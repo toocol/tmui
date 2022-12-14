@@ -1,2 +1,2 @@
 # tmui
-**_Simple cross platform ui framwork base on Skia._**
+**_Simple cross platform ui kit base on Skia._**
