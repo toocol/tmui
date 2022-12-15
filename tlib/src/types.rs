@@ -1,20 +1,145 @@
 #![allow(dead_code)]
+
+type TType = u8;
+const TTYPE_BOOL: TType = 0x01;
+const TTYPE_I8: TType = 0x02;
+const TTYPE_U8: TType = 0x03;
+const TTYPE_I16: TType = 0x04;
+const TTYPE_U16: TType = 0x05;
+const TTYPE_I32: TType = 0x06;
+const TTYPE_U32: TType = 0x07;
+const TTYPE_I64: TType = 0x08;
+const TTYPE_U64: TType = 0x09;
+const TTYPE_I128: TType = 0x0A;
+const TTYPE_U128: TType = 0x0B;
+const TTYPE_F32: TType = 0x0C;
+const TTYPE_F64: TType = 0x0D;
+const TTYPE_STRING: TType = 0x0E;
+const TTYPE_OBJECT: TType = 0x0F;
+const TTYPE_ARRAY: TType = 0x10;
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct Type {
-    name: Option<&'static str>
+    /// Type code.
+    ttype: TType,
+    /// Type name.
+    name: &'static str,
 }
 
 impl Type {
+    /// The fundamental type corresponding to `bool`
+    pub const BOOL: Self = Self {
+        ttype: TTYPE_BOOL,
+        name: "bool",
+    };
+
     /// The fundamental type corresponding to `i8`
-    pub const I8: Self = Self { name: Some("i8") };
+    pub const I8: Self = Self {
+        ttype: TTYPE_I8,
+        name: "i8",
+    };
 
     /// The fundamental type corresponding to `u8`
-    pub const U8: Self = Self { name: Some("u8") };
+    pub const U8: Self = Self {
+        ttype: TTYPE_U8,
+        name: "u8",
+    };
 
-    /// The fundamental type corresponding to `bool`
-    pub const BOOL: Self = Self { name: Some("bool") };
+    /// The fundamental type corresponding to `i16`
+    pub const I16: Self = Self {
+        ttype: TTYPE_I16,
+        name: "i16",
+    };
+
+    /// The fundamental type corresponding to `u16`
+    pub const U16: Self = Self {
+        ttype: TTYPE_U16,
+        name: "u16",
+    };
+
+    /// The fundamental type corresponding to `i32`
+    pub const I32: Self = Self {
+        ttype: TTYPE_I32,
+        name: "i32",
+    };
+
+    /// The fundamental type corresponding to `u32`
+    pub const U32: Self = Self {
+        ttype: TTYPE_U32,
+        name: "u32",
+    };
+
+    /// The fundamental type corresponding to `i64`
+    pub const I64: Self = Self {
+        ttype: TTYPE_I64,
+        name: "i64",
+    };
+
+    /// The fundamental type corresponding to `u64`
+    pub const U64: Self = Self {
+        ttype: TTYPE_U64,
+        name: "u64",
+    };
+
+    /// The fundamental type corresponding to `i128`
+    pub const I128: Self = Self {
+        ttype: TTYPE_I128,
+        name: "i128",
+    };
+
+    /// The fundamental type corresponding to `u128`
+    pub const U128: Self = Self {
+        ttype: TTYPE_U16,
+        name: "u128",
+    };
+
+    /// The fundamental type corresponding to `f32`
+    pub const F32: Self = Self {
+        ttype: TTYPE_F32,
+        name: "f32",
+    };
+
+    /// The fundamental type corresponding to `f64`
+    pub const F64: Self = Self {
+        ttype: TTYPE_F64,
+        name: "f64",
+    };
+
+    /// The fundamental type corresponding to `String`
+    pub const STRING: Self = Self {
+        ttype: TTYPE_STRING,
+        name: "String",
+    };
+
+    /// The fundamental type from which all objects are derived
+    pub const OBJECT: Self = Self {
+        ttype: TTYPE_OBJECT,
+        name: "Object",
+    };
+
+    /// The fundamental type corresponding to `Vec`
+    pub const ARRAY: Self = Self {
+        ttype: TTYPE_ARRAY,
+        name: "Array",
+    };
+
+    pub fn from_name(name: &'static str) -> Self {
+        Type {
+            ttype: TTYPE_OBJECT,
+            name: name,
+        }
+    }
+
+    pub fn is_object(&self) -> bool {
+        self.ttype == TTYPE_OBJECT
+    }
+
+    pub fn is_a(&self, t: Self) -> bool {
+        self.name == t.name
+    }
 
     pub fn name(&self) -> &'static str {
-        self.name.unwrap()
+        self.name
     }
 }
 
@@ -22,4 +147,167 @@ impl Type {
 pub trait StaticType {
     /// Get the static Type.
     fn static_type() -> Type;
+
+    /// Get the bytes length of Type.
+    fn bytes_len() -> usize;
+}
+
+impl StaticType for bool {
+    fn static_type() -> Type {
+        Type::BOOL
+    }
+
+    fn bytes_len() -> usize {
+        1
+    }
+}
+
+impl StaticType for i8 {
+    fn static_type() -> Type {
+        Type::I8
+    }
+
+    fn bytes_len() -> usize {
+        1
+    }
+}
+
+impl StaticType for u8 {
+    fn static_type() -> Type {
+        Type::U8
+    }
+
+    fn bytes_len() -> usize {
+        1
+    }
+}
+
+impl StaticType for i16 {
+    fn static_type() -> Type {
+        Type::I16
+    }
+
+    fn bytes_len() -> usize {
+        2
+    }
+}
+
+impl StaticType for u16 {
+    fn static_type() -> Type {
+        Type::U16
+    }
+
+    fn bytes_len() -> usize {
+        2
+    }
+}
+
+impl StaticType for i32 {
+    fn static_type() -> Type {
+        Type::I32
+    }
+
+    fn bytes_len() -> usize {
+        4
+    }
+}
+
+impl StaticType for u32 {
+    fn static_type() -> Type {
+        Type::U32
+    }
+
+    fn bytes_len() -> usize {
+        4
+    }
+}
+
+impl StaticType for i64 {
+    fn static_type() -> Type {
+        Type::I64
+    }
+
+    fn bytes_len() -> usize {
+        8
+    }
+}
+
+impl StaticType for u64 {
+    fn static_type() -> Type {
+        Type::U64
+    }
+
+    fn bytes_len() -> usize {
+        8
+    }
+}
+
+impl StaticType for i128 {
+    fn static_type() -> Type {
+        Type::I128
+    }
+
+    fn bytes_len() -> usize {
+        16
+    }
+}
+
+impl StaticType for u128 {
+    fn static_type() -> Type {
+        Type::U128
+    }
+
+    fn bytes_len() -> usize {
+        16
+    }
+}
+
+impl StaticType for f32 {
+    fn static_type() -> Type {
+        Type::F32
+    }
+
+    fn bytes_len() -> usize {
+        4
+    }
+}
+
+impl StaticType for f64 {
+    fn static_type() -> Type {
+        Type::F64
+    }
+
+    fn bytes_len() -> usize {
+        8
+    }
+}
+
+impl StaticType for String {
+    fn static_type() -> Type {
+        Type::STRING
+    }
+
+    fn bytes_len() -> usize {
+        0
+    }
+}
+
+impl StaticType for &str {
+    fn static_type() -> Type {
+        Type::STRING
+    }
+
+    fn bytes_len() -> usize {
+        0
+    }
+}
+
+impl<T: StaticType> StaticType for Vec<T> {
+    fn static_type() -> Type {
+        Type::ARRAY
+    }
+
+    fn bytes_len() -> usize {
+        T::bytes_len()
+    }
 }
