@@ -17,6 +17,7 @@ const TTYPE_F64: TType = 0x0D;
 const TTYPE_STRING: TType = 0x0E;
 const TTYPE_OBJECT: TType = 0x0F;
 const TTYPE_ARRAY: TType = 0x10;
+const TTYPE_TUPLE: TType = 0x11;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Type {
@@ -121,6 +122,12 @@ impl Type {
     pub const ARRAY: Self = Self {
         ttype: TTYPE_ARRAY,
         name: "Array",
+    };
+
+    /// The fundamental type corresponding to `Vec`
+    pub const TUPLE: Self = Self {
+        ttype: TTYPE_TUPLE,
+        name: "TUPLE",
     };
 
     pub fn from_name(name: &'static str) -> Self {
@@ -309,5 +316,15 @@ impl<T: StaticType> StaticType for Vec<T> {
 
     fn bytes_len() -> usize {
         T::bytes_len()
+    }
+}
+
+impl<A: StaticType, B: StaticType> StaticType for (A, B) {
+    fn static_type() -> Type {
+        Type::TUPLE
+    }
+
+    fn bytes_len() -> usize {
+        A::bytes_len() + B::bytes_len()
     }
 }

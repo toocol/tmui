@@ -7,10 +7,12 @@ pub struct Value {
     value_type: Type,
     /// field for `vec` value.
     element_len: Option<usize>,
+    /// field for `tuple` value.
+    seg_len: Option<Vec<i32>>,
 }
 
 impl Value {
-    pub fn new<T: StaticType + ToBytes>(data: T) -> Self {
+    fn new<T: StaticType + ToBytes>(data: T) -> Self {
         Value {
             data: data.to_bytes(),
             value_type: T::static_type(),
@@ -19,6 +21,20 @@ impl Value {
             } else {
                 None
             },
+            seg_len: None,
+        }
+    }
+
+    fn new_with_seg_len<T: StaticType + ToBytes>(data: T, seg_len: Vec<i32>) -> Self {
+        Value {
+            data: data.to_bytes(),
+            value_type: T::static_type(),
+            element_len: if T::static_type().is_a(Type::ARRAY) {
+                Some(T::bytes_len())
+            } else {
+                None
+            },
+            seg_len: Some(seg_len),
         }
     }
 
@@ -512,6 +528,31 @@ impl<T: StaticType + FromBytes> FromValue for Vec<T> {
 impl<T: StaticType + ToBytes> ToValue for Vec<T> {
     fn to_value(self) -> Value {
         Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+
+impl<A: StaticType, B: StaticType> ToBytes for (A, B) {
+    fn to_bytes(self) -> Vec<u8> {
+        todo!()
+    }
+}
+impl<A: StaticType, B: StaticType> FromBytes for (A, B) {
+    fn from_bytes(_data: Vec<u8>) -> Self {
+        todo!()
+    }
+}
+impl<A: StaticType, B: StaticType> FromValue for (A, B) {
+    fn from_value(_value: Value) -> Self {
+        todo!()
+    }
+}
+impl<A: StaticType, B: StaticType> ToValue for (A, B) {
+    fn to_value(self) -> Value {
+        todo!()
     }
 
     fn value_type(&self) -> Type {
