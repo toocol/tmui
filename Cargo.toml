@@ -1,2 +1,2 @@
 [workspace]
-members = ["tmio", "tmui"]
+members = ["macros", "tipc", "tlib", "tmio", "tmui"]

@@ -3,6 +3,18 @@
 version = 3
 
 [[package]]
+name = "macros"
+version = "0.1.0"
+
+[[package]]
+name = "tipc"
+version = "0.1.0"
+
+[[package]]
+name = "tlib"
+version = "0.1.0"
+
+[[package]]
 name = "tmio"
 version = "0.1.0"
 
