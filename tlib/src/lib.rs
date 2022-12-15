@@ -7,7 +7,7 @@ mod values;
 mod tests {
     use crate::{
         object::{Object, ObjectImpl, ObjectSubclass},
-        prelude::*, values::ToValue,
+        prelude::*,
     };
 
     #[derive(Default)]
