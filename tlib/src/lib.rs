@@ -5,13 +5,15 @@ mod values;
 
 #[cfg(test)]
 mod tests {
+    use macros::extends_object;
+
     use crate::{
         object::{Object, ObjectImpl, ObjectSubclass},
         prelude::*,
     };
 
-    #[derive(Default)]
-    pub struct TestObject;
+    #[extends_object]
+    pub struct TestObject {}
 
     impl ObjectSubclass for TestObject {
         const NAME: &'static str = "TestObject";
@@ -26,6 +28,13 @@ mod tests {
     #[test]
     fn test_object() {
         let obj: TestObject = Object::new();
+        assert_eq!("TestObject", obj.type_().name());
+        assert!(obj.is::<TestObject>());
+        test_is_a(obj)
+    }
+
+    fn test_is_a<T: IsA<Object>>(obj: T) {
+        let obj = obj.downcast_ref::<TestObject>().unwrap();
         assert_eq!("TestObject", obj.type_().name());
         assert!(obj.is::<TestObject>());
     }
@@ -93,5 +102,18 @@ mod tests {
         let val = vec.clone().to_value();
         let get = val.get::<Vec<String>>();
         assert_eq!(vec, get);
+
+        let tuple = ("Hello".to_string(), 1024);
+        let val = tuple.clone().to_value();
+        let get = val.get::<(String, i32)>();
+        assert_eq!(tuple, get);
+
+        let tuple = (
+            "Hello".to_string(),
+            vec!["World".to_string(), "Hello".to_string(), "Rust".to_string()],
+        );
+        let val = tuple.clone().to_value();
+        let get = val.get::<(String, Vec<String>)>();
+        assert_eq!(tuple, get);
     }
 }

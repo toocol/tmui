@@ -1,16 +1,18 @@
 #![allow(dead_code)]
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
-use crate::{prelude::StaticType, types::Type, values::Value};
+use crate::{prelude::StaticType, types::{Type, ObjectType, IsA}, values::Value};
 
 #[derive(Debug)]
 pub struct Object {
-    properties: RefCell<HashMap<&'static str, Box<Value>>>
+    properties: RefCell<HashMap<&'static str, Box<Value>>>,
 }
 
 impl Default for Object {
     fn default() -> Self {
-        Self { properties: RefCell::new(HashMap::new()) }
+        Self {
+            properties: RefCell::new(HashMap::new()),
+        }
     }
 }
 
@@ -22,14 +24,26 @@ impl Object {
     }
 }
 
-impl StaticType for Object {
-    fn static_type() -> Type {
-        Type::OBJECT
-    }
+impl ObjectSubclass for Object {
+    const NAME: &'static str = "Object";
 
-    fn bytes_len() -> usize {
-        0
+    type Type = Object;
+
+    type ParentType = Object;
+}
+
+impl ObjectType for Object {}
+
+impl IsA<Object> for Object {}
+
+impl ObjectImpl for Object {
+    fn construct(&self) {
+        println!("`Object` construct")
     }
+}
+
+impl ObjectImplExt for Object {
+    fn parent_construct(&self) {}
 }
 
 pub trait ObjectExt: StaticType {
@@ -50,12 +64,12 @@ impl<T: StaticType> ObjectExt for T {
     }
 }
 
-pub trait ObjectSubclass: 'static {
+pub trait ObjectSubclass: Debug + 'static {
     const NAME: &'static str;
 
-    type Type;
+    type Type: ObjectImpl + StaticType;
 
-    type ParentType;
+    type ParentType: ObjectImpl + StaticType;
 }
 
 impl<T: ObjectSubclass> StaticType for T {
@@ -76,8 +90,4 @@ pub trait ObjectImpl: ObjectSubclass + ObjectImplExt {
 
 pub trait ObjectImplExt {
     fn parent_construct(&self);
-}
-
-impl<T: ObjectImpl> ObjectImplExt for T {
-    fn parent_construct(&self) {}
 }

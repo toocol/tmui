@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::fmt::Debug;
+
 type TType = u8;
 const TTYPE_BOOL: TType = 0x01;
 const TTYPE_I8: TType = 0x02;
@@ -157,6 +159,14 @@ pub trait StaticType {
 
     /// Get the bytes length of Type.
     fn bytes_len() -> usize;
+
+    fn _static_type(&self) -> Type {
+        Self::static_type()
+    }
+
+    fn _bytes_len(&self) -> usize {
+        Self::bytes_len()
+    }
 }
 
 impl StaticType for bool {
@@ -297,6 +307,11 @@ impl StaticType for String {
     fn bytes_len() -> usize {
         0
     }
+
+    fn _bytes_len(&self) -> usize {
+        // An extra '\0'
+        self.bytes().len() + 1
+    }
 }
 
 impl StaticType for &str {
@@ -306,6 +321,11 @@ impl StaticType for &str {
 
     fn bytes_len() -> usize {
         0
+    }
+
+    fn _bytes_len(&self) -> usize {
+        // An extra '\0'
+        self.bytes().len() + 1
     }
 }
 
@@ -317,6 +337,14 @@ impl<T: StaticType> StaticType for Vec<T> {
     fn bytes_len() -> usize {
         T::bytes_len()
     }
+
+    fn _bytes_len(&self) -> usize {
+        let mut len = 0;
+        for i in self.iter() {
+            len += i._bytes_len();
+        }
+        len
+    }
 }
 
 impl<A: StaticType, B: StaticType> StaticType for (A, B) {
@@ -325,6 +353,20 @@ impl<A: StaticType, B: StaticType> StaticType for (A, B) {
     }
 
     fn bytes_len() -> usize {
-        A::bytes_len() + B::bytes_len()
+        0
+    }
+}
+
+pub trait ObjectType: Debug + StaticType + 'static {}
+
+pub trait IsA<T: ObjectType>: ObjectType {
+    fn downcast_ref<R: ObjectType>(&self) -> Option<&R> {
+        if Self::static_type().is_a(R::static_type()) {
+            Some(unsafe {
+                &*(self as *const Self as *const R)
+            })
+        } else {
+            None
+        }
     }
 }
