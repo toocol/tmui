@@ -23,6 +23,7 @@ const TTYPE_OBJECT: TType = 0x0F;
 const TTYPE_ARRAY: TType = 0x10;
 const TTYPE_TUPLE: TType = 0x11;
 
+/// Fundamental type of ObjectSystem
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Type {
     /// Type code.

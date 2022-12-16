@@ -1,6 +1,15 @@
 #![allow(dead_code)]
-use crate::{prelude::StaticType, types::Type};
+use crate::types::{StaticType, Type};
 
+/// Generic Value type, basically, most basic types can be converted to Value.
+///
+/// ```
+/// use tlib::prelude::*;
+///
+/// let val = 12.to_value();
+/// let get = val.get::<i32>();
+/// assert_eq!(12, get);
+/// ```
 #[derive(Debug, Clone)]
 pub struct Value {
     data: Vec<u8>,
@@ -12,7 +21,7 @@ pub struct Value {
 }
 
 impl Value {
-    fn new<T: StaticType + ToBytes>(data: T) -> Self {
+    fn new<T: StaticType + ToBytes>(data: &T) -> Self {
         Value {
             data: data.to_bytes(),
             value_type: T::static_type(),
@@ -25,7 +34,7 @@ impl Value {
         }
     }
 
-    fn new_with_seg_len<T: StaticType + ToBytes>(data: T, seg_len: Vec<usize>) -> Self {
+    fn new_with_seg_len<T: StaticType + ToBytes>(data: &T, seg_len: Vec<usize>) -> Self {
         Value {
             data: data.to_bytes(),
             value_type: T::static_type(),
@@ -65,14 +74,25 @@ pub trait FromBytes {
     fn from_bytes(data: &[u8], len: usize) -> Self;
 }
 
-pub trait ToValue: ToBytes {
+/// Trait to convert a fundamental value to a `Value`.
+pub trait ToValue {
     /// Convert a value to a `Value`.
-    fn to_value(self) -> Value;
+    fn to_value(&self) -> Value;
 
     /// Returns the type identifer of `self`.
     ///
     /// This is the type of the value to be returned by `to_value`.
     fn value_type(&self) -> Type;
+}
+
+impl<T: ToValue + StaticType> ToValue for &T {
+    fn to_value(&self) -> Value {
+        T::to_value(*self)
+    }
+
+    fn value_type(&self) -> Type {
+        T::static_type()
+    }
 }
 
 impl ToBytes for bool {
@@ -95,7 +115,7 @@ impl FromValue for bool {
     }
 }
 impl ToValue for bool {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -122,7 +142,7 @@ impl FromValue for u8 {
     }
 }
 impl ToValue for u8 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -149,7 +169,7 @@ impl FromValue for i8 {
     }
 }
 impl ToValue for i8 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -176,7 +196,7 @@ impl FromValue for u16 {
     }
 }
 impl ToValue for u16 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -203,7 +223,7 @@ impl FromValue for i16 {
     }
 }
 impl ToValue for i16 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -230,7 +250,7 @@ impl FromValue for u32 {
     }
 }
 impl ToValue for u32 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -257,7 +277,7 @@ impl FromValue for i32 {
     }
 }
 impl ToValue for i32 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -284,7 +304,7 @@ impl FromValue for u64 {
     }
 }
 impl ToValue for u64 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -311,7 +331,7 @@ impl FromValue for i64 {
     }
 }
 impl ToValue for i64 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -338,7 +358,7 @@ impl FromValue for u128 {
     }
 }
 impl ToValue for u128 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -365,7 +385,7 @@ impl FromValue for i128 {
     }
 }
 impl ToValue for i128 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -392,7 +412,7 @@ impl FromValue for f32 {
     }
 }
 impl ToValue for f32 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -419,7 +439,7 @@ impl FromValue for f64 {
     }
 }
 impl ToValue for f64 {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -437,6 +457,11 @@ impl ToBytes for String {
 }
 impl FromBytes for String {
     fn from_bytes(data: &[u8], _: usize) -> Self {
+        let data = if data[data.len() - 1] == 0 {
+            &data[0..data.len() - 1]
+        } else {
+            data
+        };
         String::from_utf8(data.to_vec()).unwrap()
     }
 }
@@ -446,7 +471,7 @@ impl FromValue for String {
     }
 }
 impl ToValue for String {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -463,7 +488,7 @@ impl ToBytes for &str {
     }
 }
 impl ToValue for &str {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -526,7 +551,7 @@ impl<T: StaticType + FromBytes> FromValue for Vec<T> {
     }
 }
 impl<T: StaticType + ToBytes> ToValue for Vec<T> {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         Value::new(self)
     }
 
@@ -602,7 +627,7 @@ impl<A: StaticType + FromBytes + Default, B: StaticType + FromBytes + Default> F
     }
 }
 impl<A: StaticType + ToBytes, B: StaticType + ToBytes> ToValue for (A, B) {
-    fn to_value(self) -> Value {
+    fn to_value(&self) -> Value {
         let seg_len = vec![self.0.bytes_len_(), self.1.bytes_len_()];
         Value::new_with_seg_len(self, seg_len)
     }

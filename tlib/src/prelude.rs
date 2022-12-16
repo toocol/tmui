@@ -1,3 +1,5 @@
-pub use crate::object::{ObjectExt, ObjectImplExt, Object, ObjectOperation};
-pub use crate::types::{StaticType, ObjectType, IsA};
-pub use crate::values::{Value, ToValue};
+pub use macros::extends_object;
+
+pub use crate::object::{Object, ObjectExt, ObjectImplExt, ObjectOperation};
+pub use crate::types::{IsA, ObjectType, StaticType};
+pub use crate::values::{ToValue, Value};

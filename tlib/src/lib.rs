@@ -1,7 +1,7 @@
-mod object;
-mod prelude;
-mod types;
-mod values;
+pub mod object;
+pub mod prelude;
+pub mod types;
+pub mod values;
 
 #[cfg(test)]
 mod tests {
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn test_object() {
-        let obj: TestObject = Object::new();
+        let obj: TestObject = Object::new(&[("property", "val")]);
         assert_eq!("TestObject", obj.type_().name());
         assert!(obj.is::<TestObject>());
         test_is_a(obj)
@@ -43,10 +43,12 @@ mod tests {
         let test_obj = obj.downcast_ref::<TestObject>().unwrap();
         assert_eq!("TestObject", test_obj.type_().name());
         assert!(test_obj.is::<TestObject>());
+        assert_eq!("val", test_obj.get_property("property").unwrap().get::<String>());
 
         let test_obj = obj.as_ref();
         assert_eq!("TestObject", test_obj.type_().name());
         assert!(test_obj.is::<TestObject>());
+        assert_eq!("val", test_obj.get_property("property").unwrap().get::<String>())
     }
 
     #[test]

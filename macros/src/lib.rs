@@ -34,12 +34,12 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
 
                 impl ObjectOperation for #name {
-                    fn set_property(&self, name: &'static str, value: Value) {
-                        self.object._set_property(name, value)
+                    fn set_property(&self, name: &str, value: Value) {
+                        self.object.primitive_set_property(name, value)
                     }
 
-                    fn get_property(&self, name: &'static str) -> Option<Value> {
-                        self.object._get_property(name)
+                    fn get_property(&self, name: &str) -> Option<Value> {
+                        self.object.primitive_get_property(name)
                     }
                 }
 
