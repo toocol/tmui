@@ -15,7 +15,7 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fields.named.push(
                         syn::Field::parse_named
                             .parse2(quote! {
-                                object: crate::object::Object
+                                object: Object
                             })
                             .unwrap(),
                     );
@@ -30,6 +30,16 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                 impl ObjectImplExt for #name {
                     fn parent_construct(&self) {
                         self.object.construct()
+                    }
+                }
+
+                impl ObjectOperation for #name {
+                    fn set_property(&self, name: &'static str, value: Value) {
+                        self.object._set_property(name, value)
+                    }
+
+                    fn get_property(&self, name: &'static str) -> Option<Value> {
+                        self.object._get_property(name)
                     }
                 }
 

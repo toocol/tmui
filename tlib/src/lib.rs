@@ -8,7 +8,7 @@ mod tests {
     use macros::extends_object;
 
     use crate::{
-        object::{Object, ObjectImpl, ObjectSubclass},
+        object::{ObjectImpl, ObjectSubclass},
         prelude::*,
     };
 
@@ -23,7 +23,13 @@ mod tests {
         type ParentType = Object;
     }
 
-    impl ObjectImpl for TestObject {}
+    impl ObjectImpl for TestObject {
+        fn construct(&self) {
+            self.parent_construct();
+
+            println!("`TestObject` construct");
+        }
+    }
 
     #[test]
     fn test_object() {
@@ -34,9 +40,13 @@ mod tests {
     }
 
     fn test_is_a<T: IsA<Object>>(obj: T) {
-        let obj = obj.downcast_ref::<TestObject>().unwrap();
-        assert_eq!("TestObject", obj.type_().name());
-        assert!(obj.is::<TestObject>());
+        let test_obj = obj.downcast_ref::<TestObject>().unwrap();
+        assert_eq!("TestObject", test_obj.type_().name());
+        assert!(test_obj.is::<TestObject>());
+
+        let test_obj = obj.as_ref();
+        assert_eq!("TestObject", test_obj.type_().name());
+        assert!(test_obj.is::<TestObject>());
     }
 
     #[test]

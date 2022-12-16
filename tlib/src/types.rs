@@ -2,6 +2,8 @@
 
 use std::fmt::Debug;
 
+use crate::object::ObjectSubclass;
+
 type TType = u8;
 const TTYPE_BOOL: TType = 0x01;
 const TTYPE_I8: TType = 0x02;
@@ -21,7 +23,7 @@ const TTYPE_OBJECT: TType = 0x0F;
 const TTYPE_ARRAY: TType = 0x10;
 const TTYPE_TUPLE: TType = 0x11;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Type {
     /// Type code.
     ttype: TType,
@@ -160,11 +162,11 @@ pub trait StaticType {
     /// Get the bytes length of Type.
     fn bytes_len() -> usize;
 
-    fn _static_type(&self) -> Type {
+    fn static_type_(&self) -> Type {
         Self::static_type()
     }
 
-    fn _bytes_len(&self) -> usize {
+    fn bytes_len_(&self) -> usize {
         Self::bytes_len()
     }
 }
@@ -308,7 +310,7 @@ impl StaticType for String {
         0
     }
 
-    fn _bytes_len(&self) -> usize {
+    fn bytes_len_(&self) -> usize {
         // An extra '\0'
         self.bytes().len() + 1
     }
@@ -323,7 +325,7 @@ impl StaticType for &str {
         0
     }
 
-    fn _bytes_len(&self) -> usize {
+    fn bytes_len_(&self) -> usize {
         // An extra '\0'
         self.bytes().len() + 1
     }
@@ -338,10 +340,10 @@ impl<T: StaticType> StaticType for Vec<T> {
         T::bytes_len()
     }
 
-    fn _bytes_len(&self) -> usize {
+    fn bytes_len_(&self) -> usize {
         let mut len = 0;
         for i in self.iter() {
-            len += i._bytes_len();
+            len += i.bytes_len_();
         }
         len
     }
@@ -359,14 +361,16 @@ impl<A: StaticType, B: StaticType> StaticType for (A, B) {
 
 pub trait ObjectType: Debug + StaticType + 'static {}
 
-pub trait IsA<T: ObjectType>: ObjectType {
+pub trait IsA<T: ObjectType>: ObjectType + ObjectSubclass {
     fn downcast_ref<R: ObjectType>(&self) -> Option<&R> {
         if Self::static_type().is_a(R::static_type()) {
-            Some(unsafe {
-                &*(self as *const Self as *const R)
-            })
+            Some(unsafe { &*(self as *const Self as *const R) })
         } else {
             None
         }
+    }
+
+    fn as_ref(&self) -> &Self::Type {
+        unsafe { &*(self as *const Self as *const Self::Type) }
     }
 }

@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
+use lazy_static::__Deref;
+
 use crate::{prelude::StaticType, types::{Type, ObjectType, IsA}, values::Value};
 
 #[derive(Debug)]
@@ -16,13 +18,45 @@ impl Default for Object {
     }
 }
 
+pub trait ObjectOperation {
+    fn set_property(&self, name: &'static str, value: Value);
+
+    fn get_property(&self, name: &'static str) -> Option<Value>;
+}
+
 impl Object {
     pub fn new<T: ObjectSubclass + Default + ObjectImpl>() -> T {
         let obj = T::default();
         obj.construct();
         obj
     }
+
+    pub fn _set_property(&self, name: &'static str, value: Value) {
+        self.properties.borrow_mut().insert(name, Box::new(value));
+    }
+
+    pub fn _get_property(&self, name: &'static str) -> Option<Value> {
+        let borrowed = self.properties.borrow();
+        let val_opt = borrowed.get(name);
+        if val_opt.is_some() {
+            Some(val_opt.as_deref().unwrap().deref().clone())
+        } else {
+            None
+        }
+    }
 }
+
+impl ObjectOperation for Object {
+    fn set_property(&self, name: &'static str, value: Value) {
+        self._set_property(name, value)
+    }
+
+    fn get_property(&self, name: &'static str) -> Option<Value> {
+        self._get_property(name)
+    }
+}
+
+impl IsSubclassable for Object {}
 
 impl ObjectSubclass for Object {
     const NAME: &'static str = "Object";
@@ -64,12 +98,14 @@ impl<T: StaticType> ObjectExt for T {
     }
 }
 
+pub trait IsSubclassable {}
+
 pub trait ObjectSubclass: Debug + 'static {
     const NAME: &'static str;
 
-    type Type: ObjectImpl + StaticType;
+    type Type: ObjectExt + ObjectOperation + StaticType;
 
-    type ParentType: ObjectImpl + StaticType;
+    type ParentType: IsSubclassable + ObjectExt + ObjectOperation + StaticType;
 }
 
 impl<T: ObjectSubclass> StaticType for T {

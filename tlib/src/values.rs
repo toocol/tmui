@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use crate::{prelude::StaticType, types::Type};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Value {
     data: Vec<u8>,
     value_type: Type,
@@ -603,7 +603,7 @@ impl<A: StaticType + FromBytes + Default, B: StaticType + FromBytes + Default> F
 }
 impl<A: StaticType + ToBytes, B: StaticType + ToBytes> ToValue for (A, B) {
     fn to_value(self) -> Value {
-        let seg_len = vec![self.0._bytes_len(), self.1._bytes_len()];
+        let seg_len = vec![self.0.bytes_len_(), self.1.bytes_len_()];
         Value::new_with_seg_len(self, seg_len)
     }
 
