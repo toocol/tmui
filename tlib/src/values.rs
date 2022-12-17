@@ -38,11 +38,7 @@ impl Value {
         Value {
             data: data.to_bytes(),
             value_type: T::static_type(),
-            element_len: if T::static_type().is_a(Type::ARRAY) {
-                Some(T::bytes_len())
-            } else {
-                None
-            },
+            element_len: None,
             seg_len: Some(seg_len),
         }
     }
