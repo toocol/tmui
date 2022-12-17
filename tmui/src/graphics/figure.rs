@@ -43,3 +43,9 @@ impl From<Point> for skia_safe::Point {
         skia_safe::Point::from(skia_safe::IPoint::from(p))
     }
 }
+
+impl Into<(i32, i32)> for Point {
+    fn into(self) -> (i32, i32) {
+        (self.x, self.y)
+    }
+}

@@ -3,6 +3,10 @@ pub mod prelude;
 pub mod types;
 pub mod values;
 
+pub use object::Object;
+pub use values::Value;
+pub use types::Type;
+
 #[cfg(test)]
 mod tests {
     use macros::extends_object;
@@ -33,7 +37,7 @@ mod tests {
 
     #[test]
     fn test_object() {
-        let obj: TestObject = Object::new(&[("property", "val")]);
+        let obj: TestObject = Object::new(&[("property", &"val")]);
         assert_eq!("TestObject", obj.type_().name());
         assert!(obj.is::<TestObject>());
         test_is_a(obj)

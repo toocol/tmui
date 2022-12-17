@@ -1,10 +1,10 @@
 #![allow(dead_code)]
-use skia_safe::{Path, Surface, Paint, PaintStyle};
+use skia_safe::{Paint, PaintStyle, Path, Surface};
 use std::cell::{RefCell, RefMut};
 
 use super::{board::Board, figure::Point};
 
-/// DrawingContext contains Board reference which contains Skia surface. 
+/// DrawingContext contains Board reference which contains Skia surface.
 /// And has basic Point, Path, Paint of Skia renderering.
 pub struct DrawingContext<'a> {
     board: &'a Board,
@@ -61,7 +61,9 @@ impl<'a> DrawingContext<'a> {
 
     #[inline]
     pub fn bezier_curve_to(&self, cp1x: f32, cp1y: f32, cp2x: f32, cp2y: f32, x: f32, y: f32) {
-        self.path.borrow_mut().cubic_to((cp1x, cp1y), (cp2x, cp2y), (x, y));
+        self.path
+            .borrow_mut()
+            .cubic_to((cp1x, cp1y), (cp2x, cp2y), (x, y));
     }
 
     #[inline]
@@ -72,20 +74,26 @@ impl<'a> DrawingContext<'a> {
     #[inline]
     pub fn begin_path(&self) {
         let new_path = Path::new();
-        self.surface().canvas().draw_path(self.path.borrow().as_ref(), self.paint.borrow().as_ref());
+        self.surface()
+            .canvas()
+            .draw_path(self.path.borrow().as_ref(), self.paint.borrow().as_ref());
         *self.path.borrow_mut() = new_path;
     }
 
     #[inline]
     pub fn stroke(&self) {
         self.paint.borrow_mut().set_style(PaintStyle::Stroke);
-        self.surface().canvas().draw_path(self.path.borrow().as_ref(), self.paint.borrow().as_ref());
+        self.surface()
+            .canvas()
+            .draw_path(self.path.borrow().as_ref(), self.paint.borrow().as_ref());
     }
 
     #[inline]
     pub fn fill(&self) {
         self.paint.borrow_mut().set_style(PaintStyle::Fill);
-        self.surface().canvas().draw_path(self.path.borrow().as_ref(), self.paint.borrow().as_ref());
+        self.surface()
+            .canvas()
+            .draw_path(self.path.borrow().as_ref(), self.paint.borrow().as_ref());
     }
 
     #[inline]

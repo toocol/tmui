@@ -54,8 +54,8 @@ pub trait ObjectOperation {
 }
 
 impl Object {
-    pub fn new<T: ObjectSubclass + Default + ObjectImpl + ObjectOperation, R: ToValue>(
-        properties: &[(&str, R)],
+    pub fn new<T: ObjectSubclass + Default + ObjectImpl + ObjectOperation>(
+        properties: &[(&str, &dyn ToValue)],
     ) -> T {
         let obj = T::default();
         obj.construct();
