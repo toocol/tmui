@@ -6,6 +6,7 @@ use super::{board::Board, figure::Point};
 
 /// DrawingContext contains Board reference which contains Skia surface.
 /// And has basic Point, Path, Paint of Skia renderering.
+/// Elements call function in DrawingContext to renderering.
 pub struct DrawingContext<'a> {
     board: &'a Board,
     point: Point,

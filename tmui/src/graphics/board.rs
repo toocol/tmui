@@ -9,7 +9,7 @@ use super::{drawing_context::DrawingContext, element::ElementImpl};
 /// Board contains all the Elements.
 ///
 /// Board contains a renderer method `invalidate_visual`, every frame will call this function automaticly and redraw the invalidated element.
-/// (All call Elments' `update()` method can set element's `invalidate` filed to true, or call `force_update()` to invoke `invalidate_visual` directly)
+/// (All elements call it's `update()` method can set it's `invalidate` field to true, or call `force_update()` to invoke `invalidate_visual` directly)
 pub struct Board {
     pub width: i32,
     pub height: i32,

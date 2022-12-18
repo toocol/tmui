@@ -11,3 +11,4 @@ tlib = { path = "../tlib/" }
 
 log = "0.4"
 skia-safe = "0.57.0"
+hex_color = "2.0.0"

@@ -23,7 +23,13 @@ mod tests {
         type ParentType = Element;
     }
 
-    impl ObjectImpl for SubElement {}
+    impl ObjectImpl for SubElement {
+        fn construct(&self) {
+            self.parent_construct();
+
+            println!("`SubElement` construct.")
+        }
+    }
 
     impl ElementImpl for SubElement {
         fn on_renderer(&self, cr: &super::drawing_context::DrawingContext) {

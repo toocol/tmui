@@ -23,7 +23,13 @@ impl ObjectSubclass for Element {
     type ParentType = tlib::Object;
 }
 
-impl ObjectImpl for Element {}
+impl ObjectImpl for Element {
+    fn construct(&self) {
+        self.parent_construct();
+
+        println!("`Element` construct")
+    }
+}
 
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt {
