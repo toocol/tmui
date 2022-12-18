@@ -230,6 +230,12 @@ impl Into<(i32, i32, i32)> for Color {
     }
 }
 
+impl Into<(i32, i32, i32)> for &Color {
+    fn into(self) -> (i32, i32, i32) {
+        (self.r as i32, self.g as i32, self.b as i32)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
