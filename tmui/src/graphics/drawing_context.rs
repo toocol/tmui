@@ -2,23 +2,23 @@
 use skia_safe::{Paint, PaintStyle, Path, Surface};
 use std::cell::{RefCell, RefMut};
 
-use super::{board::Board, figure::Point};
+use super::{board::Board, figure::Rect};
 
 /// DrawingContext contains Board reference which contains Skia surface.
 /// And has basic Point, Path, Paint of Skia renderering.
 /// Elements call function in DrawingContext to renderering.
 pub struct DrawingContext<'a> {
     board: &'a Board,
-    point: Point,
+    rect: Rect,
     path: RefCell<Path>,
     paint: RefCell<Paint>,
 }
 
 impl<'a> DrawingContext<'a> {
-    pub fn new(board: &'a Board, point: Point) -> Self {
+    pub fn new(board: &'a Board, rect: Rect) -> Self {
         Self {
             board,
-            point,
+            rect,
             path: RefCell::new(Path::new()),
             paint: RefCell::new(Paint::default()),
         }

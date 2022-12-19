@@ -103,12 +103,12 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                         self.element.force_update()
                     }
 
-                    fn point(&self) -> Point {
-                        self.element.point()
+                    fn rect(&self) -> Rect {
+                        self.element.rect()
                     }
 
-                    fn set_point(&self, point: Point) {
-                        self.element.set_point(point)
+                    fn set_rect(&self, rect: Rect) {
+                        self.element.set_rect(rect)
                     }
 
                     fn invalidate(&self) -> bool {

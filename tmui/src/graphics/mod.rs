@@ -6,7 +6,7 @@ pub mod figure;
 #[cfg(test)]
 mod tests {
     use super::element::{Element, ElementExt, ElementImpl};
-    use super::figure::Point;
+    use super::figure::Rect;
     use tlib::{
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_sub_element() {
         let element = Object::new::<SubElement>(&[("prop1", &&12), ("prop2", &"12")]);
-        element.set_point(Point::from((100, 100)));
+        element.set_rect(Rect::from((100, 100, 100, 100)));
         element.update();
         assert_eq!(12, element.get_property("prop1").unwrap().get());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
@@ -53,7 +53,7 @@ mod tests {
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 
         let element = obj.downcast_ref::<SubElement>().unwrap();
-        assert_eq!((100, 100), element.point().into());
+        assert_eq!((100, 100, 100, 100), element.rect().into());
         assert!(element.invalidate());
     }
 }

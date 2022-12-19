@@ -32,7 +32,7 @@ impl Board {
     pub fn invalidate_visual(&self) {
         for element in self.element_list.iter() {
             if element.invalidate() {
-                let cr = DrawingContext::new(self, element.point());
+                let cr = DrawingContext::new(self, element.rect());
                 element.on_renderer(&cr);
                 element.validate();
             }

@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use super::{drawing_context::DrawingContext, figure::Point};
+use super::{drawing_context::DrawingContext, figure::Rect};
 use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     prelude::*,
@@ -10,9 +10,10 @@ use tlib::{
 #[extends_object]
 pub struct Element {
     invalidate: Cell<bool>,
-    point: Cell<Point>,
+    rect: Cell<Rect>,
 }
 
+/// Mark `Element` as is subclassable.
 impl IsSubclassable for Element {}
 
 impl ObjectSubclass for Element {
@@ -37,9 +38,9 @@ pub trait ElementExt {
 
     fn force_update(&self);
 
-    fn point(&self) -> Point;
+    fn rect(&self) -> Rect;
 
-    fn set_point(&self, point: Point);
+    fn set_rect(&self, point: Rect);
 
     fn invalidate(&self) -> bool;
 
@@ -58,12 +59,12 @@ impl ElementExt for Element {
         // TODO: firgue out how to invoke `Board`'s `invalidate_visual` obligatory.
     }
 
-    fn point(&self) -> Point {
-        self.point.get()
+    fn rect(&self) -> Rect {
+        self.rect.get()
     }
 
-    fn set_point(&self, point: Point) {
-        self.point.set(point)
+    fn set_rect(&self, rect: Rect) {
+        self.rect.set(rect)
     }
 
     fn invalidate(&self) -> bool {
@@ -87,7 +88,7 @@ mod tests {
     #[test]
     fn test_element() {
         let element = Object::new::<Element>(&[("prop1", &&12), ("prop2", &"12")]);
-        element.set_point(Point::from((100, 100)));
+        element.set_rect(Rect::from((100, 100, 50, 50)));
         element.update();
         assert_eq!(12, element.get_property("prop1").unwrap().get());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
@@ -100,7 +101,7 @@ mod tests {
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 
         let element = obj.downcast_ref::<Element>().unwrap();
-        assert_eq!((100, 100), element.point().into());
+        assert_eq!((100, 100, 50, 50), element.rect().into());
         assert!(element.invalidate());
     }
 }

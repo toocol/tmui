@@ -21,7 +21,7 @@ pub struct Value {
 }
 
 impl Value {
-    fn new<T: StaticType + ToBytes>(data: &T) -> Self {
+    pub fn new<T: StaticType + ToBytes>(data: &T) -> Self {
         Value {
             data: data.to_bytes(),
             value_type: T::static_type(),
@@ -34,13 +34,17 @@ impl Value {
         }
     }
 
-    fn new_with_seg_len<T: StaticType + ToBytes>(data: &T, seg_len: Vec<usize>) -> Self {
+    pub fn new_with_seg_len<T: StaticType + ToBytes>(data: &T, seg_len: Vec<usize>) -> Self {
         Value {
             data: data.to_bytes(),
             value_type: T::static_type(),
             element_len: None,
             seg_len: Some(seg_len),
         }
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
     }
 
     pub fn get<T>(&self) -> T

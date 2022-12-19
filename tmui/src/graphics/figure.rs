@@ -1,8 +1,14 @@
 #![allow(dead_code)]
-
 use std::ops::{Add, Sub};
 
 use hex_color::HexColor;
+use tlib::{
+    types::StaticType,
+    values::{FromBytes, FromValue, ToBytes, ToValue},
+    Value,
+};
+
+/////////////// Point
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Point {
     x: i32,
@@ -77,6 +83,46 @@ impl Into<(i32, i32)> for Point {
     }
 }
 
+impl StaticType for Point {
+    fn static_type() -> tlib::Type {
+        tlib::Type::from_name("Point")
+    }
+
+    fn bytes_len() -> usize {
+        i32::bytes_len() + i32::bytes_len()
+    }
+}
+impl ToBytes for Point {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.x.to_bytes());
+        bytes.append(&mut self.y.to_bytes());
+        bytes
+    }
+}
+impl FromBytes for Point {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let x = i32::from_bytes(&data[0..4], 4);
+        let y = i32::from_bytes(&data[4..8], 4);
+        Self { x, y }
+    }
+}
+impl ToValue for Point {
+    fn to_value(&self) -> tlib::Value {
+        tlib::Value::new(self)
+    }
+
+    fn value_type(&self) -> tlib::Type {
+        Self::static_type()
+    }
+}
+impl FromValue for Point {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////// Rectangle
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Rect {
     x: i32,
@@ -95,50 +141,57 @@ impl Rect {
         }
     }
 
-    fn x(&self) -> i32 {
+    pub fn x(&self) -> i32 {
         self.x
     }
 
-    fn y(&self) -> i32 {
+    pub fn y(&self) -> i32 {
         self.y
     }
 
-    fn width(&self) -> i32 {
+    pub fn width(&self) -> i32 {
         self.width
     }
 
-    fn height(&self) -> i32 {
+    pub fn height(&self) -> i32 {
         self.height
     }
 
-    fn top_left(&self) -> Point {
+    pub fn top_left(&self) -> Point {
         Point { x: 0, y: 0 }
     }
 
-    fn top_right(&self) -> Point {
+    pub fn top_right(&self) -> Point {
         Point {
             x: self.width,
             y: 0,
         }
     }
 
-    fn bottom_left(&self) -> Point {
+    pub fn bottom_left(&self) -> Point {
         Point {
             x: 0,
             y: self.height,
         }
     }
 
-    fn bottom_right(&self) -> Point {
+    pub fn bottom_right(&self) -> Point {
         Point {
             x: self.width,
             y: self.height,
         }
     }
 
-    fn intersects(&self, rect: &Rect) -> bool {
+    pub fn intersects(&self, rect: &Rect) -> bool {
         self.x.max(rect.x) <= self.width.min(rect.width)
             && self.y.max(rect.y) <= self.height.min(rect.height)
+    }
+
+    pub fn contains(&self, point: &Point) -> bool {
+        point.x() >= self.x()
+            && point.y() >= self.y()
+            && point.x() <= self.width()
+            && point.y() <= self.height()
     }
 }
 
@@ -159,6 +212,55 @@ impl Into<(i32, i32, i32, i32)> for Rect {
     }
 }
 
+impl StaticType for Rect {
+    fn static_type() -> tlib::Type {
+        tlib::Type::from_name("Rect")
+    }
+
+    fn bytes_len() -> usize {
+        i32::bytes_len() * 4
+    }
+}
+impl ToBytes for Rect {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.x.to_bytes());
+        bytes.append(&mut self.y.to_bytes());
+        bytes.append(&mut self.width.to_bytes());
+        bytes.append(&mut self.height.to_bytes());
+        bytes
+    }
+}
+impl FromBytes for Rect {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let x = i32::from_bytes(&data[0..4], 4);
+        let y = i32::from_bytes(&data[4..8], 4);
+        let width = i32::from_bytes(&data[8..12], 4);
+        let height = i32::from_bytes(&data[12..16], 4);
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+}
+impl ToValue for Rect {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> tlib::Type {
+        Self::static_type()
+    }
+}
+impl FromValue for Rect {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////// Color
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Color {
     pub r: u8,
@@ -236,6 +338,49 @@ impl Into<(i32, i32, i32)> for &Color {
     }
 }
 
+impl StaticType for Color {
+    fn static_type() -> tlib::Type {
+        tlib::Type::from_name("Color")
+    }
+
+    fn bytes_len() -> usize {
+        u8::bytes_len() * 4
+    }
+}
+impl ToBytes for Color {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.r.to_bytes());
+        bytes.append(&mut self.g.to_bytes());
+        bytes.append(&mut self.b.to_bytes());
+        bytes.append(&mut self.a.to_bytes());
+        bytes
+    }
+}
+impl FromBytes for Color {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let r = u8::from_bytes(&data[0..1], 1);
+        let g = u8::from_bytes(&data[1..2], 1);
+        let b = u8::from_bytes(&data[2..3], 1);
+        let a = u8::from_bytes(&data[3..4], 1);
+        Self { r, g, b, a }
+    }
+}
+impl ToValue for Color {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> tlib::Type {
+        Self::static_type()
+    }
+}
+impl FromValue for Color {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,5 +395,26 @@ mod tests {
         let p4 = p3 - p1;
         assert_eq!(20, p4.x);
         assert_eq!(20, p4.y);
+
+        let val = p4.to_value();
+        let get = val.get::<Point>();
+        assert_eq!(20, get.x);
+        assert_eq!(20, get.y);
+    }
+
+    #[test]
+    fn test_rect() {
+        let rect = Rect::new(10, 10, 50, 50);
+        let val = rect.to_value();
+        let get = val.get::<Rect>();
+        assert_eq!(rect, get)
+    }
+
+    #[test]
+    fn test_color() {
+        let color = Color::from_rgba(13, 13, 13, 13);
+        let val = color.to_value();
+        let get = val.get();
+        assert_eq!(color, get)
     }
 }
