@@ -76,7 +76,8 @@ impl ElementExt for Element {
     }
 }
 
-/// Every Element's subclass should impl this trait manually, and implements `on_renderer` function.
+/// Every Element's subclass should impl this trait manually, 
+/// and implements `on_renderer` function.
 pub trait ElementImpl: ElementExt {
     fn on_renderer(&self, cr: &DrawingContext);
 }
