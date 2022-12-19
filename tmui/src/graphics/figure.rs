@@ -267,7 +267,7 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
-    valid: bool,
+    pub valid: bool,
 }
 
 impl Color {
