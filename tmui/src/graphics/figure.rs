@@ -267,15 +267,32 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
+    valid: bool,
 }
 
 impl Color {
+    pub fn new() -> Self {
+        Self { r: 0, g: 0, b: 0, a: 0, valid: false }
+    }
+
     pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
-        Self { r, g, b, a: 255 }
+        Self {
+            r,
+            g,
+            b,
+            a: 255,
+            valid: true,
+        }
     }
 
     pub fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self { r, g, b, a }
+        Self {
+            r,
+            g,
+            b,
+            a,
+            valid: true,
+        }
     }
 
     pub fn from_hex(hex_code: &str) -> Self {
@@ -286,6 +303,7 @@ impl Color {
             g: color.g,
             b: color.b,
             a: color.a,
+            valid: true,
         }
     }
 }
@@ -354,6 +372,7 @@ impl ToBytes for Color {
         bytes.append(&mut self.g.to_bytes());
         bytes.append(&mut self.b.to_bytes());
         bytes.append(&mut self.a.to_bytes());
+        bytes.append(&mut self.valid.to_bytes());
         bytes
     }
 }
@@ -363,7 +382,8 @@ impl FromBytes for Color {
         let g = u8::from_bytes(&data[1..2], 1);
         let b = u8::from_bytes(&data[2..3], 1);
         let a = u8::from_bytes(&data[3..4], 1);
-        Self { r, g, b, a }
+        let valid = data[4] == 1;
+        Self { r, g, b, a, valid }
     }
 }
 impl ToValue for Color {
