@@ -17,9 +17,9 @@ lazy_static! {
     pub static ref ACTION_HUB: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
 }
 /// Initialize the `ActionHub`, the instance should be managed by the caller.  
-/// 
-/// The thread initialize the `ActionHub` was the `main` thread. 
-/// 
+///
+/// The thread initialize the `ActionHub` was the `main` thread.
+///
 /// This function should only call once.
 pub fn initialize_action_hub(action_hub: &mut ActionHub) {
     INIT.call_once(|| {
@@ -65,11 +65,7 @@ impl ActionHub {
         }
     }
 
-    pub fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(
-        &self,
-        name: S,
-        f: F,
-    ) {
+    pub fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(&self, name: S, f: F) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
                 panic!("`connect_action()` should only call in the `main` thread.")
@@ -98,11 +94,7 @@ impl ActionHub {
     }
 }
 pub trait ActionHubExt {
-    fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(
-        &self,
-        name: S,
-        f: F,
-    ) {
+    fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(&self, name: S, f: F) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
@@ -117,10 +109,17 @@ pub trait ActionHubExt {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! emit {
-    () => {};
+    ( $name:expr ) => {{
+        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
+        unsafe {
+            action_hub
+                .as_ref()
+                .expect("`ActionHub` was not initialized, or already dead.")
+                .activate_action($name, None)
+        };
+    }};
     ( $name:expr, $x:expr ) => {{
         let value = $x.to_value();
-        // println!("Emit action {}: {:?}", $name, value);
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
@@ -129,6 +128,31 @@ macro_rules! emit {
                 .activate_action($name, Some(value))
         };
     }};
+}
+
+/// Struct represents an action which can emit specified action.
+pub struct Action {
+    name: String,
+    param: Option<Box<dyn ToValue>>,
+}
+impl Action {
+    pub fn new<T: ToValue + 'static>(name: String, param: Option<T>) -> Self {
+        let mut param = param;
+        let param: Option<Box<dyn ToValue>> = if param.is_none() {
+            None
+        } else {
+            Some(Box::new(param.take().unwrap()))
+        };
+        Self { name, param }
+    }
+
+    pub fn emit(&self) {
+        if let Some(param) = self.param.as_ref() {
+            emit!(&self.name, param)
+        } else {
+            emit!(&self.name)
+        }
+    }
 }
 
 #[cfg(test)]
