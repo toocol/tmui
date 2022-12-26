@@ -19,6 +19,8 @@ pub struct Value {
     /// field for `tuple` value.
     seg_len: Option<Vec<usize>>,
 }
+unsafe impl Sync for Value {}
+unsafe impl Send for Value {}
 
 impl Value {
     pub fn new<T: StaticType + ToBytes>(data: &T) -> Self {
