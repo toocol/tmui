@@ -136,14 +136,18 @@ pub struct Action {
     param: Option<Box<dyn ToValue>>,
 }
 impl Action {
-    pub fn new<T: ToValue + 'static>(name: String, param: Option<T>) -> Self {
-        let mut param = param;
-        let param: Option<Box<dyn ToValue>> = if param.is_none() {
-            None
-        } else {
-            Some(Box::new(param.take().unwrap()))
-        };
-        Self { name, param }
+    pub fn with_no_param<S: ToString>(name: S) -> Self {
+        Self {
+            name: name.to_string(),
+            param: None,
+        }
+    }
+
+    pub fn with_param<S: ToString, T: ToValue + 'static>(name: S, param: T) -> Self {
+        Self {
+            name: name.to_string(),
+            param: Some(Box::new(param)),
+        }
     }
 
     pub fn emit(&self) {
