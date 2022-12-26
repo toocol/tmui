@@ -33,7 +33,7 @@ pub fn initialize_action_hub(action_hub: &mut ActionHub) {
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: RefCell<HashMap<String, Vec<Box<dyn Fn(Option<Value>) + Send + Sync>>>>,
+    map: RefCell<HashMap<String, Vec<Box<dyn Fn(Option<Value>)>>>>,
     sender: Sender<(String, Option<Value>)>,
     receiver: Receiver<(String, Option<Value>)>,
 }
@@ -65,7 +65,7 @@ impl ActionHub {
         }
     }
 
-    pub fn connect_action<S: ToString, F: Fn(Option<Value>) + Send + Sync + 'static>(
+    pub fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(
         &self,
         name: S,
         f: F,
@@ -98,7 +98,7 @@ impl ActionHub {
     }
 }
 pub trait ActionHubExt {
-    fn connect_action<S: ToString, F: Fn(Option<Value>) + Send + Sync + 'static>(
+    fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(
         &self,
         name: S,
         f: F,
