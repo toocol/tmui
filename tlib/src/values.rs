@@ -594,45 +594,79 @@ fn from_value_generic<T: StaticType + FromBytes + Default>(
     }
 }
 
-impl<A: StaticType + ToBytes, B: StaticType + ToBytes> ToBytes for (A, B) {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut vec = vec![];
-        vec.append(&mut self.0.to_bytes());
-        vec.append(&mut self.1.to_bytes());
-        vec
-    }
+macro_rules! implements_tuple_value{
+    ( $($gtype:ident),+ => $($name:ident),+ => $($index:tt),+) => {
+        impl <$($gtype: StaticType + ToBytes,)+> ToBytes for ($($gtype,)+) {
+            fn to_bytes(&self) -> Vec<u8> {
+                let mut vec = vec![];
+                $(
+                    vec.append(&mut self.$index.to_bytes());
+                )+
+                vec
+            }
+        }
+
+        impl <$($gtype: StaticType,)+> FromBytes for ($($gtype,)+) {
+            fn from_bytes(_data: &[u8], _: usize) -> Self {
+                panic!("`Tuple` nestification was not supported.")
+            }
+        }
+
+        #[allow(unused_assignments)]
+        impl <$($gtype: StaticType + FromBytes + Default,)+> FromValue for ($($gtype,)+) {
+            fn from_value(value: &Value) -> Self {
+                let ($($name,)+);
+                let vec = value.seg_len.as_ref().unwrap();
+                let mut idx = 0;
+                $(
+                    let ret = from_value_generic::<$gtype>(&value.data, vec, idx, $index);
+                    $name = ret.0;
+                    idx = ret.1;
+                )+
+                ($($name,)+)
+            }
+        }
+
+        impl <$($gtype: StaticType + ToBytes,)+> ToValue for ($($gtype,)+) {
+            fn to_value(&self) -> Value {
+                let seg_len = vec![$(self.$index.bytes_len_(),)+];
+                Value::new_with_seg_len(self, seg_len)
+            }
+
+            fn value_type(&self) -> Type {
+                Self::static_type()
+            }
+        }
+    };
 }
-impl<A: StaticType, B: StaticType> FromBytes for (A, B) {
-    fn from_bytes(_data: &[u8], _: usize) -> Self {
-        panic!("`Tuple` nestification was not supported.")
-    }
-}
-impl<A: StaticType + FromBytes + Default, B: StaticType + FromBytes + Default> FromValue
-    for (A, B)
-{
-    fn from_value(value: &Value) -> Self {
-        let a;
-        let b;
-        let vec = value.seg_len.as_ref().unwrap();
-        let mut idx = 0;
+implements_tuple_value!(A,B => a,b => 0,1);
+implements_tuple_value!(A,B,C => a,b,c => 0,1,2);
+implements_tuple_value!(A,B,C,D => a,b,c,d => 0,1,2,3);
+implements_tuple_value!(A,B,C,D,E => a,b,c,d,e => 0,1,2,3,4);
+implements_tuple_value!(A,B,C,D,E,F => a,b,c,d,e,f => 0,1,2,3,4,5);
+implements_tuple_value!(A,B,C,D,E,F,G => a,b,c,d,e,f,g => 0,1,2,3,4,5,6);
+implements_tuple_value!(A,B,C,D,E,F,G,H => a,b,c,d,e,f,g,h => 0,1,2,3,4,5,6,7);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I => a,b,c,d,e,f,g,h,i => 0,1,2,3,4,5,6,7,8);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J => a,b,c,d,e,f,g,h,i,j => 0,1,2,3,4,5,6,7,8,9);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K => a,b,c,d,e,f,g,h,i,j,k => 0,1,2,3,4,5,6,7,8,9,10);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L => a,b,c,d,e,f,g,h,i,j,k,l => 0,1,2,3,4,5,6,7,8,9,10,11);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M => a,b,c,d,e,f,g,h,i,j,k,l,m => 0,1,2,3,4,5,6,7,8,9,10,11,12);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N => a,b,c,d,e,f,g,h,i,j,k,l,m,n => 0,1,2,3,4,5,6,7,8,9,10,11,12,13);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O => a,b,c,d,e,f,g,h,i,j,k,l,m,n,o => 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P => a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p => 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q => a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q => 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R => a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r => 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S => a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s => 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18);
+implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T => a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t => 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19);
 
-        let ret = from_value_generic::<A>(&value.data, vec, idx, 0);
-        a = ret.0;
-        idx = ret.1;
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
 
-        let ret = from_value_generic::<B>(&value.data, vec, idx, 1);
-        b = ret.0;
-
-        (a, b)
-    }
-}
-impl<A: StaticType + ToBytes, B: StaticType + ToBytes> ToValue for (A, B) {
-    fn to_value(&self) -> Value {
-        let seg_len = vec![self.0.bytes_len_(), self.1.bytes_len_()];
-        Value::new_with_seg_len(self, seg_len)
-    }
-
-    fn value_type(&self) -> Type {
-        Self::static_type()
+    #[test]
+    fn test_value() {
+        let tuple = (12, 64., "Hello".to_string(), 1024);
+        let value = tuple.to_value();
+        assert_eq!(tuple, value.get::<(i32, f64, String, i32)>())
     }
 }

@@ -350,15 +350,38 @@ impl<T: StaticType> StaticType for Vec<T> {
     }
 }
 
-impl<A: StaticType, B: StaticType> StaticType for (A, B) {
-    fn static_type() -> Type {
-        Type::TUPLE
-    }
+macro_rules! implements_tuple_type {
+    ( $($x:ident),+ ) => {
+        impl <$($x: StaticType,)*> StaticType for ($($x,)*) {
+            fn static_type() -> Type {
+                Type::TUPLE
+            }
 
-    fn bytes_len() -> usize {
-        0
-    }
+            fn bytes_len() -> usize {
+                0
+            }
+        }
+    };
 }
+implements_tuple_type!(A, B);
+implements_tuple_type!(A, B, C);
+implements_tuple_type!(A, B, C, D);
+implements_tuple_type!(A, B, C, D, E);
+implements_tuple_type!(A, B, C, D, E, F);
+implements_tuple_type!(A, B, C, D, E, F, G);
+implements_tuple_type!(A, B, C, D, E, F, G, H);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
+implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
 
 pub trait ObjectType: Debug + StaticType + 'static {}
 
@@ -373,5 +396,16 @@ pub trait IsA<T: ObjectType>: ObjectType + ObjectSubclass {
 
     fn as_ref(&self) -> &Self::Type {
         unsafe { &*(self as *const Self as *const Self::Type) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+
+    #[test]
+    fn test_tupe_types() {
+        let tuple = ("Hello".to_string(), 1024, 12, 64.);
+        println!("{:?}", tuple.static_type_())
     }
 }
