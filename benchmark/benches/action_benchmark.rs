@@ -46,8 +46,8 @@ pub fn criterion_values(c: &mut Criterion) {
         assert_eq!(param, "action benchmark string param");
     });
 
-    c.bench_function("test-actions-tuple", |b| b.iter(|| test_action_tuple()));
-    c.bench_function("test-actions-string", |b| b.iter(|| test_action_string()));
+    c.bench_function("actions-tuple-test", |b| b.iter(|| test_action_tuple()));
+    c.bench_function("actions-string-test", |b| b.iter(|| test_action_string()));
 }
 
 criterion_group!(benches, criterion_values);

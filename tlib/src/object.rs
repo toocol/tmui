@@ -1,7 +1,9 @@
 #![allow(dead_code)]
-use std::{cell::RefCell, collections::HashMap, fmt::Debug};
-
-use lazy_static::__Deref;
+use std::{
+    cell::{Ref, RefCell},
+    collections::HashMap,
+    fmt::Debug,
+};
 
 use crate::{
     types::{IsA, ObjectType, StaticType, Type},
@@ -50,7 +52,7 @@ impl Default for Object {
 pub trait ObjectOperation {
     fn set_property(&self, name: &str, value: Value);
 
-    fn get_property(&self, name: &str) -> Option<Value>;
+    fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>>;
 }
 
 impl Object {
@@ -71,14 +73,8 @@ impl Object {
             .insert(name.to_string(), Box::new(value));
     }
 
-    pub fn primitive_get_property(&self, name: &str) -> Option<Value> {
-        let borrowed = self.properties.borrow();
-        let val_opt = borrowed.get(name);
-        if val_opt.is_some() {
-            Some(val_opt.as_deref().unwrap().deref().clone())
-        } else {
-            None
-        }
+    pub fn primitive_get_property(&self, name: &str) -> Option<Ref<Box<Value>>> {
+        Ref::filter_map(self.properties.borrow(), |map| map.get(name)).ok()
     }
 }
 
@@ -87,7 +83,7 @@ impl ObjectOperation for Object {
         self.primitive_set_property(name, value)
     }
 
-    fn get_property(&self, name: &str) -> Option<Value> {
+    fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>> {
         self.primitive_get_property(name)
     }
 }

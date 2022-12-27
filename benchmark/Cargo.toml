@@ -10,6 +10,9 @@ tipc = { path = "../tipc/" }
 tlib = { path = "../tlib/" }
 
 criterion = "0.4.0"
+regex = "*"
+pcre2 = "*"
+ pcre2-sys = "*"
 
 [[bench]]
 name = "value_benchmark"
@@ -17,4 +20,12 @@ harness = false
 
 [[bench]]
 name = "action_benchmark"
+harness = false
+
+[[bench]]
+name = "objects_benchmark"
+harness = false
+
+[[bench]]
+name = "regex_benchmark"
 harness = false
