@@ -11,8 +11,6 @@ tlib = { path = "../tlib/" }
 
 criterion = "0.4.0"
 regex = "*"
-pcre2 = "*"
- pcre2-sys = "*"
 
 [[bench]]
 name = "value_benchmark"
