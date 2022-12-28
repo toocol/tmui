@@ -272,7 +272,13 @@ pub struct Color {
 
 impl Color {
     pub fn new() -> Self {
-        Self { r: 0, g: 0, b: 0, a: 0, valid: false }
+        Self {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 0,
+            valid: false,
+        }
     }
 
     pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
@@ -305,6 +311,10 @@ impl Color {
             a: color.a,
             valid: true,
         }
+    }
+
+    pub fn hexcode(&self) -> String {
+        HexColor::rgba(self.r, self.g, self.b, self.a).to_string()
     }
 }
 
@@ -435,6 +445,7 @@ mod tests {
         let color = Color::from_rgba(13, 13, 13, 13);
         let val = color.to_value();
         let get = val.get();
-        assert_eq!(color, get)
+        assert_eq!(color, get);
+        println!("{}", color.hexcode());
     }
 }

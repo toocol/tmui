@@ -57,7 +57,7 @@ impl ActionHub {
         while let Ok(action) = self.receiver.try_recv() {
             let name = action.0;
             let param = action.1;
-            if let Some(actions) = self.map.borrow().get(&name.to_string()) {
+            if let Some(actions) = self.map.borrow().get(&name) {
                 actions.iter().for_each(|f| f(param.clone()));
             } else {
                 println!("Unconnected action: {}", name.to_string());
