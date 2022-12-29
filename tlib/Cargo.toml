@@ -10,3 +10,5 @@ macros = { path = "../macros/" }
 
 log = "0.4"
 lazy_static = "1.4.0"
+strum = "0.24.1"
+strum_macros = "0.24"
