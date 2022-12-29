@@ -15,7 +15,7 @@ pub enum KeyboardModifier {
 impl KeyboardModifier {
     pub fn or(&self, other: KeyboardModifier) -> KeyboardModifier {
         let one = self.as_u32();
-        let other = self.as_u32();
+        let other = other.as_u32();
         Self::Combination(one | other)
     }
 
@@ -55,6 +55,21 @@ impl Into<u32> for KeyboardModifier {
             Self::GroupSwitchModifier => 0x40000000,
             Self::KeyboardModifierMask => 0xfe000000,
             Self::Combination(mask) => mask,
+        }
+    }
+}
+impl From<u32> for KeyboardModifier {
+    fn from(value: u32) -> Self {
+        match value {
+            0x00000000 => Self::NoModifier,
+            0x02000000 => Self::ShiftModifier,
+            0x04000000 => Self::ControlModifier,
+            0x08000000 => Self::AltModifier,
+            0x10000000 => Self::MetaModifier,
+            0x20000000 => Self::KeypadModifier,
+            0x40000000 => Self::GroupSwitchModifier,
+            0xfe000000 => Self::KeyboardModifierMask,
+            _ => Self::Combination(value)
         }
     }
 }
