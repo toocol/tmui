@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use tlib::{emit, prelude::*, actions::{ActionHub, initialize_action_hub}};
+use tlib::{emit, prelude::*, actions::ActionHub};
 
 struct Widget;
 impl ActionHubExt for Widget {}
@@ -25,7 +25,7 @@ pub fn test_action_string() {
 
 pub fn criterion_values(c: &mut Criterion) {
     let mut action_hub = ActionHub::new();
-    initialize_action_hub(&mut action_hub);
+    action_hub.initialize();
 
     let widget = Widget {};
     widget.connect_action("action_benchmark_tuple", |param| {

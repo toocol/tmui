@@ -102,6 +102,11 @@ impl From<&str> for KeyCode {
         Self::from(value.to_string())
     }
 }
+impl From<&String> for KeyCode {
+    fn from(value: &String) -> Self {
+        Self::from(value.to_string())
+    }
+}
 impl Into<u32> for KeyCode {
     fn into(self) -> u32 {
         self as u32

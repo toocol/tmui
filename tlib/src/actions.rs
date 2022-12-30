@@ -16,20 +16,6 @@ thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
 lazy_static! {
     pub static ref ACTION_HUB: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
 }
-/// Initialize the `ActionHub`, the instance should be managed by the caller.  
-///
-/// The thread initialize the `ActionHub` was the `main` thread.
-///
-/// This function should only call once.
-pub fn initialize_action_hub(action_hub: &mut ActionHub) {
-    INIT.call_once(|| {
-        IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
-        ACTION_HUB.store(
-            action_hub as *mut ActionHub,
-            std::sync::atomic::Ordering::SeqCst,
-        );
-    });
-}
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
@@ -45,6 +31,18 @@ impl ActionHub {
             sender,
             receiver,
         }
+    }
+
+    /// Initialize the `ActionHub`, the instance should be managed by the caller.  
+    ///
+    /// The thread initialize the `ActionHub` was the `main` thread.
+    ///
+    /// This function should only call once.
+    pub fn initialize(&mut self) {
+        INIT.call_once(|| {
+            IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+            ACTION_HUB.store(self as *mut ActionHub, std::sync::atomic::Ordering::SeqCst);
+        });
     }
 
     pub fn process_multi_thread_actions(&self) {
@@ -165,7 +163,7 @@ mod tests {
 
     use crate::prelude::*;
 
-    use super::{initialize_action_hub, ActionHub};
+    use super::ActionHub;
 
     pub struct Widget;
     impl ActionHubExt for Widget {}
@@ -195,7 +193,7 @@ mod tests {
     #[test]
     fn test_actions() {
         let mut action_hub = ActionHub::new();
-        initialize_action_hub(&mut action_hub);
+        action_hub.initialize();
 
         let widget = Widget::new();
         widget.reg_action();
