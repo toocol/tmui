@@ -128,6 +128,22 @@ macro_rules! emit {
     }};
 }
 
+pub fn ptr_address<T>(obj: &T) -> i32 {
+    obj as *const T as *const u8 as i32
+}
+
+#[allow(unused_macros)]
+#[macro_export]
+macro_rules! signal {
+    ( $object:expr, $name:expr ) => {{
+        let mut signal = String::new();
+        signal.push_str(ptr_address($object).to_string().as_str());
+        signal.push('-');
+        signal.push_str($name);
+        signal
+    }};
+}
+
 /// Struct represents an action which can emit specified action.
 pub struct Action {
     name: String,
@@ -213,5 +229,12 @@ mod tests {
         for h in join_vec {
             h.join().unwrap()
         }
+    }
+
+    #[test]
+    fn test_signal() {
+        let widget = Widget::new();
+        let signal = signal!(&widget, "hello");
+        println!("{}", signal)
     }
 }

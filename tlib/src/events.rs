@@ -1,4 +1,4 @@
-use crate::prelude::{KeyCode, KeyboardModifier};
+use crate::namespace::{KeyCode, KeyboardModifier};
 
 pub trait Event {
     fn type_(&self) -> EventType;
