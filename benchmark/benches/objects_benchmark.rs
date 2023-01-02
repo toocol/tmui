@@ -7,6 +7,7 @@ use tlib::{
 };
 
 #[extends_object]
+#[derive(Default)]
 pub struct Widget {}
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";

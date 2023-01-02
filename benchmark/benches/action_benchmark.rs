@@ -2,6 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use tlib::{actions::ActionHub, emit, prelude::*, signals, signal, object::{ObjectSubclass, ObjectImpl}};
 
 #[extends_object]
+#[derive(Default)]
 struct Widget {}
 
 impl ObjectSubclass for Widget {
