@@ -178,9 +178,9 @@ macro_rules! signal {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! signals {
-    ( $(#[doc = $doc:expr] $name:ident();)* ) => {
+    ( $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
         $(
-            #[doc = $doc]
+            $(#[$($attrss)*])*
             #[allow(dead_code)]
             fn $name(&self) -> Signal {
                 signal!(self, stringify!($name))
