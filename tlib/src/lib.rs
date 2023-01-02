@@ -4,6 +4,7 @@ pub mod namespace;
 pub mod object;
 pub mod prelude;
 pub mod types;
+pub mod utils;
 pub mod values;
 
 pub use object::Object;

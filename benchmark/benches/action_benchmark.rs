@@ -1,7 +1,19 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use tlib::{actions::ActionHub, emit, prelude::*, signals, signal};
+use tlib::{actions::ActionHub, emit, prelude::*, signals, signal, object::{ObjectSubclass, ObjectImpl}};
 
-struct Widget;
+#[extends_object]
+struct Widget {}
+
+impl ObjectSubclass for Widget {
+    const NAME: &'static str = "Widget";
+
+    type Type = Widget;
+
+    type ParentType = Object;
+}
+
+impl ObjectImpl for Widget {}
+
 impl Widget {
     signals! {
         /// Sginal to action benchmark tuple test.
@@ -35,7 +47,7 @@ fn criterion_values(c: &mut Criterion) {
     let mut action_hub = ActionHub::new();
     action_hub.initialize();
 
-    let widget = Widget {};
+    let widget: Widget = Object::new(&[]);
     widget.connect_action(widget.action_benchmark_tuple(), |param| {
         let (p1, p2, p3, p4, p5, p6, p7) =
             param

@@ -92,7 +92,7 @@ impl ActionHub {
         })
     }
 }
-pub trait ActionExt: Sized {
+pub trait ActionExt: Sized + ObjectOperation {
     fn connect_action<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
@@ -109,6 +109,10 @@ pub trait ActionExt: Sized {
 
     fn create_action_with_param<T: ToValue + 'static>(&self, signal: Signal, param: T) -> Action {
         Action::with_param(signal, param)
+    }
+
+    fn action_address(&self) -> u64 {
+        self.id()
     }
 }
 
@@ -134,8 +138,8 @@ unsafe impl Send for Signal {}
 unsafe impl Sync for Signal {}
 
 #[inline]
-pub fn ptr_address<T>(obj: &T) -> i32 {
-    obj as *const T as *const u8 as i32
+pub fn ptr_address<T>(obj: &T) -> usize {
+    obj as *const T as *const u8 as usize
 }
 
 /////////////////////////////////////////////// Macros ///////////////////////////////////////////////
@@ -168,7 +172,7 @@ macro_rules! emit {
 macro_rules! signal {
     ( $object:expr, $name:expr ) => {{
         let mut signal = String::new();
-        signal.push_str(ptr_address($object).to_string().as_str());
+        signal.push_str($object.action_address().to_string().as_str());
         signal.push('-');
         signal.push_str($name);
         Signal::new(signal)
@@ -220,13 +224,27 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, time::Duration, sync::Arc};
+    use std::{thread, time::Duration, rc::Rc};
 
-    use crate::prelude::*;
+    use crate::{prelude::*, object::{ObjectSubclass, ObjectImpl}};
 
     use super::ActionHub;
 
-    pub struct Widget;
+    #[extends_object]
+    pub struct Widget {}
+
+    impl ObjectSubclass for Widget {
+        const NAME: &'static str = "Widget";
+
+        type Type = Widget;
+
+        type ParentType = Object;
+    }
+
+    impl ObjectImpl for Widget {
+
+    }
+
     impl ActionExt for Widget {}
     impl Widget {
         signals! {
@@ -238,7 +256,7 @@ mod tests {
         }
 
         pub fn new() -> Self {
-            Self {}
+            Object::new(&[])
         }
 
         pub fn reg_action(&self) {
@@ -263,15 +281,15 @@ mod tests {
         action_hub.initialize();
 
         let widget = Widget::new();
-        let arc = Arc::new(widget);
-        arc.reg_action();
-        arc.emit();
+        widget.reg_action();
+        let rc = Rc::new(widget);
+        rc.emit();
 
         let mut join_vec = vec![];
         for _ in 0..5 {
-            let widget = arc.clone();
+            let signal = rc.action_test();
             join_vec.push(thread::spawn(move || {
-                widget.emit();
+                emit!(signal, (1, "desc"))
             }));
         }
 

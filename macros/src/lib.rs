@@ -34,6 +34,10 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
 
                 impl ObjectOperation for #name {
+                    fn id(&self) -> u64 {
+                        self.object.id()
+                    }
+
                     fn set_property(&self, name: &str, value: Value) {
                         self.object.primitive_set_property(name, value)
                     }
@@ -85,6 +89,10 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
 
                 impl ObjectOperation for #name {
+                    fn id(&self) -> u64 {
+                        self.object.id()
+                    }
+
                     fn set_property(&self, name: &str, value: Value) {
                         self.element.object.primitive_set_property(name, value)
                     }

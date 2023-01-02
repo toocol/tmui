@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     types::{IsA, ObjectType, StaticType, Type},
-    values::{ToValue, Value},
+    values::{ToValue, Value}, utils::SnowflakeGuidGenerator,
 };
 
 /// Super type of object system, every subclass object should extends this struct by proc-marco `[extends_object]`,
@@ -38,18 +38,22 @@ use crate::{
 /// ```
 #[derive(Debug)]
 pub struct Object {
+    id: u64,
     properties: RefCell<HashMap<String, Box<Value>>>,
 }
 
 impl Default for Object {
     fn default() -> Self {
         Self {
+            id: SnowflakeGuidGenerator::next_id().unwrap(),
             properties: RefCell::new(HashMap::new()),
         }
     }
 }
 
 pub trait ObjectOperation {
+    fn id(&self) -> u64;
+
     fn set_property(&self, name: &str, value: Value);
 
     fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>>;
@@ -79,6 +83,10 @@ impl Object {
 }
 
 impl ObjectOperation for Object {
+    fn id(&self) -> u64 {
+        self.id
+    }
+
     fn set_property(&self, name: &str, value: Value) {
         self.primitive_set_property(name, value)
     }
