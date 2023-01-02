@@ -242,11 +242,10 @@ mod tests {
         type ParentType = Object;
     }
 
-    impl ObjectImpl for Widget {
-
-    }
+    impl ObjectImpl for Widget {}
 
     impl ActionExt for Widget {}
+
     impl Widget {
         signals! {
             /// Signal: action to test.
