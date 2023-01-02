@@ -218,7 +218,7 @@ macro_rules! signal {
     ( $object:expr, $name:expr ) => {{
         let mut signal = String::new();
         signal.push_str($object.action_address().to_string().as_str());
-        signal.push('-');
+        signal.push('_');
         signal.push_str($name);
         Signal::new(signal)
     }};
@@ -291,8 +291,6 @@ mod tests {
     }
 
     impl ObjectImpl for Widget {}
-
-    impl ActionExt for Widget {}
 
     impl Widget {
         signals! {

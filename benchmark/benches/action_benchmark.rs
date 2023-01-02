@@ -23,7 +23,6 @@ impl Widget {
         action_benchmark_string();
     }
 }
-impl ActionExt for Widget {}
 
 fn test_action_tuple(widget: &Widget) {
     emit!(

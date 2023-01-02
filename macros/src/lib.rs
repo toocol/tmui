@@ -46,6 +46,8 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
 
+                impl ActionExt for #name {}
+
                 impl ObjectType for #name {}
 
                 impl IsA<Object> for #name {}
@@ -125,6 +127,8 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                         self.element.validate()
                     }
                 }
+
+                impl ActionExt for #name {}
 
                 impl ObjectType for #name {}
 
