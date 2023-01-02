@@ -13,6 +13,7 @@ mod tests {
     };
 
     #[extends_element]
+    #[derive(Default)]
     pub struct SubElement {}
 
     impl ObjectSubclass for SubElement {

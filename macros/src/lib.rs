@@ -24,7 +24,6 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
             }
 
             return quote! {
-                #[derive(Debug, Default)]
                 #ast
 
                 impl ObjectImplExt for #name {
@@ -79,7 +78,6 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
             }
 
             return quote! {
-                #[derive(Debug, Default)]
                 #ast
 
                 impl ObjectImplExt for #name {

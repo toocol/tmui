@@ -21,6 +21,7 @@ mod tests {
     };
 
     #[extends_object]
+    #[derive(Default)]
     pub struct TestObject {}
 
     impl ObjectSubclass for TestObject {

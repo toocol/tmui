@@ -231,6 +231,7 @@ mod tests {
     use super::ActionHub;
 
     #[extends_object]
+    #[derive(Default)]
     pub struct Widget {}
 
     impl ObjectSubclass for Widget {

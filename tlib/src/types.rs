@@ -383,7 +383,7 @@ implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
 implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
 implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
 
-pub trait ObjectType: Debug + StaticType + 'static {}
+pub trait ObjectType: StaticType + 'static {}
 
 pub trait IsA<T: ObjectType>: ObjectType + ObjectSubclass {
     fn downcast_ref<R: ObjectType>(&self) -> Option<&R> {

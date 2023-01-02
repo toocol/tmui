@@ -2,7 +2,6 @@
 use std::{
     cell::{Ref, RefCell},
     collections::HashMap,
-    fmt::Debug,
 };
 
 use crate::{
@@ -18,6 +17,7 @@ use crate::{
 /// use tlib::object::{ObjectImpl, ObjectSubclass};
 ///
 /// #[extends_object]
+/// #[derive(Default)]
 /// pub struct SubObject {};
 ///
 /// impl ObjectSubclass for SubObject {
@@ -140,7 +140,7 @@ impl<T: StaticType> ObjectExt for T {
 
 pub trait IsSubclassable {}
 
-pub trait ObjectSubclass: Debug + 'static {
+pub trait ObjectSubclass: 'static {
     const NAME: &'static str;
 
     type Type: ObjectExt + ObjectOperation + ObjectType;

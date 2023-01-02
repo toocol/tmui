@@ -8,6 +8,7 @@ use tlib::{
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends_object]
+#[derive(Default)]
 pub struct Element {
     invalidate: Cell<bool>,
     rect: Cell<Rect>,
