@@ -3,6 +3,7 @@ use lazy_static::lazy_static;
 use std::{
     cell::RefCell,
     collections::HashMap,
+    fmt::Display,
     ptr::null_mut,
     sync::{
         atomic::AtomicPtr,
@@ -63,7 +64,7 @@ impl ActionHub {
         }
     }
 
-    pub fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(&self, name: S, f: F) {
+    pub fn connect_action<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
                 panic!("`connect_action()` should only call in the `main` thread.")
@@ -71,7 +72,7 @@ impl ActionHub {
         });
 
         let mut map_ref = self.map.borrow_mut();
-        let vec = map_ref.entry(name.to_string()).or_insert(vec![]);
+        let vec = map_ref.entry(signal.signal().to_string()).or_insert(vec![]);
         vec.push(Box::new(f));
     }
 
@@ -91,45 +92,75 @@ impl ActionHub {
         })
     }
 }
-pub trait ActionHubExt {
-    fn connect_action<S: ToString, F: Fn(Option<Value>) + 'static>(&self, name: S, f: F) {
+pub trait ActionExt: Sized {
+    fn connect_action<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
                 .as_ref()
                 .expect("`ActionHub` was not initialized, or already dead.")
-                .connect_action(name, f)
+                .connect_action(signal, f)
         }
+    }
+
+    fn create_action_with_no_param(&self, signal: Signal) -> Action {
+        Action::with_no_param(signal)
+    }
+
+    fn create_action_with_param<T: ToValue + 'static>(&self, signal: Signal, param: T) -> Action {
+        Action::with_param(signal, param)
     }
 }
 
-///////////////////////////////////// Macros
+/// The struct represents the emitter's signal string.
+pub struct Signal {
+    signal: String,
+}
+impl Signal {
+    pub fn new(signal: String) -> Self {
+        Self { signal }
+    }
+
+    pub fn signal(&self) -> &String {
+        &self.signal
+    }
+}
+impl Display for Signal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("Signal: [\"{}\"]", self.signal()).as_str())
+    }
+}
+unsafe impl Send for Signal {}
+unsafe impl Sync for Signal {}
+
+#[inline]
+pub fn ptr_address<T>(obj: &T) -> i32 {
+    obj as *const T as *const u8 as i32
+}
+
+/////////////////////////////////////////////// Macros ///////////////////////////////////////////////
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! emit {
-    ( $name:expr ) => {{
+    ( $signal:expr ) => {{
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
                 .as_ref()
                 .expect("`ActionHub` was not initialized, or already dead.")
-                .activate_action($name, None)
+                .activate_action($signal.signal(), None)
         };
     }};
-    ( $name:expr, $x:expr ) => {{
+    ( $signal:expr, $x:expr ) => {{
         let value = $x.to_value();
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
                 .as_ref()
                 .expect("`ActionHub` was not initialized, or already dead.")
-                .activate_action($name, Some(value))
+                .activate_action($signal.signal(), Some(value))
         };
     }};
-}
-
-pub fn ptr_address<T>(obj: &T) -> i32 {
-    obj as *const T as *const u8 as i32
 }
 
 #[allow(unused_macros)]
@@ -140,58 +171,78 @@ macro_rules! signal {
         signal.push_str(ptr_address($object).to_string().as_str());
         signal.push('-');
         signal.push_str($name);
-        signal
+        Signal::new(signal)
     }};
+}
+
+#[allow(unused_macros)]
+#[macro_export]
+macro_rules! signals {
+    ( $(#[doc = $doc:expr] $name:ident();)* ) => {
+        $(
+            #[doc = $doc]
+            #[allow(dead_code)]
+            fn $name(&self) -> Signal {
+                signal!(self, stringify!($name))
+            }
+        )*
+    };
 }
 
 /// Struct represents an action which can emit specified action.
 pub struct Action {
-    name: String,
+    signal: Signal,
     param: Option<Box<dyn ToValue>>,
 }
 impl Action {
-    pub fn with_no_param<S: ToString>(name: S) -> Self {
+    fn with_no_param(signal: Signal) -> Self {
         Self {
-            name: name.to_string(),
+            signal: signal,
             param: None,
         }
     }
 
-    pub fn with_param<S: ToString, T: ToValue + 'static>(name: S, param: T) -> Self {
+    fn with_param<T: ToValue + 'static>(signal: Signal, param: T) -> Self {
         Self {
-            name: name.to_string(),
+            signal: signal,
             param: Some(Box::new(param)),
         }
     }
 
     pub fn emit(&self) {
         if let Some(param) = self.param.as_ref() {
-            emit!(&self.name, param)
+            emit!(self.signal, param)
         } else {
-            emit!(&self.name)
+            emit!(self.signal)
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, time::Duration};
+    use std::{thread, time::Duration, sync::Arc};
 
     use crate::prelude::*;
 
     use super::ActionHub;
 
     pub struct Widget;
-    impl ActionHubExt for Widget {}
+    impl ActionExt for Widget {}
     impl Widget {
-        pub const ACTION: &'static str = "action-test";
+        signals! {
+            /// Signal: action to test.
+            action_test();
+
+            /// Signal: action to demo.
+            action_demo();
+        }
 
         pub fn new() -> Self {
             Self {}
         }
 
         pub fn reg_action(&self) {
-            self.connect_action(Self::ACTION, |param| {
+            self.connect_action(self.action_test(), |param| {
                 println!("Process action");
                 let param = param.unwrap().get::<(i32, String)>();
                 assert_eq!(1, param.0);
@@ -202,7 +253,7 @@ mod tests {
         pub fn emit(&self) {
             let param = 1;
             let desc = "desc";
-            emit!(Self::ACTION, (param, desc));
+            emit!(self.action_test(), (param, desc));
         }
     }
 
@@ -212,23 +263,20 @@ mod tests {
         action_hub.initialize();
 
         let widget = Widget::new();
-        widget.reg_action();
-        widget.emit();
+        let arc = Arc::new(widget);
+        arc.reg_action();
+        arc.emit();
 
         let mut join_vec = vec![];
         for _ in 0..5 {
-            join_vec.push(thread::spawn(|| {
-                let widget = Widget::new();
+            let widget = arc.clone();
+            join_vec.push(thread::spawn(move || {
                 widget.emit();
             }));
         }
 
         thread::sleep(Duration::from_millis(500));
         action_hub.process_multi_thread_actions();
-
-        for h in join_vec {
-            h.join().unwrap()
-        }
     }
 
     #[test]
