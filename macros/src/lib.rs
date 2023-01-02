@@ -90,7 +90,7 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ObjectOperation for #name {
                     fn id(&self) -> u64 {
-                        self.object.id()
+                        self.element.object.id()
                     }
 
                     fn set_property(&self, name: &str, value: Value) {
