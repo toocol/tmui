@@ -1,3 +1,45 @@
+/// The crate of actions system.
+/// 
+/// <examples>
+/// 
+/// ```
+/// use tlib::prelude::*;
+/// use tlib::actions::ActionHub;
+/// use tlib::object::{ObjectImpl, ObjectSubclass};
+/// use tlib::{signals, signal, emit};
+///
+/// #[extends_object]
+/// #[derive(Default)]
+/// pub struct Widget {}
+///
+/// impl ObjectSubclass for Widget {
+///     const NAME: &'static str = "Widget";
+///
+///     type Type = Widget;
+///
+///     type ParentType = Object;
+/// }
+///
+/// impl ObjectImpl for Widget {}
+///
+/// impl ActionExt for Widget {}
+/// 
+/// impl Widget {
+///     signals! {
+///         action_test();
+///     }
+/// }
+/// 
+/// fn main() {
+///     // Not necessary in actual use. //
+///     let mut action_hub = ActionHub::new();
+///     action_hub.initialize();
+/// 
+///     let widget: Widget = Object::new(&[]);
+///     widget.connect_action(widget.action_test(), |param| println!("Hello World!"));
+///     emit!(widget.action_test());
+/// }
+/// ```
 use crate::prelude::*;
 use lazy_static::lazy_static;
 use std::{
@@ -116,7 +158,10 @@ pub trait ActionExt: Sized + ObjectOperation {
     }
 }
 
-/// The struct represents the emitter's signal string.
+/// The struct represents the subject to emit specified actions.
+///
+/// `Signal` implements the `Send` + `Sync` trait, so it can be transfered between threads safly.
+/// The `Siginal` emited in the different threads will be transfer to the `main` thread to process the action.
 pub struct Signal {
     signal: String,
 }
@@ -199,14 +244,14 @@ pub struct Action {
     param: Option<Box<dyn ToValue>>,
 }
 impl Action {
-    fn with_no_param(signal: Signal) -> Self {
+    pub fn with_no_param(signal: Signal) -> Self {
         Self {
             signal: signal,
             param: None,
         }
     }
 
-    fn with_param<T: ToValue + 'static>(signal: Signal, param: T) -> Self {
+    pub fn with_param<T: ToValue + 'static>(signal: Signal, param: T) -> Self {
         Self {
             signal: signal,
             param: Some(Box::new(param)),
@@ -224,9 +269,12 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, time::Duration, rc::Rc};
+    use std::{rc::Rc, thread, time::Duration};
 
-    use crate::{prelude::*, object::{ObjectSubclass, ObjectImpl}};
+    use crate::{
+        object::{ObjectImpl, ObjectSubclass},
+        prelude::*,
+    };
 
     use super::ActionHub;
 
@@ -288,9 +336,7 @@ mod tests {
         let mut join_vec = vec![];
         for _ in 0..5 {
             let signal = rc.action_test();
-            join_vec.push(thread::spawn(move || {
-                emit!(signal, (1, "desc"))
-            }));
+            join_vec.push(thread::spawn(move || emit!(signal, (1, "desc"))));
         }
 
         thread::sleep(Duration::from_millis(500));
