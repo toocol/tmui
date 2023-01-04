@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::fmt::Debug;
+use std::{fmt::Debug, mem::size_of};
 
 use crate::object::ObjectSubclass;
 
@@ -22,6 +22,7 @@ const TTYPE_STRING: TType = 0x0E;
 const TTYPE_OBJECT: TType = 0x0F;
 const TTYPE_ARRAY: TType = 0x10;
 const TTYPE_TUPLE: TType = 0x11;
+const TTYPE_USIZE: TType = 0x12;
 
 /// Fundamental type of ObjectSystem
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -135,6 +136,12 @@ impl Type {
         name: "TUPLE",
     };
 
+    /// The fundamental type corresponding to `Vec`
+    pub const USIZE: Self = Self {
+        ttype: TTYPE_USIZE,
+        name: "usize",
+    };
+
     pub fn from_name(name: &'static str) -> Self {
         Type {
             ttype: TTYPE_OBJECT,
@@ -169,6 +176,16 @@ pub trait StaticType {
 
     fn bytes_len_(&self) -> usize {
         Self::bytes_len()
+    }
+}
+
+impl StaticType for usize {
+    fn static_type() -> Type {
+        Type::USIZE
+    }
+
+    fn bytes_len() -> usize {
+        size_of::<usize>()
     }
 }
 

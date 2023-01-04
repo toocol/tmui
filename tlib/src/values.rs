@@ -97,6 +97,33 @@ impl<T: ToValue + StaticType> ToValue for &T {
     }
 }
 
+impl ToBytes for usize {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_be_bytes().to_vec()
+    }
+}
+impl FromBytes for usize {
+    fn from_bytes(data: &[u8], _: usize) -> Self {
+        let mut bytes = [0u8; 8];
+        bytes.copy_from_slice(&data);
+        Self::from_be_bytes(bytes)
+    }
+}
+impl FromValue for usize {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(&value.data, Self::bytes_len())
+    }
+}
+impl ToValue for usize {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+
 impl ToBytes for bool {
     fn to_bytes(&self) -> Vec<u8> {
         vec![if *self { 1 } else { 0 }; 1]
