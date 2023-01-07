@@ -11,4 +11,9 @@ tlib = { path = "../tlib/" }
 
 log = "0.4"
 skia-safe = "0.57.0"
+glutin = "0.30.3"
 hex_color = "2.0.0"
+windows = { version = "0.43.0", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+], optional = true }
