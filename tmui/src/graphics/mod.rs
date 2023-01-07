@@ -1,3 +1,4 @@
+pub mod bitmap;
 pub mod board;
 pub mod drawing_context;
 pub mod element;
