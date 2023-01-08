@@ -38,8 +38,16 @@ impl ObjectSubclass for Application {
 impl ObjectImpl for Application {}
 
 impl Application {
-    pub fn run(&mut self) {
-        loop {}
+    /// Get the builder [`ApplicationBuilder`] of `Application`.
+    pub fn builder() -> ApplicationBuilder {
+        ApplicationBuilder::default()
+    }
+
+    pub fn run(&self) {
+        // Create the `UI` main thread.
+        loop {
+            self.platform_context.as_ref().unwrap().handle_platform_event()
+        }
     }
 
     fn startup_initialize(&mut self) {
@@ -84,6 +92,7 @@ impl Application {
 }
 
 /// The builder to create the [`Application`]
+#[derive(Default)]
 pub struct ApplicationBuilder {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,

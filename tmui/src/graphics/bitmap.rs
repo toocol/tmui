@@ -1,13 +1,19 @@
 use std::{ptr::NonNull, slice, os::raw::c_void};
 
 /// `Bitmap` holding the raw pointer of specific memory area created by specific platform context.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Bitmap {
     /// The raw pointer of the origin memory area.
     raw_pointer: Option<NonNull<c_void>>,
     /// The length of the raw pointer.
     raw_bytes: usize,
+    /// The width of `Bitmap`.
+    width: i32,
+    /// The height of `Bitmap`.
+    height: i32,
 }
+unsafe impl Send for Bitmap {}
+unsafe impl Sync for Bitmap {}
 
 impl Bitmap {
     /// Constructer to create the `Bitmap`.
@@ -15,6 +21,8 @@ impl Bitmap {
         Self {
             raw_pointer: NonNull::new(pointer),
             raw_bytes: (width * height * 4) as usize,
+            width,
+            height,
         }
     }
 
@@ -39,5 +47,13 @@ impl Bitmap {
 
     pub fn raw_bytes(&self) -> usize {
         self.raw_bytes
+    }
+
+    pub fn width(&self) -> i32 {
+        self.width
+    }
+
+    pub fn height(&self) -> i32 {
+        self.height
     }
 }

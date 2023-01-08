@@ -58,4 +58,8 @@ impl PlatformContext for PlatformIpc {
     fn image_info(&self) -> &ImageInfo {
         &self.image_info
     }
+
+    fn handle_platform_event(&self) {
+        todo!()
+    }
 }

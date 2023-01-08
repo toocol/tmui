@@ -1,19 +1,13 @@
 use super::PlatformContext;
 use crate::graphics::bitmap::Bitmap;
 use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo};
-use std::{mem::size_of, os::raw::c_void};
+use std::{mem::size_of, os::raw::c_void, thread};
 use windows::{
+    core::*,
     w,
     Win32::{
-        Foundation::{HANDLE, HINSTANCE, HWND},
-        Graphics::Gdi::{
-            CreateDIBSection, DeleteObject, GetDC, ReleaseDC, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
-            COLOR_WINDOW, DIB_RGB_COLORS, HBITMAP, HBRUSH,
-        },
-        UI::WindowsAndMessaging::{
-            CloseWindow, CreateWindowExW, RegisterClassExW, CS_HREDRAW, CS_VREDRAW, HCURSOR, HICON,
-            WNDCLASSEXW, WNDPROC, WS_CAPTION, WS_EX_APPWINDOW, WS_EX_LEFT, WS_SIZEBOX, WS_VISIBLE,
-        },
+        Foundation::*, Graphics::Gdi::*, System::LibraryLoader::GetModuleHandleW,
+        UI::WindowsAndMessaging::*,
     },
 };
 
@@ -30,7 +24,7 @@ pub struct PlatformWin32 {
 
     /// The fileds associated with win32
     _hins: HINSTANCE,
-    _wcls: WNDCLASSEXW,
+    _wcls: WNDCLASSW,
     hwnd: HWND,
     hbmp: HBITMAP,
 }
@@ -39,53 +33,52 @@ impl PlatformContext for PlatformWin32 {
     type Type = PlatformWin32;
 
     fn new(title: &str, width: i32, height: i32) -> Self {
-        let hins = HINSTANCE::default();
-        let mut wcls = WNDCLASSEXW::default();
-        let mut brush = HBRUSH::default();
-        brush.0 = COLOR_WINDOW.0 as isize + 1;
-        wcls.cbClsExtra = 0;
-        wcls.cbWndExtra = 0;
-        wcls.hbrBackground = brush;
-        wcls.hCursor = HCURSOR::default();
-        wcls.hIcon = HICON::default();
-        wcls.hInstance = hins;
-        wcls.lpfnWndProc = WNDPROC::default();
-        wcls.lpszClassName = w!("TmuiMainClass");
-        wcls.lpszMenuName = w!("");
-        wcls.style = CS_HREDRAW | CS_VREDRAW;
-        unsafe { RegisterClassExW(&wcls as *const WNDCLASSEXW) };
+        unsafe {
+            let hins = GetModuleHandleW(None).unwrap();
+            assert!(hins.0 != 0);
 
-        let hwnd = unsafe {
-            CreateWindowExW(
-                WS_EX_APPWINDOW | WS_EX_LEFT,
+            let wcls = WNDCLASSW {
+                hCursor: LoadCursorW(None, IDC_ARROW).unwrap(),
+                hInstance: hins,
+                lpszClassName: w!("TmuiMainClass"),
+
+                style: CS_HREDRAW | CS_VREDRAW,
+                lpfnWndProc: Some(wndproc),
+                ..Default::default()
+            };
+
+            let atom = RegisterClassW(&wcls);
+            assert!(atom != 0);
+
+            let hwnd = CreateWindowExW(
+                WINDOW_EX_STYLE::default(),
                 w!("TmuiMainClass"),
-                w!("Tmui"),
-                WS_VISIBLE | WS_CAPTION | WS_SIZEBOX,
-                0,
-                0,
+                PCWSTR(HSTRING::from(title).as_ptr()),
+                WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
                 width,
                 height,
                 None,
                 None,
                 hins,
                 None,
-            )
-        };
+            );
 
-        let mut pixels = vec![0; (width * height * 4) as usize];
-        let bitmap = Bitmap::new(&mut pixels[..] as *mut [u8] as *mut c_void, width, height);
+            let mut pixels = vec![0; (width * height * 4) as usize];
+            let bitmap = Bitmap::new(&mut pixels[..] as *mut [u8] as *mut c_void, width, height);
 
-        let mut bmi = BITMAPINFO::default();
-        bmi.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
-        bmi.bmiHeader.biWidth = width;
-        bmi.bmiHeader.biHeight = -height;
-        bmi.bmiHeader.biPlanes = 1;
-        bmi.bmiHeader.biBitCount = 32;
-        bmi.bmiHeader.biCompression = BI_RGB;
-        bmi.bmiHeader.biSizeImage = 0;
+            let mut bmi = BITMAPINFO::default();
+            bmi.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
+            bmi.bmiHeader.biWidth = width;
+            bmi.bmiHeader.biHeight = -height;
+            bmi.bmiHeader.biPlanes = 1;
+            bmi.bmiHeader.biBitCount = 32;
+            bmi.bmiHeader.biCompression = BI_RGB;
+            bmi.bmiHeader.biSizeImage = 0;
 
-        let hbmp;
-        unsafe {
+            let hbmp;
+
             let hdc = GetDC(hwnd);
             hbmp = CreateDIBSection(
                 hdc,
@@ -97,24 +90,24 @@ impl PlatformContext for PlatformWin32 {
             )
             .expect("Create `HBITMAP` failed.");
             ReleaseDC(hwnd, hdc);
-        }
 
-        Self {
-            title: title.to_string(),
-            width,
-            height,
-            bitmap,
-            image_info: ImageInfo::new(
-                (width, height),
-                ColorType::BGRA8888,
-                AlphaType::Premul,
-                ColorSpace::new_srgb(),
-            ),
-            _pixels: pixels,
-            _hins: hins,
-            _wcls: wcls,
-            hwnd,
-            hbmp,
+            Self {
+                title: title.to_string(),
+                width,
+                height,
+                bitmap,
+                image_info: ImageInfo::new(
+                    (width, height),
+                    ColorType::BGRA8888,
+                    AlphaType::Premul,
+                    ColorSpace::new_srgb(),
+                ),
+                _pixels: pixels,
+                _hins: hins,
+                _wcls: wcls,
+                hwnd,
+                hbmp,
+            }
         }
     }
 
@@ -150,5 +143,32 @@ impl PlatformContext for PlatformWin32 {
 
     fn image_info(&self) -> &ImageInfo {
         &self.image_info
+    }
+
+    fn handle_platform_event(&self) {
+        unsafe {
+            let mut message = MSG::default();
+            if GetMessageW(&mut message, self.hwnd, 0, 0).into() {
+                DispatchMessageW(&message);
+            }
+        }
+    }
+}
+
+extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    unsafe {
+        match message {
+            WM_PAINT => {
+                println!("WM_PAINT: {}", thread::current().name().unwrap());
+                ValidateRect(window, None);
+                LRESULT(0)
+            }
+            WM_DESTROY => {
+                println!("WM_DESTROY: {}", thread::current().name().unwrap());
+                PostQuitMessage(0);
+                LRESULT(0)
+            }
+            _ => DefWindowProcW(window, message, wparam, lparam),
+        }
     }
 }

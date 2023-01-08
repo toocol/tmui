@@ -55,6 +55,9 @@ pub trait PlatformContext: Sized + 'static {
 
     /// Get the `ImageInfo` of platform context.
     fn image_info(&self) -> &ImageInfo;
+
+    /// Handle the event corresponding to specific platform.
+    fn handle_platform_event(&self);
 }
 
 pub trait PlatformContextWrapper {
@@ -71,6 +74,8 @@ pub trait PlatformContextWrapper {
     fn context_bitmap(&self) -> &Bitmap;
 
     fn image_info(&self) -> &ImageInfo;
+
+    fn handle_platform_event(&self);
 }
 
 impl<T: PlatformContext> PlatformContextWrapper for Option<T> {
@@ -100,5 +105,9 @@ impl<T: PlatformContext> PlatformContextWrapper for Option<T> {
 
     fn image_info(&self) -> &ImageInfo {
         self.as_ref().unwrap().image_info()
+    }
+
+    fn handle_platform_event(&self) {
+        self.as_ref().unwrap().handle_platform_event()
     }
 }
