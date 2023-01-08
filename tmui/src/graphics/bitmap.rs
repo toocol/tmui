@@ -1,4 +1,4 @@
-use std::{ptr::NonNull, slice, os::raw::c_void};
+use std::{os::raw::c_void, ptr::NonNull, slice};
 
 /// `Bitmap` holding the raw pointer of specific memory area created by specific platform context.
 #[derive(Default, Debug, Clone, Copy)]
@@ -6,7 +6,9 @@ pub struct Bitmap {
     /// The raw pointer of the origin memory area.
     raw_pointer: Option<NonNull<c_void>>,
     /// The length of the raw pointer.
-    raw_bytes: usize,
+    total_bytes: usize,
+    /// Bytes number of a row.
+    row_bytes: usize,
     /// The width of `Bitmap`.
     width: i32,
     /// The height of `Bitmap`.
@@ -20,7 +22,8 @@ impl Bitmap {
     pub fn new(pointer: *mut c_void, width: i32, height: i32) -> Self {
         Self {
             raw_pointer: NonNull::new(pointer),
-            raw_bytes: (width * height * 4) as usize,
+            total_bytes: (width * height * 4) as usize,
+            row_bytes: (width * 4) as usize,
             width,
             height,
         }
@@ -31,7 +34,7 @@ impl Bitmap {
     }
 
     pub fn set_raw_bytes(&mut self, raw_bytes: usize) {
-        self.raw_bytes = raw_bytes
+        self.total_bytes = raw_bytes
     }
 
     pub fn as_ptr(&self) -> *mut c_void {
@@ -42,11 +45,11 @@ impl Bitmap {
     }
 
     pub fn get_pixels(&self) -> &'static mut [u8] {
-        unsafe { slice::from_raw_parts_mut(self.as_ptr() as *mut u8, self.raw_bytes) }
+        unsafe { slice::from_raw_parts_mut(self.as_ptr() as *mut u8, self.total_bytes) }
     }
 
-    pub fn raw_bytes(&self) -> usize {
-        self.raw_bytes
+    pub fn row_bytes(&self) -> usize {
+        self.row_bytes
     }
 
     pub fn width(&self) -> i32 {

@@ -1138,6 +1138,7 @@ version = "0.1.0"
 dependencies = [
  "glutin",
  "hex_color",
+ "lazy_static",
  "log",
  "skia-safe",
  "tipc",

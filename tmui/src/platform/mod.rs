@@ -1,11 +1,12 @@
+pub mod message;
 pub mod platform_ipc;
 pub mod platform_win32;
 
+pub use message::*;
 pub use platform_ipc::*;
 pub use platform_win32::*;
 
 use crate::graphics::bitmap::Bitmap;
-use skia_safe::ImageInfo;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -53,11 +54,11 @@ pub trait PlatformContext: Sized + 'static {
     /// Get the `Bitmap` of platform context.
     fn context_bitmap(&self) -> &Bitmap;
 
-    /// Get the `ImageInfo` of platform context.
-    fn image_info(&self) -> &ImageInfo;
-
     /// Handle the event corresponding to specific platform.
     fn handle_platform_event(&self);
+
+    /// Send [`Message`] to the platform context.
+    fn send_message(&self, message: Message);
 }
 
 pub trait PlatformContextWrapper {
@@ -73,9 +74,9 @@ pub trait PlatformContextWrapper {
 
     fn context_bitmap(&self) -> &Bitmap;
 
-    fn image_info(&self) -> &ImageInfo;
-
     fn handle_platform_event(&self);
+
+    fn send_message(&self, message: Message);
 }
 
 impl<T: PlatformContext> PlatformContextWrapper for Option<T> {
@@ -103,11 +104,11 @@ impl<T: PlatformContext> PlatformContextWrapper for Option<T> {
         self.as_ref().unwrap().context_bitmap()
     }
 
-    fn image_info(&self) -> &ImageInfo {
-        self.as_ref().unwrap().image_info()
-    }
-
     fn handle_platform_event(&self) {
         self.as_ref().unwrap().handle_platform_event()
+    }
+
+    fn send_message(&self, message: Message) {
+        self.as_ref().unwrap().send_message(message)
     }
 }

@@ -1,3 +1,5 @@
+use std::{thread, time::Duration, sync::mpsc::{channel, Sender}};
+
 #[cfg(target_os = "linux")]
 use crate::platform::PlatformLinux;
 #[cfg(target_os = "macos")]
@@ -7,11 +9,14 @@ use crate::platform::PlatformWin32;
 use crate::{
     backend::{
         mental_backend::MentalBackend, opengl_backend::OpenGLBackend,
-        raster_backend::RasterBackend, Backend, BackendType, BackendWrapper,
+        raster_backend::RasterBackend, Backend, BackendType,
     },
-    platform::{PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
+    graphics::bitmap::Bitmap,
+    platform::{PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType, Message},
 };
+use skia_safe::{Path, Paint, Color};
 use tlib::{
+    actions::ActionHub,
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
     Object,
@@ -24,7 +29,6 @@ pub struct Application {
     backend_type: BackendType,
 
     platform_context: Option<Box<dyn PlatformContextWrapper>>,
-    backend: Option<Box<dyn BackendWrapper>>,
 }
 
 impl ObjectSubclass for Application {
@@ -44,9 +48,20 @@ impl Application {
     }
 
     pub fn run(&self) {
+        let platform_context = self.platform_context.as_ref().unwrap();
+        let (sender, receiver) = channel::<Message>();
+
         // Create the `UI` main thread.
+        let bitmap = platform_context.context_bitmap().clone();
+        let backend_type = self.backend_type;
+        thread::spawn(move || Self::ui_main(backend_type, bitmap, sender));
+
         loop {
-            self.platform_context.as_ref().unwrap().handle_platform_event()
+            if let Ok(msg) = receiver.try_recv() {
+                platform_context.send_message(msg);
+            }
+            platform_context.handle_platform_event();
+            thread::sleep(Duration::from_nanos(1));
         }
     }
 
@@ -73,21 +88,45 @@ impl Application {
             }
         }
         self.platform_context = Some(platform_context);
+    }
+
+    fn ui_main(backend_type: BackendType, bitmap: Bitmap, sender: Sender<Message>) {
+        // Create and initialize the `ActionHub`.
+        let mut action_hub = ActionHub::new();
+        action_hub.initialize();
 
         // Create the [`Backend`] based on the backend type specified by the user.
         let backend;
-        match self.backend_type {
-            BackendType::Raster => {
-                backend = RasterBackend::new().wrap()
-            }
-            BackendType::OpenGL => {
-                backend = OpenGLBackend::new().wrap()
-            }
-            BackendType::Mental => {
-                backend = MentalBackend::new().wrap()
-            }
+        match backend_type {
+            BackendType::Raster => backend = RasterBackend::new(bitmap).wrap(),
+            BackendType::OpenGL => backend = OpenGLBackend::new(bitmap).wrap(),
+            BackendType::Mental => backend = MentalBackend::new(bitmap).wrap(),
         }
-        self.backend = Some(backend);
+
+        let mut surface = backend.surface();
+        let canvas = surface.canvas();
+        let mut paint = Paint::default();
+        paint.set_color(Color::BLACK);
+        paint.set_anti_alias(true);
+        paint.set_stroke_width(1.0);
+
+        canvas.scale((1.2, 1.2));
+        let mut path = Path::new();
+        path.move_to((36., 48.));
+        path.quad_to((330., 440.), (600., 180.));
+        canvas.translate((10., 10.));
+        paint.set_stroke_width(10.);
+        paint.set_style(skia_safe::PaintStyle::Stroke);
+        canvas.draw_path(&path, &paint);
+        sender.send(Message::MESSAGE_PIXELS_UPDATE).unwrap();
+
+        // Create the `Board`.
+        // let _board = Board::new(backend.surface(), backend.width(), backend.height());
+
+        loop {
+            action_hub.process_multi_thread_actions();
+            thread::sleep(Duration::from_nanos(1));
+        }
     }
 }
 

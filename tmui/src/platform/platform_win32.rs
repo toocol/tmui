@@ -1,7 +1,13 @@
-use super::PlatformContext;
+use super::{PlatformContext, CODE_PIXELS_UPDATE};
 use crate::graphics::bitmap::Bitmap;
-use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo};
-use std::{mem::size_of, os::raw::c_void, thread};
+use lazy_static::lazy_static;
+use std::{
+    mem::size_of,
+    os::raw::c_void,
+    ptr::null_mut,
+    sync::atomic::{AtomicPtr, Ordering},
+    thread,
+};
 use windows::{
     core::*,
     w,
@@ -11,13 +17,16 @@ use windows::{
     },
 };
 
+lazy_static! {
+    static ref PLATFORM_WIN32: AtomicPtr<PlatformWin32> = AtomicPtr::new(null_mut());
+}
+
 #[cfg(target_os = "windows")]
 pub struct PlatformWin32 {
     title: String,
     width: i32,
     height: i32,
     bitmap: Bitmap,
-    image_info: ImageInfo,
 
     // The memory area of pixels managed by `PlatformWin32`.
     _pixels: Vec<u8>,
@@ -29,11 +38,12 @@ pub struct PlatformWin32 {
     hbmp: HBITMAP,
 }
 
+#[cfg(target_os = "windows")]
 impl PlatformContext for PlatformWin32 {
     type Type = PlatformWin32;
 
     fn new(title: &str, width: i32, height: i32) -> Self {
-        unsafe {
+        let mut platform = unsafe {
             let hins = GetModuleHandleW(None).unwrap();
             assert!(hins.0 != 0);
 
@@ -77,10 +87,8 @@ impl PlatformContext for PlatformWin32 {
             bmi.bmiHeader.biCompression = BI_RGB;
             bmi.bmiHeader.biSizeImage = 0;
 
-            let hbmp;
-
             let hdc = GetDC(hwnd);
-            hbmp = CreateDIBSection(
+            let hbmp = CreateDIBSection(
                 hdc,
                 &bmi as *const BITMAPINFO,
                 DIB_RGB_COLORS,
@@ -96,19 +104,15 @@ impl PlatformContext for PlatformWin32 {
                 width,
                 height,
                 bitmap,
-                image_info: ImageInfo::new(
-                    (width, height),
-                    ColorType::BGRA8888,
-                    AlphaType::Premul,
-                    ColorSpace::new_srgb(),
-                ),
                 _pixels: pixels,
                 _hins: hins,
                 _wcls: wcls,
                 hwnd,
                 hbmp,
             }
-        }
+        };
+        PLATFORM_WIN32.store(&mut platform as *mut PlatformWin32, Ordering::SeqCst);
+        platform
     }
 
     fn title(&self) -> &str {
@@ -141,16 +145,20 @@ impl PlatformContext for PlatformWin32 {
         &self.bitmap
     }
 
-    fn image_info(&self) -> &ImageInfo {
-        &self.image_info
-    }
-
     fn handle_platform_event(&self) {
         unsafe {
             let mut message = MSG::default();
-            if GetMessageW(&mut message, self.hwnd, 0, 0).into() {
-                DispatchMessageW(&message);
+            if PeekMessageW(&mut message, self.hwnd, 0, 0, PM_NOREMOVE).into() {
+                if GetMessageW(&mut message, self.hwnd, 0, 0).into() {
+                    DispatchMessageW(&message);
+                }
             }
+        }
+    }
+
+    fn send_message(&self, message: super::Message) {
+        unsafe {
+            SendMessageW(self.hwnd, message.0, WPARAM(0), LPARAM(0));
         }
     }
 }
@@ -160,12 +168,40 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
         match message {
             WM_PAINT => {
                 println!("WM_PAINT: {}", thread::current().name().unwrap());
-                ValidateRect(window, None);
+                let platform = PLATFORM_WIN32
+                    .load(Ordering::SeqCst)
+                    .as_ref()
+                    .expect("`PLATFORM_WIN32` is None.");
+
+                let mut ps = PAINTSTRUCT::default();
+                let hdc = BeginPaint(window, &mut ps);
+                let hdc_mem = CreateCompatibleDC(hdc);
+                SelectObject(hdc_mem, platform.hbmp);
+
+                BitBlt(
+                    hdc,
+                    0,
+                    0,
+                    platform.width,
+                    platform.height,
+                    hdc_mem,
+                    0,
+                    0,
+                    SRCCOPY,
+                );
+
+                ReleaseDC(window, hdc_mem);
+                EndPaint(window, &ps);
                 LRESULT(0)
             }
             WM_DESTROY => {
                 println!("WM_DESTROY: {}", thread::current().name().unwrap());
                 PostQuitMessage(0);
+                LRESULT(0)
+            }
+            CODE_PIXELS_UPDATE => {
+                println!("Pixels update.");
+                SendMessageW(window, WM_PAINT, WPARAM(0), LPARAM(0));
                 LRESULT(0)
             }
             _ => DefWindowProcW(window, message, wparam, lparam),

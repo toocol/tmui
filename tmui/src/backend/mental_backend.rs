@@ -1,20 +1,31 @@
 use super::Backend;
-use crate::platform::PlatformContextWrapper;
+use crate::graphics::bitmap::Bitmap;
 use skia_safe::Surface;
 
 /// Backend for Mental,
 /// Support GPU acceleration on MacOS.
 #[derive(Debug)]
-pub struct MentalBackend;
+#[allow(dead_code)]
+pub struct MentalBackend {
+    bitmap: Bitmap,
+}
 
 impl Backend for MentalBackend {
     type Type = MentalBackend;
 
-    fn new() -> Self::Type {
-        Self {}
+    fn new(bitmap: Bitmap) -> Self::Type {
+        Self { bitmap }
     }
 
-    fn surface(&self, _platform: &Box<dyn PlatformContextWrapper>) -> Surface {
+    fn surface(&self) -> Surface {
         todo!()
+    }
+
+    fn width(&self) -> i32 {
+        self.bitmap.width()
+    }
+
+    fn height(&self) -> i32 {
+        self.bitmap.height()
     }
 }
