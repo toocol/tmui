@@ -5,19 +5,21 @@ use std::{mem::size_of, os::raw::c_void};
 use windows::{
     w,
     Win32::{
-        Foundation::{HANDLE, HWND},
+        Foundation::{HANDLE, HINSTANCE, HWND},
         Graphics::Gdi::{
             CreateDIBSection, DeleteObject, GetDC, ReleaseDC, BITMAPINFO, BITMAPINFOHEADER, BI_RGB,
-            DIB_RGB_COLORS, HBITMAP,
+            COLOR_WINDOW, DIB_RGB_COLORS, HBITMAP, HBRUSH,
         },
         UI::WindowsAndMessaging::{
-            CloseWindow, CreateWindowExW, WS_EX_APPWINDOW, WS_EX_LEFT, WS_VISIBLE, WS_CAPTION, WS_SIZEBOX,
+            CloseWindow, CreateWindowExW, RegisterClassExW, CS_HREDRAW, CS_VREDRAW, HCURSOR, HICON,
+            WNDCLASSEXW, WNDPROC, WS_CAPTION, WS_EX_APPWINDOW, WS_EX_LEFT, WS_SIZEBOX, WS_VISIBLE,
         },
     },
 };
 
 #[cfg(target_os = "windows")]
 pub struct PlatformWin32 {
+    title: String,
     width: i32,
     height: i32,
     bitmap: Bitmap,
@@ -26,7 +28,9 @@ pub struct PlatformWin32 {
     // The memory area of pixels managed by `PlatformWin32`.
     _pixels: Vec<u8>,
 
-    /// The fileds  associated with win32
+    /// The fileds associated with win32
+    _hins: HINSTANCE,
+    _wcls: WNDCLASSEXW,
     hwnd: HWND,
     hbmp: HBITMAP,
 }
@@ -34,11 +38,27 @@ pub struct PlatformWin32 {
 impl PlatformContext for PlatformWin32 {
     type Type = PlatformWin32;
 
-    fn new(width: i32, height: i32) -> Self {
+    fn new(title: &str, width: i32, height: i32) -> Self {
+        let hins = HINSTANCE::default();
+        let mut wcls = WNDCLASSEXW::default();
+        let mut brush = HBRUSH::default();
+        brush.0 = COLOR_WINDOW.0 as isize + 1;
+        wcls.cbClsExtra = 0;
+        wcls.cbWndExtra = 0;
+        wcls.hbrBackground = brush;
+        wcls.hCursor = HCURSOR::default();
+        wcls.hIcon = HICON::default();
+        wcls.hInstance = hins;
+        wcls.lpfnWndProc = WNDPROC::default();
+        wcls.lpszClassName = w!("TmuiMainClass");
+        wcls.lpszMenuName = w!("");
+        wcls.style = CS_HREDRAW | CS_VREDRAW;
+        unsafe { RegisterClassExW(&wcls as *const WNDCLASSEXW) };
+
         let hwnd = unsafe {
             CreateWindowExW(
                 WS_EX_APPWINDOW | WS_EX_LEFT,
-                w!("#32769"),
+                w!("TmuiMainClass"),
                 w!("Tmui"),
                 WS_VISIBLE | WS_CAPTION | WS_SIZEBOX,
                 0,
@@ -47,12 +67,12 @@ impl PlatformContext for PlatformWin32 {
                 height,
                 None,
                 None,
-                None,
+                hins,
                 None,
             )
         };
 
-        let mut pixels = vec![0; (width * height) as usize];
+        let mut pixels = vec![0; (width * height * 4) as usize];
         let bitmap = Bitmap::new(&mut pixels[..] as *mut [u8] as *mut c_void, width, height);
 
         let mut bmi = BITMAPINFO::default();
@@ -80,6 +100,7 @@ impl PlatformContext for PlatformWin32 {
         }
 
         Self {
+            title: title.to_string(),
             width,
             height,
             bitmap,
@@ -90,9 +111,15 @@ impl PlatformContext for PlatformWin32 {
                 ColorSpace::new_srgb(),
             ),
             _pixels: pixels,
+            _hins: hins,
+            _wcls: wcls,
             hwnd,
             hbmp,
         }
+    }
+
+    fn title(&self) -> &str {
+        &self.title
     }
 
     fn width(&self) -> i32 {

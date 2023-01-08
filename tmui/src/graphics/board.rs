@@ -18,9 +18,7 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(width: i32, height: i32) -> Self {
-        let surface =
-            Surface::new_raster_n32_premul((width, height)).expect("No Skia surface available.");
+    pub fn new(surface: Surface, width: i32, height: i32) -> Self {
         Self {
             width,
             height,

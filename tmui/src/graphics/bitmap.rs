@@ -14,7 +14,7 @@ impl Bitmap {
     pub fn new(pointer: *mut c_void, width: i32, height: i32) -> Self {
         Self {
             raw_pointer: NonNull::new(pointer),
-            raw_bytes: (width * height) as usize,
+            raw_bytes: (width * height * 4) as usize,
         }
     }
 
@@ -35,5 +35,9 @@ impl Bitmap {
 
     pub fn get_pixels(&self) -> &'static mut [u8] {
         unsafe { slice::from_raw_parts_mut(self.as_ptr() as *mut u8, self.raw_bytes) }
+    }
+
+    pub fn raw_bytes(&self) -> usize {
+        self.raw_bytes
     }
 }
