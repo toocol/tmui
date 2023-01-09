@@ -1,13 +1,10 @@
 #[cfg(target_os = "windows")]
 use super::{PlatformContext, CODE_PIXELS_UPDATE};
-use crate::graphics::bitmap::Bitmap;
-use lazy_static::lazy_static;
-use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface, Paint, Font, Color, Path};
+use crate::{graphics::bitmap::Bitmap, application::PLATFORM_CONTEXT};
 use std::{
     mem::size_of,
     os::raw::c_void,
-    ptr::null_mut,
-    sync::atomic::{AtomicPtr, Ordering},
+    sync::atomic::Ordering,
     thread,
 };
 use windows::{
@@ -19,9 +16,6 @@ use windows::{
     },
 };
 
-lazy_static! {
-    static ref PLATFORM_WIN32: AtomicPtr<PlatformWin32> = AtomicPtr::new(null_mut());
-}
 #[cfg(target_os = "windows")]
 pub struct PlatformWin32 {
     title: String,
@@ -30,19 +24,21 @@ pub struct PlatformWin32 {
     bitmap: Bitmap,
 
     // The memory area of pixels managed by `PlatformWin32`.
-    pixels: Vec<u8>,
+    _pixels: Vec<u8>,
 
     /// The fileds associated with win32
     _hins: HINSTANCE,
     hwnd: HWND,
 }
+unsafe impl Send for PlatformWin32 {}
+unsafe impl Sync for PlatformWin32 {}
 
 #[cfg(target_os = "windows")]
 impl PlatformContext for PlatformWin32 {
     type Type = PlatformWin32;
 
     fn new(title: &str, width: i32, height: i32) -> Self {
-        let mut platform = unsafe {
+        unsafe {
             let hins = GetModuleHandleW(None).unwrap();
             assert!(hins.0 != 0);
 
@@ -81,14 +77,12 @@ impl PlatformContext for PlatformWin32 {
                 title: title.to_string(),
                 width,
                 height,
-                bitmap,
-                pixels,
+                bitmap: bitmap,
+                _pixels: pixels,
                 _hins: hins,
                 hwnd,
             }
-        };
-        PLATFORM_WIN32.store(&mut platform as *mut PlatformWin32, Ordering::SeqCst);
-        platform
+        }
     }
 
     fn title(&self) -> &str {
@@ -142,41 +136,16 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
         match message {
             WM_PAINT => {
                 println!("WM_PAINT: {}", thread::current().name().unwrap());
-                let platform = PLATFORM_WIN32
+                let platform = PLATFORM_CONTEXT
                     .load(Ordering::SeqCst)
                     .as_ref()
                     .expect("`PLATFORM_WIN32` is None.");
 
                 let mut ps = PAINTSTRUCT::default();
                 let hdc = BeginPaint(window, &mut ps);
-                let width = 200;
-                let height = 200;
-
-                let mut pixels = Box::new(vec![0u8; (width * height * 4) as usize]);
-                let image_info = ImageInfo::new(
-                    (width, height),
-                    ColorType::BGRA8888,
-                    AlphaType::Premul,
-                    ColorSpace::new_srgb(),
-                );
-                let mut surface = Surface::new_raster_direct(
-                    &image_info,
-                    &mut pixels,
-                    (width * 4) as usize,
-                    None,
-                )
-                .expect("Create rawster skia surface failed.")
-                .to_owned();
-                let canvas = surface.canvas();
-                let mut paint = Paint::default();
-                let mut font = Font::default();
-                font.set_size(20.);
-                canvas.clear(Color::YELLOW);
-                paint.set_color(Color::BLACK);
-                paint.set_anti_alias(true);
-                paint.set_stroke_width(1.0);
-
-                canvas.draw_str("Hello wrold", (10, 30), &font, &paint);
+                let width = platform.width();
+                let height = platform.height();
+                println!("{} {}", width, height);
 
                 let mut bmi = BITMAPINFO::default();
                 bmi.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
@@ -186,7 +155,6 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                 bmi.bmiHeader.biPlanes = 1;
                 bmi.bmiHeader.biBitCount = 32;
                 bmi.bmiHeader.biCompression = BI_RGB;
-                // bmi.bmiHeader.biSizeImage = (width * height) as u32;
 
                 StretchDIBits(
                     hdc,
@@ -198,7 +166,7 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                     0,
                     width,
                     height,
-                    Some(pixels.as_ptr() as *const c_void),
+                    Some(platform.context_bitmap().get_pixels().as_ptr() as *const c_void),
                     &bmi,
                     DIB_RGB_COLORS,
                     SRCCOPY,

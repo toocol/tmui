@@ -1,4 +1,12 @@
-use std::{thread, time::Duration, sync::mpsc::{channel, Sender}};
+use std::{
+    ptr::null_mut,
+    sync::{
+        atomic::{AtomicPtr, Ordering},
+        mpsc::{channel, Sender},
+    },
+    thread,
+    time::Duration,
+};
 
 #[cfg(target_os = "linux")]
 use crate::platform::PlatformLinux;
@@ -7,20 +15,23 @@ use crate::platform::PlatformMacos;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
 use crate::{
-    backend::{
-        opengl_backend::OpenGLBackend,
-        raster_backend::RasterBackend, Backend, BackendType,
-    },
+    backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::bitmap::Bitmap,
-    platform::{PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType, Message},
+    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
 };
-use skia_safe::{Path, Paint, Color, Font};
+use lazy_static::lazy_static;
+use skia_safe::{Color, Font, Paint, Path};
 use tlib::{
     actions::ActionHub,
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
     Object,
 };
+
+lazy_static! {
+    pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
+        AtomicPtr::new(null_mut());
+}
 
 #[extends_object]
 #[derive(Default)]
@@ -88,6 +99,10 @@ impl Application {
             }
         }
         self.platform_context = Some(platform_context);
+        PLATFORM_CONTEXT.store(
+            self.platform_context.as_mut().unwrap() as *mut Box<dyn PlatformContextWrapper>,
+            Ordering::SeqCst,
+        );
     }
 
     fn ui_main(backend_type: BackendType, bitmap: Bitmap, sender: Sender<Message>) {
@@ -103,25 +118,25 @@ impl Application {
             BackendType::OpenGL => backend = OpenGLBackend::new(bitmap).wrap(),
         }
 
-        // let mut surface = backend.surface();
-        // let canvas = surface.canvas();
-        // let mut paint = Paint::default();
-        // let font = Font::default();
-        // canvas.clear(Color::BLUE);
-        // paint.set_color(Color::BLACK);
-        // paint.set_anti_alias(true);
-        // paint.set_stroke_width(1.0);
+        let mut surface = backend.surface();
+        let canvas = surface.canvas();
+        let mut paint = Paint::default();
+        let font = Font::default();
+        canvas.clear(Color::BLUE);
+        paint.set_color(Color::BLACK);
+        paint.set_anti_alias(true);
+        paint.set_stroke_width(1.0);
 
-        // canvas.scale((1.2, 1.2));
-        // let mut path = Path::new();
-        // path.move_to((36., 48.));
-        // path.quad_to((330., 440.), (600., 180.));
-        // canvas.translate((10., 10.));
-        // paint.set_stroke_width(10.);
-        // paint.set_style(skia_safe::PaintStyle::Stroke);
-        // canvas.draw_path(&path, &paint);
-        // canvas.draw_str("Hello wrold", (0, 0), &font, &paint);
-        // sender.send(Message::MESSAGE_PIXELS_UPDATE).unwrap();
+        canvas.scale((1.2, 1.2));
+        let mut path = Path::new();
+        path.move_to((36., 48.));
+        path.quad_to((330., 440.), (600., 180.));
+        canvas.translate((10., 10.));
+        paint.set_stroke_width(10.);
+        paint.set_style(skia_safe::PaintStyle::Stroke);
+        canvas.draw_path(&path, &paint);
+        canvas.draw_str("Hello wrold", (0, 0), &font, &paint);
+        sender.send(Message::MESSAGE_PIXELS_UPDATE).unwrap();
 
         // Create the `Board`.
         // let _board = Board::new(backend.surface(), backend.width(), backend.height());
