@@ -17,7 +17,7 @@ impl Backend for RasterBackend {
         Self {
             image_info: ImageInfo::new(
                 (bitmap.width(), bitmap.height()),
-                ColorType::RGBA8888,
+                ColorType::BGRA8888,
                 AlphaType::Premul,
                 ColorSpace::new_srgb(),
             ),

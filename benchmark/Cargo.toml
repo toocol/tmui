@@ -21,6 +21,10 @@ name = "action_benchmark"
 harness = false
 
 [[bench]]
+name = "pixels_benchmark"
+harness = false
+
+[[bench]]
 name = "objects_benchmark"
 harness = false
 

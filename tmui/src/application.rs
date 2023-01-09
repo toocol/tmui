@@ -8,13 +8,13 @@ use crate::platform::PlatformMacos;
 use crate::platform::PlatformWin32;
 use crate::{
     backend::{
-        mental_backend::MentalBackend, opengl_backend::OpenGLBackend,
+        opengl_backend::OpenGLBackend,
         raster_backend::RasterBackend, Backend, BackendType,
     },
     graphics::bitmap::Bitmap,
     platform::{PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType, Message},
 };
-use skia_safe::{Path, Paint, Color};
+use skia_safe::{Path, Paint, Color, Font};
 use tlib::{
     actions::ActionHub,
     object::{ObjectImpl, ObjectSubclass},
@@ -91,6 +91,7 @@ impl Application {
     }
 
     fn ui_main(backend_type: BackendType, bitmap: Bitmap, sender: Sender<Message>) {
+        let _pixels = bitmap.get_pixels();
         // Create and initialize the `ActionHub`.
         let mut action_hub = ActionHub::new();
         action_hub.initialize();
@@ -100,25 +101,27 @@ impl Application {
         match backend_type {
             BackendType::Raster => backend = RasterBackend::new(bitmap).wrap(),
             BackendType::OpenGL => backend = OpenGLBackend::new(bitmap).wrap(),
-            BackendType::Mental => backend = MentalBackend::new(bitmap).wrap(),
         }
 
-        let mut surface = backend.surface();
-        let canvas = surface.canvas();
-        let mut paint = Paint::default();
-        paint.set_color(Color::BLACK);
-        paint.set_anti_alias(true);
-        paint.set_stroke_width(1.0);
+        // let mut surface = backend.surface();
+        // let canvas = surface.canvas();
+        // let mut paint = Paint::default();
+        // let font = Font::default();
+        // canvas.clear(Color::BLUE);
+        // paint.set_color(Color::BLACK);
+        // paint.set_anti_alias(true);
+        // paint.set_stroke_width(1.0);
 
-        canvas.scale((1.2, 1.2));
-        let mut path = Path::new();
-        path.move_to((36., 48.));
-        path.quad_to((330., 440.), (600., 180.));
-        canvas.translate((10., 10.));
-        paint.set_stroke_width(10.);
-        paint.set_style(skia_safe::PaintStyle::Stroke);
-        canvas.draw_path(&path, &paint);
-        sender.send(Message::MESSAGE_PIXELS_UPDATE).unwrap();
+        // canvas.scale((1.2, 1.2));
+        // let mut path = Path::new();
+        // path.move_to((36., 48.));
+        // path.quad_to((330., 440.), (600., 180.));
+        // canvas.translate((10., 10.));
+        // paint.set_stroke_width(10.);
+        // paint.set_style(skia_safe::PaintStyle::Stroke);
+        // canvas.draw_path(&path, &paint);
+        // canvas.draw_str("Hello wrold", (0, 0), &font, &paint);
+        // sender.send(Message::MESSAGE_PIXELS_UPDATE).unwrap();
 
         // Create the `Board`.
         // let _board = Board::new(backend.surface(), backend.width(), backend.height());

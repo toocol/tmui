@@ -1,6 +1,8 @@
+#[cfg(target_os = "windows")]
 use super::{PlatformContext, CODE_PIXELS_UPDATE};
 use crate::graphics::bitmap::Bitmap;
 use lazy_static::lazy_static;
+use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface, Paint, Font, Color, Path};
 use std::{
     mem::size_of,
     os::raw::c_void,
@@ -20,7 +22,6 @@ use windows::{
 lazy_static! {
     static ref PLATFORM_WIN32: AtomicPtr<PlatformWin32> = AtomicPtr::new(null_mut());
 }
-
 #[cfg(target_os = "windows")]
 pub struct PlatformWin32 {
     title: String,
@@ -29,13 +30,11 @@ pub struct PlatformWin32 {
     bitmap: Bitmap,
 
     // The memory area of pixels managed by `PlatformWin32`.
-    _pixels: Vec<u8>,
+    pixels: Vec<u8>,
 
     /// The fileds associated with win32
     _hins: HINSTANCE,
-    _wcls: WNDCLASSW,
     hwnd: HWND,
-    hbmp: HBITMAP,
 }
 
 #[cfg(target_os = "windows")]
@@ -75,40 +74,17 @@ impl PlatformContext for PlatformWin32 {
                 None,
             );
 
-            let mut pixels = vec![0; (width * height * 4) as usize];
-            let bitmap = Bitmap::new(&mut pixels[..] as *mut [u8] as *mut c_void, width, height);
-
-            let mut bmi = BITMAPINFO::default();
-            bmi.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
-            bmi.bmiHeader.biWidth = width;
-            bmi.bmiHeader.biHeight = -height;
-            bmi.bmiHeader.biPlanes = 1;
-            bmi.bmiHeader.biBitCount = 32;
-            bmi.bmiHeader.biCompression = BI_RGB;
-            bmi.bmiHeader.biSizeImage = 0;
-
-            let hdc = GetDC(hwnd);
-            let hbmp = CreateDIBSection(
-                hdc,
-                &bmi as *const BITMAPINFO,
-                DIB_RGB_COLORS,
-                bitmap.as_ptr() as *mut *mut c_void,
-                HANDLE::default(),
-                0,
-            )
-            .expect("Create `HBITMAP` failed.");
-            ReleaseDC(hwnd, hdc);
+            let mut pixels = vec![0u8; (width * height * 4) as usize];
+            let bitmap = Bitmap::new(pixels.as_mut_ptr() as *mut c_void, width, height);
 
             Self {
                 title: title.to_string(),
                 width,
                 height,
                 bitmap,
-                _pixels: pixels,
+                pixels,
                 _hins: hins,
-                _wcls: wcls,
                 hwnd,
-                hbmp,
             }
         };
         PLATFORM_WIN32.store(&mut platform as *mut PlatformWin32, Ordering::SeqCst);
@@ -130,13 +106,11 @@ impl PlatformContext for PlatformWin32 {
     fn resize(&mut self, width: i32, height: i32) {
         self.width = width;
         self.height = height;
-        self.bitmap.set_raw_bytes((width * height) as usize);
         todo!()
     }
 
     fn close(&self) {
         unsafe {
-            DeleteObject(self.hbmp);
             CloseWindow(self.hwnd);
         }
     }
@@ -175,22 +149,61 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
 
                 let mut ps = PAINTSTRUCT::default();
                 let hdc = BeginPaint(window, &mut ps);
-                let hdc_mem = CreateCompatibleDC(hdc);
-                SelectObject(hdc_mem, platform.hbmp);
+                let width = 200;
+                let height = 200;
 
-                BitBlt(
+                let mut pixels = Box::new(vec![0u8; (width * height * 4) as usize]);
+                let image_info = ImageInfo::new(
+                    (width, height),
+                    ColorType::BGRA8888,
+                    AlphaType::Premul,
+                    ColorSpace::new_srgb(),
+                );
+                let mut surface = Surface::new_raster_direct(
+                    &image_info,
+                    &mut pixels,
+                    (width * 4) as usize,
+                    None,
+                )
+                .expect("Create rawster skia surface failed.")
+                .to_owned();
+                let canvas = surface.canvas();
+                let mut paint = Paint::default();
+                let mut font = Font::default();
+                font.set_size(20.);
+                canvas.clear(Color::YELLOW);
+                paint.set_color(Color::BLACK);
+                paint.set_anti_alias(true);
+                paint.set_stroke_width(1.0);
+
+                canvas.draw_str("Hello wrold", (10, 30), &font, &paint);
+
+                let mut bmi = BITMAPINFO::default();
+                bmi.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
+                bmi.bmiHeader.biWidth = width;
+                // Drawing start at top-left.
+                bmi.bmiHeader.biHeight = -height;
+                bmi.bmiHeader.biPlanes = 1;
+                bmi.bmiHeader.biBitCount = 32;
+                bmi.bmiHeader.biCompression = BI_RGB;
+                // bmi.bmiHeader.biSizeImage = (width * height) as u32;
+
+                StretchDIBits(
                     hdc,
                     0,
                     0,
-                    platform.width,
-                    platform.height,
-                    hdc_mem,
+                    width,
+                    height,
                     0,
                     0,
+                    width,
+                    height,
+                    Some(pixels.as_ptr() as *const c_void),
+                    &bmi,
+                    DIB_RGB_COLORS,
                     SRCCOPY,
                 );
 
-                ReleaseDC(window, hdc_mem);
                 EndPaint(window, &ps);
                 LRESULT(0)
             }

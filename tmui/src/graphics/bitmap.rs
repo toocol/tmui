@@ -29,14 +29,6 @@ impl Bitmap {
         }
     }
 
-    pub fn set_raw_pointer(&mut self, pointer: *mut c_void) {
-        self.raw_pointer = NonNull::new(pointer)
-    }
-
-    pub fn set_raw_bytes(&mut self, raw_bytes: usize) {
-        self.total_bytes = raw_bytes
-    }
-
     pub fn as_ptr(&self) -> *mut c_void {
         self.raw_pointer
             .as_ref()

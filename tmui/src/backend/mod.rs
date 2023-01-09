@@ -2,7 +2,6 @@ use crate::graphics::bitmap::Bitmap;
 use skia_safe::Surface;
 use std::cell::RefCell;
 
-pub mod mental_backend;
 pub mod opengl_backend;
 pub mod raster_backend;
 
@@ -12,7 +11,6 @@ pub enum BackendType {
     #[default]
     Raster,
     OpenGL,
-    Mental,
 }
 
 /// Renderer backend, provide skia Surface
