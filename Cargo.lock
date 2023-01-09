@@ -54,6 +54,7 @@ dependencies = [
  "regex",
  "tipc",
  "tlib",
+ "windows",
 ]
 
 [[package]]

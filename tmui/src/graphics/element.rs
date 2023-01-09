@@ -1,5 +1,4 @@
 use std::cell::Cell;
-
 use super::{drawing_context::DrawingContext, figure::Rect};
 use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},

@@ -1,12 +1,12 @@
 #![allow(dead_code)]
+use crate::{
+    types::{IsA, ObjectType, StaticType, Type},
+    utils::SnowflakeGuidGenerator,
+    values::{ToValue, Value},
+};
 use std::{
     cell::{Ref, RefCell},
     collections::HashMap,
-};
-
-use crate::{
-    types::{IsA, ObjectType, StaticType, Type},
-    values::{ToValue, Value}, utils::SnowflakeGuidGenerator,
 };
 
 /// Super type of object system, every subclass object should extends this struct by proc-marco `[extends_object]`,
@@ -51,7 +51,7 @@ impl Default for Object {
     }
 }
 
-pub trait ObjectOperation {
+pub trait ObjectOperation: ObjectImpl {
     fn id(&self) -> u64;
 
     fn set_property(&self, name: &str, value: Value);
@@ -88,7 +88,8 @@ impl ObjectOperation for Object {
     }
 
     fn set_property(&self, name: &str, value: Value) {
-        self.primitive_set_property(name, value)
+        self.on_property_set(name, &value);
+        self.primitive_set_property(name, value);
     }
 
     fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>> {
@@ -113,6 +114,10 @@ impl IsA<Object> for Object {}
 impl ObjectImpl for Object {
     fn construct(&self) {
         println!("`Object` construct")
+    }
+
+    fn on_property_set(&self, name: &str, _value: &Value) {
+        println!("`Object` set property {}", name)
     }
 }
 
@@ -162,6 +167,8 @@ pub trait ObjectImpl: ObjectSubclass + ObjectImplExt {
     fn construct(&self) {
         self.parent_construct()
     }
+
+    fn on_property_set(&self, _name: &str, _value: &Value) {}
 }
 
 pub trait ObjectImplExt {

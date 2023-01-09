@@ -11,6 +11,12 @@ tlib = { path = "../tlib/" }
 
 criterion = "0.4.0"
 regex = "*"
+windows = { version = "0.43.0", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+] }
 
 [[bench]]
 name = "value_benchmark"
@@ -30,4 +36,8 @@ harness = false
 
 [[bench]]
 name = "regex_benchmark"
+harness = false
+
+[[bench]]
+name = "win32_benchmark"
 harness = false

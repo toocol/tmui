@@ -51,8 +51,11 @@ pub trait PlatformContext: Sized + 'static {
     /// Close the `PlatformContext`
     fn close(&self);
 
-    /// Get the `Bitmap` of platform context.
-    fn context_bitmap(&self) -> &Bitmap;
+    /// Get the front `Bitmap` of platform context.
+    fn front_bitmap(&self) -> Bitmap;
+
+    /// Get the front `Bitmap` of platform context.
+    fn back_bitmap(&self) -> Bitmap;
 
     /// Handle the event corresponding to specific platform.
     fn handle_platform_event(&self);
@@ -72,7 +75,9 @@ pub trait PlatformContextWrapper {
 
     fn close(&self);
 
-    fn context_bitmap(&self) -> &Bitmap;
+    fn front_bitmap(&self) -> Bitmap;
+
+    fn back_bitmap(&self) -> Bitmap;
 
     fn handle_platform_event(&self);
 
@@ -100,8 +105,12 @@ impl<T: PlatformContext> PlatformContextWrapper for Option<T> {
         self.as_ref().unwrap().close()
     }
 
-    fn context_bitmap(&self) -> &Bitmap {
-        self.as_ref().unwrap().context_bitmap()
+    fn front_bitmap(&self) -> Bitmap {
+        self.as_ref().unwrap().front_bitmap()
+    }
+
+    fn back_bitmap(&self) -> Bitmap {
+        self.as_ref().unwrap().back_bitmap()
     }
 
     fn handle_platform_event(&self) {

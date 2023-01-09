@@ -16,7 +16,6 @@ use crate::platform::PlatformMacos;
 use crate::platform::PlatformWin32;
 use crate::{
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
-    graphics::bitmap::Bitmap,
     platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
 };
 use lazy_static::lazy_static;
@@ -63,9 +62,8 @@ impl Application {
         let (sender, receiver) = channel::<Message>();
 
         // Create the `UI` main thread.
-        let bitmap = platform_context.context_bitmap().clone();
         let backend_type = self.backend_type;
-        thread::spawn(move || Self::ui_main(backend_type, bitmap, sender));
+        thread::spawn(move || Self::ui_main(backend_type, sender));
 
         loop {
             if let Ok(msg) = receiver.try_recv() {
@@ -105,8 +103,8 @@ impl Application {
         );
     }
 
-    fn ui_main(backend_type: BackendType, bitmap: Bitmap, sender: Sender<Message>) {
-        let _pixels = bitmap.get_pixels();
+    fn ui_main(backend_type: BackendType, sender: Sender<Message>) {
+        let platform = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_ref().unwrap() };
         // Create and initialize the `ActionHub`.
         let mut action_hub = ActionHub::new();
         action_hub.initialize();
@@ -114,14 +112,13 @@ impl Application {
         // Create the [`Backend`] based on the backend type specified by the user.
         let backend;
         match backend_type {
-            BackendType::Raster => backend = RasterBackend::new(bitmap).wrap(),
-            BackendType::OpenGL => backend = OpenGLBackend::new(bitmap).wrap(),
+            BackendType::Raster => backend = RasterBackend::new(platform.front_bitmap()).wrap(),
+            BackendType::OpenGL => backend = OpenGLBackend::new(platform.front_bitmap()).wrap(),
         }
 
         let mut surface = backend.surface();
         let canvas = surface.canvas();
         let mut paint = Paint::default();
-        let font = Font::default();
         canvas.clear(Color::BLUE);
         paint.set_color(Color::BLACK);
         paint.set_anti_alias(true);
@@ -135,8 +132,13 @@ impl Application {
         paint.set_stroke_width(10.);
         paint.set_style(skia_safe::PaintStyle::Stroke);
         canvas.draw_path(&path, &paint);
-        canvas.draw_str("Hello wrold", (0, 0), &font, &paint);
-        sender.send(Message::MESSAGE_PIXELS_UPDATE).unwrap();
+
+        paint.reset();
+        paint.set_color(Color::WHITE);
+        let mut font = Font::default();
+        font.set_size(20.);
+        canvas.draw_str("Hello world", (0, 30), &font, &paint);
+        sender.send(Message::MESSAGE_VSNYC).unwrap();
 
         // Create the `Board`.
         // let _board = Board::new(backend.surface(), backend.width(), backend.height());

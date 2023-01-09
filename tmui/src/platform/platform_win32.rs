@@ -1,12 +1,7 @@
 #[cfg(target_os = "windows")]
-use super::{PlatformContext, CODE_PIXELS_UPDATE};
-use crate::{graphics::bitmap::Bitmap, application::PLATFORM_CONTEXT};
-use std::{
-    mem::size_of,
-    os::raw::c_void,
-    sync::atomic::Ordering,
-    thread,
-};
+use super::{PlatformContext, CODE_VSYNC};
+use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
+use std::{mem::size_of, os::raw::c_void, sync::atomic::Ordering, thread};
 use windows::{
     core::*,
     w,
@@ -21,10 +16,12 @@ pub struct PlatformWin32 {
     title: String,
     width: i32,
     height: i32,
-    bitmap: Bitmap,
 
+    front_bitmap: Bitmap,
+    back_bitmap: Bitmap,
     // The memory area of pixels managed by `PlatformWin32`.
-    _pixels: Vec<u8>,
+    _front_buffer: Vec<u8>,
+    _back_buffer: Vec<u8>,
 
     /// The fileds associated with win32
     _hins: HINSTANCE,
@@ -70,15 +67,20 @@ impl PlatformContext for PlatformWin32 {
                 None,
             );
 
-            let mut pixels = vec![0u8; (width * height * 4) as usize];
-            let bitmap = Bitmap::new(pixels.as_mut_ptr() as *mut c_void, width, height);
+            let mut front_buffer = vec![0u8; (width * height * 4) as usize];
+            let front_bitmap = Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, width, height);
+
+            let mut back_buffer = vec![0u8; (width * height * 4) as usize];
+            let back_bitmap = Bitmap::new(back_buffer.as_mut_ptr() as *mut c_void, width, height);
 
             Self {
                 title: title.to_string(),
                 width,
                 height,
-                bitmap: bitmap,
-                _pixels: pixels,
+                front_bitmap,
+                back_bitmap,
+                _front_buffer: front_buffer,
+                _back_buffer: back_buffer,
                 _hins: hins,
                 hwnd,
             }
@@ -109,8 +111,12 @@ impl PlatformContext for PlatformWin32 {
         }
     }
 
-    fn context_bitmap(&self) -> &Bitmap {
-        &self.bitmap
+    fn front_bitmap(&self) -> Bitmap {
+        self.front_bitmap
+    }
+
+    fn back_bitmap(&self) -> Bitmap {
+        self.back_bitmap
     }
 
     fn handle_platform_event(&self) {
@@ -166,7 +172,7 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                     0,
                     width,
                     height,
-                    Some(platform.context_bitmap().get_pixels().as_ptr() as *const c_void),
+                    Some(platform.front_bitmap().get_pixels().as_ptr() as *const c_void),
                     &bmi,
                     DIB_RGB_COLORS,
                     SRCCOPY,
@@ -180,7 +186,7 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                 PostQuitMessage(0);
                 LRESULT(0)
             }
-            CODE_PIXELS_UPDATE => {
+            CODE_VSYNC => {
                 println!("Pixels update.");
                 SendMessageW(window, WM_PAINT, WPARAM(0), LPARAM(0));
                 LRESULT(0)

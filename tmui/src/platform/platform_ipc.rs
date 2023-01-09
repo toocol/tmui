@@ -1,12 +1,14 @@
-use std::ptr::null_mut;
 use super::PlatformContext;
 use crate::graphics::bitmap::Bitmap;
+use std::ptr::null_mut;
 
 pub struct PlatformIpc {
     title: String,
     width: i32,
     height: i32,
-    bitmap: Bitmap,
+
+    front_bitmap: Bitmap,
+    back_bitmap: Bitmap,
 }
 
 impl PlatformContext for PlatformIpc {
@@ -17,7 +19,8 @@ impl PlatformContext for PlatformIpc {
             title: title.to_string(),
             width,
             height,
-            bitmap: Bitmap::new(null_mut(), width, height),
+            front_bitmap: Bitmap::new(null_mut(), width, height),
+            back_bitmap: Bitmap::new(null_mut(), width, height),
         }
     }
 
@@ -43,8 +46,12 @@ impl PlatformContext for PlatformIpc {
         todo!()
     }
 
-    fn context_bitmap(&self) -> &Bitmap {
-        &self.bitmap
+    fn front_bitmap(&self) -> Bitmap {
+        self.front_bitmap
+    }
+
+    fn back_bitmap(&self) -> Bitmap {
+        self.back_bitmap
     }
 
     fn handle_platform_event(&self) {

@@ -38,11 +38,11 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     fn set_property(&self, name: &str, value: Value) {
-                        self.object.primitive_set_property(name, value)
+                        self.object.set_property(name, value)
                     }
 
                     fn get_property(&self, name: &str) -> Option<std::cell::Ref<Box<Value>>> {
-                        self.object.primitive_get_property(name)
+                        self.object.get_property(name)
                     }
                 }
 
@@ -94,11 +94,11 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     fn set_property(&self, name: &str, value: Value) {
-                        self.element.object.primitive_set_property(name, value)
+                        self.element.object.set_property(name, value)
                     }
 
                     fn get_property(&self, name: &str) -> Option<std::cell::Ref<Box<Value>>> {
-                        self.element.object.primitive_get_property(name)
+                        self.element.object.get_property(name)
                     }
                 }
 
