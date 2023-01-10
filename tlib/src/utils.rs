@@ -88,6 +88,13 @@ impl TimeStamp {
             .as_millis() as u64
     }
 
+    pub fn timestamp_micros() -> u128 {
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_micros()
+    }
+
     pub fn timestamp_16() -> u16 {
         let mut ts = (TimeStamp::timestamp() % 65536) as u16;
         if ts == u16::MAX {

@@ -12,6 +12,6 @@ fn main() {
     app.run();
 }
 
-fn build_ui(_window: &mut ApplicationWindow) {
+fn build_ui(_window: &ApplicationWindow) {
     println!("Hello World");
 }

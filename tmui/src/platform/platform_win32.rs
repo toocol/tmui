@@ -151,7 +151,6 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
     unsafe {
         match message {
             WM_PAINT => {
-                println!("WM_PAINT: {}", thread::current().name().unwrap());
                 let platform = PLATFORM_CONTEXT
                     .load(Ordering::SeqCst)
                     .as_ref()
@@ -161,7 +160,6 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                 let hdc = BeginPaint(window, &mut ps);
                 let width = platform.width();
                 let height = platform.height();
-                println!("{} {}", width, height);
 
                 let mut bmi = BITMAPINFO::default();
                 bmi.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
@@ -197,7 +195,6 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                 LRESULT(0)
             }
             CODE_VSYNC => {
-                println!("Pixels update.");
                 SendMessageW(window, WM_PAINT, WPARAM(0), LPARAM(0));
                 LRESULT(0)
             }

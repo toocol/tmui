@@ -7,10 +7,11 @@ use crate::platform::PlatformWin32;
 use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
-    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
+    graphics::board::Board,
+    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType}, widget::store_board,
 };
 use lazy_static::lazy_static;
-use skia_safe::{Color, Font, Paint, Path};
+
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -22,7 +23,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tlib::{actions::ActionHub, Object};
+use tlib::{actions::ActionHub, utils::TimeStamp, Object};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
@@ -30,6 +31,8 @@ lazy_static! {
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
+
+pub const FRAME_INTERVAL: u128 = 16000;
 
 #[derive(Default)]
 pub struct Application {
@@ -42,7 +45,7 @@ pub struct Application {
 
     platform_context: Option<Box<dyn PlatformContextWrapper>>,
 
-    on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
+    on_activate: RefCell<Option<Arc<dyn Fn(&ApplicationWindow) + Send + Sync>>>,
 }
 
 impl Application {
@@ -53,7 +56,7 @@ impl Application {
 
     /// Get the main application window([`ApplicationWindow`]).
     /// There was only one application window in tmui.
-    pub fn application_window<'a>() -> &'a mut ApplicationWindow {
+    pub fn application_window<'a>() -> &'a ApplicationWindow {
         if !Self::is_ui_thread() {
             panic!("`Application::application_window()` should only call in the UI `main` thread.");
         }
@@ -76,7 +79,7 @@ impl Application {
 
         // Create the `UI` main thread.
         let backend_type = self.backend_type;
-        let on_activate = self.on_activate.borrow().as_ref().unwrap().clone();
+        let on_activate = self.on_activate.borrow().clone();
         *self.on_activate.borrow_mut() = None;
         thread::spawn(move || {
             Self::ui_main(backend_type, output_sender, input_receiver, on_activate)
@@ -95,7 +98,7 @@ impl Application {
     /// UI components should create in here.
     pub fn connect_activate<F>(&self, f: F)
     where
-        F: Fn(&mut ApplicationWindow) + Send + Sync + 'static,
+        F: Fn(&ApplicationWindow) + Send + Sync + 'static,
     {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
     }
@@ -132,7 +135,7 @@ impl Application {
         backend_type: BackendType,
         output_sender: Sender<Message>,
         _input_receiver: Receiver<Message>,
-        on_activate: Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>,
+        on_activate: Option<Arc<dyn Fn(&ApplicationWindow) + Send + Sync>>,
     ) {
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
@@ -149,39 +152,28 @@ impl Application {
             BackendType::OpenGL => backend = OpenGLBackend::new(platform.front_bitmap()).wrap(),
         }
 
-        let mut surface = backend.surface();
-        let canvas = surface.canvas();
-        let mut paint = Paint::default();
-        canvas.clear(Color::BLUE);
-        paint.set_color(Color::BLACK);
-        paint.set_anti_alias(true);
-        paint.set_stroke_width(1.0);
-
-        canvas.scale((1.2, 1.2));
-        let mut path = Path::new();
-        path.move_to((36., 48.));
-        path.quad_to((330., 440.), (600., 180.));
-        canvas.translate((10., 10.));
-        paint.set_stroke_width(10.);
-        paint.set_style(skia_safe::PaintStyle::Stroke);
-        canvas.draw_path(&path, &paint);
-
-        paint.reset();
-        paint.set_color(Color::WHITE);
-        let mut font = Font::default();
-        font.set_size(20.);
-        canvas.draw_str("Hello world", (0, 30), &font, &paint);
-        output_sender.send(Message::MESSAGE_VSNYC).unwrap();
-
         // Create the `Board`.
-        // let _board = Board::new(backend.surface(), backend.width(), backend.height());
+        let mut board = Board::new(backend.surface());
+        store_board(&mut board);
 
         let mut window: ApplicationWindow = Object::new(&[]);
         APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
-        on_activate(&mut window);
-        drop(on_activate);
+        board.add_element(&mut window);
 
+        if let Some(on_activate) = on_activate {
+            on_activate(&window);
+            drop(on_activate);
+        }
+
+        let mut last_frame = 0u128;
         loop {
+            let now = TimeStamp::timestamp_micros();
+            if now - last_frame >= FRAME_INTERVAL {
+                last_frame = now;
+                output_sender.send(Message::MESSAGE_VSNYC).unwrap();
+            }
+            board.invalidate_visual();
+
             action_hub.process_multi_thread_actions();
             thread::sleep(Duration::from_nanos(1));
         }

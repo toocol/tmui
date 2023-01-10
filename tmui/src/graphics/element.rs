@@ -27,7 +27,7 @@ impl ObjectSubclass for Element {
 impl ObjectImpl for Element {
     fn construct(&self) {
         self.parent_construct();
-
+        self.invalidate.set(true);
         println!("`Element` construct")
     }
 }
@@ -78,7 +78,7 @@ impl ElementExt for Element {
 
 /// Every Element's subclass should impl this trait manually, 
 /// and implements `on_renderer` function.
-pub trait ElementImpl: ElementExt {
+pub trait ElementImpl: ElementExt + 'static {
     fn on_renderer(&self, cr: &DrawingContext);
 }
 

@@ -71,7 +71,7 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fields.named.push(
                         syn::Field::parse_named
                             .parse2(quote! {
-                                element: Element
+                                pub element: Element
                             })
                             .expect("Add field `element: Element` failed"),
                     );
@@ -157,7 +157,7 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fields.named.push(
                         syn::Field::parse_named
                             .parse2(quote! {
-                                widget: Widget 
+                                pub widget: Widget 
                             })
                             .expect("Add field `element: Element` failed"),
                     );
@@ -211,6 +211,18 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     fn validate(&self) {
                         self.widget.element.validate()
+                    }
+                }
+
+                impl ElementImpl for #name {
+                    fn on_renderer(&self, cr: &DrawingContext) {
+                        self.widget.on_renderer(cr)
+                    }
+                }
+
+                impl IWidget for #name {
+                    fn as_any(&self) -> &dyn Any {
+                        self
                     }
                 }
 
