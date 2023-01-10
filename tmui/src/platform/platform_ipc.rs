@@ -1,6 +1,6 @@
 use super::PlatformContext;
 use crate::graphics::bitmap::Bitmap;
-use std::ptr::null_mut;
+use std::{ptr::null_mut, sync::mpsc::Sender};
 
 pub struct PlatformIpc {
     title: String,
@@ -59,6 +59,10 @@ impl PlatformContext for PlatformIpc {
     }
 
     fn send_message(&self, _message: super::Message) {
+        todo!()
+    }
+
+    fn set_input_sender(&mut self, _input_sender: Sender<super::Message>) {
         todo!()
     }
 }

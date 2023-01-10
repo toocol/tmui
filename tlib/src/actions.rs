@@ -1,7 +1,7 @@
 /// The crate of actions system.
-/// 
+///
 /// <examples>
-/// 
+///
 /// ```
 /// use tlib::prelude::*;
 /// use tlib::actions::ActionHub;
@@ -23,18 +23,18 @@
 /// impl ObjectImpl for Widget {}
 ///
 /// impl ActionExt for Widget {}
-/// 
+///
 /// impl Widget {
 ///     signals! {
 ///         action_test();
 ///     }
 /// }
-/// 
+///
 /// fn main() {
 ///     // Not necessary in actual use. //
 ///     let mut action_hub = ActionHub::new();
 ///     action_hub.initialize();
-/// 
+///
 ///     let widget: Widget = Object::new(&[]);
 ///     widget.connect_action(widget.action_test(), |param| println!("Hello World!"));
 ///     emit!(widget.action_test());
@@ -78,7 +78,7 @@ impl ActionHub {
 
     /// Initialize the `ActionHub`, the instance should be managed by the caller.  
     ///
-    /// The thread initialize the `ActionHub` was the `main` thread.
+    /// The thread initialize the `ActionHub` should be the `main` thread.
     ///
     /// This function should only call once.
     pub fn initialize(&mut self) {

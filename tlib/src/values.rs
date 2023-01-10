@@ -10,7 +10,7 @@ use crate::types::{StaticType, Type};
 /// let get = val.get::<i32>();
 /// assert_eq!(12, get);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Value {
     data: Vec<u8>,
     value_type: Type,

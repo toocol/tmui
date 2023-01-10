@@ -1,7 +1,8 @@
+use super::Message;
 #[cfg(target_os = "windows")]
 use super::{PlatformContext, CODE_VSYNC};
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
-use std::{mem::size_of, os::raw::c_void, sync::atomic::Ordering, thread};
+use std::{mem::size_of, os::raw::c_void, sync::{atomic::Ordering, mpsc::Sender}, thread};
 use windows::{
     core::*,
     w,
@@ -26,8 +27,12 @@ pub struct PlatformWin32 {
     /// The fileds associated with win32
     _hins: HINSTANCE,
     hwnd: HWND,
+
+    input_sender: Option<Sender<Message>>,
 }
+#[cfg(target_os = "windows")]
 unsafe impl Send for PlatformWin32 {}
+#[cfg(target_os = "windows")]
 unsafe impl Sync for PlatformWin32 {}
 
 #[cfg(target_os = "windows")]
@@ -83,6 +88,7 @@ impl PlatformContext for PlatformWin32 {
                 _back_buffer: back_buffer,
                 _hins: hins,
                 hwnd,
+                input_sender: None,
             }
         }
     }
@@ -134,6 +140,10 @@ impl PlatformContext for PlatformWin32 {
         unsafe {
             SendMessageW(self.hwnd, message.0, WPARAM(0), LPARAM(0));
         }
+    }
+
+    fn set_input_sender(&mut self, input_sender: Sender<super::Message>) {
+        self.input_sender = Some(input_sender)
     }
 }
 

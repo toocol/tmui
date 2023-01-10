@@ -2,6 +2,8 @@ pub mod message;
 pub mod platform_ipc;
 pub mod platform_win32;
 
+use std::{cell::RefCell, sync::mpsc::Sender};
+
 pub use message::*;
 pub use platform_ipc::*;
 pub use platform_win32::*;
@@ -33,7 +35,7 @@ pub trait PlatformContext: Sized + 'static {
 
     /// Wrap trait `PlatfomContext` it self to dyn trait [`PlatfromContextWrapper`].
     fn wrap(self) -> Box<dyn PlatformContextWrapper> {
-        Box::new(Some(self))
+        Box::new(RefCell::new(self))
     }
 
     /// Get the title of platfom.
@@ -62,16 +64,19 @@ pub trait PlatformContext: Sized + 'static {
 
     /// Send [`Message`] to the platform context.
     fn send_message(&self, message: Message);
+
+    /// Set the `input_sender` to transfer user input.
+    fn set_input_sender(&mut self, input_sender: Sender<Message>);
 }
 
 pub trait PlatformContextWrapper {
-    fn title(&self) -> &str;
+    fn title(&self) -> String;
 
     fn width(&self) -> i32;
 
     fn height(&self) -> i32;
 
-    fn resize(&mut self, width: i32, height: i32);
+    fn resize(&self, width: i32, height: i32);
 
     fn close(&self);
 
@@ -82,42 +87,48 @@ pub trait PlatformContextWrapper {
     fn handle_platform_event(&self);
 
     fn send_message(&self, message: Message);
+
+    fn set_input_sender(&self, input_sender: Sender<Message>);
 }
 
-impl<T: PlatformContext> PlatformContextWrapper for Option<T> {
-    fn title(&self) -> &str {
-        self.as_ref().unwrap().title()
+impl<T: PlatformContext> PlatformContextWrapper for RefCell<T> {
+    fn title(&self) -> String {
+        self.borrow().title().to_string()
     }
 
     fn width(&self) -> i32 {
-        self.as_ref().unwrap().width()
+        self.borrow().width()
     }
 
     fn height(&self) -> i32 {
-        self.as_ref().unwrap().height()
+        self.borrow().height()
     }
 
-    fn resize(&mut self, width: i32, height: i32) {
-        self.as_mut().unwrap().resize(width, height)
+    fn resize(&self, width: i32, height: i32) {
+        self.borrow_mut().resize(width, height)
     }
 
     fn close(&self) {
-        self.as_ref().unwrap().close()
+        self.borrow().close()
     }
 
     fn front_bitmap(&self) -> Bitmap {
-        self.as_ref().unwrap().front_bitmap()
+        self.borrow().front_bitmap()
     }
 
     fn back_bitmap(&self) -> Bitmap {
-        self.as_ref().unwrap().back_bitmap()
+        self.borrow().back_bitmap()
     }
 
     fn handle_platform_event(&self) {
-        self.as_ref().unwrap().handle_platform_event()
+        self.borrow().handle_platform_event()
     }
 
     fn send_message(&self, message: Message) {
-        self.as_ref().unwrap().send_message(message)
+        self.borrow().send_message(message)
+    }
+
+    fn set_input_sender(&self, input_sender: Sender<Message>) {
+        self.borrow_mut().set_input_sender(input_sender)
     }
 }
