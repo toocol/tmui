@@ -29,7 +29,7 @@ lazy_static! {
         AtomicPtr::new(null_mut());
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
 }
-thread_local! {pub static IS_MAIN_THREAD: RefCell<bool> = RefCell::new(false)}
+thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
 #[derive(Default)]
 pub struct Application {
@@ -51,15 +51,19 @@ impl Application {
         ApplicationBuilder::default()
     }
 
+    /// Get the main application window([`ApplicationWindow`]).
+    /// There was only one application window in tmui.
     pub fn application_window<'a>() -> &'a mut ApplicationWindow {
-        IS_MAIN_THREAD.with(|is_main| {
-            if !*is_main.borrow() {
-                panic!(
-                    "`Application::application_window()` should only call in the UI `main` thread."
-                )
-            }
-        });
+        if !Self::is_ui_thread() {
+            panic!("`Application::application_window()` should only call in the UI `main` thread.");
+        }
+
         unsafe { APPLICATION_WINDOW.load(Ordering::SeqCst).as_mut().unwrap() }
+    }
+
+    /// Determine whether the current thread is the UI main thread.
+    pub fn is_ui_thread() -> bool {
+        IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
     }
 
     /// Start to run this application.
@@ -131,7 +135,7 @@ impl Application {
         on_activate: Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>,
     ) {
         // Set the UI thread to the `Main` thread.
-        IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+        IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
 
         let platform = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_ref().unwrap() };
         // Create and initialize the `ActionHub`.

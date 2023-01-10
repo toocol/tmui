@@ -1,7 +1,7 @@
 use std::{os::raw::c_void, ptr::NonNull, slice};
 
 /// `Bitmap` holding the raw pointer of specific memory area created by specific platform context.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Bitmap {
     /// The raw pointer of the origin memory area.
     raw_pointer: Option<NonNull<c_void>>,
@@ -13,6 +13,8 @@ pub struct Bitmap {
     width: i32,
     /// The height of `Bitmap`.
     height: i32,
+    /// This bitmap has been rendered and is ready to display.
+    prepared: bool,
 }
 unsafe impl Send for Bitmap {}
 unsafe impl Sync for Bitmap {}
@@ -26,6 +28,7 @@ impl Bitmap {
             row_bytes: (width * 4) as usize,
             width,
             height,
+            prepared: false,
         }
     }
 
@@ -50,5 +53,13 @@ impl Bitmap {
 
     pub fn height(&self) -> i32 {
         self.height
+    }
+
+    pub fn set_prepared(&mut self, is_prepared: bool) {
+        self.prepared = is_prepared
+    }
+
+    pub fn is_prepared(&self) -> bool {
+        self.prepared
     }
 }

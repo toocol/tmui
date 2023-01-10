@@ -82,6 +82,8 @@ pub trait ElementImpl: ElementExt {
     fn on_renderer(&self, cr: &DrawingContext);
 }
 
+pub trait ElementAcquire: ElementImpl {}
+
 #[cfg(test)]
 mod tests {
     use super::*;

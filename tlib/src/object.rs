@@ -51,7 +51,7 @@ impl Default for Object {
     }
 }
 
-pub trait ObjectOperation: ObjectImpl {
+pub trait ObjectOperation: ObjectImpl + Default {
     fn id(&self) -> u64;
 
     fn set_property(&self, name: &str, value: Value);

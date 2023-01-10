@@ -6,7 +6,7 @@ pub mod figure;
 
 #[cfg(test)]
 mod tests {
-    use super::element::{Element, ElementExt, ElementImpl};
+    use super::element::{Element, ElementExt, ElementImpl, ElementAcquire};
     use super::figure::Rect;
     use tlib::{
         object::{ObjectImpl, ObjectSubclass},
