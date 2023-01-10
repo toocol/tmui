@@ -1,6 +1,6 @@
-use std::{cell::RefCell, ptr::NonNull};
-use skia_safe::Surface;
 use super::{drawing_context::DrawingContext, element::ElementImpl};
+use skia_safe::Surface;
+use std::{cell::RefCell, ptr::NonNull};
 
 /// Basic drawing Board with Skia surface.
 ///
@@ -21,11 +21,13 @@ impl Board {
         }
     }
 
-    pub fn add_element(&mut self, element: &mut dyn ElementImpl) {
-        self.element_list.push(NonNull::new(element as *mut dyn ElementImpl))
+    pub fn add_element(&mut self, element: *mut dyn ElementImpl) {
+        self.element_list
+            .push(NonNull::new(element))
     }
 
-    pub fn invalidate_visual(&self) {
+    pub fn invalidate_visual(&self) -> bool {
+        let mut update = false;
         for element in self.element_list.iter() {
             unsafe {
                 let element = element.as_ref().unwrap().as_ref();
@@ -33,8 +35,10 @@ impl Board {
                     let cr = DrawingContext::new(self, element.rect());
                     element.on_renderer(&cr);
                     element.validate();
+                    update = true;
                 }
             }
         }
+        update
     }
 }

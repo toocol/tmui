@@ -166,13 +166,14 @@ impl Application {
         }
 
         let mut last_frame = 0u128;
+        let mut update = true;
         loop {
             let now = TimeStamp::timestamp_micros();
-            if now - last_frame >= FRAME_INTERVAL {
+            if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
                 output_sender.send(Message::MESSAGE_VSNYC).unwrap();
             }
-            board.invalidate_visual();
+            update = board.invalidate_visual();
 
             action_hub.process_multi_thread_actions();
             thread::sleep(Duration::from_nanos(1));

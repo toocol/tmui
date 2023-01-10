@@ -220,12 +220,6 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
 
-                impl IWidget for #name {
-                    fn as_any(&self) -> &dyn Any {
-                        self
-                    }
-                }
-
                 impl WidgetExt for #name {}
 
                 impl WidgetAcquire for #name {}

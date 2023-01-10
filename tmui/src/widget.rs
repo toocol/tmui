@@ -1,5 +1,10 @@
+use crate::{
+    graphics::{board::Board, drawing_context::DrawingContext, element::ElementImpl},
+    prelude::*,
+};
+use lazy_static::lazy_static;
+use skia_safe::{Color, Font, Paint, Path};
 use std::{
-    any::Any,
     cell::RefCell,
     ptr::{null_mut, NonNull},
     sync::{
@@ -7,13 +12,6 @@ use std::{
         Once,
     },
 };
-
-use crate::{
-    graphics::{board::Board, drawing_context::DrawingContext, element::ElementImpl},
-    prelude::*,
-};
-use lazy_static::lazy_static;
-use skia_safe::{Color, Font, Paint, Path};
 use tlib::object::{IsSubclassable, ObjectImpl, ObjectSubclass};
 
 static INIT: Once = Once::new();
@@ -32,7 +30,7 @@ pub fn store_board(board: &mut Board) {
 #[derive(Default)]
 pub struct Widget {
     board: RefCell<Option<NonNull<Board>>>,
-    _child: Option<Box<dyn ElementImpl>>,
+    _child: Option<Box<dyn WidgetImpl>>,
 }
 
 impl ObjectSubclass for Widget {
@@ -50,10 +48,6 @@ impl Widget {
 
 pub trait WidgetAcquire: WidgetImpl {}
 
-pub trait IWidget {
-    fn as_any(&self) -> &dyn Any;
-}
-
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {}
@@ -63,6 +57,13 @@ impl WidgetExt for Widget {}
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////
 /// Every struct modified by proc-macro [`extends_widget`] should impl this trait manually.
 pub trait WidgetImpl: WidgetExt + ElementImpl {}
+
+pub trait WidgetImplExt {
+    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
+        let mut child = child;
+        let _c = &mut child as *mut T as *mut dyn ElementImpl;
+    }
+}
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl IsSubclassable for Widget {}
