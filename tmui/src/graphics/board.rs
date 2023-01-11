@@ -9,21 +9,22 @@ use std::{cell::RefCell, ptr::NonNull};
 /// Board contains a renderer method `invalidate_visual`, every frame will call this function automaticly and redraw the invalidated element.
 /// (All elements call it's `update()` method can set it's `invalidate` field to true, or call `force_update()` to invoke `invalidate_visual` directly)
 pub struct Board {
-    pub surface: RefCell<Surface>,
+    pub front_surface: RefCell<Surface>,
+    pub back_surface: RefCell<Surface>,
     pub element_list: Vec<Option<NonNull<dyn ElementImpl>>>,
 }
 
 impl Board {
-    pub fn new(surface: Surface) -> Self {
+    pub fn new(surface: (Surface, Surface)) -> Self {
         Self {
-            surface: RefCell::new(surface),
+            front_surface: RefCell::new(surface.0),
+            back_surface: RefCell::new(surface.1),
             element_list: vec![],
         }
     }
 
     pub fn add_element(&mut self, element: *mut dyn ElementImpl) {
-        self.element_list
-            .push(NonNull::new(element))
+        self.element_list.push(NonNull::new(element))
     }
 
     pub fn invalidate_visual(&self) -> bool {

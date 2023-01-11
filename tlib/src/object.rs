@@ -51,7 +51,7 @@ impl Default for Object {
     }
 }
 
-pub trait ObjectOperation: ObjectImpl + Default {
+pub trait ObjectOperation {
     fn id(&self) -> u64;
 
     fn set_property(&self, name: &str, value: Value);
@@ -107,7 +107,11 @@ impl ObjectSubclass for Object {
     type ParentType = Object;
 }
 
-impl ObjectType for Object {}
+impl ObjectType for Object {
+    fn object_type(&self) -> Type {
+        Self::static_type()
+    }
+}
 
 impl IsA<Object> for Object {}
 

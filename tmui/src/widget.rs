@@ -30,7 +30,8 @@ pub fn store_board(board: &mut Board) {
 #[derive(Default)]
 pub struct Widget {
     board: RefCell<Option<NonNull<Board>>>,
-    _child: Option<Box<dyn WidgetImpl>>,
+    parent: RefCell<Option<*const dyn WidgetImpl>>,
+    child: RefCell<Option<Box<dyn WidgetImpl>>>,
 }
 
 impl ObjectSubclass for Widget {
@@ -41,8 +42,13 @@ impl ObjectSubclass for Widget {
 }
 
 impl Widget {
-    pub fn board(&self) -> &mut Board {
-        unsafe { self.board.borrow_mut().as_mut().unwrap().as_mut() }
+    pub fn board(&self) -> Option<&mut Board> {
+        unsafe {
+            match self.board.borrow_mut().as_mut() {
+                Some(board) => Some(board.as_mut()),
+                None => None,
+            }
+        }
     }
 }
 
@@ -50,35 +56,89 @@ pub trait WidgetAcquire: WidgetImpl {}
 
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
-pub trait WidgetExt {}
+pub trait WidgetExt {
+    /// ## Do not invoke this function directly.
+    fn set_parent(&self, parent: *const dyn WidgetImpl);
 
-impl WidgetExt for Widget {}
+    /// Get the raw pointer of parent.
+    /// Please use `get_parent()` function in [`WidgetGenericExt`]
+    fn get_raw_child(&self) -> Option<*const dyn WidgetImpl>;
+
+    /// Get the raw pointer of parent.
+    /// Please use `get_parent()` function in [`WidgetGenericExt`]
+    fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl>;
+}
+
+impl WidgetExt for Widget {
+    fn set_parent(&self, parent: *const dyn WidgetImpl) {
+        *self.parent.borrow_mut() = Some(parent)
+    }
+
+    fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
+        match self.child.borrow().as_ref() {
+            Some(child) => Some(child.as_ref() as *const dyn WidgetImpl),
+            None => None,
+        }
+    }
+
+    fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
+        match self.parent.borrow().as_ref() {
+            Some(parent) => Some(*parent),
+            None => None,
+        }
+    }
+}
+
+////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
+/// The trait provide some functions include the generic types.
+pub trait WidgetGenericExt {
+    fn get_parent<T: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&T>;
+
+    fn get_child<T: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&T>;
+}
+impl<T: WidgetImpl> WidgetGenericExt for T {
+    fn get_parent<R: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&R> {
+        let raw_parent = self.get_raw_parent();
+        match raw_parent {
+            Some(parent) => unsafe { 
+                if parent.as_ref().is_none() {
+                    return None
+                }
+                println!("target type {}", R::static_type().name());
+                println!("actual type {}", parent.as_ref().unwrap().object_type().name());
+                if parent.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                    (parent as *const R).as_ref()
+                } else {
+                    None
+                }
+            },
+            None => None,
+        }
+    }
+
+    fn get_child<R: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&R> {
+        let raw_child = self.get_raw_child();
+        match raw_child {
+            Some(child) => unsafe { 
+                if child.as_ref().is_none() {
+                    return None
+                }
+                if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                    (child as *const R).as_ref()
+                } else {
+                    None
+                }
+            },
+            None => None,
+        }
+    }
+}
 
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////
 /// Every struct modified by proc-macro [`extends_widget`] should impl this trait manually.
-pub trait WidgetImpl: WidgetExt + ElementImpl {}
-
-pub trait WidgetImplExt {
-    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
-        let mut child = child;
-        let _c = &mut child as *mut T as *mut dyn ElementImpl;
-    }
-}
-
-////////////////////////////////////// Widget Implements //////////////////////////////////////
-impl IsSubclassable for Widget {}
-
-impl ObjectImpl for Widget {
-    fn construct(&self) {
-        self.parent_construct();
-        *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
-
-        println!("`Widget` construct")
-    }
-}
-
-impl ElementImpl for Widget {
-    fn on_renderer(&self, cr: &DrawingContext) {
+/// WidgetImpl's `paint()` function Will be proxy executated by ElementImpl `on_renderer` method .
+pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType {
+    fn paint(&self, cr: &DrawingContext) {
         let mut surface = cr.surface();
         let canvas = surface.canvas();
         let mut paint = Paint::default();
@@ -104,13 +164,49 @@ impl ElementImpl for Widget {
     }
 }
 
+pub trait WidgetImplExt: WidgetImpl {
+    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T);
+}
+
+impl WidgetImplExt for Widget {
+    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
+        let mut child = Box::new(child);
+
+        child.set_parent(self as *const dyn WidgetImpl);
+
+        if let Some(board) = self.board() {
+            board.add_element(child.as_mut() as *mut T as *mut dyn ElementImpl);
+        }
+
+        *self.child.borrow_mut() = Some(child);
+    }
+}
+
+////////////////////////////////////// Widget Implements //////////////////////////////////////
+impl IsSubclassable for Widget {}
+
+impl ObjectImpl for Widget {
+    fn construct(&self) {
+        self.parent_construct();
+        *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
+
+        println!("`Widget` construct")
+    }
+}
+
+impl WidgetImpl for Widget {}
+
+impl<T: WidgetImpl> ElementImpl for T {
+    fn on_renderer(&self, cr: &DrawingContext) {
+        self.paint(cr)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use tlib::object::{ObjectImpl, ObjectSubclass};
-
-    use crate::prelude::*;
-
     use super::WidgetImpl;
+    use crate::{prelude::*, widget::WidgetGenericExt};
+    use tlib::object::{ObjectImpl, ObjectSubclass};
 
     #[extends_widget]
     #[derive(Default)]
@@ -127,10 +223,38 @@ mod tests {
 
     impl WidgetImpl for SubWidget {}
 
+    #[extends_widget]
+    #[derive(Default)]
+    struct ChildWidget {
+    }
+
+    impl ObjectSubclass for ChildWidget {
+        const NAME: &'static str = "ChildWidget";
+
+        type Type = SubWidget;
+        type ParentType = Widget;
+    }
+
+    impl ObjectImpl for ChildWidget {}
+
+    impl WidgetImpl for ChildWidget {}
+
     #[test]
     fn test_sub_widget() {
         let widget: SubWidget = Object::new(&[("width", &&120), ("height", &&80)]);
+        assert!(widget.id() > 0);
         assert_eq!(120, widget.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, widget.get_property("height").unwrap().get::<i32>());
+
+        let child: ChildWidget = Object::new(&[]);
+        let child_id = child.id();
+
+        widget.child(child);
+
+        let child_ref = widget.get_child::<ChildWidget>().unwrap();
+        assert_eq!(child_ref.id(), child_id);
+
+        let parent_ref = child_ref.get_parent::<SubWidget>().unwrap();
+        assert_eq!(parent_ref.id(), widget.id());
     }
 }

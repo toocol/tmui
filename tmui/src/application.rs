@@ -8,10 +8,10 @@ use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType}, widget::store_board,
+    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
+    widget::store_board,
 };
 use lazy_static::lazy_static;
-
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -148,8 +148,12 @@ impl Application {
         // Create the [`Backend`] based on the backend type specified by the user.
         let backend;
         match backend_type {
-            BackendType::Raster => backend = RasterBackend::new(platform.front_bitmap()).wrap(),
-            BackendType::OpenGL => backend = OpenGLBackend::new(platform.front_bitmap()).wrap(),
+            BackendType::Raster => {
+                backend = RasterBackend::new(platform.front_bitmap(), platform.back_bitmap()).wrap()
+            }
+            BackendType::OpenGL => {
+                backend = OpenGLBackend::new(platform.front_bitmap(), platform.back_bitmap()).wrap()
+            }
         }
 
         // Create the `Board`.
@@ -166,14 +170,15 @@ impl Application {
         }
 
         let mut last_frame = 0u128;
-        let mut update = true;
+        let mut update;
         loop {
+            update = board.invalidate_visual();
+
             let now = TimeStamp::timestamp_micros();
             if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
                 output_sender.send(Message::MESSAGE_VSNYC).unwrap();
             }
-            update = board.invalidate_visual();
 
             action_hub.process_multi_thread_actions();
             thread::sleep(Duration::from_nanos(1));

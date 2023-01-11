@@ -17,13 +17,13 @@ pub enum BackendType {
 pub trait Backend: Sized + 'static {
     type Type: Backend;
 
-    fn new(bitmap: Bitmap) -> Self::Type;
+    fn new(front: Bitmap, back: Bitmap) -> Self::Type;
 
     fn wrap(self) -> Box<dyn BackendWrapper> {
         Box::new(RefCell::new(self))
     }
 
-    fn surface(&self) -> Surface;
+    fn surface(&self) -> (Surface, Surface);
 
     fn width(&self) -> i32;
 
@@ -31,7 +31,7 @@ pub trait Backend: Sized + 'static {
 }
 
 pub trait BackendWrapper {
-    fn surface(&self) -> skia_safe::Surface;
+    fn surface(&self) -> (Surface, Surface);
 
     fn width(&self) -> i32;
 
@@ -39,7 +39,7 @@ pub trait BackendWrapper {
 }
 
 impl<T: Backend> BackendWrapper for RefCell<T> {
-    fn surface(&self) -> Surface {
+    fn surface(&self) -> (Surface, Surface) {
         self.borrow().surface()
     }
 

@@ -33,7 +33,7 @@ impl ObjectImpl for Element {
 }
 
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
-pub trait ElementExt {
+pub trait ElementExt: 'static {
     fn update(&self);
 
     fn force_update(&self);

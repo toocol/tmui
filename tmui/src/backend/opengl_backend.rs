@@ -7,25 +7,26 @@ use skia_safe::Surface;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct OpenGLBackend {
-    bitmap: Bitmap,
+    front_buffer: Bitmap,
+    back_buffer: Bitmap,
 }
 
 impl Backend for OpenGLBackend {
     type Type = OpenGLBackend;
 
-    fn new(bitmap: Bitmap) -> Self::Type {
-        Self { bitmap }
+    fn new(front: Bitmap, back: Bitmap) -> Self::Type {
+        Self { front_buffer: front, back_buffer: back }
     }
 
-    fn surface(&self) -> Surface {
+    fn surface(&self) -> (Surface, Surface) {
         todo!()
     }
 
     fn width(&self) -> i32 {
-        self.bitmap.width()
+        self.front_buffer.width()
     }
 
     fn height(&self) -> i32 {
-        self.bitmap.height()
+        self.front_buffer.height()
     }
 }

@@ -55,11 +55,4 @@ impl Bitmap {
         self.height
     }
 
-    pub fn set_prepared(&mut self, is_prepared: bool) {
-        self.prepared = is_prepared
-    }
-
-    pub fn is_prepared(&self) -> bool {
-        self.prepared
-    }
 }

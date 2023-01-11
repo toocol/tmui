@@ -48,7 +48,11 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ActionExt for #name {}
 
-                impl ObjectType for #name {}
+                impl ObjectType for #name {
+                    fn object_type(&self) -> Type {
+                        Self::static_type()
+                    }
+                }
 
                 impl IsA<Object> for #name {}
 
@@ -132,7 +136,11 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ActionExt for #name {}
 
-                impl ObjectType for #name {}
+                impl ObjectType for #name {
+                    fn object_type(&self) -> Type {
+                        Self::static_type()
+                    }
+                }
 
                 impl IsA<Object> for #name {}
 
@@ -214,19 +222,35 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
                 }
 
-                impl ElementImpl for #name {
-                    fn on_renderer(&self, cr: &DrawingContext) {
-                        self.widget.on_renderer(cr)
+                impl WidgetExt for #name {
+                    fn set_parent(&self, parent: *const dyn WidgetImpl) {
+                        self.widget.set_parent(parent)
+                    }
+
+                    fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
+                        self.widget.get_raw_child()
+                    }
+
+                    fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
+                        self.widget.get_raw_parent()
                     }
                 }
 
-                impl WidgetExt for #name {}
+                impl WidgetImplExt for #name {
+                    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
+                        self.widget.child(child)
+                    }
+                }
 
                 impl WidgetAcquire for #name {}
 
                 impl ActionExt for #name {}
 
-                impl ObjectType for #name {}
+                impl ObjectType for #name {
+                    fn object_type(&self) -> Type {
+                        Self::static_type()
+                    }
+                }
 
                 impl IsA<Object> for #name {}
 

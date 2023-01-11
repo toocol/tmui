@@ -400,10 +400,12 @@ implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R);
 implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S);
 implements_tuple_type!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T);
 
-pub trait ObjectType: StaticType + 'static {}
+pub trait ObjectType: 'static {
+    fn object_type(&self) -> Type;
+}
 
-pub trait IsA<T: ObjectType>: ObjectType + ObjectSubclass {
-    fn downcast_ref<R: ObjectType>(&self) -> Option<&R> {
+pub trait IsA<T: ObjectType + StaticType>: ObjectType + StaticType + ObjectSubclass {
+    fn downcast_ref<R: ObjectType + StaticType>(&self) -> Option<&R> {
         if Self::static_type().is_a(R::static_type()) {
             Some(unsafe { &*(self as *const Self as *const R) })
         } else {

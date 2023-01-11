@@ -7,40 +7,53 @@ use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface};
 #[derive(Debug)]
 pub struct RasterBackend {
     image_info: ImageInfo,
-    bitmap: Bitmap,
+    front_buffer: Bitmap,
+    back_buffer: Bitmap,
 }
 
 impl Backend for RasterBackend {
     type Type = RasterBackend;
 
-    fn new(bitmap: Bitmap) -> Self::Type {
+    fn new(front: Bitmap, back: Bitmap) -> Self::Type {
         Self {
             image_info: ImageInfo::new(
-                (bitmap.width(), bitmap.height()),
+                (front.width(), front.height()),
                 ColorType::BGRA8888,
                 AlphaType::Premul,
                 ColorSpace::new_srgb(),
             ),
-            bitmap,
+            front_buffer: front,
+            back_buffer: back,
         }
     }
 
-    fn surface(&self) -> Surface {
-        Surface::new_raster_direct(
+    fn surface(&self) -> (Surface, Surface) {
+        let front_surface = Surface::new_raster_direct(
             &self.image_info,
-            self.bitmap.get_pixels(),
-            self.bitmap.row_bytes(),
+            self.front_buffer.get_pixels(),
+            self.front_buffer.row_bytes(),
             None,
         )
         .expect("Create rawster skia surface failed.")
-        .to_owned()
+        .to_owned();
+
+        let back_surface = Surface::new_raster_direct(
+            &self.image_info,
+            self.back_buffer.get_pixels(),
+            self.back_buffer.row_bytes(),
+            None,
+        )
+        .expect("Create rawster skia surface failed.")
+        .to_owned();
+
+        (front_surface, back_surface)
     }
 
     fn width(&self) -> i32 {
-        self.bitmap.width()
+        self.front_buffer.width()
     }
 
     fn height(&self) -> i32 {
-        self.bitmap.height()
+        self.front_buffer.height()
     }
 }

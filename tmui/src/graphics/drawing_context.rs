@@ -26,7 +26,7 @@ impl<'a> DrawingContext<'a> {
 
     #[inline]
     pub fn surface(&self) -> RefMut<Surface> {
-        self.board.surface.borrow_mut()
+        self.board.front_surface.borrow_mut()
     }
 
     #[inline]
