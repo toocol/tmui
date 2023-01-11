@@ -34,6 +34,7 @@ pub struct Widget {
     child: RefCell<Option<Box<dyn WidgetImpl>>>,
 }
 
+////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";
 
@@ -41,8 +42,43 @@ impl ObjectSubclass for Widget {
     type ParentType = Object;
 }
 
+impl IsSubclassable for Widget {}
+
+impl ObjectImpl for Widget {
+    fn construct(&self) {
+        self.parent_construct();
+        *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
+
+        println!("`Widget` construct")
+    }
+
+    fn on_property_set(&self, name: &str, value: &Value) {
+        println!("`Widget` on set property");
+
+        match name {
+            "width" => {
+                let width = value.get::<i32>();
+                self.set_fixed_width(width)
+            }
+            "height" => {
+                let height = value.get::<i32>();
+                self.set_fixed_height(height)
+            }
+            _ => {}
+        }
+    }
+}
+
+impl WidgetImpl for Widget {}
+
+impl<T: WidgetImpl> ElementImpl for T {
+    fn on_renderer(&self, cr: &DrawingContext) {
+        self.paint(cr)
+    }
+}
+
 impl Widget {
-    pub fn board(&self) -> Option<&mut Board> {
+    fn board(&self) -> Option<&mut Board> {
         unsafe {
             match self.board.borrow_mut().as_mut() {
                 Some(board) => Some(board.as_mut()),
@@ -67,6 +103,12 @@ pub trait WidgetExt {
     /// Get the raw pointer of parent.
     /// Please use `get_parent()` function in [`WidgetGenericExt`]
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl>;
+
+    /// Request the widget's maximum width.
+    fn width_request(&self, width: i32);
+
+    /// Request the widget's maximum width.
+    fn height_request(&self, width: i32);
 }
 
 impl WidgetExt for Widget {
@@ -87,6 +129,14 @@ impl WidgetExt for Widget {
             None => None,
         }
     }
+
+    fn width_request(&self, width: i32) {
+        self.set_property("width", width.to_value());
+    }
+
+    fn height_request(&self, height: i32) {
+        self.set_property("height", height.to_value());
+    }
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -100,13 +150,16 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
     fn get_parent<R: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&R> {
         let raw_parent = self.get_raw_parent();
         match raw_parent {
-            Some(parent) => unsafe { 
+            Some(parent) => unsafe {
                 if parent.as_ref().is_none() {
-                    return None
+                    return None;
                 }
-                println!("target type {}", R::static_type().name());
-                println!("actual type {}", parent.as_ref().unwrap().object_type().name());
-                if parent.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                if parent
+                    .as_ref()
+                    .unwrap()
+                    .object_type()
+                    .is_a(R::static_type())
+                {
                     (parent as *const R).as_ref()
                 } else {
                     None
@@ -119,9 +172,9 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
     fn get_child<R: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&R> {
         let raw_child = self.get_raw_child();
         match raw_child {
-            Some(child) => unsafe { 
+            Some(child) => unsafe {
                 if child.as_ref().is_none() {
-                    return None
+                    return None;
                 }
                 if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
                     (child as *const R).as_ref()
@@ -168,37 +221,28 @@ pub trait WidgetImplExt: WidgetImpl {
     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T);
 }
 
-impl WidgetImplExt for Widget {
-    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
+pub trait WidgetImplInternal {
+    fn child_internal<P, T>(&self, parent: &P, child: T)
+    where
+        P: WidgetImpl + ElementImpl + IsA<Widget>,
+        T: WidgetImpl + ElementImpl + IsA<Widget>;
+}
+
+impl WidgetImplInternal for Widget {
+    fn child_internal<P, T>(&self, parent: &P, child: T)
+    where
+        P: WidgetImpl + ElementImpl + IsA<Widget>,
+        T: WidgetImpl + ElementImpl + IsA<Widget>,
+    {
         let mut child = Box::new(child);
 
-        child.set_parent(self as *const dyn WidgetImpl);
+        child.set_parent(parent as *const dyn WidgetImpl);
 
         if let Some(board) = self.board() {
-            board.add_element(child.as_mut() as *mut T as *mut dyn ElementImpl);
+            board.add_element(child.as_mut() as *mut dyn ElementImpl);
         }
 
         *self.child.borrow_mut() = Some(child);
-    }
-}
-
-////////////////////////////////////// Widget Implements //////////////////////////////////////
-impl IsSubclassable for Widget {}
-
-impl ObjectImpl for Widget {
-    fn construct(&self) {
-        self.parent_construct();
-        *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
-
-        println!("`Widget` construct")
-    }
-}
-
-impl WidgetImpl for Widget {}
-
-impl<T: WidgetImpl> ElementImpl for T {
-    fn on_renderer(&self, cr: &DrawingContext) {
-        self.paint(cr)
     }
 }
 
@@ -225,8 +269,7 @@ mod tests {
 
     #[extends_widget]
     #[derive(Default)]
-    struct ChildWidget {
-    }
+    struct ChildWidget {}
 
     impl ObjectSubclass for ChildWidget {
         const NAME: &'static str = "ChildWidget";
@@ -242,19 +285,29 @@ mod tests {
     #[test]
     fn test_sub_widget() {
         let widget: SubWidget = Object::new(&[("width", &&120), ("height", &&80)]);
-        assert!(widget.id() > 0);
         assert_eq!(120, widget.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, widget.get_property("height").unwrap().get::<i32>());
 
-        let child: ChildWidget = Object::new(&[]);
+        let child: ChildWidget = Object::new(&[("width", &&120), ("height", &&80)]);
         let child_id = child.id();
 
         widget.child(child);
 
         let child_ref = widget.get_child::<ChildWidget>().unwrap();
         assert_eq!(child_ref.id(), child_id);
+        assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
+        assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());
 
         let parent_ref = child_ref.get_parent::<SubWidget>().unwrap();
         assert_eq!(parent_ref.id(), widget.id());
+        assert_eq!(120, parent_ref.get_property("width").unwrap().get::<i32>());
+        assert_eq!(80, parent_ref.get_property("height").unwrap().get::<i32>());
+
+        parent_ref.set_property("length", 100.to_value());
+        assert_eq!(100, widget.get_property("length").unwrap().get::<i32>());
+
+        let rect = parent_ref.rect();
+        assert_eq!(120, rect.width());
+        assert_eq!(80, rect.height());
     }
 }

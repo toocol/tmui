@@ -153,7 +153,7 @@ pub trait ActionExt: Sized + ObjectOperation {
         Action::with_param(signal, param)
     }
 
-    fn action_address(&self) -> u64 {
+    fn action_address(&self) -> u16 {
         self.id()
     }
 }

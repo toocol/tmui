@@ -1,5 +1,5 @@
+#![cfg(target_os = "windows")]
 use super::Message;
-#[cfg(target_os = "windows")]
 use super::{PlatformContext, CODE_VSYNC};
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
 use std::{mem::size_of, os::raw::c_void, sync::{atomic::Ordering, mpsc::Sender}, thread};
@@ -12,7 +12,6 @@ use windows::{
     },
 };
 
-#[cfg(target_os = "windows")]
 pub struct PlatformWin32 {
     title: String,
     width: i32,
@@ -30,12 +29,9 @@ pub struct PlatformWin32 {
 
     input_sender: Option<Sender<Message>>,
 }
-#[cfg(target_os = "windows")]
 unsafe impl Send for PlatformWin32 {}
-#[cfg(target_os = "windows")]
 unsafe impl Sync for PlatformWin32 {}
 
-#[cfg(target_os = "windows")]
 impl PlatformContext for PlatformWin32 {
     type Type = PlatformWin32;
 

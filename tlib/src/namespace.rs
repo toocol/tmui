@@ -1,5 +1,9 @@
+use std::mem::size_of;
+
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+
+use crate::{prelude::{ToValue, StaticType}, Type, values::{FromValue, FromBytes, ToBytes}, Value};
 
 /// The enum to represent the key code on keyboard.
 #[repr(u32)]
@@ -405,5 +409,78 @@ impl From<u32> for KeyboardModifier {
             0xfe000000 => Self::KeyboardModifierMask,
             _ => Self::Combination(value),
         }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Align {
+    Start = 1,
+    Center,
+    End,
+}
+impl Align {
+    pub fn as_u8(&self) -> u8 {
+        match self {
+            Self::Start => 1,
+            Self::Center => 2,
+            Self::End => 3,
+        }
+    }
+}
+impl From<u8> for Align {
+    fn from(x: u8) -> Self {
+        match x {
+            1 => Self::Start,
+            2 => Self::Center,
+            3 => Self::End,
+            _ => unimplemented!()
+        }
+    }
+}
+impl StaticType for Align {
+    fn static_type() -> Type {
+        Type::from_name("Align")
+    }
+
+    fn bytes_len() -> usize {
+        size_of::<u8>()
+    }
+}
+impl ToBytes for Align {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.as_u8().to_bytes()
+    }
+}
+impl ToValue for Align {
+    fn to_value(&self) -> crate::Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> crate::Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for Align {
+    fn from_bytes(data: &[u8], len: usize) -> Self {
+        Align::from(u8::from_bytes(data, len))
+    }
+}
+impl FromValue for Align {
+    fn from_value(value: &crate::Value) -> Self {
+        Align::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::ToValue;
+
+    use super::Align;
+
+    #[test]
+    fn test_align() {
+        let val = Align::Center.to_value();
+        assert_eq!(val.get::<Align>(), Align::Center);
     }
 }

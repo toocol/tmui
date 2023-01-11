@@ -1,5 +1,5 @@
-use std::cell::Cell;
 use super::{drawing_context::DrawingContext, figure::Rect};
+use std::cell::{Cell, Ref, RefCell};
 use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     prelude::*,
@@ -10,7 +10,7 @@ use tlib::{
 #[derive(Default)]
 pub struct Element {
     invalidate: Cell<bool>,
-    rect: Cell<Rect>,
+    rect: RefCell<Rect>,
 }
 
 /// Mark `Element` as is subclassable.
@@ -38,9 +38,15 @@ pub trait ElementExt: 'static {
 
     fn force_update(&self);
 
-    fn rect(&self) -> Rect;
+    fn rect(&self) -> Ref<Rect>;
 
-    fn set_rect(&self, point: Rect);
+    fn set_fixed_width(&self, width: i32);
+
+    fn set_fixed_height(&self, height: i32);
+
+    fn set_fixed_x(&self, x: i32);
+
+    fn set_fixed_y(&self, y: i32);
 
     fn invalidate(&self) -> bool;
 
@@ -59,12 +65,24 @@ impl ElementExt for Element {
         // TODO: firgue out how to invoke `Board`'s `invalidate_visual` obligatory.
     }
 
-    fn rect(&self) -> Rect {
-        self.rect.get()
+    fn rect(&self) -> Ref<Rect> {
+        Ref::map(self.rect.borrow(), |rect| rect)
     }
 
-    fn set_rect(&self, rect: Rect) {
-        self.rect.set(rect)
+    fn set_fixed_width(&self, width: i32) {
+        self.rect.borrow_mut().set_width(width)
+    }
+
+    fn set_fixed_height(&self, height: i32) {
+        self.rect.borrow_mut().set_height(height)
+    }
+
+    fn set_fixed_x(&self, x: i32) {
+        self.rect.borrow_mut().set_x(x)
+    }
+
+    fn set_fixed_y(&self, y: i32) {
+        self.rect.borrow_mut().set_y(y)
     }
 
     fn invalidate(&self) -> bool {
@@ -76,8 +94,8 @@ impl ElementExt for Element {
     }
 }
 
-/// Every Element's subclass should impl this trait manually, 
-/// and implements `on_renderer` function.
+/// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>
+/// Each subclass which impl [`WidgetImpl`] will impl this trait automatically.
 pub trait ElementImpl: ElementExt + 'static {
     fn on_renderer(&self, cr: &DrawingContext);
 }
@@ -91,7 +109,6 @@ mod tests {
     #[test]
     fn test_element() {
         let element = Object::new::<Element>(&[("prop1", &&12), ("prop2", &"12")]);
-        element.set_rect(Rect::from((100, 100, 50, 50)));
         element.update();
         assert_eq!(12, element.get_property("prop1").unwrap().get());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
@@ -104,7 +121,6 @@ mod tests {
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 
         let element = obj.downcast_ref::<Element>().unwrap();
-        assert_eq!((100, 100, 50, 50), element.rect().into());
         assert!(element.invalidate());
     }
 }

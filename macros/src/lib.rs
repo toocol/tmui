@@ -33,11 +33,12 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
 
                 impl ObjectOperation for #name {
-                    fn id(&self) -> u64 {
+                    fn id(&self) -> u16 {
                         self.object.id()
                     }
 
                     fn set_property(&self, name: &str, value: Value) {
+                        self.object.on_property_set(name, &value);
                         self.object.set_property(name, value)
                     }
 
@@ -93,11 +94,14 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
 
                 impl ObjectOperation for #name {
-                    fn id(&self) -> u64 {
+                    fn id(&self) -> u16 {
                         self.element.object.id()
                     }
 
                     fn set_property(&self, name: &str, value: Value) {
+                        self.element.object.on_property_set(name, &value);
+                        self.element.on_property_set(name, &value);
+
                         self.element.object.set_property(name, value)
                     }
 
@@ -115,12 +119,24 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                         self.element.force_update()
                     }
 
-                    fn rect(&self) -> Rect {
+                    fn rect(&self) -> Ref<Rect> {
                         self.element.rect()
                     }
 
-                    fn set_rect(&self, rect: Rect) {
-                        self.element.set_rect(rect)
+                    fn set_fixed_width(&self, width: i32) {
+                        self.element.set_fixed_width(width)
+                    }
+
+                    fn set_fixed_height(&self, height: i32) {
+                        self.element.set_fixed_height(height)
+                    }
+
+                    fn set_fixed_x(&self, x: i32) {
+                        self.element.set_fixed_x(x)
+                    }
+
+                    fn set_fixed_y(&self, y: i32) {
+                        self.element.set_fixed_y(y)
                     }
 
                     fn invalidate(&self) -> bool {
@@ -183,11 +199,15 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
 
                 impl ObjectOperation for #name {
-                    fn id(&self) -> u64 {
+                    fn id(&self) -> u16 {
                         self.widget.element.object.id()
                     }
 
                     fn set_property(&self, name: &str, value: Value) {
+                        self.widget.element.object.on_property_set(name, &value);
+                        self.widget.element.on_property_set(name, &value);
+                        self.widget.on_property_set(name, &value);
+
                         self.widget.element.object.set_property(name, value)
                     }
 
@@ -205,12 +225,24 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                         self.widget.element.force_update()
                     }
 
-                    fn rect(&self) -> Rect {
+                    fn rect(&self) -> Ref<Rect> {
                         self.widget.element.rect()
                     }
 
-                    fn set_rect(&self, rect: Rect) {
-                        self.widget.element.set_rect(rect)
+                    fn set_fixed_width(&self, width: i32) {
+                        self.widget.element.set_fixed_width(width)
+                    }
+
+                    fn set_fixed_height(&self, height: i32) {
+                        self.widget.element.set_fixed_height(height)
+                    }
+
+                    fn set_fixed_x(&self, x: i32) {
+                        self.widget.element.set_fixed_x(x)
+                    }
+
+                    fn set_fixed_y(&self, y: i32) {
+                        self.widget.element.set_fixed_y(y)
                     }
 
                     fn invalidate(&self) -> bool {
@@ -234,11 +266,19 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
                         self.widget.get_raw_parent()
                     }
+
+                    fn width_request(&self, width: i32) {
+                        self.widget.width_request(width)
+                    }
+
+                    fn height_request(&self, width: i32) {
+                        self.widget.height_request(width)
+                    }
                 }
 
                 impl WidgetImplExt for #name {
                     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
-                        self.widget.child(child)
+                        self.widget.child_internal(self, child)
                     }
                 }
 
@@ -265,30 +305,3 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
         _ => panic!("`extends_object` has to be used with structs "),
     }
 }
-
-// #[proc_macro_derive(Element)]
-// pub fn derive_element(input: TokenStream) -> TokenStream {
-//     let mut ast = parse_macro_input!(input as DeriveInput);
-//     match &mut ast.data {
-//         syn::Data::Struct(ref mut struct_data) => {
-//             match &mut struct_data.fields {
-//                 syn::Fields::Named(fields) => {
-//                     fields.named.push(
-//                         syn::Field::parse_named
-//                             .parse2(quote! {
-//                                 element: Element,
-//                             })
-//                             .expect("Add field `element: Element` failed"),
-//                     );
-//                 }
-//                 _ => (),
-//             }
-
-//             return quote! {
-//                 #ast
-//             }
-//             .into();
-//         }
-//         _ => panic!("`extends_object` has to be used with structs "),
-//     }
-// }

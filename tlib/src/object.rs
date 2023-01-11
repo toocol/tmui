@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 use crate::{
     types::{IsA, ObjectType, StaticType, Type},
-    utils::SnowflakeGuidGenerator,
     values::{ToValue, Value},
 };
 use std::{
     cell::{Ref, RefCell},
-    collections::HashMap,
+    collections::HashMap, sync::atomic::{AtomicU16, Ordering},
 };
+
+const ID_INCREMENT: AtomicU16 = AtomicU16::new(0);
 
 /// Super type of object system, every subclass object should extends this struct by proc-marco `[extends_object]`,
 /// and impl `ObjectSubclass, ObjectImpl`
@@ -38,21 +39,21 @@ use std::{
 /// ```
 #[derive(Debug)]
 pub struct Object {
-    id: u64,
+    id: u16,
     properties: RefCell<HashMap<String, Box<Value>>>,
 }
 
 impl Default for Object {
     fn default() -> Self {
         Self {
-            id: SnowflakeGuidGenerator::next_id().unwrap(),
+            id: ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
             properties: RefCell::new(HashMap::new()),
         }
     }
 }
 
 pub trait ObjectOperation {
-    fn id(&self) -> u64;
+    fn id(&self) -> u16;
 
     fn set_property(&self, name: &str, value: Value);
 
@@ -83,12 +84,11 @@ impl Object {
 }
 
 impl ObjectOperation for Object {
-    fn id(&self) -> u64 {
+    fn id(&self) -> u16 {
         self.id
     }
 
     fn set_property(&self, name: &str, value: Value) {
-        self.on_property_set(name, &value);
         self.primitive_set_property(name, value);
     }
 
@@ -120,8 +120,8 @@ impl ObjectImpl for Object {
         println!("`Object` construct")
     }
 
-    fn on_property_set(&self, name: &str, _value: &Value) {
-        println!("`Object` set property {}", name)
+    fn on_property_set(&self, _name: &str, _value: &Value) {
+        println!("`Object` on set property")
     }
 }
 

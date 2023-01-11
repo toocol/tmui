@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use skia_safe::{Paint, PaintStyle, Path, Surface};
-use std::cell::{RefCell, RefMut};
+use std::cell::{RefCell, RefMut, Ref};
 
 use super::{board::Board, figure::Rect};
 
@@ -9,13 +9,13 @@ use super::{board::Board, figure::Rect};
 /// Elements call function in DrawingContext to renderering.
 pub struct DrawingContext<'a> {
     board: &'a Board,
-    rect: Rect,
+    rect: Ref<'a, Rect>,
     path: RefCell<Path>,
     paint: RefCell<Paint>,
 }
 
 impl<'a> DrawingContext<'a> {
-    pub fn new(board: &'a Board, rect: Rect) -> Self {
+    pub fn new(board: &'a Board, rect: Ref<'a, Rect>) -> Self {
         Self {
             board,
             rect,

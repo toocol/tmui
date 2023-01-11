@@ -16,7 +16,7 @@ impl ObjectSubclass for ApplicationWindow {
 impl ObjectImpl for ApplicationWindow {
     fn construct(&self) {
         self.parent_construct();
-        println!("Application construct: static_type: {}", Self::static_type().name())
+        println!("`ApplicationWindow` construct: static_type: {}", Self::static_type().name())
     }
 }
 
