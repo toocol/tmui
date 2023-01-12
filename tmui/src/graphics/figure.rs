@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use std::ops::{Add, Sub};
-
 use hex_color::HexColor;
 use tlib::{
     types::StaticType,
@@ -351,6 +350,17 @@ impl Into<(i32, i32, i32, i32)> for Rect {
     }
 }
 
+impl Into<skia_safe::Rect> for Rect {
+    fn into(self) -> skia_safe::Rect {
+        skia_safe::Rect::from_xywh(
+            self.x as f32,
+            self.y as f32,
+            self.width as f32,
+            self.height as f32,
+        )
+    }
+}
+
 impl StaticType for Rect {
     fn static_type() -> tlib::Type {
         tlib::Type::from_name("Rect")
@@ -505,6 +515,11 @@ impl Into<(i32, i32, i32)> for Color {
 impl Into<(i32, i32, i32)> for &Color {
     fn into(self) -> (i32, i32, i32) {
         (self.r as i32, self.g as i32, self.b as i32)
+    }
+}
+impl Into<skia_safe::Color> for Color {
+    fn into(self) -> skia_safe::Color {
+        skia_safe::Color::from_argb(self.a, self.r, self.g, self.b)
     }
 }
 
