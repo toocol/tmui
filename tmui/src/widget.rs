@@ -3,6 +3,7 @@ use crate::{
     prelude::*,
 };
 use lazy_static::lazy_static;
+use log::debug;
 use skia_safe::{Color, Font, Paint, Path};
 use std::{
     cell::RefCell,
@@ -12,7 +13,7 @@ use std::{
         Once,
     },
 };
-use tlib::object::{IsSubclassable, ObjectImpl, ObjectSubclass};
+use tlib::{object::{IsSubclassable, ObjectImpl, ObjectSubclass}, namespace::Align};
 
 static INIT: Once = Once::new();
 lazy_static! {
@@ -49,11 +50,11 @@ impl ObjectImpl for Widget {
         self.parent_construct();
         *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
 
-        println!("`Widget` construct")
+        debug!("`Widget` construct")
     }
 
     fn on_property_set(&self, name: &str, value: &Value) {
-        println!("`Widget` on set property");
+        debug!("`Widget` on set property, name = {}", name);
 
         match name {
             "width" => {
@@ -64,6 +65,10 @@ impl ObjectImpl for Widget {
                 let height = value.get::<i32>();
                 self.set_fixed_height(height)
             }
+            "invalidate" => {
+                // Notify all the child widget to invalidate, preparing rerenderer after.
+                self.notify_invalidate();
+            },
             _ => {}
         }
     }
@@ -109,6 +114,15 @@ pub trait WidgetExt {
 
     /// Request the widget's maximum width.
     fn height_request(&self, width: i32);
+
+    /// Notify all the child widget to invalidate.
+    fn notify_invalidate(&self);
+
+    /// Set alignment on the horizontal direction.
+    fn set_halign(&self, halign: Align);
+
+    /// Set alignment on the vertical direction.
+    fn set_valign(&self, valign: Align);
 }
 
 impl WidgetExt for Widget {
@@ -136,6 +150,20 @@ impl WidgetExt for Widget {
 
     fn height_request(&self, height: i32) {
         self.set_property("height", height.to_value());
+    }
+
+    fn notify_invalidate(&self) {
+        if let Some(child) = self.get_raw_child() {
+            unsafe { child.as_ref().unwrap().update() }
+        }
+    }
+
+    fn set_halign(&self, halign: Align) {
+        self.set_property("halign", halign.to_value())
+    }
+
+    fn set_valign(&self, valign: Align) {
+        self.set_property("valign", valign.to_value())
     }
 }
 
@@ -309,5 +337,7 @@ mod tests {
         let rect = parent_ref.rect();
         assert_eq!(120, rect.width());
         assert_eq!(80, rect.height());
+
+        parent_ref.update();
     }
 }

@@ -112,11 +112,11 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ElementExt for #name {
                     fn update(&self) {
-                        self.element.update()
+                        self.set_property("invalidate", true.to_value());
                     }
 
                     fn force_update(&self) {
-                        self.element.force_update()
+                        self.set_property("invalidate", true.to_value());
                     }
 
                     fn rect(&self) -> Ref<Rect> {
@@ -140,11 +140,14 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     fn invalidate(&self) -> bool {
-                        self.element.invalidate()
+                        match self.get_property("invalidate") {
+                            Some(invalidate) => invalidate.get::<bool>(),
+                            None => false
+                        }
                     }
 
                     fn validate(&self) {
-                        self.element.validate()
+                        self.set_property("invalidate", false.to_value());
                     }
                 }
 
@@ -218,11 +221,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ElementExt for #name {
                     fn update(&self) {
-                        self.widget.element.update()
+                        self.set_property("invalidate", true.to_value());
                     }
 
                     fn force_update(&self) {
-                        self.widget.element.force_update()
+                        self.set_property("invalidate", true.to_value());
                     }
 
                     fn rect(&self) -> Ref<Rect> {
@@ -246,11 +249,14 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     fn invalidate(&self) -> bool {
-                        self.widget.element.invalidate()
+                        match self.get_property("invalidate") {
+                            Some(invalidate) => invalidate.get::<bool>(),
+                            None => false
+                        }
                     }
 
                     fn validate(&self) {
-                        self.widget.element.validate()
+                        self.set_property("invalidate", false.to_value());
                     }
                 }
 
@@ -273,6 +279,18 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     fn height_request(&self, width: i32) {
                         self.widget.height_request(width)
+                    }
+
+                    fn notify_invalidate(&self) {
+                        self.widget.notify_invalidate()
+                    }
+
+                    fn set_halign(&self, halign: Align) {
+                        self.set_property("halign", halign.to_value())
+                    }
+
+                    fn set_valign(&self, valign: Align) {
+                        self.set_property("halign", valign.to_value())
                     }
                 }
 

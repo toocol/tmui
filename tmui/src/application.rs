@@ -162,12 +162,12 @@ impl Application {
 
         let mut window: ApplicationWindow = Object::new(&[]);
         APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
-        board.add_element(&mut window);
 
         if let Some(on_activate) = on_activate {
             on_activate(&window);
             drop(on_activate);
         }
+        board.add_element(&mut window);
 
         let mut last_frame = 0u128;
         let mut update;

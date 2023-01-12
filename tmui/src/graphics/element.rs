@@ -1,15 +1,15 @@
 use super::{drawing_context::DrawingContext, figure::Rect};
-use std::cell::{Cell, Ref, RefCell};
+use std::cell::{Ref, RefCell};
 use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     prelude::*,
 };
+use log::debug;
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends_object]
 #[derive(Default)]
 pub struct Element {
-    invalidate: Cell<bool>,
     rect: RefCell<Rect>,
 }
 
@@ -27,8 +27,8 @@ impl ObjectSubclass for Element {
 impl ObjectImpl for Element {
     fn construct(&self) {
         self.parent_construct();
-        self.invalidate.set(true);
-        println!("`Element` construct")
+        self.update();
+        debug!("`Element` construct")
     }
 }
 
@@ -56,12 +56,12 @@ pub trait ElementExt: 'static {
 impl ElementExt for Element {
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     fn update(&self) {
-        self.invalidate.set(true);
+        self.set_property("invalidate", true.to_value());
     }
 
     /// Mark element's invalidate field to true, and element will be redrawed immediately.
     fn force_update(&self) {
-        self.invalidate.set(true);
+        self.set_property("invalidate", true.to_value());
         // TODO: firgue out how to invoke `Board`'s `invalidate_visual` obligatory.
     }
 
@@ -86,11 +86,14 @@ impl ElementExt for Element {
     }
 
     fn invalidate(&self) -> bool {
-        self.invalidate.get()
+        match self.get_property("invalidate") {
+            Some(invalidate) => invalidate.get::<bool>(),
+            None => false
+        }
     }
 
     fn validate(&self) {
-        self.invalidate.set(false)
+        self.set_property("invalidate", false.to_value());
     }
 }
 

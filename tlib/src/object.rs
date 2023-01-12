@@ -7,6 +7,7 @@ use std::{
     cell::{Ref, RefCell},
     collections::HashMap, sync::atomic::{AtomicU16, Ordering},
 };
+use log::debug;
 
 const ID_INCREMENT: AtomicU16 = AtomicU16::new(0);
 
@@ -117,11 +118,7 @@ impl IsA<Object> for Object {}
 
 impl ObjectImpl for Object {
     fn construct(&self) {
-        println!("`Object` construct")
-    }
-
-    fn on_property_set(&self, _name: &str, _value: &Value) {
-        println!("`Object` on set property")
+        debug!("`Object` construct")
     }
 }
 
