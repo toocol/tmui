@@ -131,7 +131,7 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
-                    fn rect(&self) -> Ref<Rect> {
+                    fn rect(&self) -> Rect {
                         self.element.rect()
                     }
 
@@ -254,7 +254,7 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
-                    fn rect(&self) -> Ref<Rect> {
+                    fn rect(&self) -> Rect {
                         self.widget.element.rect()
                     }
 

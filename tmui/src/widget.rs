@@ -118,7 +118,7 @@ impl Widget {
         Self::child_region_probe(parent.rect(), child)
     }
 
-    pub fn child_region_probe(parent_rect: Ref<Rect>, child: Option<*const dyn WidgetImpl>) {
+    pub fn child_region_probe(parent_rect: Rect, child: Option<*const dyn WidgetImpl>) {
         if let Some(child) = child {
             unsafe {
                 let child = child.as_ref().unwrap();

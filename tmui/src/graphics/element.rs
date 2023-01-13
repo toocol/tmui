@@ -1,5 +1,5 @@
 use super::{drawing_context::DrawingContext, figure::Rect};
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     prelude::*,
@@ -38,7 +38,7 @@ pub trait ElementExt: 'static {
 
     fn force_update(&self);
 
-    fn rect(&self) -> Ref<Rect>;
+    fn rect(&self) -> Rect;
 
     fn set_fixed_width(&self, width: i32);
 
@@ -65,8 +65,8 @@ impl ElementExt for Element {
         // TODO: firgue out how to invoke `Board`'s `invalidate_visual` obligatory.
     }
 
-    fn rect(&self) -> Ref<Rect> {
-        Ref::map(self.rect.borrow(), |rect| rect)
+    fn rect(&self) -> Rect {
+        *self.rect.borrow()
     }
 
     fn set_fixed_width(&self, width: i32) {

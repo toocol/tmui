@@ -7,7 +7,6 @@ pub mod painter;
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Ref;
     use super::element::{Element, ElementExt, ElementImpl, ElementAcquire};
     use super::figure::Rect;
     use tlib::{
