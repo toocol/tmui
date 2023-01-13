@@ -1,10 +1,11 @@
 use crate::{
-    graphics::{board::Board, drawing_context::DrawingContext, element::ElementImpl},
+    graphics::{
+        board::Board, drawing_context::DrawingContext, element::ElementImpl, painter::Painter,
+    },
     prelude::*,
 };
 use lazy_static::lazy_static;
 use log::debug;
-use skia_safe::{Color, Font, Paint, Path};
 use std::{
     cell::RefCell,
     ptr::{null_mut, NonNull},
@@ -13,7 +14,10 @@ use std::{
         Once,
     },
 };
-use tlib::{object::{IsSubclassable, ObjectImpl, ObjectSubclass}, namespace::Align};
+use tlib::{
+    namespace::Align,
+    object::{IsSubclassable, ObjectImpl, ObjectSubclass},
+};
 
 static INIT: Once = Once::new();
 lazy_static! {
@@ -66,9 +70,12 @@ impl ObjectImpl for Widget {
                 self.set_fixed_height(height)
             }
             "invalidate" => {
-                // Notify all the child widget to invalidate, preparing rerenderer after.
-                self.notify_invalidate();
-            },
+                let invalidate = value.get::<bool>();
+                if invalidate {
+                    // Notify all the child widget to invalidate, preparing rerenderer after.
+                    self.notify_invalidate();
+                }
+            }
             _ => {}
         }
     }
@@ -78,7 +85,7 @@ impl WidgetImpl for Widget {}
 
 impl<T: WidgetImpl> ElementImpl for T {
     fn on_renderer(&self, cr: &DrawingContext) {
-        self.paint(cr)
+        self.paint(Painter::new(cr.canvas(), self))
     }
 }
 
@@ -88,6 +95,41 @@ impl Widget {
             match self.board.borrow_mut().as_mut() {
                 Some(board) => Some(board.as_mut()),
                 None => None,
+            }
+        }
+    }
+
+    pub fn child_internal<P, T>(&self, parent: &P, child: T)
+    where
+        P: WidgetImpl + ElementImpl + IsA<Widget>,
+        T: WidgetImpl + ElementImpl + IsA<Widget>,
+    {
+        let mut child = Box::new(child);
+
+        child.set_parent(parent as *const dyn WidgetImpl);
+
+        if let Some(board) = self.board() {
+            board.add_element(child.as_mut() as *mut dyn ElementImpl);
+        }
+
+        *self.child.borrow_mut() = Some(child);
+
+        let child = self.get_raw_child();
+        Self::child_region_probe(parent.rect(), child)
+    }
+
+    pub fn child_region_probe(parent_rect: Ref<Rect>, child: Option<*const dyn WidgetImpl>) {
+        if let Some(child) = child {
+            unsafe {
+                let child = child.as_ref().unwrap();
+                let child_rect = child.rect();
+
+                let _halign = child.get_property("halign");
+                let _valign = child.get_property("valign");
+                child.set_fixed_x(parent_rect.x() + child_rect.x());
+                child.set_fixed_y(parent_rect.y() + child_rect.y());
+
+                Self::child_region_probe(child_rect, child.get_raw_child())
             }
         }
     }
@@ -170,12 +212,13 @@ impl WidgetExt for Widget {
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
 /// The trait provide some functions include the generic types.
 pub trait WidgetGenericExt {
-    fn get_parent<T: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&T>;
+    fn get_parent<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
 
-    fn get_child<T: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&T>;
+    fn get_child<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
 }
+
 impl<T: WidgetImpl> WidgetGenericExt for T {
-    fn get_parent<R: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&R> {
+    fn get_parent<R: IsA<Widget> + ObjectType>(&self) -> Option<&R> {
         let raw_parent = self.get_raw_parent();
         match raw_parent {
             Some(parent) => unsafe {
@@ -197,7 +240,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         }
     }
 
-    fn get_child<R: IsA<Widget> + StaticType + ObjectType>(&self) -> Option<&R> {
+    fn get_child<R: IsA<Widget> + ObjectType>(&self) -> Option<&R> {
         let raw_child = self.get_raw_child();
         match raw_child {
             Some(child) => unsafe {
@@ -218,62 +261,15 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////
 /// Every struct modified by proc-macro [`extends_widget`] should impl this trait manually.
 /// WidgetImpl's `paint()` function Will be proxy executated by ElementImpl `on_renderer` method .
+#[allow(unused_variables)]
+#[allow(unused_mut)]
 pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType {
-    fn paint(&self, cr: &DrawingContext) {
-        let mut surface = cr.surface();
-        let canvas = surface.canvas();
-        let mut paint = Paint::default();
-        canvas.clear(Color::BLUE);
-        paint.set_color(Color::BLACK);
-        paint.set_anti_alias(true);
-        paint.set_stroke_width(1.0);
-
-        canvas.scale((1.2, 1.2));
-        let mut path = Path::new();
-        path.move_to((36., 48.));
-        path.quad_to((330., 440.), (600., 180.));
-        canvas.translate((10., 10.));
-        paint.set_stroke_width(10.);
-        paint.set_style(skia_safe::PaintStyle::Stroke);
-        canvas.draw_path(&path, &paint);
-
-        paint.reset();
-        paint.set_color(Color::WHITE);
-        let mut font = Font::default();
-        font.set_size(20.);
-        canvas.draw_str("Hello world", (0, 30), &font, &paint);
-    }
+    fn paint(&self, mut painter: Painter) {}
 }
 
 pub trait WidgetImplExt: WidgetImpl {
     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T);
 }
-
-pub trait WidgetImplInternal {
-    fn child_internal<P, T>(&self, parent: &P, child: T)
-    where
-        P: WidgetImpl + ElementImpl + IsA<Widget>,
-        T: WidgetImpl + ElementImpl + IsA<Widget>;
-}
-
-impl WidgetImplInternal for Widget {
-    fn child_internal<P, T>(&self, parent: &P, child: T)
-    where
-        P: WidgetImpl + ElementImpl + IsA<Widget>,
-        T: WidgetImpl + ElementImpl + IsA<Widget>,
-    {
-        let mut child = Box::new(child);
-
-        child.set_parent(parent as *const dyn WidgetImpl);
-
-        if let Some(board) = self.board() {
-            board.add_element(child.as_mut() as *mut dyn ElementImpl);
-        }
-
-        *self.child.borrow_mut() = Some(child);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;

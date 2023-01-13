@@ -1,11 +1,12 @@
 #![allow(dead_code)]
-use skia_safe::{Path, Paint, Font, Canvas, Matrix, Point};
-use crate::prelude::Rect;
 use super::figure::Color;
+use crate::{prelude::Rect, widget::WidgetImpl};
 use log::error;
+use skia_safe::{Canvas, Font, Paint, Path, Point};
+use std::cell::RefMut;
 
 pub struct Painter<'a> {
-    canvas: &'a mut Canvas,
+    canvas: RefMut<'a, Canvas>,
     path: Path,
     paint: Paint,
     font: Option<Font>,
@@ -17,17 +18,35 @@ pub struct Painter<'a> {
 }
 
 impl<'a> Painter<'a> {
+    /// The constructer to build the Painter.
+    pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
+        let rect = widget.rect();
+        Painter {
+            canvas,
+            path: Path::default(),
+            paint: Paint::default(),
+            font: None,
+            width: rect.width(),
+            height: rect.height(),
+            x_offset: rect.x(),
+            y_offset: rect.y(),
+        }
+    }
+
     /// Save the canvas status.
+    #[inline]
     pub fn save(&mut self) {
         self.canvas.save();
     }
 
     /// Restore the canvas status.
+    #[inline]
     pub fn restore(&mut self) {
         self.canvas.restore();
     }
 
     /// Reset the painter to Initial state.
+    #[inline]
     pub fn reset(&mut self) {
         self.canvas.reset_matrix();
         self.paint.reset();
@@ -35,26 +54,42 @@ impl<'a> Painter<'a> {
     }
 
     /// Set the antialiasing to true.
+    #[inline]
     pub fn set_antialiasing(&mut self) {
         self.paint.set_anti_alias(true);
     }
 
     /// Set the global transform of this painter.
-    pub fn set_world_transform(&mut self, matrix: Matrix) {
-        self.path = self.path.with_transform(&matrix);
+    #[inline]
+    pub fn scale(&mut self, sx: i32, sy: i32) {
+        self.canvas.scale((sx as f32, sy as f32));
+    }
+
+    #[inline]
+    pub fn translate(&mut self, dx: f32, dy: f32) {
+        self.canvas.translate((dx, dy));
     }
 
     /// Set the font of painter.
+    #[inline]
     pub fn set_font(&mut self, font: Font) {
         self.font = Some(font);
     }
 
     /// Set the color of painter.
+    #[inline]
     pub fn set_color(&mut self, color: Color) {
         self.paint.set_color(color);
     }
 
+    /// Set the stroke width of painter.
+    #[inline]
+    pub fn set_line_width(&mut self, width: f32) {
+        self.paint.set_stroke_width(width);
+    }
+
     /// Stroke and fill the specified Rect with offset.
+    #[inline]
     pub fn fill_rect(&mut self, rect: Rect, color: Color) {
         self.paint.set_color(color);
         self.paint.set_style(skia_safe::PaintStyle::StrokeAndFill);
@@ -66,6 +101,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Stroke the specified Rect with offset.
+    #[inline]
     pub fn draw_rect(&mut self, rect: Rect) {
         self.paint.set_style(skia_safe::PaintStyle::Stroke);
         let rect: skia_safe::Rect = rect.into();
@@ -73,6 +109,7 @@ impl<'a> Painter<'a> {
     }
 
     // Draw text at specified position `origin` with offset.
+    #[inline]
     pub fn draw_text<T: Into<Point>>(&mut self, text: &str, origin: T) {
         if let Some(font) = self.font.as_ref() {
             let mut origin: Point = origin.into();
@@ -85,6 +122,7 @@ impl<'a> Painter<'a> {
     }
 
     // Draw a line from (x1, y1) to (x2, y2) with offset.
+    #[inline]
     pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
         let mut p1: Point = (x1, y1).into();
         let mut p2: Point = (x2, y2).into();
@@ -95,6 +133,7 @@ impl<'a> Painter<'a> {
     }
 
     // Draw a point at (x, y) with offset.
+    #[inline]
     pub fn draw_point(&mut self, x: i32, y: i32) {
         let mut point: Point = (x, y).into();
         point.offset((self.x_offset, self.y_offset));
@@ -103,6 +142,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Draw a pixmap.
+    #[inline]
     pub fn draw_pixmap(&mut self) {
         todo!()
     }

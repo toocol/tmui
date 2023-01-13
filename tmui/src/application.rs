@@ -23,7 +23,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tlib::{actions::ActionHub, utils::TimeStamp, Object};
+use tlib::{actions::ActionHub, utils::TimeStamp};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
@@ -160,7 +160,7 @@ impl Application {
         let mut board = Board::new(backend.surface());
         store_board(&mut board);
 
-        let mut window: ApplicationWindow = Object::new(&[]);
+        let mut window: ApplicationWindow = ApplicationWindow::new(backend.width(), backend.height());
         APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {

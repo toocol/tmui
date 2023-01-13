@@ -29,7 +29,9 @@ impl Board {
 
     pub fn invalidate_visual(&self) -> bool {
         let mut update = false;
-        for element in self.element_list.iter() {
+        // The parent elements always at the end of `element_list`.
+        // We should renderer the parent elements first.
+        for element in self.element_list.iter().rev() {
             unsafe {
                 let element = element.as_ref().unwrap().as_ref();
                 if element.invalidate() {

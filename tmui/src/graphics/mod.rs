@@ -36,9 +36,7 @@ mod tests {
     }
 
     impl ElementImpl for SubElement {
-        fn on_renderer(&self, cr: &super::drawing_context::DrawingContext) {
-            cr.line_to(10., 10.)
-        }
+        fn on_renderer(&self, _cr: &super::drawing_context::DrawingContext) {}
     }
 
     #[test]

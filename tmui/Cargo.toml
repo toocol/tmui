@@ -23,5 +23,8 @@ windows = { version = "0.43.0", features = [
     "Win32_System_LibraryLoader",
 ] }
 
+[dev-dependencies]
+log4rs = "1.1.1"
+
 [[example]]
 name = "win32_window"
