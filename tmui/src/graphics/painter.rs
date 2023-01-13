@@ -108,7 +108,7 @@ impl<'a> Painter<'a> {
         self.canvas.draw_rect(rect, &self.paint);
     }
 
-    // Draw text at specified position `origin` with offset.
+    /// Draw text at specified position `origin` with offset.
     #[inline]
     pub fn draw_text<T: Into<Point>>(&mut self, text: &str, origin: T) {
         if let Some(font) = self.font.as_ref() {
@@ -121,7 +121,7 @@ impl<'a> Painter<'a> {
         }
     }
 
-    // Draw a line from (x1, y1) to (x2, y2) with offset.
+    /// Draw a line from (x1, y1) to (x2, y2) with offset.
     #[inline]
     pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
         let mut p1: Point = (x1, y1).into();
@@ -132,7 +132,18 @@ impl<'a> Painter<'a> {
         self.canvas.draw_line(p1, p2, &self.paint);
     }
 
-    // Draw a point at (x, y) with offset.
+    /// Draw arc
+    #[inline]
+    pub fn draw_arc(&mut self, x: i32, y: i32, w: i32, h: i32, a: i32, alen: i32) {
+        let rect: Rect = (x, y, w, h).into();
+        let mut rect: skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        self.canvas
+            .draw_arc(rect, a as f32, alen as f32, true, &self.paint);
+    }
+
+    /// Draw a point at (x, y) with offset.
     #[inline]
     pub fn draw_point(&mut self, x: i32, y: i32) {
         let mut point: Point = (x, y).into();
