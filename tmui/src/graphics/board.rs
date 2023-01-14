@@ -11,7 +11,7 @@ use std::{cell::RefCell, ptr::NonNull};
 pub struct Board {
     pub front_surface: RefCell<Surface>,
     pub back_surface: RefCell<Surface>,
-    pub element_list: Vec<Option<NonNull<dyn ElementImpl>>>,
+    pub element_list: Vec<RefCell<Option<NonNull<dyn ElementImpl>>>>,
 }
 
 impl Board {
@@ -24,7 +24,7 @@ impl Board {
     }
 
     pub fn add_element(&mut self, element: *mut dyn ElementImpl) {
-        self.element_list.push(NonNull::new(element))
+        self.element_list.push(RefCell::new(NonNull::new(element)))
     }
 
     pub fn invalidate_visual(&self) -> bool {
@@ -32,14 +32,12 @@ impl Board {
         // The parent elements always at the end of `element_list`.
         // We should renderer the parent elements first.
         for element in self.element_list.iter().rev() {
-            unsafe {
-                let element = element.as_ref().unwrap().as_ref();
-                if element.invalidate() {
-                    let cr = DrawingContext::new(self, element.rect());
-                    element.on_renderer(&cr);
-                    element.validate();
-                    update = true;
-                }
+            let element = unsafe { element.borrow_mut().as_mut().unwrap().as_mut() };
+            if element.invalidate() {
+                let cr = DrawingContext::new(self, element.rect());
+                element.on_renderer(&cr);
+                element.validate();
+                update = true;
             }
         }
         update

@@ -35,7 +35,7 @@ mod tests {
     }
 
     impl ElementImpl for SubElement {
-        fn on_renderer(&self, _cr: &super::drawing_context::DrawingContext) {}
+        fn on_renderer(&mut self, _cr: &super::drawing_context::DrawingContext) {}
     }
 
     #[test]

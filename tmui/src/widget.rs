@@ -1,6 +1,6 @@
 use crate::{
     graphics::{
-        board::Board, drawing_context::DrawingContext, element::ElementImpl, painter::Painter,
+        board::Board, drawing_context::DrawingContext, element::ElementImpl, painter::Painter, figure::Size,
     },
     prelude::*,
 };
@@ -84,7 +84,7 @@ impl ObjectImpl for Widget {
 impl WidgetImpl for Widget {}
 
 impl<T: WidgetImpl> ElementImpl for T {
-    fn on_renderer(&self, cr: &DrawingContext) {
+    fn on_renderer(&mut self, cr: &DrawingContext) {
         self.paint(Painter::new(cr.canvas(), self))
     }
 }
@@ -118,19 +118,19 @@ impl Widget {
         Self::child_region_probe(parent.rect(), child)
     }
 
-    pub fn child_region_probe(parent_rect: Rect, child: Option<*const dyn WidgetImpl>) {
-        if let Some(child) = child {
-            unsafe {
-                let child = child.as_ref().unwrap();
-                let child_rect = child.rect();
+    #[inline]
+    pub fn child_region_probe(mut parent_rect: Rect, mut child: Option<*const dyn WidgetImpl>) {
+        while let Some(child_ptr) = child {
+                let child_ref = unsafe {child_ptr.as_ref().unwrap()};
+                let child_rect = child_ref.rect();
 
-                let _halign = child.get_property("halign");
-                let _valign = child.get_property("valign");
-                child.set_fixed_x(parent_rect.x() + child_rect.x());
-                child.set_fixed_y(parent_rect.y() + child_rect.y());
+                let _halign = child_ref.get_property("halign");
+                let _valign = child_ref.get_property("valign");
+                child_ref.set_fixed_x(parent_rect.x() + child_rect.x());
+                child_ref.set_fixed_y(parent_rect.y() + child_rect.y());
 
-                Self::child_region_probe(child_rect, child.get_raw_child())
-            }
+                parent_rect = child_rect;
+                child = child_ref.get_raw_child();
         }
     }
 }
@@ -264,7 +264,11 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 #[allow(unused_variables)]
 #[allow(unused_mut)]
 pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType {
-    fn paint(&self, mut painter: Painter) {}
+    /// Invoke this function when widget's size change.
+    fn size_hint(&mut self, size: Size) {}
+
+    /// Invoke this function when renderering.
+    fn paint(&mut self, mut painter: Painter) {}
 }
 
 pub trait WidgetImplExt: WidgetImpl {

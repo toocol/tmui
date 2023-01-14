@@ -81,9 +81,11 @@ impl Application {
         let backend_type = self.backend_type;
         let on_activate = self.on_activate.borrow().clone();
         *self.on_activate.borrow_mut() = None;
-        thread::spawn(move || {
-            Self::ui_main(backend_type, output_sender, input_receiver, on_activate)
-        });
+
+        thread::Builder::new()
+            .name("tmui-main".to_string())
+            .spawn(move || Self::ui_main(backend_type, output_sender, input_receiver, on_activate))
+            .unwrap();
 
         loop {
             if let Ok(msg) = output_receiver.try_recv() {
@@ -160,7 +162,8 @@ impl Application {
         let mut board = Board::new(backend.surface());
         store_board(&mut board);
 
-        let mut window: ApplicationWindow = ApplicationWindow::new(backend.width(), backend.height());
+        let mut window: ApplicationWindow =
+            ApplicationWindow::new(backend.width(), backend.height());
         APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {

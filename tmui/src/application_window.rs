@@ -30,7 +30,7 @@ impl ObjectImpl for ApplicationWindow {
 }
 
 impl WidgetImpl for ApplicationWindow {
-    fn paint(&self, mut painter: Painter) {
+    fn paint(&mut self, mut painter: Painter) {
         painter.set_antialiasing();
         painter.fill_rect(self.rect().clone(), Color::BLUE);
         painter.set_color(Color::WHITE);
