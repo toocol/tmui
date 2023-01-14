@@ -1,11 +1,13 @@
 use crate::{
     graphics::{
-        board::Board, drawing_context::DrawingContext, element::ElementImpl, painter::Painter, figure::Size,
+        board::Board, drawing_context::DrawingContext, element::ElementImpl, figure::Size,
+        painter::Painter,
     },
     prelude::*,
 };
 use lazy_static::lazy_static;
 use log::debug;
+use skia_safe::Font;
 use std::{
     cell::RefCell,
     ptr::{null_mut, NonNull},
@@ -37,6 +39,7 @@ pub struct Widget {
     board: RefCell<Option<NonNull<Board>>>,
     parent: RefCell<Option<*const dyn WidgetImpl>>,
     child: RefCell<Option<Box<dyn WidgetImpl>>>,
+    font: Font,
 }
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
@@ -121,16 +124,16 @@ impl Widget {
     #[inline]
     pub fn child_region_probe(mut parent_rect: Rect, mut child: Option<*const dyn WidgetImpl>) {
         while let Some(child_ptr) = child {
-                let child_ref = unsafe {child_ptr.as_ref().unwrap()};
-                let child_rect = child_ref.rect();
+            let child_ref = unsafe { child_ptr.as_ref().unwrap() };
+            let child_rect = child_ref.rect();
 
-                let _halign = child_ref.get_property("halign");
-                let _valign = child_ref.get_property("valign");
-                child_ref.set_fixed_x(parent_rect.x() + child_rect.x());
-                child_ref.set_fixed_y(parent_rect.y() + child_rect.y());
+            let _halign = child_ref.get_property("halign");
+            let _valign = child_ref.get_property("valign");
+            child_ref.set_fixed_x(parent_rect.x() + child_rect.x());
+            child_ref.set_fixed_y(parent_rect.y() + child_rect.y());
 
-                parent_rect = child_rect;
-                child = child_ref.get_raw_child();
+            parent_rect = child_rect;
+            child = child_ref.get_raw_child();
         }
     }
 }
@@ -165,6 +168,12 @@ pub trait WidgetExt {
 
     /// Set alignment on the vertical direction.
     fn set_valign(&self, valign: Align);
+
+    /// Set the font of widget.
+    fn set_font(&mut self, font: Font);
+
+    /// Get the font of widget.
+    fn font(&self) -> Font;
 }
 
 impl WidgetExt for Widget {
@@ -206,6 +215,29 @@ impl WidgetExt for Widget {
 
     fn set_valign(&self, valign: Align) {
         self.set_property("valign", valign.to_value())
+    }
+
+    fn set_font(&mut self, font: Font) {
+        self.font = font
+    }
+
+    fn font(&self) -> Font {
+        let mut font = Font::default();
+        font.set_force_auto_hinting(self.font.is_force_auto_hinting());
+        font.set_embedded_bitmaps(self.font.is_embedded_bitmaps());
+        font.set_subpixel(self.font.is_subpixel());
+        font.set_linear_metrics(self.font.is_baseline_snap());
+        font.set_embolden(self.font.is_embolden());
+        font.set_baseline_snap(self.font.is_baseline_snap());
+        font.set_edging(self.font.edging());
+        font.set_hinting(self.font.hinting());
+        if let Some(typeface) = self.font.typeface() {
+            font.set_typeface(typeface);
+        }
+        font.set_size(self.font.size());
+        font.set_scale_x(self.font.scale_x());
+        font.set_skew_x(self.font.skew_x());
+        font
     }
 }
 

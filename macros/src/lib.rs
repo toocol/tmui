@@ -332,6 +332,16 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn set_valign(&self, valign: Align) {
                         self.set_property("halign", valign.to_value())
                     }
+
+                    #[inline]
+                    fn set_font(&mut self, font: Font) {
+                        self.widget.set_font(font)
+                    }
+
+                    #[inline]
+                    fn font(&self) -> Font {
+                        self.font()
+                    }
                 }
 
                 impl WidgetImplExt for #name {
