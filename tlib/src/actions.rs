@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 /// The crate of actions system.
 ///
 /// <examples>
@@ -118,6 +119,16 @@ impl ActionHub {
         vec.push(Box::new(f));
     }
 
+    pub fn disconnect_action<T: ActionExt>(&self, target: &T) {
+        IS_MAIN_THREAD.with(|is_main| {
+            if !*is_main.borrow() {
+                panic!("`connect_action()` should only call in the `main` thread.")
+            }
+        });
+
+        let mut map_ref = self.map.borrow_mut();
+    }
+
     pub fn activate_action<S: ToString>(&self, name: S, param: Option<Value>) {
         IS_MAIN_THREAD.with(|is_main| {
             if *is_main.borrow() {
@@ -135,7 +146,7 @@ impl ActionHub {
     }
 }
 pub trait ActionExt: Sized + ObjectOperation {
-    fn connect_action<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
+    fn connect<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
@@ -143,6 +154,10 @@ pub trait ActionExt: Sized + ObjectOperation {
                 .expect("`ActionHub` was not initialized, or already dead.")
                 .connect_action(signal, f)
         }
+    }
+
+    fn disconnect(&self, signal: Option<Signal>) {
+        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
     }
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
@@ -158,16 +173,28 @@ pub trait ActionExt: Sized + ObjectOperation {
     }
 }
 
+pub trait AsMutPtr {
+    fn as_mut_ptr(&mut self) -> *mut Self {
+        self as *mut Self
+    }
+}
+impl<T: ActionExt> AsMutPtr for T {}
+
 /// The struct represents the subject to emit specified actions.
 ///
 /// `Signal` implements the `Send` + `Sync` trait, so it can be transfered between threads safly.
 /// The `Siginal` emited in the different threads will be transfer to the `main` thread to process the action.
 pub struct Signal {
+    emiter_id: u16,
     signal: String,
 }
 impl Signal {
-    pub fn new(signal: String) -> Self {
-        Self { signal }
+    pub fn new(emiter_id: u16, signal: String) -> Self {
+        Self { emiter_id, signal }
+    }
+
+    pub fn emiter_id(&self) -> u16 {
+        self.emiter_id
     }
 
     pub fn signal(&self) -> &String {
@@ -200,8 +227,9 @@ macro_rules! emit {
                 .activate_action($signal.signal(), None)
         };
     }};
-    ( $signal:expr, $x:expr ) => {{
-        let value = $x.to_value();
+    ( $signal:expr, $($x:expr),+ ) => {{
+        let tuple = ($($x),+);
+        let value = tuple.to_value();
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
@@ -214,13 +242,36 @@ macro_rules! emit {
 
 #[allow(unused_macros)]
 #[macro_export]
+macro_rules! connect {
+    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident() ) => {
+        let signal = $emiter.$signal();
+        let target_ptr = $target.as_mut_ptr();
+        $emiter.connect(signal, move |param| {
+            unsafe {
+                let target = target_ptr.as_ref().unwrap();
+                target.$slot()
+            }
+        })
+    };
+    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
+        let signal = $emiter.$signal();
+        let target_ptr = $target.as_mut_ptr();
+        $emiter.connect(signal, move |param| {
+            unsafe {
+                let val = param.unwrap();
+                let target = target_ptr.as_ref().unwrap();
+                let param = val.get::<($($param),+)>();
+                target.$slot($(param.$index),+)
+            }
+        })
+    };
+}
+
+#[allow(unused_macros)]
+#[macro_export]
 macro_rules! signal {
     ( $object:expr, $name:expr ) => {{
-        let mut signal = String::new();
-        signal.push_str($object.action_address().to_string().as_str());
-        signal.push('_');
-        signal.push_str($name);
-        Signal::new(signal)
+        Signal::new($object.action_address(), $name.to_string())
     }};
 }
 
@@ -305,19 +356,26 @@ mod tests {
             Object::new(&[])
         }
 
-        pub fn reg_action(&self) {
-            self.connect_action(self.action_test(), |param| {
-                println!("Process action");
-                let param = param.unwrap().get::<(i32, String)>();
-                assert_eq!(1, param.0);
-                assert_eq!("desc", param.1);
-            })
+        pub fn reg_action(&mut self) {
+            connect!(self, action_test(), self, slot_test(i32:0, String:1));
+            connect!(self, action_demo(), self, slot_demo());
+        }
+
+        pub fn slot_test(&self, p1: i32, p2: String) {
+            println!("Process action test");
+            assert_eq!(1, p1);
+            assert_eq!("desc", p2);
+        }
+
+        pub fn slot_demo(&self) {
+            println!("Process action demo");
         }
 
         pub fn emit(&self) {
             let param = 1;
             let desc = "desc";
-            emit!(self.action_test(), (param, desc));
+            emit!(self.action_test(), param, desc);
+            emit!(self.action_demo());
         }
     }
 
@@ -326,7 +384,7 @@ mod tests {
         let mut action_hub = ActionHub::new();
         action_hub.initialize();
 
-        let widget = Widget::new();
+        let mut widget = Widget::new();
         widget.reg_action();
         let rc = Rc::new(widget);
         rc.emit();
@@ -334,7 +392,7 @@ mod tests {
         let mut join_vec = vec![];
         for _ in 0..5 {
             let signal = rc.action_test();
-            join_vec.push(thread::spawn(move || emit!(signal, (1, "desc"))));
+            join_vec.push(thread::spawn(move || emit!(signal, 1, "desc")));
         }
 
         thread::sleep(Duration::from_millis(500));
@@ -346,5 +404,16 @@ mod tests {
         let widget = Widget::new();
         let signal = signal!(&widget, "hello");
         println!("{}", signal)
+    }
+
+    #[test]
+    fn test_action() {
+        let mut action_hub = ActionHub::new();
+        action_hub.initialize();
+
+        let mut widget = Widget::new();
+        let action = Action::with_param(widget.action_test(), (1, "desc"));
+        widget.reg_action();
+        action.emit();
     }
 }

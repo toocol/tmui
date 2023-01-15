@@ -1,5 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use tlib::{actions::ActionHub, emit, prelude::*, signals, signal, object::{ObjectSubclass, ObjectImpl}};
+use tlib::{
+    actions::ActionHub,
+    emit,
+    object::{ObjectImpl, ObjectSubclass},
+    prelude::*,
+    signal, signals,
+};
 
 #[extends_object]
 #[derive(Default)]
@@ -27,20 +33,21 @@ impl Widget {
 fn test_action_tuple(widget: &Widget) {
     emit!(
         widget.action_benchmark_tuple(),
-        (
-            "Bench mark param 1",
-            "Bench mark param 2",
-            i32::MAX,
-            i32::MIN,
-            f64::MAX,
-            "Bench mark param 6",
-            f64::MIN
-        )
+        "Bench mark param 1",
+        "Bench mark param 2",
+        i32::MAX,
+        i32::MIN,
+        f64::MAX,
+        "Bench mark param 6",
+        f64::MIN
     )
 }
 
 fn test_action_string(widget: &Widget) {
-    emit!(widget.action_benchmark_string(), "action benchmark string param")
+    emit!(
+        widget.action_benchmark_string(),
+        "action benchmark string param"
+    )
 }
 
 fn criterion_values(c: &mut Criterion) {
@@ -48,7 +55,7 @@ fn criterion_values(c: &mut Criterion) {
     action_hub.initialize();
 
     let widget: Widget = Object::new(&[]);
-    widget.connect_action(widget.action_benchmark_tuple(), |param| {
+    widget.connect(widget.action_benchmark_tuple(), |param| {
         let (p1, p2, p3, p4, p5, p6, p7) =
             param
                 .unwrap()
@@ -61,13 +68,17 @@ fn criterion_values(c: &mut Criterion) {
         assert_eq!(p6, "Bench mark param 6");
         assert_eq!(p7, f64::MIN);
     });
-    widget.connect_action(widget.action_benchmark_string(), |param| {
+    widget.connect(widget.action_benchmark_string(), |param| {
         let param = param.unwrap().get::<String>();
         assert_eq!(param, "action benchmark string param");
     });
 
-    c.bench_function("actions-tuple-test", |b| b.iter(|| test_action_tuple(&widget)));
-    c.bench_function("actions-string-test", |b| b.iter(|| test_action_string(&widget)));
+    c.bench_function("actions-tuple-test", |b| {
+        b.iter(|| test_action_tuple(&widget))
+    });
+    c.bench_function("actions-string-test", |b| {
+        b.iter(|| test_action_string(&widget))
+    });
 }
 
 criterion_group!(benches, criterion_values);

@@ -45,6 +45,13 @@ impl Value {
         }
     }
 
+    pub fn tuple_count(&self) -> usize {
+        match self.seg_len.as_ref() {
+            Some(seg_len) => seg_len.len(),
+            None => 0,
+        }
+    }
+
     pub fn data(&self) -> &[u8] {
         &self.data
     }

@@ -340,7 +340,7 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     #[inline]
                     fn font(&self) -> Font {
-                        self.font()
+                        self.widget.font()
                     }
                 }
 

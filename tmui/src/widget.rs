@@ -226,7 +226,7 @@ impl WidgetExt for Widget {
         font.set_force_auto_hinting(self.font.is_force_auto_hinting());
         font.set_embedded_bitmaps(self.font.is_embedded_bitmaps());
         font.set_subpixel(self.font.is_subpixel());
-        font.set_linear_metrics(self.font.is_baseline_snap());
+        font.set_linear_metrics(self.font.is_linear_metrics());
         font.set_embolden(self.font.is_embolden());
         font.set_baseline_snap(self.font.is_baseline_snap());
         font.set_edging(self.font.edging());
