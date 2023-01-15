@@ -248,7 +248,7 @@ macro_rules! connect {
         let target_ptr = $target.as_mut_ptr();
         $emiter.connect(signal, move |param| {
             unsafe {
-                let target = target_ptr.as_ref().unwrap();
+                let target = target_ptr.as_mut().expect("Target is None.");
                 target.$slot()
             }
         })
@@ -258,8 +258,8 @@ macro_rules! connect {
         let target_ptr = $target.as_mut_ptr();
         $emiter.connect(signal, move |param| {
             unsafe {
-                let val = param.unwrap();
-                let target = target_ptr.as_ref().unwrap();
+                let val = param.expect("Param is None.");
+                let target = target_ptr.as_mut().expect("Target is None.");
                 let param = val.get::<$param>();
                 target.$slot(param)
             }
@@ -270,8 +270,8 @@ macro_rules! connect {
         let target_ptr = $target.as_mut_ptr();
         $emiter.connect(signal, move |param| {
             unsafe {
-                let val = param.unwrap();
-                let target = target_ptr.as_ref().unwrap();
+                let val = param.expect("Param is None.");
+                let target = target_ptr.as_mut().expect("Target is None.");
                 let param = val.get::<($($param),+)>();
                 target.$slot($(param.$index),+)
             }
@@ -387,7 +387,7 @@ mod tests {
             let param = 1;
             let desc = "desc";
             emit!(self.action_test(), param, desc);
-            emit!(self.action_demo());
+            emit!(self.action_demo(), param);
         }
     }
 
@@ -409,10 +409,16 @@ mod tests {
 
         thread::sleep(Duration::from_millis(500));
         action_hub.process_multi_thread_actions();
+        for join in join_vec {
+            join.join().unwrap();
+        }
     }
 
     #[test]
     fn test_signal() {
+        let mut action_hub = ActionHub::new();
+        action_hub.initialize();
+
         let widget = Widget::new();
         let signal = signal!(&widget, "hello");
         println!("{}", signal)
