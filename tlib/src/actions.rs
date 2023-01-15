@@ -253,6 +253,18 @@ macro_rules! connect {
             }
         })
     };
+    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident:$index:tt) ) => {
+        let signal = $emiter.$signal();
+        let target_ptr = $target.as_mut_ptr();
+        $emiter.connect(signal, move |param| {
+            unsafe {
+                let val = param.unwrap();
+                let target = target_ptr.as_ref().unwrap();
+                let param = val.get::<$param>();
+                target.$slot(param)
+            }
+        })
+    };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
@@ -358,7 +370,7 @@ mod tests {
 
         pub fn reg_action(&mut self) {
             connect!(self, action_test(), self, slot_test(i32:0, String:1));
-            connect!(self, action_demo(), self, slot_demo());
+            connect!(self, action_demo(), self, slot_demo(i32:0));
         }
 
         pub fn slot_test(&self, p1: i32, p2: String) {
@@ -367,7 +379,7 @@ mod tests {
             assert_eq!("desc", p2);
         }
 
-        pub fn slot_demo(&self) {
+        pub fn slot_demo(&self, i: i32) {
             println!("Process action demo");
         }
 
