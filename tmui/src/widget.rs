@@ -174,6 +174,9 @@ pub trait WidgetExt {
 
     /// Get the font of widget.
     fn font(&self) -> Font;
+
+    /// Get the area inside the widget's margins.
+    fn contents_rect(&self) -> Rect;
 }
 
 impl WidgetExt for Widget {
@@ -238,6 +241,11 @@ impl WidgetExt for Widget {
         font.set_scale_x(self.font.scale_x());
         font.set_skew_x(self.font.skew_x());
         font
+    }
+
+    fn contents_rect(&self) -> Rect {
+        // TODO: should calculate the margin of widget
+        self.rect()
     }
 }
 

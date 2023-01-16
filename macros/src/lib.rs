@@ -342,6 +342,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn font(&self) -> Font {
                         self.widget.font()
                     }
+
+                    #[inline]
+                    fn contents_rect(&self) -> Rect {
+                        self.widget.contents_rect()
+                    }
                 }
 
                 impl WidgetImplExt for #name {
