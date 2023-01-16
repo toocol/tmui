@@ -110,10 +110,10 @@ impl ActionHub {
         }
     }
 
-    pub fn connect_action<T: ActionExt, F: Fn(Option<Value>) + 'static>(
+    pub fn connect_action<F: Fn(Option<Value>) + 'static>(
         &self,
         signal: Signal,
-        target: &T,
+        target: u16,
         f: F,
     ) {
         IS_MAIN_THREAD.with(|is_main| {
@@ -125,7 +125,7 @@ impl ActionHub {
         let mut map_ref = self.map.borrow_mut();
         let emiter_map = map_ref.entry(signal.emiter_id).or_insert(HashMap::new());
         let target_map = emiter_map.entry(signal.signal).or_insert(HashMap::new());
-        target_map.insert(target.object_id(), Box::new(f));
+        target_map.insert(target, Box::new(f));
     }
 
     pub fn disconnect_target_action(&self, signal: Option<Signal>, target: Option<u16>) {
@@ -171,10 +171,10 @@ impl ActionHub {
     }
 }
 pub trait ActionExt: Sized + ObjectOperation {
-    fn connect<T: ActionExt, F: Fn(Option<Value>) + 'static>(
+    fn connect<F: Fn(Option<Value>) + 'static>(
         &self,
         signal: Signal,
-        target: &T,
+        target: u16,
         f: F,
     ) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
@@ -293,7 +293,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident() ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, $target, move |param| {
+        $emiter.connect(signal, $target.object_id(), move |param| {
             unsafe {
                 let target = target_ptr.as_mut().expect("Target is None.");
                 target.$slot()
@@ -303,7 +303,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, $target, move |param| {
+        $emiter.connect(signal, $target.object_id(), move |param| {
             unsafe {
                 let val = param.expect("Param is None.");
                 let target = target_ptr.as_mut().expect("Target is None.");
@@ -315,7 +315,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, $target, move |param| {
+        $emiter.connect(signal, $target.object_id(), move |param| {
             unsafe {
                 let val = param.expect("Param is None.");
                 let target = target_ptr.as_mut().expect("Target is None.");
