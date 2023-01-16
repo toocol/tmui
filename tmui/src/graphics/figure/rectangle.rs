@@ -88,6 +88,26 @@ impl Rect {
     }
 
     #[inline]
+    pub fn left(&self) -> i32 {
+        self.x
+    }
+
+    #[inline]
+    pub fn top(&self) -> i32 {
+        self.y
+    }
+
+    #[inline]
+    pub fn right(&self) -> i32 {
+        self.x + self.width
+    }
+
+    #[inline]
+    pub fn bottom(&self) -> i32 {
+        self.y + self.height
+    }
+
+    #[inline]
     pub fn intersects(&self, rect: &Rect) -> bool {
         self.x.max(rect.x) <= self.width.min(rect.width)
             && self.y.max(rect.y) <= self.height.min(rect.height)
