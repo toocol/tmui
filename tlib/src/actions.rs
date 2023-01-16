@@ -62,7 +62,7 @@ lazy_static! {
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: RefCell<HashMap<u16, HashMap<String, HashMap<u16, Box<dyn Fn(Option<Value>)>>>>>,
+    map: RefCell<HashMap<u16, HashMap<String, HashMap<u16, Vec<Box<dyn Fn(Option<Value>)>>>>>>,
     sender: Sender<(Signal, Option<Value>)>,
     receiver: Receiver<(Signal, Option<Value>)>,
 }
@@ -100,7 +100,9 @@ impl ActionHub {
             let param = action.1;
             if let Some(emiter_map) = self.map.borrow().get(&signal.emiter_id) {
                 if let Some(actions) = emiter_map.get(signal.signal()) {
-                    actions.iter().for_each(|(target_id, f)| f(param.clone()));
+                    actions
+                        .iter()
+                        .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(param.clone())));
                 } else {
                     warn!("Unconnected action: {}", signal.signal());
                 }
@@ -125,7 +127,8 @@ impl ActionHub {
         let mut map_ref = self.map.borrow_mut();
         let emiter_map = map_ref.entry(signal.emiter_id).or_insert(HashMap::new());
         let target_map = emiter_map.entry(signal.signal).or_insert(HashMap::new());
-        target_map.insert(target, Box::new(f));
+        let actions = target_map.entry(target).or_insert(vec![]);
+        actions.push(Box::new(f));
     }
 
     pub fn disconnect_target_action(&self, signal: Option<Signal>, target: Option<u16>) {
@@ -155,7 +158,9 @@ impl ActionHub {
             if *is_main.borrow() {
                 if let Some(emiter_map) = self.map.borrow().get(&signal.emiter_id) {
                     if let Some(actions) = emiter_map.get(name) {
-                        actions.iter().for_each(|(target_id, f)| f(param.clone()));
+                        actions
+                            .iter()
+                            .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(param.clone())));
                     } else {
                         warn!("Unconnected action: {}", name);
                     }
@@ -171,12 +176,7 @@ impl ActionHub {
     }
 }
 pub trait ActionExt: Sized + ObjectOperation {
-    fn connect<F: Fn(Option<Value>) + 'static>(
-        &self,
-        signal: Signal,
-        target: u16,
-        f: F,
-    ) {
+    fn connect<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, target: u16, f: F) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
