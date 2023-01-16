@@ -55,7 +55,7 @@ fn criterion_values(c: &mut Criterion) {
     action_hub.initialize();
 
     let widget: Widget = Object::new(&[]);
-    widget.connect(&widget, widget.action_benchmark_tuple(), |param| {
+    widget.connect(widget.action_benchmark_tuple(), &widget, |param| {
         let (p1, p2, p3, p4, p5, p6, p7) =
             param
                 .unwrap()
@@ -68,7 +68,7 @@ fn criterion_values(c: &mut Criterion) {
         assert_eq!(p6, "Bench mark param 6");
         assert_eq!(p7, f64::MIN);
     });
-    widget.connect(&widget, widget.action_benchmark_string(), |param| {
+    widget.connect(widget.action_benchmark_string(), &widget, |param| {
         let param = param.unwrap().get::<String>();
         assert_eq!(param, "action benchmark string param");
     });

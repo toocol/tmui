@@ -173,8 +173,8 @@ impl ActionHub {
 pub trait ActionExt: Sized + ObjectOperation {
     fn connect<T: ActionExt, F: Fn(Option<Value>) + 'static>(
         &self,
-        target: &T,
         signal: Signal,
+        target: &T,
         f: F,
     ) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
@@ -293,7 +293,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident() ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, move |param| {
+        $emiter.connect(signal, $target, move |param| {
             unsafe {
                 let target = target_ptr.as_mut().expect("Target is None.");
                 target.$slot()
@@ -303,7 +303,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect($target, signal, move |param| {
+        $emiter.connect(signal, $target, move |param| {
             unsafe {
                 let val = param.expect("Param is None.");
                 let target = target_ptr.as_mut().expect("Target is None.");
@@ -315,7 +315,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect($target, signal, move |param| {
+        $emiter.connect(signal, $target, move |param| {
             unsafe {
                 let val = param.expect("Param is None.");
                 let target = target_ptr.as_mut().expect("Target is None.");
