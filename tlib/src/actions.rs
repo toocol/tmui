@@ -329,6 +329,9 @@ macro_rules! connect {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! disconnect {
+    ( null, null, $target:expr, null ) => {
+        // TODO: remove all action binding in target side.
+    };
     ( $emiter:expr, null, null, null ) => {
         $emiter.disconnect_all();
     };
@@ -482,6 +485,7 @@ mod tests {
         let action = Action::with_param(rc.action_test(), (1, "desc"));
         action.emit();
 
+        disconnect!(null, null, rc, null);
         disconnect!(rc, null, null, null);
         disconnect!(rc, null, rc, null);
         disconnect!(rc, action_test(), rc, null);
