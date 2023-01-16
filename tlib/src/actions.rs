@@ -23,8 +23,6 @@
 ///
 /// impl ObjectImpl for Widget {}
 ///
-/// impl ActionExt for Widget {}
-///
 /// impl Widget {
 ///     signals! {
 ///         action_test();
@@ -43,6 +41,7 @@
 /// ```
 use crate::prelude::*;
 use lazy_static::lazy_static;
+use log::warn;
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -63,9 +62,9 @@ lazy_static! {
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: RefCell<HashMap<String, Vec<Box<dyn Fn(Option<Value>)>>>>,
-    sender: Sender<(String, Option<Value>)>,
-    receiver: Receiver<(String, Option<Value>)>,
+    map: RefCell<HashMap<u16, HashMap<String, HashMap<u16, Box<dyn Fn(Option<Value>)>>>>>,
+    sender: Sender<(Signal, Option<Value>)>,
+    receiver: Receiver<(Signal, Option<Value>)>,
 }
 impl ActionHub {
     pub fn new() -> Self {
@@ -97,17 +96,26 @@ impl ActionHub {
         });
 
         while let Ok(action) = self.receiver.try_recv() {
-            let name = action.0;
+            let signal = action.0;
             let param = action.1;
-            if let Some(actions) = self.map.borrow().get(&name) {
-                actions.iter().for_each(|f| f(param.clone()));
+            if let Some(emiter_map) = self.map.borrow().get(&signal.emiter_id) {
+                if let Some(actions) = emiter_map.get(signal.signal()) {
+                    actions.iter().for_each(|(target_id, f)| f(param.clone()));
+                } else {
+                    warn!("Unconnected action: {}", signal.signal());
+                }
             } else {
-                println!("Unconnected action: {}", name.to_string());
+                warn!("Unconnected action: {}", signal.signal());
             }
         }
     }
 
-    pub fn connect_action<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
+    pub fn connect_action<T: ActionExt, F: Fn(Option<Value>) + 'static>(
+        &self,
+        signal: Signal,
+        target: &T,
+        f: F,
+    ) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
                 panic!("`connect_action()` should only call in the `main` thread.")
@@ -115,49 +123,87 @@ impl ActionHub {
         });
 
         let mut map_ref = self.map.borrow_mut();
-        let vec = map_ref.entry(signal.signal().to_string()).or_insert(vec![]);
-        vec.push(Box::new(f));
+        let emiter_map = map_ref.entry(signal.emiter_id).or_insert(HashMap::new());
+        let target_map = emiter_map.entry(signal.signal).or_insert(HashMap::new());
+        target_map.insert(target.object_id(), Box::new(f));
     }
 
-    pub fn disconnect_action<T: ActionExt>(&self, target: &T) {
+    pub fn disconnect_target_action(&self, signal: Option<Signal>, target: Option<u16>) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
-                panic!("`connect_action()` should only call in the `main` thread.")
+                panic!("`disconnect_action()` should only call in the `main` thread.")
             }
         });
 
         let mut map_ref = self.map.borrow_mut();
     }
 
-    pub fn activate_action<S: ToString>(&self, name: S, param: Option<Value>) {
+    pub fn disconnect_all_action(&self, emiter_id: u16) {
         IS_MAIN_THREAD.with(|is_main| {
+            if !*is_main.borrow() {
+                panic!("`disconnect_action()` should only call in the `main` thread.")
+            }
+        });
+
+        let mut map_ref = self.map.borrow_mut();
+        map_ref.remove(&emiter_id);
+    }
+
+    pub fn activate_action(&self, signal: Signal, param: Option<Value>) {
+        IS_MAIN_THREAD.with(|is_main| {
+            let name = signal.signal();
             if *is_main.borrow() {
-                if let Some(actions) = self.map.borrow().get(&name.to_string()) {
-                    actions.iter().for_each(|f| f(param.clone()));
+                if let Some(emiter_map) = self.map.borrow().get(&signal.emiter_id) {
+                    if let Some(actions) = emiter_map.get(name) {
+                        actions.iter().for_each(|(target_id, f)| f(param.clone()));
+                    } else {
+                        warn!("Unconnected action: {}", name);
+                    }
                 } else {
-                    println!("Unconnected action: {}", name.to_string());
+                    warn!("Unconnected action: {}", name);
                 }
             } else {
                 self.sender
-                    .send((name.to_string(), param))
+                    .send((signal, param))
                     .expect("`ActionHub` send actions from multi thread failed.");
             }
         })
     }
 }
 pub trait ActionExt: Sized + ObjectOperation {
-    fn connect<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, f: F) {
+    fn connect<T: ActionExt, F: Fn(Option<Value>) + 'static>(
+        &self,
+        target: &T,
+        signal: Signal,
+        f: F,
+    ) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
                 .as_ref()
                 .expect("`ActionHub` was not initialized, or already dead.")
-                .connect_action(signal, f)
+                .connect_action(signal, target, f)
         }
     }
 
-    fn disconnect(&self, signal: Option<Signal>) {
+    fn disconnect(&self, signal: Option<Signal>, target: Option<u16>) {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
+        unsafe {
+            action_hub
+                .as_ref()
+                .expect("`ActionHub` was not initialized, or already dead.")
+                .disconnect_target_action(signal, target)
+        }
+    }
+
+    fn disconnect_all(&self) {
+        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
+        unsafe {
+            action_hub
+                .as_ref()
+                .expect("`ActionHub` was not initialized, or already dead.")
+                .disconnect_all_action(self.object_id())
+        }
     }
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
@@ -168,7 +214,7 @@ pub trait ActionExt: Sized + ObjectOperation {
         Action::with_param(signal, param)
     }
 
-    fn action_address(&self) -> u16 {
+    fn object_id(&self) -> u16 {
         self.id()
     }
 }
@@ -184,6 +230,7 @@ impl<T: ActionExt> AsMutPtr for T {}
 ///
 /// `Signal` implements the `Send` + `Sync` trait, so it can be transfered between threads safly.
 /// The `Siginal` emited in the different threads will be transfer to the `main` thread to process the action.
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Signal {
     emiter_id: u16,
     signal: String,
@@ -224,7 +271,7 @@ macro_rules! emit {
             action_hub
                 .as_ref()
                 .expect("`ActionHub` was not initialized, or already dead.")
-                .activate_action($signal.signal(), None)
+                .activate_action($signal, None)
         };
     }};
     ( $signal:expr, $($x:expr),+ ) => {{
@@ -235,7 +282,7 @@ macro_rules! emit {
             action_hub
                 .as_ref()
                 .expect("`ActionHub` was not initialized, or already dead.")
-                .activate_action($signal.signal(), Some(value))
+                .activate_action($signal, Some(value))
         };
     }};
 }
@@ -253,10 +300,10 @@ macro_rules! connect {
             }
         })
     };
-    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident:$index:tt) ) => {
+    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, move |param| {
+        $emiter.connect($target, signal, move |param| {
             unsafe {
                 let val = param.expect("Param is None.");
                 let target = target_ptr.as_mut().expect("Target is None.");
@@ -268,7 +315,7 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, move |param| {
+        $emiter.connect($target, signal, move |param| {
             unsafe {
                 let val = param.expect("Param is None.");
                 let target = target_ptr.as_mut().expect("Target is None.");
@@ -281,9 +328,28 @@ macro_rules! connect {
 
 #[allow(unused_macros)]
 #[macro_export]
+macro_rules! disconnect {
+    ( $emiter:expr, null, null, null ) => {
+        $emiter.disconnect_all();
+    };
+    ( $emiter:expr, $signal:ident(), null, null ) => {
+        let signal = $emiter.$signal();
+        $emiter.disconnect(Some(signal), None);
+    };
+    ( $emiter:expr, $signal:ident(), $target:expr, null ) => {
+        let signal = $emiter.$signal();
+        $emiter.disconnect(Some(signal), Some($target.object_id()));
+    };
+    ( $emiter:expr, null, $target:expr, null ) => {
+        $emiter.disconnect(None, Some($target.object_id()));
+    };
+}
+
+#[allow(unused_macros)]
+#[macro_export]
 macro_rules! signal {
     ( $object:expr, $name:expr ) => {{
-        Signal::new($object.action_address(), $name.to_string())
+        Signal::new($object.object_id(), $name.to_string())
     }};
 }
 
@@ -323,9 +389,9 @@ impl Action {
 
     pub fn emit(&self) {
         if let Some(param) = self.param.as_ref() {
-            emit!(self.signal, param)
+            emit!(self.signal.clone(), param)
         } else {
-            emit!(self.signal)
+            emit!(self.signal.clone())
         }
     }
 }
@@ -370,7 +436,7 @@ mod tests {
 
         pub fn reg_action(&mut self) {
             connect!(self, action_test(), self, slot_test(i32:0, String:1));
-            connect!(self, action_demo(), self, slot_demo(i32:0));
+            connect!(self, action_demo(), self, slot_demo(i32));
         }
 
         pub fn slot_test(&self, p1: i32, p2: String) {
@@ -412,26 +478,20 @@ mod tests {
         for join in join_vec {
             join.join().unwrap();
         }
+
+        let action = Action::with_param(rc.action_test(), (1, "desc"));
+        action.emit();
+
+        disconnect!(rc, null, null, null);
+        disconnect!(rc, null, rc, null);
+        disconnect!(rc, action_test(), rc, null);
+        disconnect!(rc, action_test(), null, null);
     }
 
     #[test]
     fn test_signal() {
-        let mut action_hub = ActionHub::new();
-        action_hub.initialize();
-
         let widget = Widget::new();
         let signal = signal!(&widget, "hello");
         println!("{}", signal)
-    }
-
-    #[test]
-    fn test_action() {
-        let mut action_hub = ActionHub::new();
-        action_hub.initialize();
-
-        let mut widget = Widget::new();
-        let action = Action::with_param(widget.action_test(), (1, "desc"));
-        widget.reg_action();
-        action.emit();
     }
 }
