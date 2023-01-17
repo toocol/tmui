@@ -5,3 +5,4 @@ pub use crate::namespace::Align;
 pub use crate::object::{Object, ObjectExt, ObjectImplExt, ObjectOperation};
 pub use crate::types::{IsA, ObjectType, StaticType, Type};
 pub use crate::values::{ToValue, Value};
+pub use crate::timer::TimerSignal;

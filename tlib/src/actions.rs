@@ -44,7 +44,7 @@ use lazy_static::lazy_static;
 use log::warn;
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Display,
     ptr::null_mut,
     sync::{
@@ -62,7 +62,17 @@ lazy_static! {
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: RefCell<HashMap<u16, HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>>>,
+    map: RefCell<
+        Box<
+            HashMap<
+                u16,
+                (
+                    HashSet<u16>,
+                    HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>,
+                ),
+            >,
+        >,
+    >,
     sender: Sender<(Signal, Option<Value>)>,
     receiver: Receiver<(Signal, Option<Value>)>,
 }
@@ -70,14 +80,14 @@ impl ActionHub {
     pub fn new() -> Self {
         let (sender, receiver) = channel();
         Self {
-            map: RefCell::new(HashMap::new()),
+            map: RefCell::new(Box::new(HashMap::new())),
             sender,
             receiver,
         }
     }
 
     /// The owenership of `ActionHub` should manage by the caller who called [`initialize()`]
-    pub fn instance<'a>() -> &'a ActionHub {
+    pub fn instance<'a>() -> &'a Self {
         let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
         unsafe {
             action_hub
@@ -86,7 +96,7 @@ impl ActionHub {
         }
     }
 
-    /// Initialize the `ActionHub`, the instance should be managed by the caller.  
+    /// Initialize the `ActionHub`, the instance should be managed by the caller.
     ///
     /// The thread initialize the `ActionHub` should be the `main` thread.
     ///
@@ -108,7 +118,7 @@ impl ActionHub {
         while let Ok(action) = self.receiver.try_recv() {
             let signal = action.0;
             let param = action.1;
-            if let Some(emiter_map) = self.map.borrow().get(&signal.emiter_id) {
+            if let Some((_, emiter_map)) = self.map.borrow().get(&signal.emiter_id) {
                 if let Some(actions) = emiter_map.get(signal.signal()) {
                     actions
                         .iter()
@@ -135,17 +145,24 @@ impl ActionHub {
         });
 
         let mut map_ref = self.map.borrow_mut();
-        let actions = map_ref
+        let (target_set, signal_map) = map_ref
             .entry(signal.emiter_id)
-            .or_insert(HashMap::new())
+            .or_insert((HashSet::new(), HashMap::new()));
+        let actions = signal_map
             .entry(signal.signal)
             .or_insert(HashMap::new())
             .entry(target)
             .or_insert(vec![]);
+        target_set.insert(target);
         actions.push(Box::new(f));
     }
 
-    pub fn disconnect_action(&self, emiter: Option<u16>, signal: Option<&str>, target: Option<u16>) {
+    pub fn disconnect_action(
+        &self,
+        emiter: Option<u16>,
+        signal: Option<&str>,
+        target: Option<u16>,
+    ) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
                 panic!("`disconnect_action()` should only call in the `main` thread.")
@@ -154,29 +171,52 @@ impl ActionHub {
 
         let mut map_ref = self.map.borrow_mut();
 
+        // When disconnect with specified signal(`signal.is_some()`),
+        // we assume that other signals also hold the action function of the target id,
+        // so it is not necessary to remove the target id from the target set.
+        // (This can be solved by counting the target, but it doesn't seem necessary at present.)
+        //
+        // Bechmarks: `connected 10000 widgets with 100 slots/widget and 1 signal,
+        //             with the most time-consuming way to disconnect
+        //             (emiter.is_none() && signal.is_none() && target.is_some())`
+        // No-Target-Set time:   [495.17 µs 506.13 µs 517.70 µs]
+        // With-Target-Set time: [190.71 µs 193.56 µs 196.83 µs]
+        //
+        // This is just that there is only one signal for each connection.
+        // If there are multiple signals, the performance improvement will be more obvious.
         if emiter.is_none() && signal.is_none() && target.is_some() {
-            for (_, signal_map) in map_ref.iter_mut() {
-                for (_, target_map) in signal_map.iter_mut() {
-                    target_map.remove(target.as_ref().unwrap());
+            for (_, (target_set, signal_map)) in map_ref.iter_mut() {
+                let target = target.as_ref().unwrap();
+                if !target_set.contains(target) {
+                    continue;
                 }
+                for (_, target_map) in signal_map.iter_mut() {
+                    target_map.remove(target);
+                }
+                target_set.remove(target);
             }
         } else if emiter.is_some() && signal.is_none() && target.is_none() {
             map_ref.remove(emiter.as_ref().unwrap());
         } else if emiter.is_some() && signal.is_some() && target.is_none() {
-            if let Some(signal_map) = map_ref.get_mut(emiter.as_ref().unwrap()) {
+            if let Some((_, signal_map)) = map_ref.get_mut(emiter.as_ref().unwrap()) {
                 signal_map.remove(signal.unwrap());
             }
         } else if emiter.is_some() && signal.is_some() && target.is_some() {
-            if let Some(signal_map) = map_ref.get_mut(emiter.as_ref().unwrap()) {
+            if let Some((_, signal_map)) = map_ref.get_mut(emiter.as_ref().unwrap()) {
                 if let Some(target_map) = signal_map.get_mut(signal.unwrap()) {
                     target_map.remove(target.as_ref().unwrap());
                 }
             }
         } else if emiter.is_some() && signal.is_none() && target.is_some() {
-            if let Some(signal_map) = map_ref.get_mut(emiter.as_ref().unwrap()) {
-                for (_, target_map) in signal_map.iter_mut() {
-                    target_map.remove(target.as_ref().unwrap());
+            if let Some((target_set, signal_map)) = map_ref.get_mut(emiter.as_ref().unwrap()) {
+                let target = target.as_ref().unwrap();
+                if !target_set.contains(target) {
+                    return;
                 }
+                for (_, target_map) in signal_map.iter_mut() {
+                    target_map.remove(target);
+                }
+                target_set.remove(target);
             }
         }
     }
@@ -185,7 +225,7 @@ impl ActionHub {
         IS_MAIN_THREAD.with(|is_main| {
             let name = signal.signal();
             if *is_main.borrow() {
-                if let Some(emiter_map) = self.map.borrow().get(&signal.emiter_id) {
+                if let Some((_, emiter_map)) = self.map.borrow().get(&signal.emiter_id) {
                     if let Some(actions) = emiter_map.get(name) {
                         actions
                             .iter()
@@ -290,17 +330,19 @@ macro_rules! emit {
 #[macro_export]
 macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident() ) => {
-        let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, $target.object_id(), move |param| {
+        let id = $target.object_id();
+        let signal = $emiter.$signal();
+        $emiter.connect(signal, id, move |_| {
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             target.$slot()
         })
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
-        let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, $target.object_id(), move |param| {
+        let id = $target.object_id();
+        let signal = $emiter.$signal();
+        $emiter.connect(signal, id, move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             let param = val.get::<$param>();
@@ -308,9 +350,10 @@ macro_rules! connect {
         })
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
-        let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
-        $emiter.connect(signal, $target.object_id(), move |param| {
+        let id = $target.object_id();
+        let signal = $emiter.$signal();
+        $emiter.connect(signal, id, move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             let param = val.get::<($($param),+)>();
@@ -398,7 +441,7 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{rc::Rc, thread, time::Duration};
+    use std::{rc::Rc, thread, time::Duration, cell::RefCell};
 
     use crate::{
         object::{ObjectImpl, ObjectSubclass},
@@ -406,6 +449,16 @@ mod tests {
     };
 
     use super::ActionHub;
+
+    #[derive(Default)]
+    pub struct Inner {
+        num: i32,
+    }
+
+    #[derive(Default)]
+    pub struct Outter {
+        inner: Inner,
+    }
 
     #[extends_object]
     #[derive(Default)]
@@ -428,6 +481,9 @@ mod tests {
 
             /// Signal: action to demo.
             action_demo();
+
+            /// Signal: action with no param.
+            action_no_param();
         }
 
         pub fn new() -> Self {
@@ -437,6 +493,7 @@ mod tests {
         pub fn reg_action(&mut self) {
             connect!(self, action_test(), self, slot_test(i32:0, String:1));
             connect!(self, action_demo(), self, slot_demo(i32));
+            connect!(self, action_no_param(), self, slot_no_param());
         }
 
         pub fn slot_test(&self, p1: i32, p2: String) {
@@ -446,7 +503,12 @@ mod tests {
         }
 
         pub fn slot_demo(&self, i: i32) {
+            assert_eq!(i, 1);
             println!("Process action demo");
+        }
+
+        pub fn slot_no_param(&self) {
+            println!("Process action no param");
         }
 
         pub fn emit(&self) {
@@ -454,6 +516,7 @@ mod tests {
             let desc = "desc";
             emit!(self.action_test(), param, desc);
             emit!(self.action_demo(), param);
+            emit!(self.action_no_param());
         }
     }
 
@@ -487,6 +550,7 @@ mod tests {
         disconnect!(rc, null, rc, null);
         disconnect!(rc, action_test(), rc, null);
         disconnect!(rc, action_test(), null, null);
+        rc.emit();
     }
 
     #[test]
@@ -494,5 +558,15 @@ mod tests {
         let widget = Widget::new();
         let signal = signal!(&widget, "hello");
         println!("{}", signal)
+    }
+
+    #[test]
+    fn test_ptr() {
+        let mut inner = Inner::default();
+        let ptr = &mut inner as *mut Inner;
+        let outter = Outter { inner };
+        let outter = RefCell::new(outter);
+        unsafe{ ptr.as_mut().unwrap().num = 100 };
+        println!("{}", outter.borrow().inner.num)
     }
 }
