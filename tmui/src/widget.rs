@@ -116,6 +116,7 @@ impl Widget {
         }
 
         *self.child.borrow_mut() = Some(child);
+        self.child.borrow_mut().as_mut().unwrap().initialize();
 
         let child = self.get_raw_child();
         Self::child_region_probe(parent.rect(), child)
@@ -303,7 +304,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 /// WidgetImpl's `paint()` function Will be proxy executated by ElementImpl `on_renderer` method .
 #[allow(unused_variables)]
 #[allow(unused_mut)]
-pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType {
+pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + ObjectImpl {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self, size: Size) {}
 

@@ -120,6 +120,8 @@ impl ObjectImpl for Object {
     fn construct(&self) {
         debug!("`Object` construct")
     }
+
+    fn initialize(&mut self) {}
 }
 
 impl ObjectImplExt for Object {
@@ -164,10 +166,13 @@ impl<T: ObjectSubclass> StaticType for T {
     }
 }
 
-pub trait ObjectImpl: ObjectSubclass + ObjectImplExt {
+pub trait ObjectImpl: ObjectImplExt {
     fn construct(&self) {
         self.parent_construct()
     }
+
+    /// `initialize()` will be called when widget as a `child` of another widget.
+    fn initialize(&mut self) {}
 
     fn on_property_set(&self, _name: &str, _value: &Value) {}
 }
