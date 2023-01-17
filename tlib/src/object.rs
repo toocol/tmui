@@ -9,7 +9,7 @@ use std::{
 };
 use log::debug;
 
-const ID_INCREMENT: AtomicU16 = AtomicU16::new(0);
+static ID_INCREMENT: AtomicU16 = AtomicU16::new(0);
 
 /// Super type of object system, every subclass object should extends this struct by proc-marco `[extends_object]`,
 /// and impl `ObjectSubclass, ObjectImpl`

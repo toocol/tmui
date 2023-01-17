@@ -62,7 +62,7 @@ lazy_static! {
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: RefCell<HashMap<u16, HashMap<String, HashMap<u16, Vec<Box<dyn Fn(Option<Value>)>>>>>>,
+    map: RefCell<HashMap<u16, HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>>>,
     sender: Sender<(Signal, Option<Value>)>,
     receiver: Receiver<(Signal, Option<Value>)>,
 }
@@ -73,6 +73,16 @@ impl ActionHub {
             map: RefCell::new(HashMap::new()),
             sender,
             receiver,
+        }
+    }
+
+    /// The owenership of `ActionHub` should manage by the caller who called [`initialize()`]
+    pub fn instance<'a>() -> &'a ActionHub {
+        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
+        unsafe {
+            action_hub
+                .as_ref()
+                .expect("`ActionHub` was not initialized, or already dead.")
         }
     }
 
@@ -102,7 +112,7 @@ impl ActionHub {
                 if let Some(actions) = emiter_map.get(signal.signal()) {
                     actions
                         .iter()
-                        .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(param.clone())));
+                        .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
                 } else {
                     warn!("Unconnected action: {}", signal.signal());
                 }
@@ -112,7 +122,7 @@ impl ActionHub {
         }
     }
 
-    pub fn connect_action<F: Fn(Option<Value>) + 'static>(
+    pub fn connect_action<F: Fn(&Option<Value>) + 'static>(
         &self,
         signal: Signal,
         target: u16,
@@ -125,13 +135,17 @@ impl ActionHub {
         });
 
         let mut map_ref = self.map.borrow_mut();
-        let emiter_map = map_ref.entry(signal.emiter_id).or_insert(HashMap::new());
-        let target_map = emiter_map.entry(signal.signal).or_insert(HashMap::new());
-        let actions = target_map.entry(target).or_insert(vec![]);
+        let actions = map_ref
+            .entry(signal.emiter_id)
+            .or_insert(HashMap::new())
+            .entry(signal.signal)
+            .or_insert(HashMap::new())
+            .entry(target)
+            .or_insert(vec![]);
         actions.push(Box::new(f));
     }
 
-    pub fn disconnect_target_action(&self, signal: Option<Signal>, target: Option<u16>) {
+    pub fn disconnect_action(&self, emiter: Option<u16>, signal: Option<&str>, target: Option<u16>) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
                 panic!("`disconnect_action()` should only call in the `main` thread.")
@@ -139,17 +153,32 @@ impl ActionHub {
         });
 
         let mut map_ref = self.map.borrow_mut();
-    }
 
-    pub fn disconnect_all_action(&self, emiter_id: u16) {
-        IS_MAIN_THREAD.with(|is_main| {
-            if !*is_main.borrow() {
-                panic!("`disconnect_action()` should only call in the `main` thread.")
+        if emiter.is_none() && signal.is_none() && target.is_some() {
+            for (_, signal_map) in map_ref.iter_mut() {
+                for (_, target_map) in signal_map.iter_mut() {
+                    target_map.remove(target.as_ref().unwrap());
+                }
             }
-        });
-
-        let mut map_ref = self.map.borrow_mut();
-        map_ref.remove(&emiter_id);
+        } else if emiter.is_some() && signal.is_none() && target.is_none() {
+            map_ref.remove(emiter.as_ref().unwrap());
+        } else if emiter.is_some() && signal.is_some() && target.is_none() {
+            if let Some(signal_map) = map_ref.get_mut(emiter.as_ref().unwrap()) {
+                signal_map.remove(signal.unwrap());
+            }
+        } else if emiter.is_some() && signal.is_some() && target.is_some() {
+            if let Some(signal_map) = map_ref.get_mut(emiter.as_ref().unwrap()) {
+                if let Some(target_map) = signal_map.get_mut(signal.unwrap()) {
+                    target_map.remove(target.as_ref().unwrap());
+                }
+            }
+        } else if emiter.is_some() && signal.is_none() && target.is_some() {
+            if let Some(signal_map) = map_ref.get_mut(emiter.as_ref().unwrap()) {
+                for (_, target_map) in signal_map.iter_mut() {
+                    target_map.remove(target.as_ref().unwrap());
+                }
+            }
+        }
     }
 
     pub fn activate_action(&self, signal: Signal, param: Option<Value>) {
@@ -160,7 +189,7 @@ impl ActionHub {
                     if let Some(actions) = emiter_map.get(name) {
                         actions
                             .iter()
-                            .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(param.clone())));
+                            .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
                     } else {
                         warn!("Unconnected action: {}", name);
                     }
@@ -176,34 +205,16 @@ impl ActionHub {
     }
 }
 pub trait ActionExt: Sized + ObjectOperation {
-    fn connect<F: Fn(Option<Value>) + 'static>(&self, signal: Signal, target: u16, f: F) {
-        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            action_hub
-                .as_ref()
-                .expect("`ActionHub` was not initialized, or already dead.")
-                .connect_action(signal, target, f)
-        }
+    fn connect<F: Fn(&Option<Value>) + 'static>(&self, signal: Signal, target: u16, f: F) {
+        ActionHub::instance().connect_action(signal, target, f)
     }
 
-    fn disconnect(&self, signal: Option<Signal>, target: Option<u16>) {
-        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            action_hub
-                .as_ref()
-                .expect("`ActionHub` was not initialized, or already dead.")
-                .disconnect_target_action(signal, target)
-        }
+    fn disconnect(&self, emiter: Option<u16>, signal: Option<&str>, target: Option<u16>) {
+        ActionHub::instance().disconnect_action(emiter, signal, target)
     }
 
     fn disconnect_all(&self) {
-        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            action_hub
-                .as_ref()
-                .expect("`ActionHub` was not initialized, or already dead.")
-                .disconnect_all_action(self.object_id())
-        }
+        ActionHub::instance().disconnect_action(Some(self.object_id()), None, None)
     }
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
@@ -266,24 +277,12 @@ pub fn ptr_address<T>(obj: &T) -> usize {
 #[macro_export]
 macro_rules! emit {
     ( $signal:expr ) => {{
-        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            action_hub
-                .as_ref()
-                .expect("`ActionHub` was not initialized, or already dead.")
-                .activate_action($signal, None)
-        };
+        ActionHub::instance().activate_action($signal, None);
     }};
     ( $signal:expr, $($x:expr),+ ) => {{
         let tuple = ($($x),+);
         let value = tuple.to_value();
-        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            action_hub
-                .as_ref()
-                .expect("`ActionHub` was not initialized, or already dead.")
-                .activate_action($signal, Some(value))
-        };
+        ActionHub::instance().activate_action($signal, Some(value));
     }};
 }
 
@@ -294,34 +293,28 @@ macro_rules! connect {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
         $emiter.connect(signal, $target.object_id(), move |param| {
-            unsafe {
-                let target = target_ptr.as_mut().expect("Target is None.");
-                target.$slot()
-            }
+            let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
+            target.$slot()
         })
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
         $emiter.connect(signal, $target.object_id(), move |param| {
-            unsafe {
-                let val = param.expect("Param is None.");
-                let target = target_ptr.as_mut().expect("Target is None.");
-                let param = val.get::<$param>();
-                target.$slot(param)
-            }
+            let val = param.as_ref().expect("Param is None.");
+            let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
+            let param = val.get::<$param>();
+            target.$slot(param)
         })
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let signal = $emiter.$signal();
         let target_ptr = $target.as_mut_ptr();
         $emiter.connect(signal, $target.object_id(), move |param| {
-            unsafe {
-                let val = param.expect("Param is None.");
-                let target = target_ptr.as_mut().expect("Target is None.");
-                let param = val.get::<($($param),+)>();
-                target.$slot($(param.$index),+)
-            }
+            let val = param.as_ref().expect("Param is None.");
+            let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
+            let param = val.get::<($($param),+)>();
+            target.$slot($(param.$index),+)
         })
     };
 }
@@ -330,21 +323,25 @@ macro_rules! connect {
 #[macro_export]
 macro_rules! disconnect {
     ( null, null, $target:expr, null ) => {
-        // TODO: remove all action binding in target side.
+        $target.disconnect(None, None, Some($target.object_id()));
     };
     ( $emiter:expr, null, null, null ) => {
         $emiter.disconnect_all();
     };
     ( $emiter:expr, $signal:ident(), null, null ) => {
         let signal = $emiter.$signal();
-        $emiter.disconnect(Some(signal), None);
+        $emiter.disconnect(Some($emiter.object_id()), Some(signal.signal()), None);
     };
     ( $emiter:expr, $signal:ident(), $target:expr, null ) => {
         let signal = $emiter.$signal();
-        $emiter.disconnect(Some(signal), Some($target.object_id()));
+        $emiter.disconnect(
+            Some($emiter.object_id()),
+            Some(signal.signal()),
+            Some($target.object_id()),
+        );
     };
     ( $emiter:expr, null, $target:expr, null ) => {
-        $emiter.disconnect(None, Some($target.object_id()));
+        $emiter.disconnect(Some($emiter.object_id()), None, Some($target.object_id()));
     };
 }
 
