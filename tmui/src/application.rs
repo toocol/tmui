@@ -23,7 +23,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tlib::{actions::ActionHub, utils::TimeStamp};
+use tlib::{actions::ActionHub, utils::TimeStamp, timer::TimerHub};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
@@ -143,9 +143,14 @@ impl Application {
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
 
         let platform = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_ref().unwrap() };
+
         // Create and initialize the `ActionHub`.
         let mut action_hub = ActionHub::new();
         action_hub.initialize();
+
+        // Create and initialize the `TimerHub`.
+        let mut timer_hub = TimerHub::new();
+        timer_hub.initialize();
 
         // Create the [`Backend`] based on the backend type specified by the user.
         let backend;
@@ -183,6 +188,7 @@ impl Application {
                 output_sender.send(Message::MESSAGE_VSNYC).unwrap();
             }
 
+            timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             thread::sleep(Duration::from_nanos(1));
         }

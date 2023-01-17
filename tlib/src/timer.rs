@@ -2,9 +2,10 @@
 use crate::{
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
-    signal, signals,
+    signal, signals, emit,
 };
 use lazy_static::lazy_static;
+use log::warn;
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -22,6 +23,7 @@ lazy_static! {
     static ref TIMER_HUB: AtomicPtr<TimerHub> = AtomicPtr::new(null_mut());
 }
 
+/// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
     timers: RefCell<Box<HashMap<u16, Option<NonNull<Timer>>>>>,
 }
@@ -42,6 +44,7 @@ impl TimerHub {
         }
     }
 
+    /// Intialize the `TimerHub`, this function should only call once.
     pub fn initialize(&mut self) {
         INIT.call_once(|| {
             IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
@@ -49,12 +52,21 @@ impl TimerHub {
         });
     }
 
+    /// Check the timers, if any timer was arrival the interval, emit the [`timeout()`] signal.
     pub fn check_timers(&self) {
-
+        for (id, timer) in self.timers.borrow_mut().iter_mut() {
+            if let Some(timer) = timer.as_mut() {
+                unsafe { timer.as_mut().check_timer() }
+            } else {
+                warn!("The raw pointer of timer was none, id = {}", id)
+            }
+        }
     }
 
     fn add_timer(&self, timer: &mut Timer) {
-        self.timers.borrow_mut().insert(timer.id(), NonNull::new(timer));
+        self.timers
+            .borrow_mut()
+            .insert(timer.id(), NonNull::new(timer));
     }
 
     fn delete_timer(&self, id: u16) {
@@ -96,7 +108,14 @@ impl Timer {
         timer
     }
 
-    pub fn check_timer(&self) {}
+    pub fn check_timer(&mut self) {
+        if let Ok(duration) = SystemTime::now().duration_since(self.last_strike) {
+            if duration > self.duration {
+                emit!(self.timeout());
+                self.last_strike = SystemTime::now();
+            }
+        }
+    }
 }
 
 pub trait TimerSignal: ActionExt {

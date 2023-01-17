@@ -315,6 +315,7 @@ pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + Ob
 pub trait WidgetImplExt: WidgetImpl {
     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T);
 }
+
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;
