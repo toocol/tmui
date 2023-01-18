@@ -121,7 +121,7 @@ impl Timer {
         self.last_strike = SystemTime::now();
     }
 
-    pub fn set_sigle_shot(&mut self, single_shot: bool) {
+    pub fn set_single_shot(&mut self, single_shot: bool) {
         self.single_shoot = single_shot
     }
 
