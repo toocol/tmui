@@ -34,7 +34,7 @@ mod tests {
     }
 
     impl ObjectImpl for TestObject {
-        fn construct(&self) {
+        fn construct(&mut self) {
             self.parent_construct();
 
             println!("`TestObject` construct");

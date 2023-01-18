@@ -56,7 +56,10 @@ impl TimerHub {
     pub fn check_timers(&self) {
         for (id, timer) in self.timers.borrow_mut().iter_mut() {
             if let Some(timer) = timer.as_mut() {
-                unsafe { timer.as_mut().check_timer() }
+                let timer = unsafe { timer.as_mut() };
+                if timer.is_active() {
+                    timer.check_timer()
+                }
             } else {
                 warn!("The raw pointer of timer was none, id = {}", id)
             }
@@ -79,6 +82,9 @@ impl TimerHub {
 pub struct Timer {
     duration: Duration,
     last_strike: SystemTime,
+    started: bool,
+    single_shoot: bool,
+    triggered: i32,
 }
 
 impl Default for Timer {
@@ -87,6 +93,9 @@ impl Default for Timer {
             duration: Default::default(),
             last_strike: SystemTime::now(),
             object: Default::default(),
+            started: false,
+            single_shoot: false,
+            triggered: 0,
         };
 
         TimerHub::instance().add_timer(&mut timer);
@@ -102,10 +111,26 @@ impl Drop for Timer {
 }
 
 impl Timer {
-    pub fn new(duration: Duration) -> Self {
-        let mut timer: Timer = Object::new(&[]);
-        timer.duration = duration;
-        timer
+    pub fn new() -> Self {
+        Object::new(&[])
+    }
+
+    pub fn start(&mut self, duration: Duration) {
+        self.started = true;
+        self.duration = duration;
+        self.last_strike = SystemTime::now();
+    }
+
+    pub fn set_sigle_shot(&mut self, single_shot: bool) {
+        self.single_shoot = single_shot
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.started
+    }
+
+    pub fn stop(&mut self) {
+        self.started = false
     }
 
     pub fn check_timer(&mut self) {
@@ -113,6 +138,10 @@ impl Timer {
             if duration > self.duration {
                 emit!(self.timeout());
                 self.last_strike = SystemTime::now();
+
+                if self.single_shoot {
+                    self.started = false;
+                }
             }
         }
     }
@@ -135,3 +164,59 @@ impl ObjectSubclass for Timer {
 }
 
 impl ObjectImpl for Timer {}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use crate::{
+        object::{ObjectImpl, ObjectSubclass},
+        prelude::*, connect,
+    };
+    use super::{TimerHub, Timer};
+
+    #[extends_object]
+    #[derive(Default)]
+    pub struct Widget {
+        num: i32,
+    }
+
+    impl ObjectSubclass for Widget {
+        const NAME: &'static str = "Widget";
+
+        type Type = Widget;
+
+        type ParentType = Object;
+    }
+
+    impl ObjectImpl for Widget {}
+
+    impl Widget {
+        pub fn deal_num(&mut self) {
+            println!("{}", self.num);
+            self.num += 1;
+        }
+    }
+
+    #[test]
+    fn test_timer() {
+        let mut action_hub = ActionHub::new();
+        action_hub.initialize();
+
+        let mut timer_hub = TimerHub::new();
+        timer_hub.initialize();
+
+        let mut widget: Widget = Object::new(&[]);
+        let mut timer = Timer::new();
+
+        connect!(timer, timeout(), widget, deal_num());
+        timer.start(Duration::from_secs(1));
+
+        loop {
+            if widget.num >= 5 {
+                break;
+            }
+            timer_hub.check_timers();
+        }
+    }
+}

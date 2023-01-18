@@ -25,7 +25,7 @@ impl ObjectSubclass for Element {
 }
 
 impl ObjectImpl for Element {
-    fn construct(&self) {
+    fn construct(&mut self) {
         self.parent_construct();
         self.update();
         debug!("`Element` construct")

@@ -65,7 +65,7 @@ impl Object {
     pub fn new<T: ObjectSubclass + Default + ObjectImpl + ObjectOperation>(
         properties: &[(&str, &dyn ToValue)],
     ) -> T {
-        let obj = T::default();
+        let mut obj = T::default();
         obj.construct();
         for (name, value) in properties {
             obj.set_property(*name, value.to_value())
@@ -117,7 +117,7 @@ impl ObjectType for Object {
 impl IsA<Object> for Object {}
 
 impl ObjectImpl for Object {
-    fn construct(&self) {
+    fn construct(&mut self) {
         debug!("`Object` construct")
     }
 
@@ -125,7 +125,7 @@ impl ObjectImpl for Object {
 }
 
 impl ObjectImplExt for Object {
-    fn parent_construct(&self) {}
+    fn parent_construct(&mut self) {}
 }
 
 pub trait ObjectExt: StaticType {
@@ -167,7 +167,7 @@ impl<T: ObjectSubclass> StaticType for T {
 }
 
 pub trait ObjectImpl: ObjectImplExt {
-    fn construct(&self) {
+    fn construct(&mut self) {
         self.parent_construct()
     }
 
@@ -178,5 +178,5 @@ pub trait ObjectImpl: ObjectImplExt {
 }
 
 pub trait ObjectImplExt {
-    fn parent_construct(&self);
+    fn parent_construct(&mut self);
 }

@@ -20,7 +20,7 @@ impl ObjectSubclass for ApplicationWindow {
 }
 
 impl ObjectImpl for ApplicationWindow {
-    fn construct(&self) {
+    fn construct(&mut self) {
         self.parent_construct();
         debug!(
             "`ApplicationWindow` construct: static_type: {}",

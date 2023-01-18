@@ -53,7 +53,7 @@ impl ObjectSubclass for Widget {
 impl IsSubclassable for Widget {}
 
 impl ObjectImpl for Widget {
-    fn construct(&self) {
+    fn construct(&mut self) {
         self.parent_construct();
         *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
 

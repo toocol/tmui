@@ -28,7 +28,7 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ObjectImplExt for #name {
                     #[inline]
-                    fn parent_construct(&self) {
+                    fn parent_construct(&mut self) {
                         self.object.construct()
                     }
                 }
@@ -94,7 +94,7 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ObjectImplExt for #name {
                     #[inline]
-                    fn parent_construct(&self) {
+                    fn parent_construct(&mut self) {
                         self.element.construct()
                     }
                 }
@@ -216,7 +216,7 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl ObjectImplExt for #name {
                     #[inline]
-                    fn parent_construct(&self) {
+                    fn parent_construct(&mut self) {
                         self.widget.construct()
                     }
                 }
