@@ -108,6 +108,26 @@ impl Rect {
     }
 
     #[inline]
+    pub fn set_left(&mut self, pos: i32) {
+        self.x = pos;
+    }
+
+    #[inline]
+    pub fn set_top(&mut self, pos: i32) {
+        self.y = pos;
+    }
+
+    #[inline]
+    pub fn set_right(&mut self, pos: i32) {
+        self.width = pos - self.x;
+    }
+
+    #[inline]
+    pub fn set_bottom(&mut self, pos: i32) {
+        self.height = pos - self.y;
+    }
+
+    #[inline]
     pub fn intersects(&self, rect: &Rect) -> bool {
         self.x.max(rect.x) <= self.width.min(rect.width)
             && self.y.max(rect.y) <= self.height.min(rect.height)
