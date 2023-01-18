@@ -1,4 +1,4 @@
-use super::point::Point;
+use super::{point::Point, Size};
 use tlib::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
@@ -24,6 +24,15 @@ impl Rect {
             y,
             width,
             height,
+        }
+    }
+
+    pub fn from_point_size(point: Point, size: Size) -> Self {
+        Self {
+            x: point.x(),
+            y: point.y(),
+            width: point.x() + size.width(),
+            height: point.y() + size.height(),
         }
     }
 
