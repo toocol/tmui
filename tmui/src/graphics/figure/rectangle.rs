@@ -130,6 +130,22 @@ impl Rect {
             height: self.height + yp2 - yp1,
         }
     }
+
+    #[inline]
+    pub fn and(&mut self, other: &Rect) {
+        self.x &= other.x;
+        self.y &= other.y;
+        self.width &= other.width;
+        self.height &= other.height;
+    }
+
+    #[inline]
+    pub fn or(&mut self, other: &Rect) {
+        self.x |= other.x;
+        self.y |= other.y;
+        self.width |= other.width;
+        self.height |= other.height;
+    }
 }
 
 impl From<(i32, i32, i32, i32)> for Rect {
