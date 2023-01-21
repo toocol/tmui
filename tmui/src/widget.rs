@@ -1,6 +1,9 @@
 use crate::{
     graphics::{
-        board::Board, drawing_context::DrawingContext, element::ElementImpl, figure::Size,
+        board::Board,
+        drawing_context::DrawingContext,
+        element::ElementImpl,
+        figure::{Color, Size},
         painter::Painter,
     },
     prelude::*,
@@ -39,7 +42,11 @@ pub struct Widget {
     board: RefCell<Option<NonNull<Board>>>,
     parent: RefCell<Option<*const dyn WidgetImpl>>,
     child: RefCell<Option<Box<dyn WidgetImpl>>>,
+
+    background: Color,
     font: Font,
+    margins: [i32; 4],
+    paddings: [i32; 4],
 }
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
@@ -91,7 +98,13 @@ impl WidgetImpl for Widget {}
 
 impl<T: WidgetImpl> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
-        self.paint(Painter::new(cr.canvas(), self))
+        let mut painter = Painter::new(cr.canvas(), self);
+
+        // Draw the background color of the Widget.
+        painter.set_color(self.background());
+        painter.draw_rect(self.rect());
+
+        self.paint(painter)
     }
 }
 
@@ -182,6 +195,72 @@ pub trait WidgetExt {
 
     /// Get the area inside the widget's margins.
     fn contents_rect(&self) -> Rect;
+
+    /// Get the widget's background color.
+    fn background(&self) -> Color;
+
+    /// Set the widget's background color.
+    fn set_background(&mut self, color: Color);
+
+    /// Get the margins of the Widget. (top, right, bottom, left)
+    fn margins(&self) -> (i32, i32, i32, i32);
+
+    /// Get the top margin of the Widget.
+    fn margin_top(&self) -> i32;
+
+    /// Get the right margin of the Widget.
+    fn margin_right(&self) -> i32;
+
+    /// Get the bottom margin of the Widget.
+    fn margin_bottom(&self) -> i32;
+
+    /// Get the left margin of the Widget.
+    fn margin_left(&self) -> i32;
+
+    /// Set the margins of the Widget.
+    fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32);
+
+    /// Set the top margin of the Widget.
+    fn set_margin_top(&mut self, val: i32);
+
+    /// Set the right margin of the Widget.
+    fn set_margin_right(&mut self, val: i32);
+
+    /// Set the bottom margin of the Widget.
+    fn set_margin_bottom(&mut self, val: i32);
+
+    /// Set the left margin of the Widget.
+    fn set_margin_left(&mut self, val: i32);
+
+    /// Get the paddins of the Widget. (top, right, bottom, left)
+    fn paddings(&self) -> (i32, i32, i32, i32);
+
+    /// Get the top padding of the Widget.
+    fn padding_top(&self) -> i32;
+
+    /// Get the right padding of the Widget.
+    fn padding_right(&self) -> i32;
+
+    /// Get the bottom padding of the Widget.
+    fn padding_bottom(&self) -> i32;
+
+    /// Get the left padding of the Widget.
+    fn padding_left(&self) -> i32;
+
+    /// Set the paddings of the Widget.
+    fn set_paddings(&mut self, top: i32, right: i32, bottom: i32, left: i32);
+
+    /// Set the top padding of the Widget.
+    fn set_padding_top(&mut self, val: i32);
+
+    /// Set the right padding of the Widget.
+    fn set_padding_right(&mut self, val: i32);
+
+    /// Set the bottom padding of the Widget.
+    fn set_padding_bottom(&mut self, val: i32);
+
+    /// Set the left padding of the Widget.
+    fn set_padding_left(&mut self, val: i32);
 }
 
 impl WidgetExt for Widget {
@@ -251,6 +330,110 @@ impl WidgetExt for Widget {
     fn contents_rect(&self) -> Rect {
         // TODO: should calculate the margin of widget
         self.rect()
+    }
+
+    fn background(&self) -> Color {
+        self.background
+    }
+
+    fn set_background(&mut self, color: Color) {
+        self.background = color
+    }
+
+    fn margins(&self) -> (i32, i32, i32, i32) {
+        (
+            self.margins[0],
+            self.margins[1],
+            self.margins[2],
+            self.margins[3],
+        )
+    }
+
+    fn margin_top(&self) -> i32 {
+        self.margins[0]
+    }
+
+    fn margin_right(&self) -> i32 {
+        self.margins[1]
+    }
+
+    fn margin_bottom(&self) -> i32 {
+        self.margins[2]
+    }
+
+    fn margin_left(&self) -> i32 {
+        self.margins[3]
+    }
+
+    fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
+        self.margins[0] = top;
+        self.margins[1] = right;
+        self.margins[2] = bottom;
+        self.margins[3] = left;
+    }
+
+    fn set_margin_top(&mut self, val: i32) {
+        self.margins[0] = val;
+    }
+
+    fn set_margin_right(&mut self, val: i32) {
+        self.margins[1] = val;
+    }
+
+    fn set_margin_bottom(&mut self, val: i32) {
+        self.margins[2] = val;
+    }
+
+    fn set_margin_left(&mut self, val: i32) {
+        self.margins[3] = val;
+    }
+
+    fn paddings(&self) -> (i32, i32, i32, i32) {
+        (
+            self.paddings[0],
+            self.paddings[1],
+            self.paddings[2],
+            self.paddings[3],
+        )
+    }
+
+    fn padding_top(&self) -> i32 {
+        self.paddings[0]
+    }
+
+    fn padding_right(&self) -> i32 {
+        self.paddings[1]
+    }
+
+    fn padding_bottom(&self) -> i32 {
+        self.paddings[2]
+    }
+
+    fn padding_left(&self) -> i32 {
+        self.paddings[3]
+    }
+
+    fn set_paddings(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
+        self.paddings[0] = top;
+        self.paddings[1] = right;
+        self.paddings[2] = bottom;
+        self.paddings[3] = left;
+    }
+
+    fn set_padding_top(&mut self, val: i32) {
+        self.paddings[0] = val;
+    }
+
+    fn set_padding_right(&mut self, val: i32) {
+        self.paddings[1] = val;
+    }
+
+    fn set_padding_bottom(&mut self, val: i32) {
+        self.paddings[2] = val;
+    }
+
+    fn set_padding_left(&mut self, val: i32) {
+        self.paddings[3] = val;
     }
 }
 

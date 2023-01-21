@@ -349,6 +349,116 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn contents_rect(&self) -> Rect {
                         self.widget.contents_rect()
                     }
+
+                    #[inline]
+                    fn background(&self) -> Color {
+                        self.widget.background()
+                    }
+
+                    #[inline]
+                    fn set_background(&mut self, color: Color) {
+                        self.widget.set_background(color)
+                    }
+
+                    #[inline]
+                    fn margins(&self) -> (i32, i32, i32, i32) {
+                        self.widget.margins()
+                    }
+
+                    #[inline]
+                    fn margin_top(&self) -> i32 {
+                        self.widget.margin_top()
+                    }
+
+                    #[inline]
+                    fn margin_right(&self) -> i32 {
+                        self.widget.margin_right()
+                    }
+
+                    #[inline]
+                    fn margin_bottom(&self) -> i32 {
+                        self.widget.margin_bottom()
+                    }
+
+                    #[inline]
+                    fn margin_left(&self) -> i32 {
+                        self.widget.margin_left()
+                    }
+
+                    #[inline]
+                    fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
+                        self.widget.set_margins(top, right, bottom, left)
+                    }
+
+                    #[inline]
+                    fn set_margin_top(&mut self, val: i32) {
+                        self.widget.set_margin_top(val)
+                    }
+
+                    #[inline]
+                    fn set_margin_right(&mut self, val: i32) {
+                        self.widget.set_margin_right(val)
+                    }
+
+                    #[inline]
+                    fn set_margin_bottom(&mut self, val: i32) {
+                        self.widget.set_margin_bottom(val)
+                    }
+
+                    #[inline]
+                    fn set_margin_left(&mut self, val: i32) {
+                        self.widget.set_margin_left(val)
+                    }
+
+                    #[inline]
+                    fn paddings(&self) -> (i32, i32, i32, i32) {
+                        self.widget.paddings()
+                    }
+
+                    #[inline]
+                    fn padding_top(&self) -> i32 {
+                        self.widget.padding_top()
+                    }
+
+                    #[inline]
+                    fn padding_right(&self) -> i32 {
+                        self.widget.padding_right()
+                    }
+
+                    #[inline]
+                    fn padding_bottom(&self) -> i32 {
+                        self.widget.padding_bottom()
+                    }
+
+                    #[inline]
+                    fn padding_left(&self) -> i32 {
+                        self.widget.padding_left()
+                    }
+
+                    #[inline]
+                    fn set_paddings(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
+                        self.widget.set_paddings(top, right, bottom, left)
+                    }
+
+                    #[inline]
+                    fn set_padding_top(&mut self, val: i32) {
+                        self.widget.set_padding_top(val)
+                    }
+
+                    #[inline]
+                    fn set_padding_right(&mut self, val: i32) {
+                        self.widget.set_padding_right(val)
+                    }
+
+                    #[inline]
+                    fn set_padding_bottom(&mut self, val: i32) {
+                        self.widget.set_padding_bottom(val)
+                    }
+
+                    #[inline]
+                    fn set_padding_left(&mut self, val: i32) {
+                        self.widget.set_padding_left(val)
+                    }
                 }
 
                 impl WidgetImplExt for #name {
