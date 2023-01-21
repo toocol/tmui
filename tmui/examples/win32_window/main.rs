@@ -1,4 +1,7 @@
-use tmui::{application::Application, application_window::ApplicationWindow};
+mod test_widget;
+
+use test_widget::TestWidget;
+use tmui::{application::Application, application_window::ApplicationWindow, widget::{WidgetImplExt, WidgetExt}};
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
@@ -14,6 +17,9 @@ fn main() {
     app.run();
 }
 
-fn build_ui(_window: &ApplicationWindow) {
-    println!("Hello World");
+fn build_ui(window: &ApplicationWindow) {
+    let test_widget = TestWidget::new();
+    test_widget.height_request(200);
+    test_widget.width_request(200);
+    window.child(test_widget)
 }

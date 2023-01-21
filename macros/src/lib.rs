@@ -109,6 +109,7 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn set_property(&self, name: &str, value: Value) {
                         self.element.object.on_property_set(name, &value);
                         self.element.on_property_set(name, &value);
+                        self.on_property_set(name, &value);
 
                         self.element.object.set_property(name, value)
                     }
@@ -232,6 +233,7 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                         self.widget.element.object.on_property_set(name, &value);
                         self.widget.element.on_property_set(name, &value);
                         self.widget.on_property_set(name, &value);
+                        self.on_property_set(name, &value);
 
                         self.widget.element.object.set_property(name, value)
                     }

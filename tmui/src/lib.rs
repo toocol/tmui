@@ -6,7 +6,9 @@ pub mod graphics;
 pub mod prelude;
 pub mod widget;
 
-pub use skia_safe::*;
+pub mod skia_safe {
+    pub use skia_safe::*;
+}
 pub mod tlib {
     pub use tlib::*;
 }

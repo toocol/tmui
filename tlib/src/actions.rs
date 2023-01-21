@@ -402,6 +402,7 @@ macro_rules! signals {
     ( $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
         $(
             $(#[$($attrss)*])*
+            /// #### All the Signals/Slots should be connected in [`ObjectImpl::initialize()`] function.
             #[allow(dead_code)]
             fn $name(&self) -> Signal {
                 signal!(self, stringify!($name))

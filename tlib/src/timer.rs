@@ -16,6 +16,7 @@ use std::{
     },
     time::{Duration, SystemTime},
 };
+use log::debug;
 
 static INIT: Once = Once::new();
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
@@ -42,6 +43,11 @@ impl TimerHub {
                 .as_ref()
                 .expect("`TimerHub` was not initialized, or already dead.")
         }
+    }
+
+
+    fn contains_timer(id: u16) -> bool {
+        Self::instance().timers.borrow().contains_key(&id)
     }
 
     /// Intialize the `TimerHub`, this function should only call once.
@@ -89,18 +95,14 @@ pub struct Timer {
 
 impl Default for Timer {
     fn default() -> Self {
-        let mut timer = Self {
+        Self {
             duration: Default::default(),
             last_strike: SystemTime::now(),
             object: Default::default(),
             started: false,
             single_shoot: false,
             triggered: 0,
-        };
-
-        TimerHub::instance().add_timer(&mut timer);
-
-        timer
+        }
     }
 }
 
@@ -116,6 +118,9 @@ impl Timer {
     }
 
     pub fn start(&mut self, duration: Duration) {
+        if !TimerHub::contains_timer(self.id()) {
+            TimerHub::instance().add_timer(self);
+        }
         self.started = true;
         self.duration = duration;
         self.last_strike = SystemTime::now();
@@ -136,6 +141,7 @@ impl Timer {
     pub fn check_timer(&mut self) {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike) {
             if duration > self.duration {
+                debug!("Timer was reached, emit timeout().");
                 emit!(self.timeout());
                 self.last_strike = SystemTime::now();
 

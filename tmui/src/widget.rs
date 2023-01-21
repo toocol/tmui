@@ -57,6 +57,9 @@ impl ObjectImpl for Widget {
         self.parent_construct();
         *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
 
+        self.set_halign(Align::default());
+        self.set_valign(Align::default());
+
         debug!("`Widget` construct")
     }
 
@@ -128,8 +131,9 @@ impl Widget {
             let child_ref = unsafe { child_ptr.as_ref().unwrap() };
             let child_rect = child_ref.rect();
 
-            let _halign = child_ref.get_property("halign");
-            let _valign = child_ref.get_property("valign");
+            let _halign = child_ref.get_property("halign").unwrap().get::<Align>();
+            let _valign = child_ref.get_property("valign").unwrap().get::<Align>();
+
             child_ref.set_fixed_x(parent_rect.x() + child_rect.x());
             child_ref.set_fixed_y(parent_rect.y() + child_rect.y());
 

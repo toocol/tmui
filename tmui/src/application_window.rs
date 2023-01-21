@@ -38,7 +38,7 @@ impl WidgetImpl for ApplicationWindow {
         let mut font = Font::default();
         font.set_size(30.);
         painter.set_font(font);
-        painter.draw_text("Hello World", (30, 40));
+        painter.draw_text("Hello World", (230, 240));
     }
 }
 

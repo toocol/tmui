@@ -172,6 +172,7 @@ pub trait ObjectImpl: ObjectImplExt {
     }
 
     /// `initialize()` will be called when widget as a `child` of another widget.
+    /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}
 
     fn on_property_set(&self, _name: &str, _value: &Value) {}

@@ -413,8 +413,9 @@ impl From<u32> for KeyboardModifier {
 }
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Align {
+    #[default]
     Start = 1,
     Center,
     End,
