@@ -30,16 +30,7 @@ impl ObjectImpl for ApplicationWindow {
 }
 
 impl WidgetImpl for ApplicationWindow {
-    fn paint(&mut self, mut painter: Painter) {
-        painter.set_antialiasing();
-        painter.fill_rect(self.rect().clone(), Color::BLUE);
-        painter.set_color(Color::WHITE);
-
-        let mut font = Font::default();
-        font.set_size(30.);
-        painter.set_font(font);
-        painter.draw_text("Hello World", (230, 240));
-    }
+    fn paint(&mut self, mut _painter: Painter) {}
 }
 
 impl ApplicationWindow {

@@ -147,7 +147,7 @@ impl ActionHub {
             }
         });
         if !ACTIVATE.load(Ordering::SeqCst) && !INITIALIZE_CONNECT.load(Ordering::SeqCst) {
-            error!("Signals/Slots should connect in `ObjectImpl::initialize()`, or after application was activated.");
+            error!("Signal/Slot should connect in `ObjectImpl::initialize()`, or be connected after application was activated.");
             return;
         }
 

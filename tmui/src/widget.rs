@@ -20,8 +20,11 @@ use std::{
     },
 };
 use tlib::{
+    actions::INITIALIZE_CONNECT,
+    emit,
     namespace::{Align, Coordinate},
-    object::{IsSubclassable, ObjectImpl, ObjectSubclass}, actions::INITIALIZE_CONNECT,
+    object::{IsSubclassable, ObjectImpl, ObjectSubclass},
+    signals,
 };
 
 static INIT: Once = Once::new();
@@ -37,7 +40,6 @@ pub fn store_board(board: &mut Board) {
 }
 
 #[extends_element]
-#[derive(Default)]
 pub struct Widget {
     board: RefCell<Option<NonNull<Board>>>,
     parent: RefCell<Option<*const dyn WidgetImpl>>,
@@ -49,7 +51,34 @@ pub struct Widget {
     paddings: [i32; 4],
 }
 
+////////////////////////////////////// Widget Signals //////////////////////////////////////
+pub trait WidgetSignals: ActionExt {
+    signals! {
+        /// Emit when widget's size changed.
+        font_changed();
+
+        /// Emit when widget's size changed.
+        size_changed();
+    }
+}
+impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
+
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
+impl Default for Widget {
+    fn default() -> Self {
+        Self {
+            board: Default::default(),
+            parent: Default::default(),
+            child: Default::default(),
+            background: Color::WHITE,
+            font: Default::default(),
+            margins: Default::default(),
+            paddings: Default::default(),
+            element: Default::default(),
+        }
+    }
+}
+
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";
 
@@ -76,7 +105,7 @@ impl ObjectImpl for Widget {
         match name {
             "width" => {
                 let width = value.get::<i32>();
-                self.set_fixed_width(width)
+                self.set_fixed_width(width);
             }
             "height" => {
                 let height = value.get::<i32>();
@@ -101,8 +130,7 @@ impl<T: WidgetImpl> ElementImpl for T {
         let mut painter = Painter::new(cr.canvas(), self);
 
         // Draw the background color of the Widget.
-        painter.set_color(self.background());
-        painter.draw_rect(self.rect());
+        painter.fill_rect(self.image_rect(None), self.background());
 
         self.paint(painter)
     }
@@ -312,7 +340,8 @@ impl WidgetExt for Widget {
     }
 
     fn set_font(&mut self, font: Font) {
-        self.font = font
+        self.font = font;
+        emit!(self.font_changed());
     }
 
     fn font(&self) -> Font {

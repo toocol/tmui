@@ -31,6 +31,16 @@ impl Point {
     }
 
     #[inline]
+    pub fn set_x(&mut self, x: i32) {
+        self.x = x
+    }
+
+    #[inline]
+    pub fn set_y(&mut self, y: i32) {
+        self.y = y
+    }
+
+    #[inline]
     pub fn to_skia_ipoint(self) -> skia_safe::IPoint {
         skia_safe::IPoint::from(self)
     }
