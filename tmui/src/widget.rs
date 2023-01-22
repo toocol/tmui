@@ -21,7 +21,7 @@ use std::{
 };
 use tlib::{
     namespace::{Align, Coordinate},
-    object::{IsSubclassable, ObjectImpl, ObjectSubclass},
+    object::{IsSubclassable, ObjectImpl, ObjectSubclass}, actions::INITIALIZE_CONNECT,
 };
 
 static INIT: Once = Once::new();
@@ -132,7 +132,9 @@ impl Widget {
         }
 
         *self.child.borrow_mut() = Some(child);
+        INITIALIZE_CONNECT.store(true, Ordering::SeqCst);
         self.child.borrow_mut().as_mut().unwrap().initialize();
+        INITIALIZE_CONNECT.store(false, Ordering::SeqCst);
 
         let child = self.get_raw_child();
         Self::child_region_probe(parent.rect(), child)

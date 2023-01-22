@@ -23,7 +23,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tlib::{actions::ActionHub, utils::TimeStamp, timer::TimerHub};
+use tlib::{actions::{ActionHub, ACTIVATE}, utils::TimeStamp, timer::TimerHub};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
@@ -176,6 +176,7 @@ impl Application {
             drop(on_activate);
         }
         board.add_element(&mut window);
+        ACTIVATE.store(true, Ordering::SeqCst);
 
         let mut last_frame = 0u128;
         let mut update;

@@ -41,20 +41,23 @@
 /// ```
 use crate::prelude::*;
 use lazy_static::lazy_static;
-use log::warn;
+use log::{error, warn};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fmt::Display,
     ptr::null_mut,
     sync::{
-        atomic::AtomicPtr,
+        atomic::{AtomicBool, AtomicPtr, Ordering},
         mpsc::{channel, Receiver, Sender},
         Once,
     },
 };
 
 static INIT: Once = Once::new();
+pub static ACTIVATE: AtomicBool = AtomicBool::new(false);
+pub static INITIALIZE_CONNECT: AtomicBool = AtomicBool::new(false);
+
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
 lazy_static! {
     pub static ref ACTION_HUB: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
@@ -143,6 +146,10 @@ impl ActionHub {
                 panic!("`connect_action()` should only call in the `main` thread.")
             }
         });
+        if !ACTIVATE.load(Ordering::SeqCst) && !INITIALIZE_CONNECT.load(Ordering::SeqCst) {
+            error!("Signals/Slots should connect in `ObjectImpl::initialize()`, or after application was activated.");
+            return;
+        }
 
         let mut map_ref = self.map.borrow_mut();
         let (target_set, signal_map) = map_ref
@@ -442,7 +449,7 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{rc::Rc, thread, time::Duration, cell::RefCell};
+    use std::{cell::RefCell, rc::Rc, thread, time::Duration};
 
     use crate::{
         object::{ObjectImpl, ObjectSubclass},
@@ -567,7 +574,7 @@ mod tests {
         let ptr = &mut inner as *mut Inner;
         let outter = Outter { inner };
         let outter = RefCell::new(outter);
-        unsafe{ ptr.as_mut().unwrap().num = 100 };
+        unsafe { ptr.as_mut().unwrap().num = 100 };
         println!("{}", outter.borrow().inner.num)
     }
 }
