@@ -151,7 +151,7 @@ impl Rect {
     }
 
     #[inline]
-    pub fn asjusted(&self, xp1: i32, yp1: i32, xp2: i32, yp2: i32) -> Rect {
+    pub fn adjusted(&self, xp1: i32, yp1: i32, xp2: i32, yp2: i32) -> Rect {
         Rect {
             x: self.x + xp1,
             y: self.y + yp1,

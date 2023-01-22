@@ -346,8 +346,13 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
-                    fn contents_rect(&self) -> Rect {
-                        self.widget.contents_rect()
+                    fn image_rect(&self, coord: Option<Coordinate>) -> Rect {
+                        self.widget.image_rect(coord)
+                    }
+
+                    #[inline]
+                    fn contents_rect(&self, coord: Option<Coordinate>) -> Rect {
+                        self.widget.contents_rect(coord)
                     }
 
                     #[inline]

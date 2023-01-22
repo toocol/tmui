@@ -20,7 +20,7 @@ use std::{
     },
 };
 use tlib::{
-    namespace::Align,
+    namespace::{Align, Coordinate},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
 };
 
@@ -193,8 +193,13 @@ pub trait WidgetExt {
     /// Get the font of widget.
     fn font(&self) -> Font;
 
-    /// Get the area inside the widget's margins.
-    fn contents_rect(&self) -> Rect;
+    /// Get the area of widget's total image renderering Rect with the margins. <br>
+    /// The default [`Coordinate`] was `World`.
+    fn image_rect(&self, coord: Option<Coordinate>) -> Rect;
+
+    /// Get the area inside the widget's paddings. <br>
+    /// The default [`Coordinate`] was `World`.
+    fn contents_rect(&self, coord: Option<Coordinate>) -> Rect;
 
     /// Get the widget's background color.
     fn background(&self) -> Color;
@@ -327,9 +332,43 @@ impl WidgetExt for Widget {
         font
     }
 
-    fn contents_rect(&self) -> Rect {
-        // TODO: should calculate the margin of widget
-        self.rect()
+    fn image_rect(&self, coord: Option<Coordinate>) -> Rect {
+        let mut rect = self.rect();
+
+        let (top, right, bottom, left) = self.margins();
+        rect.set_x(rect.x() - left);
+        rect.set_y(rect.y() - top);
+        rect.set_width(rect.width() + left + right);
+        rect.set_height(rect.height() + top + bottom);
+
+        if let Some(coord) = coord {
+            if coord == Coordinate::Widget {
+                rect.set_x(0);
+                rect.set_y(0);
+            }
+        }
+
+        rect
+    }
+
+    fn contents_rect(&self, coord: Option<Coordinate>) -> Rect {
+        let mut rect = self.image_rect(coord);
+
+        // Rect add the margins.
+        let (top, right, bottom, left) = self.margins();
+        rect.set_x(rect.x() + left);
+        rect.set_y(rect.y() + top);
+        rect.set_width(rect.width() - left - right);
+        rect.set_height(rect.height() - top - bottom);
+
+        // Rect add the paddings.
+        let (top, right, bottom, left) = self.paddings();
+        rect.set_x((rect.x() + left).max(rect.x()));
+        rect.set_y((rect.y() + top).max(rect.y()));
+        rect.set_width((rect.width() - left - right).min(rect.width()));
+        rect.set_height((rect.height() - top - bottom).min(rect.width()));
+
+        rect
     }
 
     fn background(&self) -> Color {

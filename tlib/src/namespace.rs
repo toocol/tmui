@@ -473,6 +473,14 @@ impl FromValue for Align {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum Coordinate {
+    #[default]
+    World,
+    Widget
+}
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
