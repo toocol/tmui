@@ -111,6 +111,15 @@ impl Label {
     }
 
     fn on_font_change(&mut self) {
-        debug!("`Label` font changed!")
+        debug!("`Label` font changed.");
+        let font = self.font();
+        
+        let mut widths = vec![0f32; self.label.len()];
+        font.get_widths(&label.label, &mut widths);
+        let width: f32 = widths.iter().sum();
+        let height = font.metrics().1.cap_height;
+
+        self.width_request(width as i32 + 1);
+        self.height_request(height as i32 + 1);
     }
 }
