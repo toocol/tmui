@@ -115,7 +115,7 @@ impl Label {
         let font = self.font();
         
         let mut widths = vec![0f32; self.label.len()];
-        font.get_widths(&label.label, &mut widths);
+        font.get_widths(&self.label, &mut widths);
         let width: f32 = widths.iter().sum();
         let height = font.metrics().1.cap_height;
 
