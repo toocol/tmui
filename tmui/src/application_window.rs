@@ -1,14 +1,36 @@
+use std::{
+    ptr::null_mut,
+    sync::{
+        atomic::{AtomicPtr, Ordering},
+        Once,
+    },
+};
+
 use crate::{
     graphics::{
+        board::Board,
         figure::{Color, Size},
         painter::Painter,
     },
     prelude::*,
     widget::WidgetImpl,
 };
+use lazy_static::lazy_static;
 use log::debug;
 use skia_safe::Font;
 use tlib::object::{ObjectImpl, ObjectSubclass};
+
+static INIT: Once = Once::new();
+lazy_static! {
+    static ref BOARD: AtomicPtr<Board> = AtomicPtr::new(null_mut());
+}
+
+/// Store the [`Board`] as raw ptr.
+pub fn store_board(board: &mut Board) {
+    INIT.call_once(move || {
+        BOARD.store(board as *mut Board, Ordering::SeqCst);
+    })
+}
 
 #[extends_widget]
 #[derive(Default)]
@@ -29,6 +51,10 @@ impl ObjectImpl for ApplicationWindow {
             "`ApplicationWindow` construct: static_type: {}",
             Self::static_type().name()
         )
+    }
+
+    fn initialize(&mut self) {
+        child_initialize(self.get_raw_child_mut())
     }
 }
 
@@ -151,5 +177,17 @@ fn child_position_probe(
 
         parent = child_ptr;
         child = child_ref.get_raw_child();
+    }
+}
+
+#[inline]
+fn child_initialize(mut child: Option<*mut dyn WidgetImpl>) {
+    let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
+    while let Some(child_ptr) = child {
+        let child_ref = unsafe { child_ptr.as_mut().unwrap() };
+        board.add_element(child_ref.as_element());
+
+        child_ref.initialize();
+        child = child_ref.get_raw_child_mut();
     }
 }

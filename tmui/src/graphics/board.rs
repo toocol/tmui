@@ -31,7 +31,7 @@ impl Board {
         let mut update = false;
         // The parent elements always at the end of `element_list`.
         // We should renderer the parent elements first.
-        for element in self.element_list.iter().rev() {
+        for element in self.element_list.iter() {
             let element = unsafe { element.borrow_mut().as_mut().unwrap().as_mut() };
             if element.invalidate() {
                 let cr = DrawingContext::new(self, element.rect());

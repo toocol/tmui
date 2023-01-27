@@ -296,6 +296,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                 impl WidgetExt for #name {
                     #[inline]
+                    fn as_element(&mut self) -> *mut dyn ElementImpl {
+                        self as *mut Self as *mut dyn ElementImpl
+                    }
+
+                    #[inline]
                     fn set_parent(&self, parent: *const dyn WidgetImpl) {
                         self.widget.set_parent(parent)
                     }
@@ -303,6 +308,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     #[inline]
                     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
                         self.widget.get_raw_child()
+                    }
+
+                    #[inline]
+                    fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl> {
+                        self.widget.get_raw_child_mut()
                     }
 
                     #[inline]

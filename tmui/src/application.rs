@@ -5,11 +5,10 @@ use crate::platform::PlatformMacos;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
 use crate::{
-    application_window::ApplicationWindow,
+    application_window::{ApplicationWindow, store_board},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
     platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
-    widget::store_board,
 };
 use lazy_static::lazy_static;
 use std::{
@@ -23,7 +22,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tlib::{actions::{ActionHub, ACTIVATE}, utils::TimeStamp, timer::TimerHub};
+use tlib::{actions::{ActionHub, ACTIVATE}, utils::TimeStamp, timer::TimerHub, object::ObjectImpl};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
@@ -175,11 +174,13 @@ impl Application {
             on_activate(&window);
             drop(on_activate);
         }
+        ACTIVATE.store(true, Ordering::SeqCst);
+
+        board.add_element(&mut window);
+        window.initialize();
         window.parent_setting();
         window.size_probe();
         window.position_probe();
-        board.add_element(&mut window);
-        ACTIVATE.store(true, Ordering::SeqCst);
 
         let mut last_frame = 0u128;
         let mut update;

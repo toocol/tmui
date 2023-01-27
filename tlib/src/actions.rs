@@ -56,7 +56,6 @@ use std::{
 
 static INIT: Once = Once::new();
 pub static ACTIVATE: AtomicBool = AtomicBool::new(false);
-pub static INITIALIZE_CONNECT: AtomicBool = AtomicBool::new(false);
 
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
 lazy_static! {
@@ -146,7 +145,7 @@ impl ActionHub {
                 panic!("`connect_action()` should only call in the `main` thread.")
             }
         });
-        if !ACTIVATE.load(Ordering::SeqCst) && !INITIALIZE_CONNECT.load(Ordering::SeqCst) {
+        if !ACTIVATE.load(Ordering::SeqCst) {
             error!("Signal/Slot should connect in `ObjectImpl::initialize()`, or be connected after application was activated(after UI building).");
             return;
         }

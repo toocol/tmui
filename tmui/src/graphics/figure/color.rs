@@ -105,8 +105,8 @@ impl Color {
         valid: true,
     };
     pub const CYAN: Color = Color {
-        r: 255,
-        g: 0,
+        r: 0,
+        g: 255,
         b: 255,
         a: 255,
         valid: true,

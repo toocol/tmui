@@ -1,6 +1,5 @@
 use crate::{
     graphics::{
-        board::Board,
         drawing_context::DrawingContext,
         element::ElementImpl,
         figure::{Color, Size},
@@ -8,39 +7,17 @@ use crate::{
     },
     prelude::*,
 };
-use lazy_static::lazy_static;
 use log::debug;
 use skia_safe::Font;
-use std::{
-    cell::RefCell,
-    ptr::{null_mut, NonNull},
-    sync::{
-        atomic::{AtomicPtr, Ordering},
-        Once,
-    },
-};
+use std::cell::RefCell;
 use tlib::{
-    actions::INITIALIZE_CONNECT,
     namespace::{Align, Coordinate},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     signals,
 };
 
-static INIT: Once = Once::new();
-lazy_static! {
-    static ref BOARD: AtomicPtr<Board> = AtomicPtr::new(null_mut());
-}
-
-/// Store the [`Board`] as raw ptr.
-pub fn store_board(board: &mut Board) {
-    INIT.call_once(move || {
-        BOARD.store(board as *mut Board, Ordering::SeqCst);
-    })
-}
-
 #[extends_element]
 pub struct Widget {
-    board: RefCell<Option<NonNull<Board>>>,
     parent: RefCell<Option<*const dyn WidgetImpl>>,
     child: RefCell<Option<Box<dyn WidgetImpl>>>,
 
@@ -63,7 +40,6 @@ impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
 impl Default for Widget {
     fn default() -> Self {
         Self {
-            board: Default::default(),
             parent: Default::default(),
             child: Default::default(),
             background: Color::WHITE,
@@ -87,7 +63,6 @@ impl IsSubclassable for Widget {}
 impl ObjectImpl for Widget {
     fn construct(&mut self) {
         self.parent_construct();
-        *self.board.borrow_mut() = NonNull::new(BOARD.load(Ordering::SeqCst));
 
         self.set_halign(Align::default());
         self.set_valign(Align::default());
@@ -121,10 +96,11 @@ impl ObjectImpl for Widget {
 
 impl WidgetImpl for Widget {}
 
-impl<T: WidgetImpl> ElementImpl for T {
+impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         let mut painter = Painter::new(cr.canvas(), self);
 
+        debug!("background color: {:?}", self.background());
         // Draw the background color of the Widget.
         painter.fill_rect(
             self.origin_rect(Some(Coordinate::Widget)),
@@ -136,29 +112,12 @@ impl<T: WidgetImpl> ElementImpl for T {
 }
 
 impl Widget {
-    fn board(&self) -> Option<&mut Board> {
-        unsafe {
-            match self.board.borrow_mut().as_mut() {
-                Some(board) => Some(board.as_mut()),
-                None => None,
-            }
-        }
-    }
-
     pub fn child_internal<T>(&self, child: T)
     where
         T: WidgetImpl + ElementImpl + IsA<Widget>,
     {
-        let mut child = Box::new(child);
-
-        if let Some(board) = self.board() {
-            board.add_element(child.as_mut() as *mut dyn ElementImpl);
-        }
-
+        let child = Box::new(child);
         *self.child.borrow_mut() = Some(child);
-        INITIALIZE_CONNECT.store(true, Ordering::SeqCst);
-        self.child.borrow_mut().as_mut().unwrap().initialize();
-        INITIALIZE_CONNECT.store(false, Ordering::SeqCst);
     }
 }
 
@@ -167,12 +126,18 @@ pub trait WidgetAcquire: WidgetImpl {}
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
+    fn as_element(&mut self) -> *mut dyn ElementImpl;
+
     /// ## Do not invoke this function directly.
     fn set_parent(&self, parent: *const dyn WidgetImpl);
 
-    /// Get the raw pointer of parent.
-    /// Please use `get_parent()` function in [`WidgetGenericExt`]
+    /// Get the raw pointer of child.
+    /// Please use `get_child()` function in [`WidgetGenericExt`]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl>;
+
+    /// Get the raw pointer of child.
+    /// Please use `get_child()` function in [`WidgetGenericExt`]
+    fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl>;
 
     /// Get the raw pointer of parent.
     /// Please use `get_parent()` function in [`WidgetGenericExt`]
@@ -288,6 +253,10 @@ pub trait WidgetExt {
 }
 
 impl WidgetExt for Widget {
+    fn as_element(&mut self) -> *mut dyn ElementImpl {
+        self as *mut Self as *mut dyn ElementImpl
+    }
+
     fn set_parent(&self, parent: *const dyn WidgetImpl) {
         *self.parent.borrow_mut() = Some(parent)
     }
@@ -295,6 +264,13 @@ impl WidgetExt for Widget {
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
         match self.child.borrow().as_ref() {
             Some(child) => Some(child.as_ref() as *const dyn WidgetImpl),
+            None => None,
+        }
+    }
+
+    fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl> {
+        match self.child.borrow_mut().as_mut() {
+            Some(child) => Some(child.as_mut() as *mut dyn WidgetImpl),
             None => None,
         }
     }

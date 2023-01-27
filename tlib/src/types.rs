@@ -413,6 +413,14 @@ pub trait IsA<T: ObjectType + StaticType>: ObjectType + StaticType + ObjectSubcl
         }
     }
 
+    fn downcast_ref_mut<R: ObjectType + StaticType>(&mut self) -> Option<&mut R> {
+        if Self::static_type().is_a(R::static_type()) {
+            Some(unsafe { &mut*(self as *mut Self as *mut R) })
+        } else {
+            None
+        }
+    }
+
     fn as_ref(&self) -> &Self::Type {
         unsafe { &*(self as *const Self as *const Self::Type) }
     }

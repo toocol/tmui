@@ -19,7 +19,7 @@ fn main() {
 
 fn build_ui(window: &ApplicationWindow) {
     let mut label = Label::new(Some("Hello World"));
-    label.set_background(Color::BLUE);
+    label.set_background(Color::CYAN);
     label.set_halign(Align::Center);
     label.set_valign(Align::Center);
     label.set_size(30);
