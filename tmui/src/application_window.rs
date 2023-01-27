@@ -59,6 +59,7 @@ impl ApplicationWindow {
     }
 }
 
+#[inline]
 fn child_parent_setting(
     mut parent: *const dyn WidgetImpl,
     mut child: Option<*const dyn WidgetImpl>,
@@ -71,7 +72,6 @@ fn child_parent_setting(
     }
 }
 
-#[inline]
 fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn WidgetImpl) -> Size {
     let widget_ref = unsafe { widget.as_ref().unwrap() };
     if widget_ref.get_raw_child().is_none() {
@@ -91,7 +91,8 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
                 widget_ref.height_request(window_size.height());
             }
         }
-        return size;
+        let image_rect = widget_ref.image_rect();
+        return Size::new(image_rect.width(), image_rect.height());
     } else {
         let size = widget_ref.size();
         let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child().unwrap());

@@ -22,8 +22,10 @@ fn build_ui(window: &ApplicationWindow) {
     label.set_background(Color::BLUE);
     label.set_halign(Align::Center);
     label.set_valign(Align::Center);
+    label.set_size(30);
     label.set_margin_left(50);
     label.set_margin_top(50);
+    label.set_paddings(15, 0, 15, 10);
 
     let mut test_widget = TestWidget::new();
     test_widget.set_background(Color::RED);

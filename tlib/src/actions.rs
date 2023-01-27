@@ -147,7 +147,7 @@ impl ActionHub {
             }
         });
         if !ACTIVATE.load(Ordering::SeqCst) && !INITIALIZE_CONNECT.load(Ordering::SeqCst) {
-            error!("Signal/Slot should connect in `ObjectImpl::initialize()`, or be connected after application was activated.");
+            error!("Signal/Slot should connect in `ObjectImpl::initialize()`, or be connected after application was activated(after UI building).");
             return;
         }
 
@@ -409,7 +409,7 @@ macro_rules! signals {
     ( $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
         $(
             $(#[$($attrss)*])*
-            /// #### All the Signals/Slots should be connected in [`ObjectImpl::initialize()`] function.
+            /// #### Signal/Slot should connect in `ObjectImpl::initialize()` function, or be connected after application was activated(after UI building).
             #[allow(dead_code)]
             fn $name(&self) -> Signal {
                 signal!(self, stringify!($name))

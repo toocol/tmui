@@ -347,7 +347,8 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     #[inline]
                     fn set_font(&mut self, font: Font) {
-                        self.widget.set_font(font)
+                        self.widget.set_font(font);
+                        self.font_changed()
                     }
 
                     #[inline]
@@ -361,8 +362,13 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
-                    fn image_rect(&self, coord: Option<Coordinate>) -> Rect {
-                        self.widget.image_rect(coord)
+                    fn image_rect(&self) -> Rect {
+                        self.widget.image_rect()
+                    }
+
+                    #[inline]
+                    fn origin_rect(&self, coord: Option<Coordinate>) -> Rect {
+                        self.widget.origin_rect(coord)
                     }
 
                     #[inline]

@@ -21,7 +21,6 @@ use std::{
 };
 use tlib::{
     actions::INITIALIZE_CONNECT,
-    emit,
     namespace::{Align, Coordinate},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     signals,
@@ -54,9 +53,6 @@ pub struct Widget {
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
 pub trait WidgetSignals: ActionExt {
     signals! {
-        /// Emit when widget's size changed.
-        font_changed();
-
         /// Emit when widget's size changed.
         size_changed();
     }
@@ -130,7 +126,10 @@ impl<T: WidgetImpl> ElementImpl for T {
         let mut painter = Painter::new(cr.canvas(), self);
 
         // Draw the background color of the Widget.
-        painter.fill_rect(self.contents_rect(Some(Coordinate::Widget)), self.background());
+        painter.fill_rect(
+            self.origin_rect(Some(Coordinate::Widget)),
+            self.background(),
+        );
 
         self.paint(painter)
     }
@@ -209,9 +208,13 @@ pub trait WidgetExt {
     /// Get the size of widget.
     fn size(&self) -> Size;
 
-    /// Get the area of widget's total image renderering Rect with the margins. <br>
+    /// Get the area of widget's total image Rect with the margins. <br>
+    /// The [`Coordinate`] was `World`.
+    fn image_rect(&self) -> Rect;
+
+    /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
-    fn image_rect(&self, coord: Option<Coordinate>) -> Rect;
+    fn origin_rect(&self, coord: Option<Coordinate>) -> Rect;
 
     /// Get the area inside the widget's paddings. <br>
     /// The default [`Coordinate`] was `World`.
@@ -337,7 +340,7 @@ impl WidgetExt for Widget {
 
     fn set_font(&mut self, font: Font) {
         self.font = font;
-        emit!(self.font_changed());
+        self.font_changed();
     }
 
     fn font(&self) -> Font {
@@ -364,7 +367,7 @@ impl WidgetExt for Widget {
         Size::new(rect.width(), rect.height())
     }
 
-    fn image_rect(&self, coord: Option<Coordinate>) -> Rect {
+    fn image_rect(&self) -> Rect {
         let mut rect = self.rect();
 
         let (top, right, bottom, left) = self.margins();
@@ -372,6 +375,12 @@ impl WidgetExt for Widget {
         rect.set_y(rect.y() - top);
         rect.set_width(rect.width() + left + right);
         rect.set_height(rect.height() + top + bottom);
+
+        rect
+    }
+
+    fn origin_rect(&self, coord: Option<Coordinate>) -> Rect {
+        let mut rect = self.rect();
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
@@ -386,24 +395,17 @@ impl WidgetExt for Widget {
     fn contents_rect(&self, coord: Option<Coordinate>) -> Rect {
         let mut rect = self.rect();
 
-        // // Rect add the margins.
-        // let (top, right, bottom, left) = self.margins();
-        // rect.set_x(rect.x() + left);
-        // rect.set_y(rect.y() + top);
-        // rect.set_width(rect.width() - left - right);
-        // rect.set_height(rect.height() - top - bottom);
-
         // Rect add the paddings.
         let (top, right, bottom, left) = self.paddings();
-        rect.set_x((rect.x() + left).max(rect.x()));
-        rect.set_y((rect.y() + top).max(rect.y()));
-        rect.set_width((rect.width() - left - right).min(rect.width()));
-        rect.set_height((rect.height() - top - bottom).min(rect.width()));
+        rect.set_x(rect.x() + left);
+        rect.set_y(rect.y() + top);
+        rect.set_width(rect.width() - left - right);
+        rect.set_height(rect.height() - top - bottom);
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
-                rect.set_x(0);
-                rect.set_y(0);
+                rect.set_x(left);
+                rect.set_y(top);
             }
         }
 
@@ -491,27 +493,63 @@ impl WidgetExt for Widget {
         self.paddings[3]
     }
 
-    fn set_paddings(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
+    fn set_paddings(&mut self, mut top: i32, mut right: i32, mut bottom: i32, mut left: i32) {
+        if top < 0 {
+            top = 0;
+        }
+        if right < 0 {
+            right = 0;
+        }
+        if bottom < 0 {
+            bottom = 0;
+        }
+        if left < 0 {
+            left = 0;
+        }
+
         self.paddings[0] = top;
         self.paddings[1] = right;
         self.paddings[2] = bottom;
         self.paddings[3] = left;
+        let size = self.size();
+        self.width_request(size.width() + left + right);
+        self.height_request(size.height() + top + bottom);
     }
 
-    fn set_padding_top(&mut self, val: i32) {
+    fn set_padding_top(&mut self, mut val: i32) {
+        if val < 0 {
+            val = 0;
+        }
         self.paddings[0] = val;
+        let size = self.size();
+        self.height_request(size.height() + val);
     }
 
-    fn set_padding_right(&mut self, val: i32) {
+    fn set_padding_right(&mut self, mut val: i32) {
+        if val < 0 {
+            val = 0;
+        }
         self.paddings[1] = val;
+        let size = self.size();
+        self.width_request(size.width() + val);
     }
 
-    fn set_padding_bottom(&mut self, val: i32) {
+    fn set_padding_bottom(&mut self, mut val: i32) {
+        if val < 0 {
+            val = 0;
+        }
         self.paddings[2] = val;
+        let size = self.size();
+        self.height_request(size.height() + val);
     }
 
-    fn set_padding_left(&mut self, val: i32) {
+    fn set_padding_left(&mut self, mut val: i32) {
+        if val < 0 {
+            val = 0;
+        }
         self.paddings[3] = val;
+        let size = self.size();
+        self.width_request(size.width() + val);
     }
 }
 
@@ -579,6 +617,9 @@ pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + Ob
 
     /// Invoke this function when renderering.
     fn paint(&mut self, mut painter: Painter) {}
+
+    /// Invoke when widget's font was changed.
+    fn font_changed(&mut self) {}
 }
 
 pub trait WidgetImplExt: WidgetImpl {
