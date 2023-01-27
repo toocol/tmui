@@ -332,7 +332,17 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     #[inline]
                     fn set_valign(&self, valign: Align) {
-                        self.set_property("halign", valign.to_value())
+                        self.set_property("valign", valign.to_value())
+                    }
+
+                    #[inline]
+                    fn halign(&self) -> Align {
+                        self.widget.halign()
+                    }
+
+                    #[inline]
+                    fn valign(&self) -> Align {
+                        self.widget.valign()
                     }
 
                     #[inline]
@@ -343,6 +353,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     #[inline]
                     fn font(&self) -> Font {
                         self.widget.font()
+                    }
+
+                    #[inline]
+                    fn size(&self) -> Size {
+                        self.widget.size()
                     }
 
                     #[inline]
@@ -469,7 +484,7 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                 impl WidgetImplExt for #name {
                     #[inline]
                     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
-                        self.widget.child_internal(self, child)
+                        self.widget.child_internal(child)
                     }
                 }
 

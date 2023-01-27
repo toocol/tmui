@@ -16,7 +16,6 @@ use std::{
     },
     time::{Duration, SystemTime},
 };
-use log::debug;
 
 static INIT: Once = Once::new();
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
@@ -141,7 +140,6 @@ impl Timer {
     pub fn check_timer(&mut self) {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike) {
             if duration > self.duration {
-                debug!("Timer was reached, emit timeout().");
                 emit!(self.timeout());
                 self.last_strike = SystemTime::now();
 

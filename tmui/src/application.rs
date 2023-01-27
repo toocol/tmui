@@ -175,6 +175,9 @@ impl Application {
             on_activate(&window);
             drop(on_activate);
         }
+        window.parent_setting();
+        window.size_probe();
+        window.position_probe();
         board.add_element(&mut window);
         ACTIVATE.store(true, Ordering::SeqCst);
 

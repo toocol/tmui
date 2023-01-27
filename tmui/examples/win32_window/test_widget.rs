@@ -37,7 +37,6 @@ impl WidgetImpl for TestWidget {
     fn paint(&mut self, mut painter: Painter) {
         debug!("Paint test widget. self rect = {:?}", self.rect());
         painter.set_antialiasing();
-        painter.fill_rect(self.rect(), Color::RED);
     }
 }
 
@@ -47,7 +46,6 @@ impl TestWidget {
     }
 
     pub fn timeout(&mut self) {
-        debug!("Number is {}", self.num);
         self.num += 1;
     }
 }

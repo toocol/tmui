@@ -130,7 +130,7 @@ impl<T: WidgetImpl> ElementImpl for T {
         let mut painter = Painter::new(cr.canvas(), self);
 
         // Draw the background color of the Widget.
-        painter.fill_rect(self.image_rect(None), self.background());
+        painter.fill_rect(self.contents_rect(Some(Coordinate::Widget)), self.background());
 
         self.paint(painter)
     }
@@ -146,14 +146,11 @@ impl Widget {
         }
     }
 
-    pub fn child_internal<P, T>(&self, parent: &P, child: T)
+    pub fn child_internal<T>(&self, child: T)
     where
-        P: WidgetImpl + ElementImpl + IsA<Widget>,
         T: WidgetImpl + ElementImpl + IsA<Widget>,
     {
         let mut child = Box::new(child);
-
-        child.set_parent(parent as *const dyn WidgetImpl);
 
         if let Some(board) = self.board() {
             board.add_element(child.as_mut() as *mut dyn ElementImpl);
@@ -163,26 +160,6 @@ impl Widget {
         INITIALIZE_CONNECT.store(true, Ordering::SeqCst);
         self.child.borrow_mut().as_mut().unwrap().initialize();
         INITIALIZE_CONNECT.store(false, Ordering::SeqCst);
-
-        let child = self.get_raw_child();
-        Self::child_region_probe(parent.rect(), child)
-    }
-
-    #[inline]
-    pub fn child_region_probe(mut parent_rect: Rect, mut child: Option<*const dyn WidgetImpl>) {
-        while let Some(child_ptr) = child {
-            let child_ref = unsafe { child_ptr.as_ref().unwrap() };
-            let child_rect = child_ref.rect();
-
-            let _halign = child_ref.get_property("halign").unwrap().get::<Align>();
-            let _valign = child_ref.get_property("valign").unwrap().get::<Align>();
-
-            child_ref.set_fixed_x(parent_rect.x() + child_rect.x());
-            child_ref.set_fixed_y(parent_rect.y() + child_rect.y());
-
-            parent_rect = child_rect;
-            child = child_ref.get_raw_child();
-        }
     }
 }
 
@@ -217,11 +194,20 @@ pub trait WidgetExt {
     /// Set alignment on the vertical direction.
     fn set_valign(&self, valign: Align);
 
+    /// Get alignment on the horizontal direction.
+    fn halign(&self) -> Align;
+
+    /// Get alignment on the vertical direction.
+    fn valign(&self) -> Align;
+
     /// Set the font of widget.
     fn set_font(&mut self, font: Font);
 
     /// Get the font of widget.
     fn font(&self) -> Font;
+
+    /// Get the size of widget.
+    fn size(&self) -> Size;
 
     /// Get the area of widget's total image renderering Rect with the margins. <br>
     /// The default [`Coordinate`] was `World`.
@@ -319,10 +305,12 @@ impl WidgetExt for Widget {
 
     fn width_request(&self, width: i32) {
         self.set_property("width", width.to_value());
+        self.set_property("width-request", width.to_value());
     }
 
     fn height_request(&self, height: i32) {
         self.set_property("height", height.to_value());
+        self.set_property("height-request", height.to_value());
     }
 
     fn notify_invalidate(&self) {
@@ -337,6 +325,14 @@ impl WidgetExt for Widget {
 
     fn set_valign(&self, valign: Align) {
         self.set_property("valign", valign.to_value())
+    }
+
+    fn halign(&self) -> Align {
+        self.get_property("halign").unwrap().get::<Align>()
+    }
+
+    fn valign(&self) -> Align {
+        self.get_property("valign").unwrap().get::<Align>()
     }
 
     fn set_font(&mut self, font: Font) {
@@ -363,6 +359,11 @@ impl WidgetExt for Widget {
         font
     }
 
+    fn size(&self) -> Size {
+        let rect = self.rect();
+        Size::new(rect.width(), rect.height())
+    }
+
     fn image_rect(&self, coord: Option<Coordinate>) -> Rect {
         let mut rect = self.rect();
 
@@ -383,14 +384,14 @@ impl WidgetExt for Widget {
     }
 
     fn contents_rect(&self, coord: Option<Coordinate>) -> Rect {
-        let mut rect = self.image_rect(coord);
+        let mut rect = self.rect();
 
-        // Rect add the margins.
-        let (top, right, bottom, left) = self.margins();
-        rect.set_x(rect.x() + left);
-        rect.set_y(rect.y() + top);
-        rect.set_width(rect.width() - left - right);
-        rect.set_height(rect.height() - top - bottom);
+        // // Rect add the margins.
+        // let (top, right, bottom, left) = self.margins();
+        // rect.set_x(rect.x() + left);
+        // rect.set_y(rect.y() + top);
+        // rect.set_width(rect.width() - left - right);
+        // rect.set_height(rect.height() - top - bottom);
 
         // Rect add the paddings.
         let (top, right, bottom, left) = self.paddings();
@@ -398,6 +399,13 @@ impl WidgetExt for Widget {
         rect.set_y((rect.y() + top).max(rect.y()));
         rect.set_width((rect.width() - left - right).min(rect.width()));
         rect.set_height((rect.height() - top - bottom).min(rect.width()));
+
+        if let Some(coord) = coord {
+            if coord == Coordinate::Widget {
+                rect.set_x(0);
+                rect.set_y(0);
+            }
+        }
 
         rect
     }
@@ -563,7 +571,11 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 #[allow(unused_mut)]
 pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + ObjectImpl {
     /// Invoke this function when widget's size change.
-    fn size_hint(&mut self, size: Size) {}
+    fn size_hint(&mut self) -> Size {
+        let width = self.get_property("width-request").unwrap().get::<i32>();
+        let height = self.get_property("height-request").unwrap().get::<i32>();
+        Size::new(width, height)
+    }
 
     /// Invoke this function when renderering.
     fn paint(&mut self, mut painter: Painter) {}
@@ -624,19 +636,5 @@ mod tests {
         assert_eq!(child_ref.id(), child_id);
         assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());
-
-        let parent_ref = child_ref.get_parent::<SubWidget>().unwrap();
-        assert_eq!(parent_ref.id(), widget.id());
-        assert_eq!(120, parent_ref.get_property("width").unwrap().get::<i32>());
-        assert_eq!(80, parent_ref.get_property("height").unwrap().get::<i32>());
-
-        parent_ref.set_property("length", 100.to_value());
-        assert_eq!(100, widget.get_property("length").unwrap().get::<i32>());
-
-        let rect = parent_ref.rect();
-        assert_eq!(120, rect.width());
-        assert_eq!(80, rect.height());
-
-        parent_ref.update();
     }
 }

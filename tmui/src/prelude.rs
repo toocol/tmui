@@ -6,5 +6,5 @@ pub use skia_safe::font::Font;
 pub use crate::graphics::figure::Color;
 pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{Element, ElementExt, ElementAcquire, ElementImpl};
-pub use crate::graphics::figure::{Point, Rect};
+pub use crate::graphics::figure::{Point, Rect, Size};
 pub use crate::widget::{Widget, WidgetExt, WidgetAcquire, WidgetImplExt};
