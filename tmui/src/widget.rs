@@ -1,17 +1,19 @@
 use crate::{
+    application::Application,
     graphics::{
         drawing_context::DrawingContext,
         element::ElementImpl,
         figure::{Color, Size},
         painter::Painter,
     },
+    platform::Message,
     prelude::*,
 };
 use log::debug;
 use skia_safe::Font;
 use std::cell::RefCell;
 use tlib::{
-    namespace::{Align, BorderStyle, Coordinate},
+    namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     signals,
 };
@@ -289,6 +291,9 @@ pub trait WidgetExt {
 
     /// Get the border color of the widget.
     fn border_color(&self) -> Color;
+
+    /// Set the system cursor shape.
+    fn set_cursor_shape(&mut self, cursor: SystemCursorShape);
 }
 
 impl WidgetExt for Widget {
@@ -604,6 +609,10 @@ impl WidgetExt for Widget {
 
     fn border_color(&self) -> Color {
         self.border_color
+    }
+
+    fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
+        Application::send_message(Message::message_set_cursor_shape(cursor))
     }
 }
 

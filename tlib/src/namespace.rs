@@ -1,9 +1,11 @@
+use crate::{
+    prelude::{StaticType, ToValue},
+    values::{FromBytes, FromValue, ToBytes},
+    Type, Value,
+};
 use std::mem::size_of;
-
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-
-use crate::{prelude::{ToValue, StaticType}, Type, values::{FromValue, FromBytes, ToBytes}, Value};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`KeyCode`]
@@ -339,7 +341,7 @@ impl ToString for KeyCode {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-/// [`KeyboardModifier`] 
+/// [`KeyboardModifier`]
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// The enum to represent the keyboard modifier.
 #[repr(u32)]
@@ -444,7 +446,7 @@ impl From<u8> for Align {
             1 => Self::Start,
             2 => Self::Center,
             3 => Self::End,
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
@@ -490,7 +492,7 @@ impl FromValue for Align {
 pub enum Coordinate {
     #[default]
     World,
-    Widget
+    Widget,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -506,15 +508,142 @@ pub enum BorderStyle {
     Dashed,
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`SystemCursorShape`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum SystemCursorShape {
+    #[default]
+    ArrowCursor = 0,
+    UpArrowCursor,
+    CrossCursor,
+    WaitCursor,
+    IBeamCursor,
+    SizeVerCursor,
+    SizeHorCursor,
+    SizeBDiagCursor,
+    SizeFDiagCursor,
+    SizeAllCursor,
+    BlankCursor,
+    SplitVCursor,
+    SplitHCursor,
+    PointingHandCursor,
+    ForbiddenCursor,
+    WhatsThisCursor,
+    BusyCursor,
+    OpenHandCursor,
+    ClosedHandCursor,
+    DragCopyCursor,
+    DragMoveCursor,
+    DragLinkCursor,
+}
+impl SystemCursorShape {
+    pub fn as_u8(&self) -> u8 {
+        match self {
+            SystemCursorShape::ArrowCursor => 0,
+            SystemCursorShape::UpArrowCursor => 1,
+            SystemCursorShape::CrossCursor => 2,
+            SystemCursorShape::WaitCursor => 3,
+            SystemCursorShape::IBeamCursor => 4,
+            SystemCursorShape::SizeVerCursor => 5,
+            SystemCursorShape::SizeHorCursor => 6,
+            SystemCursorShape::SizeBDiagCursor => 7,
+            SystemCursorShape::SizeFDiagCursor => 8,
+            SystemCursorShape::SizeAllCursor => 9,
+            SystemCursorShape::BlankCursor => 10,
+            SystemCursorShape::SplitVCursor => 11,
+            SystemCursorShape::SplitHCursor => 12,
+            SystemCursorShape::PointingHandCursor => 13,
+            SystemCursorShape::ForbiddenCursor => 14,
+            SystemCursorShape::WhatsThisCursor => 15,
+            SystemCursorShape::BusyCursor => 16,
+            SystemCursorShape::OpenHandCursor => 17,
+            SystemCursorShape::ClosedHandCursor => 18,
+            SystemCursorShape::DragCopyCursor => 19,
+            SystemCursorShape::DragMoveCursor => 20,
+            SystemCursorShape::DragLinkCursor => 21,
+        }
+    }
+}
+impl From<u8> for SystemCursorShape {
+    fn from(n: u8) -> Self {
+        match n {
+            0 => SystemCursorShape::ArrowCursor,
+            1 => SystemCursorShape::UpArrowCursor,
+            2 => SystemCursorShape::CrossCursor,
+            3 => SystemCursorShape::WaitCursor,
+            4 => SystemCursorShape::IBeamCursor,
+            5 => SystemCursorShape::SizeVerCursor,
+            6 => SystemCursorShape::SizeHorCursor,
+            7 => SystemCursorShape::SizeBDiagCursor,
+            8 => SystemCursorShape::SizeFDiagCursor,
+            9 => SystemCursorShape::SizeAllCursor,
+            10 => SystemCursorShape::BlankCursor,
+            11 => SystemCursorShape::SplitVCursor,
+            12 => SystemCursorShape::SplitHCursor,
+            13 => SystemCursorShape::PointingHandCursor,
+            14 => SystemCursorShape::ForbiddenCursor,
+            15 => SystemCursorShape::WhatsThisCursor,
+            16 => SystemCursorShape::BusyCursor,
+            17 => SystemCursorShape::OpenHandCursor,
+            18 => SystemCursorShape::ClosedHandCursor,
+            19 => SystemCursorShape::DragCopyCursor,
+            20 => SystemCursorShape::DragMoveCursor,
+            21 => SystemCursorShape::DragLinkCursor,
+            _ => unimplemented!(),
+        }
+    }
+}
+impl StaticType for SystemCursorShape {
+    fn static_type() -> Type {
+        Type::from_name("SystemCursorShape")
+    }
+
+    fn bytes_len() -> usize {
+        size_of::<u8>()
+    }
+}
+impl ToBytes for SystemCursorShape {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.as_u8().to_bytes()
+    }
+}
+impl ToValue for SystemCursorShape {
+    fn to_value(&self) -> crate::Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> crate::Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for SystemCursorShape {
+    fn from_bytes(data: &[u8], len: usize) -> Self {
+        SystemCursorShape::from(u8::from_bytes(data, len))
+    }
+}
+impl FromValue for SystemCursorShape {
+    fn from_value(value: &crate::Value) -> Self {
+        SystemCursorShape::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
 
-    use super::Align;
+    use super::{Align, SystemCursorShape};
 
     #[test]
     fn test_align() {
         let val = Align::Center.to_value();
         assert_eq!(val.get::<Align>(), Align::Center);
+    }
+
+    #[test]
+    fn test_system_cursor_shape() {
+        let val = SystemCursorShape::CrossCursor.to_value();
+        assert_eq!(val.get::<SystemCursorShape>(), SystemCursorShape::CrossCursor);
     }
 }

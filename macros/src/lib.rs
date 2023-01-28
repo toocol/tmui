@@ -525,6 +525,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn border_color(&self) -> Color {
                         self.widget.border_color()
                     }
+
+                    #[inline]
+                    fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
+                        self.widget.set_cursor_shape(cursor)
+                    }
                 }
 
                 impl WidgetImplExt for #name {

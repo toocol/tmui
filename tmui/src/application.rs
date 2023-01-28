@@ -5,7 +5,7 @@ use crate::platform::PlatformMacos;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
 use crate::{
-    application_window::{ApplicationWindow, store_board},
+    application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
     platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
@@ -22,12 +22,18 @@ use std::{
     thread,
     time::Duration,
 };
-use tlib::{actions::{ActionHub, ACTIVATE}, utils::TimeStamp, timer::TimerHub, object::ObjectImpl};
+use tlib::{
+    actions::{ActionHub, ACTIVATE},
+    object::ObjectImpl,
+    timer::TimerHub,
+    utils::TimeStamp,
+};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
         AtomicPtr::new(null_mut());
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
+    static ref OUTPUT_SENDER: AtomicPtr<Sender<Message>> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
@@ -55,6 +61,7 @@ impl Application {
 
     /// Get the main application window([`ApplicationWindow`]).
     /// There was only one application window in tmui.
+    #[inline]
     pub fn application_window<'a>() -> &'a ApplicationWindow {
         if !Self::is_ui_thread() {
             panic!("`Application::application_window()` should only call in the UI `main` thread.");
@@ -63,7 +70,21 @@ impl Application {
         unsafe { APPLICATION_WINDOW.load(Ordering::SeqCst).as_mut().unwrap() }
     }
 
+    /// Send the [`Message`] to the platform process thread.
+    #[inline]
+    pub fn send_message(message: Message) {
+        unsafe {
+            OUTPUT_SENDER
+                .load(Ordering::SeqCst)
+                .as_ref()
+                .unwrap()
+                .send(message)
+                .expect("`Application` send message failed.")
+        }
+    }
+
     /// Determine whether the current thread is the UI main thread.
+    #[inline]
     pub fn is_ui_thread() -> bool {
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
     }
@@ -134,7 +155,7 @@ impl Application {
 
     fn ui_main(
         backend_type: BackendType,
-        output_sender: Sender<Message>,
+        mut output_sender: Sender<Message>,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&ApplicationWindow) + Send + Sync>>,
     ) {
@@ -169,6 +190,7 @@ impl Application {
         let mut window: ApplicationWindow =
             ApplicationWindow::new(backend.width(), backend.height());
         APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
+        OUTPUT_SENDER.store(&mut output_sender as *mut Sender<Message>, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
             on_activate(&window);
