@@ -1,11 +1,3 @@
-use std::{
-    ptr::null_mut,
-    sync::{
-        atomic::{AtomicPtr, Ordering},
-        Once,
-    },
-};
-
 use crate::{
     graphics::{
         board::Board,
@@ -18,6 +10,13 @@ use crate::{
 use lazy_static::lazy_static;
 use log::debug;
 use skia_safe::Font;
+use std::{
+    ptr::null_mut,
+    sync::{
+        atomic::{AtomicPtr, Ordering},
+        Once,
+    },
+};
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
 static INIT: Once = Once::new();
@@ -54,7 +53,7 @@ impl ObjectImpl for ApplicationWindow {
     }
 
     fn initialize(&mut self) {
-        child_initialize(self.get_raw_child_mut())
+        child_initialize(self, self.get_raw_child_mut())
     }
 }
 
@@ -65,11 +64,6 @@ impl WidgetImpl for ApplicationWindow {
 impl ApplicationWindow {
     pub fn new(width: i32, height: i32) -> ApplicationWindow {
         Object::new(&[("width", &width), ("height", &height)])
-    }
-
-    pub fn parent_setting(&self) {
-        let child = self.get_raw_child();
-        child_parent_setting(self, child)
     }
 
     pub fn size_probe(&self) {
@@ -86,15 +80,17 @@ impl ApplicationWindow {
 }
 
 #[inline]
-fn child_parent_setting(
-    mut parent: *const dyn WidgetImpl,
-    mut child: Option<*const dyn WidgetImpl>,
-) {
+fn child_initialize(mut parent: *const dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
+    let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
     while let Some(child_ptr) = child {
-        let child_ref = unsafe { child_ptr.as_ref().unwrap() };
+        let child_ref = unsafe { child_ptr.as_mut().unwrap() };
         child_ref.set_parent(parent);
         parent = child_ptr;
-        child = child_ref.get_raw_child();
+
+        board.add_element(child_ref.as_element());
+
+        child_ref.initialize();
+        child = child_ref.get_raw_child_mut();
     }
 }
 
@@ -177,17 +173,5 @@ fn child_position_probe(
 
         parent = child_ptr;
         child = child_ref.get_raw_child();
-    }
-}
-
-#[inline]
-fn child_initialize(mut child: Option<*mut dyn WidgetImpl>) {
-    let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
-    while let Some(child_ptr) = child {
-        let child_ref = unsafe { child_ptr.as_mut().unwrap() };
-        board.add_element(child_ref.as_element());
-
-        child_ref.initialize();
-        child = child_ref.get_raw_child_mut();
     }
 }

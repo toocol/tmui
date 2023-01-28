@@ -178,7 +178,6 @@ impl Application {
 
         board.add_element(&mut window);
         window.initialize();
-        window.parent_setting();
         window.size_probe();
         window.position_probe();
 
