@@ -629,6 +629,58 @@ impl FromValue for SystemCursorShape {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`Coordinate`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u32)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum MouseButton {
+    #[default]
+    NoButton,
+    LeftButton,
+    RightButton,
+    MiddleButton,
+    Combination(u32),
+}
+impl MouseButton {
+    pub fn or(&self, other: MouseButton) -> MouseButton {
+        let one = self.as_u32();
+        let other = other.as_u32();
+        Self::Combination(one | other)
+    }
+
+    pub fn has(&self, has: MouseButton) -> bool {
+        match self {
+            Self::Combination(mask) => {
+                let has = has.as_u32();
+                mask & has > 0
+            }
+            _ => *self == has,
+        }
+    }
+
+    pub fn as_u32(&self) -> u32 {
+        match self {
+            MouseButton::NoButton => 0x00000000,
+            MouseButton::LeftButton => 0x00000001,
+            MouseButton::RightButton => 0x00000002,
+            MouseButton::MiddleButton => 0x00000004,
+            MouseButton::Combination(x) => *x,
+        }
+    }
+}
+impl From<u32> for MouseButton {
+    fn from(x: u32) -> Self {
+        match x {
+            0x00000000 => MouseButton::NoButton,
+            0x00000001 => MouseButton::LeftButton,
+            0x00000002 => MouseButton::RightButton,
+            0x00000004 => MouseButton::MiddleButton,
+            _ => MouseButton::Combination(x),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
@@ -644,6 +696,9 @@ mod tests {
     #[test]
     fn test_system_cursor_shape() {
         let val = SystemCursorShape::CrossCursor.to_value();
-        assert_eq!(val.get::<SystemCursorShape>(), SystemCursorShape::CrossCursor);
+        assert_eq!(
+            val.get::<SystemCursorShape>(),
+            SystemCursorShape::CrossCursor
+        )
     }
 }

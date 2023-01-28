@@ -1,4 +1,4 @@
-use crate::namespace::{KeyCode, KeyboardModifier};
+use crate::namespace::{KeyCode, KeyboardModifier, MouseButton};
 
 pub trait Event {
     fn type_(&self) -> EventType;
@@ -24,7 +24,7 @@ pub enum EventType {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-/// Keyboard press/release events.
+/// [`KeyEvent`] Keyboard press/release events.
 /////////////////////////////////////////////////////////////////////////////////////
 pub struct KeyEvent {
     type_: EventType,
@@ -32,7 +32,6 @@ pub struct KeyEvent {
     text: String,
     modifier: Option<KeyboardModifier>,
 }
-
 impl KeyEvent {
     pub fn new(
         type_: EventType,
@@ -65,8 +64,54 @@ impl KeyEvent {
         self.modifier
     }
 }
-
 impl Event for KeyEvent {
+    fn type_(&self) -> EventType {
+        self.type_
+    }
+}
+
+pub type Position = (i32, i32);
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`MouseEvent`] Mouse press/release events.
+/////////////////////////////////////////////////////////////////////////////////////
+pub struct MouseEvent {
+    type_: EventType,
+    position: Position,
+    mouse_button: MouseButton,
+    modifier: KeyboardModifier,
+}
+
+impl MouseEvent {
+    pub fn new(type_: EventType, position: Position, mouse_button: MouseButton, modifier: KeyboardModifier) -> Self {
+        let type_ = match type_ {
+            EventType::MouseButtonPress => type_,
+            EventType::MouseButtonRelease => type_,
+            EventType::MouseButtonDoubleClick => type_,
+            _ => unimplemented!(),
+        };
+
+        Self {
+            type_,
+            position,
+            mouse_button,
+            modifier,
+        }
+    }
+
+    pub fn position(&self) -> Position {
+        self.position
+    }
+
+    pub fn mouse_button(&self) -> MouseButton {
+        self.mouse_button
+    }
+
+    pub fn modifier(&self) -> KeyboardModifier {
+        self.modifier
+    }
+}
+
+impl Event for MouseEvent {
     fn type_(&self) -> EventType {
         self.type_
     }
