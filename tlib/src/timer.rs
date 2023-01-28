@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 use crate::{
+    emit,
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
-    signal, signals, emit,
+    signal, signals,
 };
 use lazy_static::lazy_static;
 use log::warn;
 use std::{
-    cell::RefCell,
+    cell::{RefCell, RefMut},
     collections::HashMap,
     ptr::{null_mut, NonNull},
     sync::{
@@ -26,12 +27,14 @@ lazy_static! {
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
     timers: RefCell<Box<HashMap<u16, Option<NonNull<Timer>>>>>,
+    once_timers: RefCell<Box<HashMap<u16, Timer>>>,
 }
 
 impl TimerHub {
     pub fn new() -> Self {
         Self {
             timers: RefCell::new(Box::new(HashMap::new())),
+            once_timers: RefCell::new(Box::new(HashMap::new())),
         }
     }
 
@@ -43,7 +46,6 @@ impl TimerHub {
                 .expect("`TimerHub` was not initialized, or already dead.")
         }
     }
-
 
     fn contains_timer(id: u16) -> bool {
         Self::instance().timers.borrow().contains_key(&id)
@@ -63,18 +65,40 @@ impl TimerHub {
             if let Some(timer) = timer.as_mut() {
                 let timer = unsafe { timer.as_mut() };
                 if timer.is_active() {
-                    timer.check_timer()
+                    timer.check_timer();
                 }
             } else {
                 warn!("The raw pointer of timer was none, id = {}", id)
             }
         }
+
+        self.once_timers.borrow_mut().retain(|_, timer| {
+            if timer.is_active() {
+                let shoot = timer.check_timer();
+                if shoot && timer.once_timer {
+                    timer.disconnect_all();
+                    return false
+                }
+            } else {
+                // Just remove the un-actived once timer.
+                return false
+            }
+            true
+        })
     }
 
     fn add_timer(&self, timer: &mut Timer) {
         self.timers
             .borrow_mut()
             .insert(timer.id(), NonNull::new(timer));
+    }
+
+    fn add_once_timer(&self, timer: Timer) -> RefMut<Timer> {
+        let id = timer.id();
+        self.once_timers.borrow_mut().insert(id, timer);
+        RefMut::map(self.once_timers.borrow_mut(), |map| {
+            map.get_mut(&id).unwrap()
+        })
     }
 
     fn delete_timer(&self, id: u16) {
@@ -89,6 +113,7 @@ pub struct Timer {
     last_strike: SystemTime,
     started: bool,
     single_shoot: bool,
+    once_timer: bool,
     triggered: i32,
 }
 
@@ -100,6 +125,7 @@ impl Default for Timer {
             object: Default::default(),
             started: false,
             single_shoot: false,
+            once_timer: false,
             triggered: 0,
         }
     }
@@ -107,17 +133,27 @@ impl Default for Timer {
 
 impl Drop for Timer {
     fn drop(&mut self) {
+        self.disconnect_all();
         TimerHub::instance().delete_timer(self.id())
     }
 }
 
 impl Timer {
+    /// Normal constructor to build a `Timer`
     pub fn new() -> Self {
         Object::new(&[])
     }
 
+    /// Create an once timer.
+    /// Once timer can only be executed once and will be removed later
+    pub fn once<'a>() -> RefMut<'a, Self> {
+        let mut timer = Self::new();
+        timer.once_timer = true;
+        TimerHub::instance().add_once_timer(timer)
+    }
+
     pub fn start(&mut self, duration: Duration) {
-        if !TimerHub::contains_timer(self.id()) {
+        if !TimerHub::contains_timer(self.id()) && !self.once_timer {
             TimerHub::instance().add_timer(self);
         }
         self.started = true;
@@ -137,7 +173,7 @@ impl Timer {
         self.started = false
     }
 
-    pub fn check_timer(&mut self) {
+    pub fn check_timer(&mut self) -> bool {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike) {
             if duration > self.duration {
                 emit!(self.timeout());
@@ -146,8 +182,10 @@ impl Timer {
                 if self.single_shoot {
                     self.started = false;
                 }
+                return true;
             }
         }
+        false
     }
 }
 
@@ -171,13 +209,15 @@ impl ObjectImpl for Timer {}
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{sync::atomic::Ordering, time::Duration};
 
+    use super::{Timer, TimerHub};
     use crate::{
+        actions::ACTIVATE,
+        connect,
         object::{ObjectImpl, ObjectSubclass},
-        prelude::*, connect,
+        prelude::*, utils::TimeStamp,
     };
-    use super::{TimerHub, Timer};
 
     #[extends_object]
     #[derive(Default)]
@@ -210,6 +250,8 @@ mod tests {
         let mut timer_hub = TimerHub::new();
         timer_hub.initialize();
 
+        ACTIVATE.store(true, Ordering::SeqCst);
+
         let mut widget: Widget = Object::new(&[]);
         let mut timer = Timer::new();
 
@@ -218,6 +260,32 @@ mod tests {
 
         loop {
             if widget.num >= 5 {
+                break;
+            }
+            timer_hub.check_timers();
+        }
+    }
+
+    #[test]
+    fn test_once_timer() {
+        let mut action_hub = ActionHub::new();
+        action_hub.initialize();
+
+        let mut timer_hub = TimerHub::new();
+        timer_hub.initialize();
+
+        ACTIVATE.store(true, Ordering::SeqCst);
+
+        let mut widget: Widget = Object::new(&[]);
+        let mut timer = Timer::once();
+
+        connect!(timer, timeout(), widget, deal_num());
+        timer.start(Duration::from_secs(1));
+        drop(timer);
+
+        let start = TimeStamp::timestamp();
+        loop {
+            if TimeStamp::timestamp() - start > 1500 {
                 break;
             }
             timer_hub.check_timers();
