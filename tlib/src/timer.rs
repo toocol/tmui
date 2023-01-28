@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 use crate::{
+    actions::ACTIVATE,
     emit,
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
     signal, signals,
 };
 use lazy_static::lazy_static;
-use log::warn;
+use log::{error, warn};
 use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
@@ -77,11 +78,11 @@ impl TimerHub {
                 let shoot = timer.check_timer();
                 if shoot && timer.once_timer {
                     timer.disconnect_all();
-                    return false
+                    return false;
                 }
             } else {
                 // Just remove the un-actived once timer.
-                return false
+                return false;
             }
             true
         })
@@ -153,6 +154,11 @@ impl Timer {
     }
 
     pub fn start(&mut self, duration: Duration) {
+        if !ACTIVATE.load(Ordering::SeqCst) {
+            error!("`Timer` should `start()` in `ObjectImpl::initialize()`, or after application was activated(after UI building).");
+            return;
+        }
+
         if !TimerHub::contains_timer(self.id()) && !self.once_timer {
             TimerHub::instance().add_timer(self);
         }
@@ -209,15 +215,14 @@ impl ObjectImpl for Timer {}
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::atomic::Ordering, time::Duration};
-
     use super::{Timer, TimerHub};
     use crate::{
         actions::ACTIVATE,
         connect,
         object::{ObjectImpl, ObjectSubclass},
-        prelude::*, utils::TimeStamp,
+        prelude::*,
     };
+    use std::{sync::atomic::Ordering, time::Duration};
 
     #[extends_object]
     #[derive(Default)]
@@ -258,34 +263,14 @@ mod tests {
         connect!(timer, timeout(), widget, deal_num());
         timer.start(Duration::from_secs(1));
 
-        loop {
-            if widget.num >= 5 {
-                break;
-            }
-            timer_hub.check_timers();
-        }
-    }
-
-    #[test]
-    fn test_once_timer() {
-        let mut action_hub = ActionHub::new();
-        action_hub.initialize();
-
-        let mut timer_hub = TimerHub::new();
-        timer_hub.initialize();
-
-        ACTIVATE.store(true, Ordering::SeqCst);
-
-        let mut widget: Widget = Object::new(&[]);
         let mut timer = Timer::once();
 
         connect!(timer, timeout(), widget, deal_num());
         timer.start(Duration::from_secs(1));
         drop(timer);
 
-        let start = TimeStamp::timestamp();
         loop {
-            if TimeStamp::timestamp() - start > 1500 {
+            if widget.num >= 5 {
                 break;
             }
             timer_hub.check_timers();
