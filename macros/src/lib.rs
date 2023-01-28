@@ -495,6 +495,36 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn set_padding_left(&mut self, val: i32) {
                         self.widget.set_padding_left(val)
                     }
+
+                    #[inline]
+                    fn set_borders(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
+                        self.widget.set_borders(top, right, bottom, left)
+                    }
+
+                    #[inline]
+                    fn set_border_style(&mut self, style: BorderStyle) {
+                        self.widget.set_border_style(style)
+                    }
+
+                    #[inline]
+                    fn set_border_color(&mut self, color: Color) {
+                        self.widget.set_border_color(color)
+                    }
+
+                    #[inline]
+                    fn borders(&self) -> [f32; 4] {
+                        self.widget.borders()
+                    }
+
+                    #[inline]
+                    fn border_style(&self) -> BorderStyle {
+                        self.widget.border_style()
+                    }
+
+                    #[inline]
+                    fn border_color(&self) -> Color {
+                        self.widget.border_color()
+                    }
                 }
 
                 impl WidgetImplExt for #name {

@@ -11,7 +11,7 @@ use log::debug;
 use skia_safe::Font;
 use std::cell::RefCell;
 use tlib::{
-    namespace::{Align, Coordinate},
+    namespace::{Align, BorderStyle, Coordinate},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     signals,
 };
@@ -25,6 +25,9 @@ pub struct Widget {
     font: Font,
     margins: [i32; 4],
     paddings: [i32; 4],
+    borders: [f32; 4],
+    border_style: BorderStyle,
+    border_color: Color,
 }
 
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
@@ -47,6 +50,9 @@ impl Default for Widget {
             margins: Default::default(),
             paddings: Default::default(),
             element: Default::default(),
+            borders: Default::default(),
+            border_style: Default::default(),
+            border_color: Color::BLACK,
         }
     }
 }
@@ -80,7 +86,7 @@ impl ObjectImpl for Widget {
             }
             "height" => {
                 let height = value.get::<i32>();
-                self.set_fixed_height(height)
+                self.set_fixed_height(height);
             }
             "invalidate" => {
                 let invalidate = value.get::<bool>();
@@ -100,12 +106,27 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         let mut painter = Painter::new(cr.canvas(), self);
 
-        debug!("background color: {:?}", self.background());
+        let origin_rect = self.origin_rect(Some(Coordinate::Widget));
+
         // Draw the background color of the Widget.
-        painter.fill_rect(
-            self.origin_rect(Some(Coordinate::Widget)),
-            self.background(),
-        );
+        painter.fill_rect(origin_rect, self.background());
+
+        // Draw the border of the Widget.
+        let borders = self.borders();
+        let _style = self.border_style();
+        painter.set_color(self.border_color());
+        if borders[0] > 0. {
+            painter.set_line_width(borders[0]);
+        }
+        if borders[1] > 0. {
+            painter.set_line_width(borders[1]);
+        }
+        if borders[2] > 0. {
+            painter.set_line_width(borders[2]);
+        }
+        if borders[3] > 0. {
+            painter.set_line_width(borders[3]);
+        }
 
         self.paint(painter)
     }
@@ -250,6 +271,24 @@ pub trait WidgetExt {
 
     /// Set the left padding of the Widget.
     fn set_padding_left(&mut self, val: i32);
+
+    /// Set the borders of the widget.
+    fn set_borders(&mut self, top: f32, right: f32, bottom: f32, left: f32);
+
+    /// Set the border style of the widget.
+    fn set_border_style(&mut self, style: BorderStyle);
+
+    /// Set the border color of the widget.
+    fn set_border_color(&mut self, color: Color);
+
+    /// Get the borders of the widget.
+    fn borders(&self) -> [f32; 4];
+
+    /// Get the border style of the widget.
+    fn border_style(&self) -> BorderStyle;
+
+    /// Get the border color of the widget.
+    fn border_color(&self) -> Color;
 }
 
 impl WidgetExt for Widget {
@@ -526,6 +565,45 @@ impl WidgetExt for Widget {
         self.paddings[3] = val;
         let size = self.size();
         self.width_request(size.width() + val);
+    }
+
+    fn set_borders(&mut self, mut top: f32, mut right: f32, mut bottom: f32, mut left: f32) {
+        if top < 0. {
+            top = 0.;
+        }
+        if right < 0. {
+            right = 0.;
+        }
+        if bottom < 0. {
+            bottom = 0.;
+        }
+        if left < 0. {
+            left = 0.;
+        }
+        self.borders[0] = top;
+        self.borders[1] = right;
+        self.borders[2] = bottom;
+        self.borders[3] = left;
+    }
+
+    fn set_border_style(&mut self, style: BorderStyle) {
+        self.border_style = style;
+    }
+
+    fn set_border_color(&mut self, color: Color) {
+        self.border_color = color;
+    }
+
+    fn borders(&self) -> [f32; 4] {
+        self.borders
+    }
+
+    fn border_style(&self) -> BorderStyle {
+        self.border_style
+    }
+
+    fn border_color(&self) -> Color {
+        self.border_color
     }
 }
 
