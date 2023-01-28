@@ -185,13 +185,22 @@ extern "system" fn wndproc(window: HWND, message: u32, wparam: WPARAM, lparam: L
                 EndPaint(window, &ps);
                 LRESULT(0)
             }
+            WM_ERASEBKGND => {
+                LRESULT(1)
+            }
             WM_DESTROY => {
                 println!("WM_DESTROY: {}", thread::current().name().unwrap());
                 PostQuitMessage(0);
                 LRESULT(0)
             }
+            WM_MOVING => {
+                InvalidateRect(window, None, true);
+                UpdateWindow(window);
+                LRESULT(0)
+            }
             CODE_VSYNC => {
-                SendMessageW(window, WM_PAINT, WPARAM(0), LPARAM(0));
+                InvalidateRect(window, None, true);
+                UpdateWindow(window);
                 LRESULT(0)
             }
             _ => DefWindowProcW(window, message, wparam, lparam),
