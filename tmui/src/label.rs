@@ -4,7 +4,7 @@ use crate::{
     widget::WidgetImpl,
 };
 use log::debug;
-use tlib::object::{ObjectImpl, ObjectSubclass};
+use tlib::{object::{ObjectImpl, ObjectSubclass}, signals, emit};
 use widestring::U16String;
 
 #[extends_widget]
@@ -36,6 +36,16 @@ impl ObjectSubclass for Label {
 }
 
 impl ObjectImpl for Label {}
+
+pub trait LabelSignal: ActionExt {
+    signals! {
+        /// Emitted when text was changed.
+        /// @param old(String)
+        /// @param new(String)
+        text_changed();
+    }
+}
+impl LabelSignal for Label {}
 
 impl WidgetImpl for Label {
     fn size_hint(&mut self) -> Size {
@@ -133,6 +143,14 @@ impl Label {
             label.font_changed();
         }
         label
+    }
+
+    pub fn set_text(&mut self, text: &str) {
+        let old = U16String::from_vec(&self.label[..])
+            .to_string()
+            .expect("`Label` encode u16 string to utf-8 string failed.");
+        self.label = U16String::from_str(text).as_slice().to_vec();
+        emit!(self.text_changed(), old, text);
     }
 
     pub fn set_color(&mut self, color: Color) {
