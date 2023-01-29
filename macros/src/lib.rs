@@ -321,6 +321,31 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
+                    fn hide(&self) {
+                        self.widget.hide()
+                    }
+
+                    #[inline]
+                    fn show(&self) {
+                        self.widget.show()
+                    }
+
+                    #[inline]
+                    fn visible(&self) -> bool {
+                        self.widget.visible()
+                    }
+
+                    #[inline]
+                    fn set_focus(&self, focus: bool) {
+                        self.widget.set_focus(focus)
+                    }
+
+                    #[inline]
+                    fn is_focus(&self) -> bool {
+                        self.widget.is_focus()
+                    }
+
+                    #[inline]
                     fn width_request(&self, width: i32) {
                         self.widget.width_request(width)
                     }
@@ -328,11 +353,6 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     #[inline]
                     fn height_request(&self, width: i32) {
                         self.widget.height_request(width)
-                    }
-
-                    #[inline]
-                    fn notify_invalidate(&self) {
-                        self.widget.notify_invalidate()
                     }
 
                     #[inline]

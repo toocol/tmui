@@ -487,22 +487,30 @@ impl FromValue for Align {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Coordinate`]
 ////////////////////////////////////////////////////////////////////////////////////////////////
-#[repr(C)]
+#[repr(u8)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Coordinate {
     #[default]
-    World,
+    World = 0,
     Widget,
+}
+
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum Orientation {
+    #[default]
+    Horizontal = 0,
+    Vertical
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Coordinate`]
 ////////////////////////////////////////////////////////////////////////////////////////////////
-#[repr(C)]
+#[repr(u8)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum BorderStyle {
     #[default]
-    Solid,
+    Solid = 0,
     Dotted,
     Double,
     Dashed,

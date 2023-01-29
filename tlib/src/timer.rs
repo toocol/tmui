@@ -82,6 +82,7 @@ impl TimerHub {
                 }
             } else {
                 // Just remove the un-actived once timer.
+                timer.disconnect_all();
                 return false;
             }
             true

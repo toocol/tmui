@@ -448,11 +448,11 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc, thread, time::Duration};
+    use std::{cell::RefCell, rc::Rc, thread, time::Duration, sync::atomic::Ordering};
 
     use crate::{
         object::{ObjectImpl, ObjectSubclass},
-        prelude::*,
+        prelude::*, actions::ACTIVATE,
     };
 
     use super::ActionHub;
@@ -531,6 +531,7 @@ mod tests {
     fn test_actions() {
         let mut action_hub = ActionHub::new();
         action_hub.initialize();
+        ACTIVATE.store(true, Ordering::SeqCst);
 
         let mut widget = Widget::new();
         widget.reg_action();

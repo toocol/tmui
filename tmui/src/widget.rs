@@ -18,6 +18,12 @@ use tlib::{
     signals,
 };
 
+#[inline]
+pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
+    assert!(max >= min);
+    min.max(max.min(val))
+}
+
 #[extends_element]
 pub struct Widget {
     parent: RefCell<Option<*const dyn WidgetImpl>>,
@@ -75,6 +81,9 @@ impl ObjectImpl for Widget {
         self.set_halign(Align::default());
         self.set_valign(Align::default());
 
+        self.show();
+        self.set_focus(false);
+
         debug!("`Widget` construct")
     }
 
@@ -97,6 +106,11 @@ impl ObjectImpl for Widget {
                     self.notify_invalidate();
                 }
             }
+            "visible" => {
+                let visible = value.get::<bool>();
+                self.notify_visible(visible)
+            }
+            "focus" => {}
             _ => {}
         }
     }
@@ -106,6 +120,10 @@ impl WidgetImpl for Widget {}
 
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
+        if !self.visible() {
+            return
+        }
+
         let mut painter = Painter::new(cr.canvas(), self);
 
         let origin_rect = self.origin_rect(Some(Coordinate::Widget));
@@ -142,6 +160,25 @@ impl Widget {
         let child = Box::new(child);
         *self.child.borrow_mut() = Some(child);
     }
+
+    /// Notify all the child widget to invalidate.
+    fn notify_invalidate(&self) {
+        if let Some(child) = self.get_raw_child() {
+            unsafe { child.as_ref().unwrap().update() }
+        }
+    }
+
+    /// Notify the child to change the visibility.
+    fn notify_visible(&self, visible: bool) {
+        if let Some(child) = self.get_raw_child() {
+            let child = unsafe { child.as_ref().unwrap() };
+            if visible {
+                child.show()
+            } else {
+                child.hide()
+            }
+        }
+    }
 }
 
 pub trait WidgetAcquire: WidgetImpl {}
@@ -166,14 +203,26 @@ pub trait WidgetExt {
     /// Please use `get_parent()` function in [`WidgetGenericExt`]
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl>;
 
+    /// Hide the Widget.
+    fn hide(&self);
+
+    /// Show the Widget.
+    fn show(&self);
+
+    /// Return true if widget is visble, otherwise, false is returned.
+    fn visible(&self) -> bool;
+
+    /// Setter of property `focus`.
+    fn set_focus(&self, focus: bool);
+
+    /// Getter of property `focus`.
+    fn is_focus(&self) -> bool;
+
     /// Request the widget's maximum width.
     fn width_request(&self, width: i32);
 
     /// Request the widget's maximum width.
     fn height_request(&self, width: i32);
-
-    /// Notify all the child widget to invalidate.
-    fn notify_invalidate(&self);
 
     /// Set alignment on the horizontal direction.
     fn set_halign(&self, halign: Align);
@@ -326,6 +375,26 @@ impl WidgetExt for Widget {
         }
     }
 
+    fn hide(&self) {
+        self.set_property("visible", false.to_value())
+    }
+
+    fn show(&self) {
+        self.set_property("visible", true.to_value())
+    }
+
+    fn visible(&self) -> bool {
+        self.get_property("visible").unwrap().get::<bool>()
+    }
+
+    fn set_focus(&self, focus: bool) {
+        self.set_property("focus", focus.to_value())
+    }
+
+    fn is_focus(&self) -> bool {
+        self.get_property("focus").unwrap().get::<bool>()
+    }
+
     fn width_request(&self, width: i32) {
         self.set_property("width", width.to_value());
         self.set_property("width-request", width.to_value());
@@ -334,12 +403,6 @@ impl WidgetExt for Widget {
     fn height_request(&self, height: i32) {
         self.set_property("height", height.to_value());
         self.set_property("height-request", height.to_value());
-    }
-
-    fn notify_invalidate(&self) {
-        if let Some(child) = self.get_raw_child() {
-            unsafe { child.as_ref().unwrap().update() }
-        }
     }
 
     fn set_halign(&self, halign: Align) {
