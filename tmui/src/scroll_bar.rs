@@ -137,6 +137,21 @@ impl ScrollBar {
         self.page_step
     }
 
+    /// Setter of property `single_step`.
+    pub fn set_single_step(&mut self, mut step: i32) {
+        if step < 0 {
+            step = 1;
+        }
+
+        if step != self.single_step {
+            self.set_steps(step, self.page_step)
+        }
+    }
+    /// Getter of property `single_step`.
+    pub fn single_step(&self) -> i32 {
+        self.single_step
+    }
+
     /// Setter of property `slider_position`.
     pub fn set_slider_position(&mut self, position: i32) {
         let position = self.bound(position);
