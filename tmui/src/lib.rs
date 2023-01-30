@@ -6,6 +6,7 @@ pub mod graphics;
 pub mod prelude;
 pub mod widget;
 pub mod label;
+pub mod layouts;
 pub mod scroll_bar;
 
 pub mod skia_safe {
