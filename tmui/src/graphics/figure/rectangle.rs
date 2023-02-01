@@ -161,6 +161,11 @@ impl Rect {
     }
 
     #[inline]
+    pub fn is_valid(&self) -> bool {
+        self.width >= 0 && self.height >= 0
+    }
+
+    #[inline]
     pub fn and(&mut self, other: &Rect) {
         self.x &= other.x;
         self.y &= other.y;
