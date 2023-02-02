@@ -218,6 +218,9 @@ pub trait WidgetExt {
     /// Getter of property `focus`.
     fn is_focus(&self) -> bool;
 
+    /// Resize the widget.
+    fn resize(&self, width: i32, height: i32);
+
     /// Request the widget's maximum width.
     fn width_request(&self, width: i32);
 
@@ -393,6 +396,11 @@ impl WidgetExt for Widget {
 
     fn is_focus(&self) -> bool {
         self.get_property("focus").unwrap().get::<bool>()
+    }
+
+    fn resize(&self, width: i32, height: i32) {
+        self.set_property("width", width.to_value());
+        self.set_property("height", height.to_value());
     }
 
     fn width_request(&self, width: i32) {

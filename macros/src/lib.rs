@@ -346,6 +346,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
+                    fn resize(&self, width: i32, height: i32) {
+                        self.widget.resize(width, height)
+                    }
+
+                    #[inline]
                     fn width_request(&self, width: i32) {
                         self.widget.width_request(width)
                     }
