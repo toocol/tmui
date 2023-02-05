@@ -369,7 +369,7 @@ impl KeyboardModifier {
         match self {
             Self::Combination(mask) => {
                 let has = has.as_u32();
-                mask & has > 0
+                mask & has != 0
             }
             _ => *self == has,
         }
@@ -661,7 +661,7 @@ impl MouseButton {
         match self {
             Self::Combination(mask) => {
                 let has = has.as_u32();
-                mask & has > 0
+                mask & has != 0
             }
             _ => *self == has,
         }
