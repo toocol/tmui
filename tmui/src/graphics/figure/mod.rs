@@ -2,11 +2,13 @@ pub mod color;
 pub mod point;
 pub mod size;
 pub mod rectangle;
+pub mod transform;
 
 pub use color::*;
 pub use point::*;
 pub use size::*;
 pub use rectangle::*;
+pub use transform::*;
 
 #[cfg(test)]
 mod tests {
