@@ -18,12 +18,6 @@ use tlib::{
     signals,
 };
 
-#[inline]
-pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
-    assert!(max >= min);
-    min.max(max.min(val))
-}
-
 #[extends_element]
 pub struct Widget {
     parent: RefCell<Option<*const dyn WidgetImpl>>,

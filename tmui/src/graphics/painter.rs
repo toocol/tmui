@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use super::figure::Color;
+use super::figure::{Color, Transform};
 use crate::{prelude::Rect, widget::WidgetImpl};
 use log::error;
 use skia_safe::{Canvas, Font, Paint, Path, Point};
@@ -15,6 +15,8 @@ pub struct Painter<'a> {
     height: i32,
     x_offset: i32,
     y_offset: i32,
+
+    transform: Transform,
 }
 
 impl<'a> Painter<'a> {
@@ -30,6 +32,16 @@ impl<'a> Painter<'a> {
             height: rect.height(),
             x_offset: rect.x(),
             y_offset: rect.y(),
+            transform: Transform::new(),
+        }
+    }
+
+    #[inline]
+    pub fn set_transform(&mut self, transform: Transform, combined: bool) {
+        if combined {
+            self.transform = self.transform * transform;
+        } else {
+            self.transform = transform
         }
     }
 

@@ -117,6 +117,56 @@ impl Rect {
     }
 
     #[inline]
+    pub fn move_left(&mut self, pos: i32) {
+        self.x = pos;
+    }
+
+    #[inline]
+    pub fn move_top(&mut self, pos: i32) {
+        self.y = pos;
+    }
+
+    #[inline]
+    pub fn move_right(&mut self, pos: i32) {
+        self.x += pos - self.right();
+    }
+
+    #[inline]
+    pub fn move_bottom(&mut self, pos: i32) {
+        self.y += pos - self.bottom();
+    }
+
+    #[inline]
+    pub fn move_top_left(&mut self, point: &Point) {
+        self.move_left(point.x());
+        self.move_top(point.y());
+    }
+
+    #[inline]
+    pub fn move_bottom_right(&mut self, point: &Point) {
+        self.move_right(point.x());
+        self.move_bottom(point.y());
+    }
+
+    #[inline]
+    pub fn move_top_right(&mut self, point: &Point) {
+        self.move_right(point.x());
+        self.move_top(point.y());
+    }
+
+    #[inline]
+    pub fn move_bottom_left(&mut self, point: &Point) {
+        self.move_left(point.x());
+        self.move_bottom(point.y());
+    }
+
+    #[inline]
+    pub fn move_center(&mut self, point: &Point) {
+        self.x = point.x() - self.width / 2;
+        self.y = point.y() - self.height / 2;
+    }
+
+    #[inline]
     pub fn set_left(&mut self, pos: i32) {
         self.x = pos;
     }
