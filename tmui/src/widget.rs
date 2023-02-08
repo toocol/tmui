@@ -456,10 +456,10 @@ impl WidgetExt for Widget {
         let mut rect = self.rect();
 
         let (top, right, bottom, left) = self.margins();
-        rect.set_x(rect.x() - left as f32);
-        rect.set_y(rect.y() - top as f32);
-        rect.set_width(rect.width() + left as f32 + right as f32);
-        rect.set_height(rect.height() + top as f32 + bottom as f32);
+        rect.set_x(rect.x() - left);
+        rect.set_y(rect.y() - top);
+        rect.set_width(rect.width() + left + right);
+        rect.set_height(rect.height() + top + bottom);
 
         rect
     }
@@ -469,8 +469,8 @@ impl WidgetExt for Widget {
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
-                rect.set_x(0.);
-                rect.set_y(0.);
+                rect.set_x(0);
+                rect.set_y(0);
             }
         }
 
@@ -482,15 +482,15 @@ impl WidgetExt for Widget {
 
         // Rect add the paddings.
         let (top, right, bottom, left) = self.paddings();
-        rect.set_x(rect.x() + left as f32);
-        rect.set_y(rect.y() + top as f32);
-        rect.set_width(rect.width() - left as f32 - right as f32);
-        rect.set_height(rect.height() - top as f32 - bottom as f32);
+        rect.set_x(rect.x() + left);
+        rect.set_y(rect.y() + top);
+        rect.set_width(rect.width() - left - right);
+        rect.set_height(rect.height() - top - bottom);
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
-                rect.set_x(left as f32);
-                rect.set_y(top as f32);
+                rect.set_x(left);
+                rect.set_y(top);
             }
         }
 
@@ -740,7 +740,7 @@ pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + Ob
     fn size_hint(&mut self) -> Size {
         let width = self.get_property("width-request").unwrap().get::<i32>();
         let height = self.get_property("height-request").unwrap().get::<i32>();
-        Size::new(width as f32, height as f32)
+        Size::new(width, height)
     }
 
     /// Invoke this function when renderering.

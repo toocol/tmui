@@ -55,10 +55,10 @@ impl WidgetImpl for Label {
         let metrics = font.metrics().1;
         let mut widths = vec![0f32; self.label.len()];
         font.get_widths(&self.label, &mut widths);
-        let mut text_width = 0.;
+        let mut text_width = 0;
         let mut idx = 0;
         for i in 0..widths.len() {
-            let width = widths[i];
+            let width = widths[i] as i32;
             text_width += width;
             if text_width > content_rect.width() {
                 idx = i - 1;
@@ -84,21 +84,21 @@ impl WidgetImpl for Label {
         match self.text_halign {
             Align::Start => {},
             Align::Center => {
-                let offset = (content_rect.width() - text_width as f32) / 2.;
+                let offset = (content_rect.width() - text_width) / 2;
                 draw_point.set_x(draw_point.x() + offset);
             },
             Align::End => {
-                let offset = content_rect.width() - text_width as f32;
+                let offset = content_rect.width() - text_width;
                 draw_point.set_x(draw_point.x() + offset);
             },
         };
         match self.text_valign {
             Align::Start => {
-                let offset = content_rect.height() - metrics.cap_height;
+                let offset = content_rect.height() - metrics.cap_height as i32;
                 draw_point.set_y(draw_point.y() - offset);
             },
             Align::Center => {
-                let offset = (content_rect.height() - metrics.cap_height) / 2.;
+                let offset = (content_rect.height() - metrics.cap_height as i32) / 2;
                 draw_point.set_y(draw_point.y() - offset);
             },
             Align::End => {},
