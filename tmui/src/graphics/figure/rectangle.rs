@@ -247,10 +247,10 @@ impl Into<(f32, f32, f32, f32)> for Rect {
 impl Into<skia_safe::Rect> for Rect {
     fn into(self) -> skia_safe::Rect {
         skia_safe::Rect::from_xywh(
-            self.x as f32,
-            self.y as f32,
-            self.width as f32,
-            self.height as f32,
+            self.x,
+            self.y,
+            self.width,
+            self.height,
         )
     }
 }

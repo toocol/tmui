@@ -39,16 +39,6 @@ impl Point {
     pub fn set_y(&mut self, y: f32) {
         self.y = y
     }
-
-    #[inline]
-    pub fn to_skia_ipoint(self) -> skia_safe::IPoint {
-        skia_safe::IPoint::from(self)
-    }
-
-    #[inline]
-    pub fn to_skia_point(self) -> skia_safe::Point {
-        skia_safe::Point::from(self)
-    }
 }
 
 impl Add for Point {
@@ -75,31 +65,40 @@ impl Sub for Point {
 
 impl From<(i32, i32)> for Point {
     fn from((x, y): (i32, i32)) -> Self {
-        Self { x: x as f32, y: y as f32}
+        Self {
+            x: x as f32,
+            y: y as f32,
+        }
     }
 }
 
 impl From<(f32, f32)> for Point {
     fn from((x, y): (f32, f32)) -> Self {
-        Self { x, y}
-    }
-}
-
-impl From<Point> for skia_safe::IPoint {
-    fn from(p: Point) -> Self {
-        p.into()
-    }
-}
-
-impl From<Point> for skia_safe::Point {
-    fn from(p: Point) -> Self {
-        skia_safe::Point::from(skia_safe::IPoint::from(p))
+        Self { x, y }
     }
 }
 
 impl Into<(f32, f32)> for Point {
     fn into(self) -> (f32, f32) {
         (self.x, self.y)
+    }
+}
+
+impl Into<skia_safe::Point> for Point {
+    fn into(self) -> skia_safe::Point {
+        skia_safe::Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
+impl Into<skia_safe::IPoint> for Point {
+    fn into(self) -> skia_safe::IPoint {
+        skia_safe::IPoint {
+            x: self.x as i32,
+            y: self.y as i32,
+        }
     }
 }
 
