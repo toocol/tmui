@@ -11,10 +11,10 @@ pub struct Painter<'a> {
     paint: Paint,
     font: Option<Font>,
 
-    width: f32,
-    height: f32,
-    x_offset: f32,
-    y_offset: f32,
+    width: i32,
+    height: i32,
+    x_offset: i32,
+    y_offset: i32,
 
     transform: Transform,
 }
@@ -108,7 +108,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke and fill the specified Rect with offset.
     #[inline]
-    pub fn fill_rect(&mut self, rect: Rect, color: Color) {
+    pub fn fill_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
         self.paint.set_style(skia_safe::PaintStyle::StrokeAndFill);
 
@@ -120,7 +120,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke the specified Rect with offset.
     #[inline]
-    pub fn draw_rect(&mut self, rect: Rect) {
+    pub fn draw_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T) {
         self.paint.set_style(skia_safe::PaintStyle::Stroke);
         let rect: skia_safe::Rect = rect.into();
         self.canvas.draw_rect(rect, &self.paint);

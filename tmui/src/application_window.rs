@@ -98,19 +98,19 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
     let widget_ref = unsafe { widget.as_ref().unwrap() };
     if widget_ref.get_raw_child().is_none() {
         let size = widget_ref.size();
-        if parent_size.width() != 0. && parent_size.height() != 0. {
-            if size.width() == 0. {
-                widget_ref.width_request(parent_size.width() as i32);
+        if parent_size.width() != 0 && parent_size.height() != 0 {
+            if size.width() == 0 {
+                widget_ref.width_request(parent_size.width());
             }
-            if size.height() == 0. {
-                widget_ref.height_request(parent_size.height() as i32);
+            if size.height() == 0 {
+                widget_ref.height_request(parent_size.height());
             }
         } else {
-            if size.width() == 0. {
-                widget_ref.width_request(window_size.width() as i32);
+            if size.width() == 0 {
+                widget_ref.width_request(window_size.width());
             }
-            if size.height() == 0. {
-                widget_ref.height_request(window_size.height() as i32);
+            if size.height() == 0 {
+                widget_ref.height_request(window_size.height());
             }
         }
         let image_rect = widget_ref.image_rect();
@@ -118,11 +118,11 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
     } else {
         let size = widget_ref.size();
         let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child().unwrap());
-        if size.width() == 0. {
-            widget_ref.width_request(child_size.width() as i32);
+        if size.width() == 0 {
+            widget_ref.width_request(child_size.width());
         }
-        if size.height() == 0. {
-            widget_ref.height_request(child_size.height() as i32);
+        if size.height() == 0 {
+            widget_ref.height_request(child_size.height());
         }
         return widget_ref.size();
     }
