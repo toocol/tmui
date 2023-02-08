@@ -236,8 +236,8 @@ impl ApplicationBuilder {
     pub fn build(self) -> Application {
         let mut app = Application::default();
 
-        if let Some(title) = self.title {
-            app.title = title
+        if let Some(ref title) = self.title {
+            app.title = title.to_string()
         }
         if let Some(width) = self.width {
             app.width = width
