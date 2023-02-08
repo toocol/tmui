@@ -94,6 +94,12 @@ impl<'a> Painter<'a> {
         self.paint.set_color(color);
     }
 
+    /// Get the stroke width of painter.
+    #[inline]
+    pub fn line_width(&self) -> f32 {
+        self.paint.stroke_width()
+    }
+
     /// Set the stroke width of painter.
     #[inline]
     pub fn set_line_width(&mut self, width: f32) {
