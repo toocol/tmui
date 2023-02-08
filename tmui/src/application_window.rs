@@ -98,19 +98,19 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
     let widget_ref = unsafe { widget.as_ref().unwrap() };
     if widget_ref.get_raw_child().is_none() {
         let size = widget_ref.size();
-        if parent_size.width() != 0 && parent_size.height() != 0 {
-            if size.width() == 0 {
-                widget_ref.width_request(parent_size.width());
+        if parent_size.width() != 0. && parent_size.height() != 0. {
+            if size.width() == 0. {
+                widget_ref.width_request(parent_size.width() as i32);
             }
-            if size.height() == 0 {
-                widget_ref.height_request(parent_size.height());
+            if size.height() == 0. {
+                widget_ref.height_request(parent_size.height() as i32);
             }
         } else {
-            if size.width() == 0 {
-                widget_ref.width_request(window_size.width());
+            if size.width() == 0. {
+                widget_ref.width_request(window_size.width() as i32);
             }
-            if size.height() == 0 {
-                widget_ref.height_request(window_size.height());
+            if size.height() == 0. {
+                widget_ref.height_request(window_size.height() as i32);
             }
         }
         let image_rect = widget_ref.image_rect();
@@ -118,11 +118,11 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
     } else {
         let size = widget_ref.size();
         let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child().unwrap());
-        if size.width() == 0 {
-            widget_ref.width_request(child_size.width());
+        if size.width() == 0. {
+            widget_ref.width_request(child_size.width() as i32);
         }
-        if size.height() == 0 {
-            widget_ref.height_request(child_size.height());
+        if size.height() == 0. {
+            widget_ref.height_request(child_size.height() as i32);
         }
         return widget_ref.size();
     }
@@ -142,32 +142,32 @@ fn child_position_probe(
         let valign = child_ref.get_property("valign").unwrap().get::<Align>();
 
         match halign {
-            Align::Start => child_ref.set_fixed_x(parent_rect.x() + child_ref.margin_left()),
+            Align::Start => child_ref.set_fixed_x(parent_rect.x() as i32 + child_ref.margin_left()),
             Align::Center => {
                 let offset =
-                    (parent_rect.width() - child_ref.rect().width()) / 2 + child_ref.margin_left();
-                child_ref.set_fixed_x(parent_rect.x() + offset)
+                    (parent_rect.width() - child_ref.rect().width()) as i32 / 2 + child_ref.margin_left();
+                child_ref.set_fixed_x(parent_rect.x() as i32 + offset)
             }
             Align::End => {
                 let offset =
-                    parent_rect.width() - child_ref.rect().width() + child_ref.margin_left();
-                child_ref.set_fixed_x(parent_rect.x() + offset)
+                    parent_rect.width() as i32 - child_ref.rect().width() as i32 + child_ref.margin_left();
+                child_ref.set_fixed_x(parent_rect.x() as i32 + offset)
             }
         }
 
         match valign {
             Align::Start => {
-                child_ref.set_fixed_y(parent_rect.y() + child_rect.y() + child_ref.margin_top())
+                child_ref.set_fixed_y(parent_rect.y() as i32 + child_rect.y() as i32 + child_ref.margin_top())
             }
             Align::Center => {
                 let offset =
-                    (parent_rect.height() - child_ref.rect().height()) / 2 + child_ref.margin_top();
-                child_ref.set_fixed_y(parent_rect.y() + offset)
+                    (parent_rect.height() - child_ref.rect().height()) as i32 / 2 + child_ref.margin_top();
+                child_ref.set_fixed_y(parent_rect.y() as i32 + offset)
             }
             Align::End => {
                 let offset =
-                    parent_rect.height() - child_ref.rect().height() + child_ref.margin_top();
-                child_ref.set_fixed_y(parent_rect.y() + offset)
+                    parent_rect.height() as i32 - child_ref.rect().height() as i32 + child_ref.margin_top();
+                child_ref.set_fixed_y(parent_rect.y() as i32 + offset)
             }
         }
 

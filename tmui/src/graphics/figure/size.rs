@@ -8,37 +8,43 @@ use tlib::{
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Size
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub struct Size {
-    width: i32,
-    height: i32,
+    width: f32,
+    height: f32,
 }
 
 impl Size {
     #[inline]
-    pub fn new(width: i32, height: i32) -> Self {
+    pub fn new(width: f32, height: f32) -> Self {
         Self { width, height }
     }
 
     #[inline]
-    pub fn width(&self) -> i32 {
+    pub fn width(&self) -> f32 {
         self.width
     }
 
     #[inline]
-    pub fn height(&self) -> i32 {
+    pub fn height(&self) -> f32 {
         self.height
     }
 }
 
 impl From<(i32, i32)> for Size {
     fn from((width, height): (i32, i32)) -> Self {
-        Self { width, height }
+        Self { width: width as f32, height: height as f32}
     }
 }
 
-impl Into<(i32, i32)> for Size {
-    fn into(self) -> (i32, i32) {
+impl From<(f32, f32)> for Size {
+    fn from((width, height): (f32, f32)) -> Self {
+        Self { width, height}
+    }
+}
+
+impl Into<(f32, f32)> for Size {
+    fn into(self) -> (f32, f32) {
         (self.width, self.height)
     }
 }
@@ -86,8 +92,8 @@ impl ToBytes for Size {
 
 impl FromBytes for Size {
     fn from_bytes(data: &[u8], _len: usize) -> Self {
-        let width = i32::from_bytes(&data[0..4], 4);
-        let height = i32::from_bytes(&data[4..8], 4);
+        let width = f32::from_bytes(&data[0..4], 4);
+        let height = f32::from_bytes(&data[4..8], 4);
         Self { width, height }
     }
 }

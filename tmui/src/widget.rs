@@ -456,10 +456,10 @@ impl WidgetExt for Widget {
         let mut rect = self.rect();
 
         let (top, right, bottom, left) = self.margins();
-        rect.set_x(rect.x() - left);
-        rect.set_y(rect.y() - top);
-        rect.set_width(rect.width() + left + right);
-        rect.set_height(rect.height() + top + bottom);
+        rect.set_x(rect.x() - left as f32);
+        rect.set_y(rect.y() - top as f32);
+        rect.set_width(rect.width() + left as f32 + right as f32);
+        rect.set_height(rect.height() + top as f32 + bottom as f32);
 
         rect
     }
@@ -469,8 +469,8 @@ impl WidgetExt for Widget {
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
-                rect.set_x(0);
-                rect.set_y(0);
+                rect.set_x(0.);
+                rect.set_y(0.);
             }
         }
 
@@ -482,15 +482,15 @@ impl WidgetExt for Widget {
 
         // Rect add the paddings.
         let (top, right, bottom, left) = self.paddings();
-        rect.set_x(rect.x() + left);
-        rect.set_y(rect.y() + top);
-        rect.set_width(rect.width() - left - right);
-        rect.set_height(rect.height() - top - bottom);
+        rect.set_x(rect.x() + left as f32);
+        rect.set_y(rect.y() + top as f32);
+        rect.set_width(rect.width() - left as f32 - right as f32);
+        rect.set_height(rect.height() - top as f32 - bottom as f32);
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
-                rect.set_x(left);
-                rect.set_y(top);
+                rect.set_x(left as f32);
+                rect.set_y(top as f32);
             }
         }
 
@@ -597,8 +597,8 @@ impl WidgetExt for Widget {
         self.paddings[2] = bottom;
         self.paddings[3] = left;
         let size = self.size();
-        self.width_request(size.width() + left + right);
-        self.height_request(size.height() + top + bottom);
+        self.width_request(size.width() as i32 + left + right);
+        self.height_request(size.height() as i32 + top + bottom);
     }
 
     fn set_padding_top(&mut self, mut val: i32) {
@@ -607,7 +607,7 @@ impl WidgetExt for Widget {
         }
         self.paddings[0] = val;
         let size = self.size();
-        self.height_request(size.height() + val);
+        self.height_request(size.height() as i32 + val);
     }
 
     fn set_padding_right(&mut self, mut val: i32) {
@@ -616,7 +616,7 @@ impl WidgetExt for Widget {
         }
         self.paddings[1] = val;
         let size = self.size();
-        self.width_request(size.width() + val);
+        self.width_request(size.width() as i32 + val);
     }
 
     fn set_padding_bottom(&mut self, mut val: i32) {
@@ -625,7 +625,7 @@ impl WidgetExt for Widget {
         }
         self.paddings[2] = val;
         let size = self.size();
-        self.height_request(size.height() + val);
+        self.height_request(size.height() as i32 + val);
     }
 
     fn set_padding_left(&mut self, mut val: i32) {
@@ -634,7 +634,7 @@ impl WidgetExt for Widget {
         }
         self.paddings[3] = val;
         let size = self.size();
-        self.width_request(size.width() + val);
+        self.width_request(size.width() as i32 + val);
     }
 
     fn set_borders(&mut self, mut top: f32, mut right: f32, mut bottom: f32, mut left: f32) {
@@ -740,7 +740,7 @@ pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + Ob
     fn size_hint(&mut self) -> Size {
         let width = self.get_property("width-request").unwrap().get::<i32>();
         let height = self.get_property("height-request").unwrap().get::<i32>();
-        Size::new(width, height)
+        Size::new(width as f32, height as f32)
     }
 
     /// Invoke this function when renderering.

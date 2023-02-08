@@ -70,19 +70,19 @@ impl ElementExt for Element {
     }
 
     fn set_fixed_width(&self, width: i32) {
-        self.rect.borrow_mut().set_width(width)
+        self.rect.borrow_mut().set_width(width as f32)
     }
 
     fn set_fixed_height(&self, height: i32) {
-        self.rect.borrow_mut().set_height(height)
+        self.rect.borrow_mut().set_height(height as f32)
     }
 
     fn set_fixed_x(&self, x: i32) {
-        self.rect.borrow_mut().set_x(x)
+        self.rect.borrow_mut().set_x(x as f32)
     }
 
     fn set_fixed_y(&self, y: i32) {
-        self.rect.borrow_mut().set_y(y)
+        self.rect.borrow_mut().set_y(y as f32)
     }
 
     fn invalidate(&self) -> bool {
