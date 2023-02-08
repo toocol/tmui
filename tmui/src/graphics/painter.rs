@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-use super::figure::{Color, Transform};
-use crate::{prelude::Rect, widget::WidgetImpl};
+use super::figure::{Color, FRect, Transform};
+use crate::widget::WidgetImpl;
 use log::error;
 use skia_safe::{Canvas, Font, Paint, Path, Point};
 use std::cell::RefMut;
@@ -142,6 +142,12 @@ impl<'a> Painter<'a> {
     /// Draw a line from (x1, y1) to (x2, y2) with offset.
     #[inline]
     pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
+        self.draw_line_f(x1 as f32, y1 as f32, x2 as f32, y2 as f32)
+    }
+
+    /// Draw a line from (x1, y1) to (x2, y2) with offset.
+    #[inline]
+    pub fn draw_line_f(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
         let mut p1: Point = (x1, y1).into();
         let mut p2: Point = (x2, y2).into();
         p1.offset((self.x_offset, self.y_offset));
@@ -153,17 +159,35 @@ impl<'a> Painter<'a> {
     /// Draw arc
     #[inline]
     pub fn draw_arc(&mut self, x: i32, y: i32, w: i32, h: i32, a: i32, alen: i32) {
-        let rect: Rect = (x, y, w, h).into();
+        self.draw_arc_f(
+            x as f32,
+            y as f32,
+            w as f32,
+            h as f32,
+            a as f32,
+            alen as f32,
+        )
+    }
+
+    /// Draw arc
+    #[inline]
+    pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, a: f32, alen: f32) {
+        let rect: FRect = (x, y, w, h).into();
         let mut rect: skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
-        self.canvas
-            .draw_arc(rect, a as f32, alen as f32, true, &self.paint);
+        self.canvas.draw_arc(rect, a, alen, true, &self.paint);
     }
 
     /// Draw a point at (x, y) with offset.
     #[inline]
     pub fn draw_point(&mut self, x: i32, y: i32) {
+        self.draw_point_f(x as f32, y as f32)
+    }
+
+    /// Draw a point at (x, y) with offset.
+    #[inline]
+    pub fn draw_point_f(&mut self, x: f32, y: f32) {
         let mut point: Point = (x, y).into();
         point.offset((self.x_offset, self.y_offset));
 
