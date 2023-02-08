@@ -8,17 +8,17 @@ use tlib::{
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Rectangle
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub struct Rect {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
 }
 
 impl Rect {
     #[inline]
-    pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
+    pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         Self {
             x,
             y,
@@ -37,42 +37,42 @@ impl Rect {
     }
 
     #[inline]
-    pub fn x(&self) -> i32 {
+    pub fn x(&self) -> f32 {
         self.x
     }
 
     #[inline]
-    pub fn y(&self) -> i32 {
+    pub fn y(&self) -> f32 {
         self.y
     }
 
     #[inline]
-    pub fn width(&self) -> i32 {
+    pub fn width(&self) -> f32 {
         self.width
     }
 
     #[inline]
-    pub fn height(&self) -> i32 {
+    pub fn height(&self) -> f32 {
         self.height
     }
 
     #[inline]
-    pub fn set_width(&mut self, width: i32) {
+    pub fn set_width(&mut self, width: f32) {
         self.width = width
     }
 
     #[inline]
-    pub fn set_height(&mut self, height: i32) {
+    pub fn set_height(&mut self, height: f32) {
         self.height = height
     }
 
     #[inline]
-    pub fn set_x(&mut self, x: i32) {
+    pub fn set_x(&mut self, x: f32) {
         self.x = x
     }
 
     #[inline]
-    pub fn set_y(&mut self, y: i32) {
+    pub fn set_y(&mut self, y: f32) {
         self.y = y
     }
 
@@ -97,42 +97,42 @@ impl Rect {
     }
 
     #[inline]
-    pub fn left(&self) -> i32 {
+    pub fn left(&self) -> f32 {
         self.x
     }
 
     #[inline]
-    pub fn top(&self) -> i32 {
+    pub fn top(&self) -> f32 {
         self.y
     }
 
     #[inline]
-    pub fn right(&self) -> i32 {
+    pub fn right(&self) -> f32 {
         self.x + self.width
     }
 
     #[inline]
-    pub fn bottom(&self) -> i32 {
+    pub fn bottom(&self) -> f32 {
         self.y + self.height
     }
 
     #[inline]
-    pub fn move_left(&mut self, pos: i32) {
+    pub fn move_left(&mut self, pos: f32) {
         self.x = pos;
     }
 
     #[inline]
-    pub fn move_top(&mut self, pos: i32) {
+    pub fn move_top(&mut self, pos: f32) {
         self.y = pos;
     }
 
     #[inline]
-    pub fn move_right(&mut self, pos: i32) {
+    pub fn move_right(&mut self, pos: f32) {
         self.x += pos - self.right();
     }
 
     #[inline]
-    pub fn move_bottom(&mut self, pos: i32) {
+    pub fn move_bottom(&mut self, pos: f32) {
         self.y += pos - self.bottom();
     }
 
@@ -162,27 +162,27 @@ impl Rect {
 
     #[inline]
     pub fn move_center(&mut self, point: &Point) {
-        self.x = point.x() - self.width / 2;
-        self.y = point.y() - self.height / 2;
+        self.x = point.x() - self.width / 2.;
+        self.y = point.y() - self.height / 2.;
     }
 
     #[inline]
-    pub fn set_left(&mut self, pos: i32) {
+    pub fn set_left(&mut self, pos: f32) {
         self.x = pos;
     }
 
     #[inline]
-    pub fn set_top(&mut self, pos: i32) {
+    pub fn set_top(&mut self, pos: f32) {
         self.y = pos;
     }
 
     #[inline]
-    pub fn set_right(&mut self, pos: i32) {
+    pub fn set_right(&mut self, pos: f32) {
         self.width = pos - self.x;
     }
 
     #[inline]
-    pub fn set_bottom(&mut self, pos: i32) {
+    pub fn set_bottom(&mut self, pos: f32) {
         self.height = pos - self.y;
     }
 
@@ -201,7 +201,7 @@ impl Rect {
     }
 
     #[inline]
-    pub fn adjusted(&self, xp1: i32, yp1: i32, xp2: i32, yp2: i32) -> Rect {
+    pub fn adjusted(&self, xp1: f32, yp1: f32, xp2: f32, yp2: f32) -> Rect {
         Rect {
             x: self.x + xp1,
             y: self.y + yp1,
@@ -212,28 +212,23 @@ impl Rect {
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        self.width >= 0 && self.height >= 0
-    }
-
-    #[inline]
-    pub fn and(&mut self, other: &Rect) {
-        self.x &= other.x;
-        self.y &= other.y;
-        self.width &= other.width;
-        self.height &= other.height;
-    }
-
-    #[inline]
-    pub fn or(&mut self, other: &Rect) {
-        self.x |= other.x;
-        self.y |= other.y;
-        self.width |= other.width;
-        self.height |= other.height;
+        self.width >= 0. && self.height >= 0.
     }
 }
 
 impl From<(i32, i32, i32, i32)> for Rect {
     fn from((x, y, width, height): (i32, i32, i32, i32)) -> Self {
+        Self {
+            x: x as f32,
+            y: y as f32,
+            width: width as f32,
+            height: height as f32,
+        }
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Rect {
+    fn from((x, y, width, height): (f32, f32, f32, f32)) -> Self {
         Self {
             x,
             y,
@@ -243,8 +238,8 @@ impl From<(i32, i32, i32, i32)> for Rect {
     }
 }
 
-impl Into<(i32, i32, i32, i32)> for Rect {
-    fn into(self) -> (i32, i32, i32, i32) {
+impl Into<(f32, f32, f32, f32)> for Rect {
+    fn into(self) -> (f32, f32, f32, f32) {
         (self.x, self.y, self.width, self.height)
     }
 }
@@ -283,10 +278,10 @@ impl ToBytes for Rect {
 
 impl FromBytes for Rect {
     fn from_bytes(data: &[u8], _len: usize) -> Self {
-        let x = i32::from_bytes(&data[0..4], 4);
-        let y = i32::from_bytes(&data[4..8], 4);
-        let width = i32::from_bytes(&data[8..12], 4);
-        let height = i32::from_bytes(&data[12..16], 4);
+        let x = f32::from_bytes(&data[0..4], 4);
+        let y = f32::from_bytes(&data[4..8], 4);
+        let width = f32::from_bytes(&data[8..12], 4);
+        let height = f32::from_bytes(&data[12..16], 4);
         Self {
             x,
             y,

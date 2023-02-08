@@ -236,14 +236,14 @@ impl ApplicationBuilder {
     pub fn build(self) -> Application {
         let mut app = Application::default();
 
-        if let Some(ref title) = self.title {
-            app.title = title.to_string()
+        if let Some(title) = self.title {
+            app.title = title
         }
-        if let Some(ref width) = self.width {
-            app.width = *width
+        if let Some(width) = self.width {
+            app.width = width
         }
-        if let Some(ref height) = self.height {
-            app.height = *height
+        if let Some(height) = self.height {
+            app.height = height
         }
 
         if let Some(platform) = self.platform {

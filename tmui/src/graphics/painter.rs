@@ -11,10 +11,10 @@ pub struct Painter<'a> {
     paint: Paint,
     font: Option<Font>,
 
-    width: i32,
-    height: i32,
-    x_offset: i32,
-    y_offset: i32,
+    width: f32,
+    height: f32,
+    x_offset: f32,
+    y_offset: f32,
 
     transform: Transform,
 }

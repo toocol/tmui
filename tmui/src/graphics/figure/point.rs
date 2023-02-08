@@ -8,35 +8,35 @@ use tlib::{
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Point
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub struct Point {
-    x: i32,
-    y: i32,
+    x: f32,
+    y: f32,
 }
 
 impl Point {
     #[inline]
-    pub fn new(x: i32, y: i32) -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
     #[inline]
-    pub fn x(&self) -> i32 {
+    pub fn x(&self) -> f32 {
         self.x
     }
 
     #[inline]
-    pub fn y(&self) -> i32 {
+    pub fn y(&self) -> f32 {
         self.y
     }
 
     #[inline]
-    pub fn set_x(&mut self, x: i32) {
+    pub fn set_x(&mut self, x: f32) {
         self.x = x
     }
 
     #[inline]
-    pub fn set_y(&mut self, y: i32) {
+    pub fn set_y(&mut self, y: f32) {
         self.y = y
     }
 
@@ -75,13 +75,19 @@ impl Sub for Point {
 
 impl From<(i32, i32)> for Point {
     fn from((x, y): (i32, i32)) -> Self {
-        Self { x, y }
+        Self { x: x as f32, y: y as f32}
+    }
+}
+
+impl From<(f32, f32)> for Point {
+    fn from((x, y): (f32, f32)) -> Self {
+        Self { x, y}
     }
 }
 
 impl From<Point> for skia_safe::IPoint {
     fn from(p: Point) -> Self {
-        skia_safe::IPoint::from((p.x, p.y))
+        p.into()
     }
 }
 
@@ -91,8 +97,8 @@ impl From<Point> for skia_safe::Point {
     }
 }
 
-impl Into<(i32, i32)> for Point {
-    fn into(self) -> (i32, i32) {
+impl Into<(f32, f32)> for Point {
+    fn into(self) -> (f32, f32) {
         (self.x, self.y)
     }
 }
@@ -118,8 +124,8 @@ impl ToBytes for Point {
 
 impl FromBytes for Point {
     fn from_bytes(data: &[u8], _len: usize) -> Self {
-        let x = i32::from_bytes(&data[0..4], 4);
-        let y = i32::from_bytes(&data[4..8], 4);
+        let x = f32::from_bytes(&data[0..4], 4);
+        let y = f32::from_bytes(&data[4..8], 4);
         Self { x, y }
     }
 }

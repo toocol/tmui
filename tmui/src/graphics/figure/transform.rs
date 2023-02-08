@@ -224,7 +224,7 @@ impl Transform {
             }
         }
 
-        Point::new(round32(x), round32(y))
+        Point::new(round32(x) as f32, round32(y) as f32)
     }
 
     #[inline]
@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn test_transform() {
-        let rect = Rect::new(100, 100, 100, 100);
+        let rect = Rect::new(100., 100., 100., 100.);
 
         let mut transform = Transform::new();
         transform.scale(2., 1.);
