@@ -1,10 +1,12 @@
 pub mod color;
+pub mod font;
 pub mod point;
 pub mod size;
 pub mod rectangle;
 pub mod transform;
 
 pub use color::*;
+pub use font::*;
 pub use point::*;
 pub use size::*;
 pub use rectangle::*;
