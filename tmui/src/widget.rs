@@ -25,6 +25,7 @@ pub struct Widget {
 
     background: Color,
     font: Font,
+    font_family: String,
     margins: [i32; 4],
     paddings: [i32; 4],
     borders: [f32; 4],
@@ -49,6 +50,7 @@ impl Default for Widget {
             child: Default::default(),
             background: Color::WHITE,
             font: Default::default(),
+            font_family: Default::default(),
             margins: Default::default(),
             paddings: Default::default(),
             element: Default::default(),
@@ -238,6 +240,12 @@ pub trait WidgetExt {
 
     /// Get the font of widget.
     fn font(&self) -> Font;
+
+    /// Set the font family of Widget.
+    fn set_font_family(&mut self, family: String);
+
+    /// Get the font family of Widget.
+    fn font_family(&self) -> &str;
 
     /// Get the size of widget.
     fn size(&self) -> Size;
@@ -445,6 +453,14 @@ impl WidgetExt for Widget {
         font.set_scale_x(self.font.scale_x());
         font.set_skew_x(self.font.skew_x());
         font
+    }
+
+    fn set_font_family(&mut self, family: String) {
+        self.font_family = family
+    }
+
+    fn font_family(&self) -> &str {
+        &self.font_family
     }
 
     fn size(&self) -> Size {

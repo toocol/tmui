@@ -392,6 +392,16 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     }
 
                     #[inline]
+                    fn set_font_family(&mut self, family: String) {
+                        self.widget.set_font_family(family)
+                    }
+
+                    #[inline]
+                    fn font_family(&self) -> &str {
+                        self.widget.font_family()
+                    }
+
+                    #[inline]
                     fn size(&self) -> Size {
                         self.widget.size()
                     }
