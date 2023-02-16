@@ -25,6 +25,7 @@ pub struct Widget {
 
     background: Color,
     font: Font,
+    font_family: String,
     margins: [i32; 4],
     paddings: [i32; 4],
     borders: [f32; 4],
@@ -49,12 +50,42 @@ impl Default for Widget {
             child: Default::default(),
             background: Color::WHITE,
             font: Default::default(),
+            font_family: Default::default(),
             margins: Default::default(),
             paddings: Default::default(),
             element: Default::default(),
             borders: Default::default(),
             border_style: Default::default(),
             border_color: Color::BLACK,
+        }
+    }
+}
+
+impl Widget {
+    pub fn child_internal<T>(&self, child: T)
+    where
+        T: WidgetImpl + ElementImpl + IsA<Widget>,
+    {
+        let child = Box::new(child);
+        *self.child.borrow_mut() = Some(child);
+    }
+
+    /// Notify all the child widget to invalidate.
+    fn notify_invalidate(&self) {
+        if let Some(child) = self.get_raw_child() {
+            unsafe { child.as_ref().unwrap().update() }
+        }
+    }
+
+    /// Notify the child to change the visibility.
+    fn notify_visible(&self, visible: bool) {
+        if let Some(child) = self.get_raw_child() {
+            let child = unsafe { child.as_ref().unwrap() };
+            if visible {
+                child.show()
+            } else {
+                child.hide()
+            }
         }
     }
 }
@@ -146,199 +177,283 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     }
 }
 
-impl Widget {
-    pub fn child_internal<T>(&self, child: T)
-    where
-        T: WidgetImpl + ElementImpl + IsA<Widget>,
-    {
-        let child = Box::new(child);
-        *self.child.borrow_mut() = Some(child);
-    }
-
-    /// Notify all the child widget to invalidate.
-    fn notify_invalidate(&self) {
-        if let Some(child) = self.get_raw_child() {
-            unsafe { child.as_ref().unwrap().update() }
-        }
-    }
-
-    /// Notify the child to change the visibility.
-    fn notify_visible(&self, visible: bool) {
-        if let Some(child) = self.get_raw_child() {
-            let child = unsafe { child.as_ref().unwrap() };
-            if visible {
-                child.show()
-            } else {
-                child.hide()
-            }
-        }
-    }
-}
-
 pub trait WidgetAcquire: WidgetImpl {}
 
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
+    /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
     fn as_element(&mut self) -> *mut dyn ElementImpl;
 
     /// ## Do not invoke this function directly.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_parent) (Defined in [`WidgetExt`])
     fn set_parent(&self, parent: *const dyn WidgetImpl);
 
     /// Get the raw pointer of child.
-    /// Please use `get_child()` function in [`WidgetGenericExt`]
+    /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::get_raw_child) (Defined in [`WidgetExt`])
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl>;
 
     /// Get the raw pointer of child.
-    /// Please use `get_child()` function in [`WidgetGenericExt`]
+    /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::get_raw_child_mut) (Defined in [`WidgetExt`])
     fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl>;
 
     /// Get the raw pointer of parent.
-    /// Please use `get_parent()` function in [`WidgetGenericExt`]
+    /// Use [`get_parent()`](WidgetGenericExt::get_parent) instead.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::get_raw_parent) (Defined in [`WidgetExt`])
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl>;
 
     /// Hide the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::hide) (Defined in [`WidgetExt`])
     fn hide(&self);
 
     /// Show the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::show) (Defined in [`WidgetExt`])
     fn show(&self);
 
     /// Return true if widget is visble, otherwise, false is returned.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::visible) (Defined in [`WidgetExt`])
     fn visible(&self) -> bool;
 
     /// Setter of property `focus`.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_focus) (Defined in [`WidgetExt`])
     fn set_focus(&self, focus: bool);
 
     /// Getter of property `focus`.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::is_focus) (Defined in [`WidgetExt`])
     fn is_focus(&self) -> bool;
 
     /// Resize the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
     fn resize(&self, width: i32, height: i32);
 
     /// Request the widget's maximum width.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::width_request) (Defined in [`WidgetExt`])
     fn width_request(&self, width: i32);
 
     /// Request the widget's maximum width.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
     fn height_request(&self, width: i32);
 
     /// Set alignment on the horizontal direction.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_halign) (Defined in [`WidgetExt`])
     fn set_halign(&self, halign: Align);
 
     /// Set alignment on the vertical direction.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_valign) (Defined in [`WidgetExt`])
     fn set_valign(&self, valign: Align);
 
     /// Get alignment on the horizontal direction.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::halign) (Defined in [`WidgetExt`])
     fn halign(&self) -> Align;
 
     /// Get alignment on the vertical direction.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::valign) (Defined in [`WidgetExt`])
     fn valign(&self) -> Align;
 
     /// Set the font of widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_font) (Defined in [`WidgetExt`])
     fn set_font(&mut self, font: Font);
 
     /// Get the font of widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::font) (Defined in [`WidgetExt`])
     fn font(&self) -> Font;
 
+    /// Set the font family of Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_font_family) (Defined in [`WidgetExt`])
+    fn set_font_family(&mut self, family: String);
+
+    /// Get the font family of Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::font_family) (Defined in [`WidgetExt`])
+    fn font_family(&self) -> &str;
+
     /// Get the size of widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
     fn size(&self) -> Size;
 
     /// Get the area of widget's total image Rect with the margins. <br>
     /// The [`Coordinate`] was `World`.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::image_rect) (Defined in [`WidgetExt`])
     fn image_rect(&self) -> Rect;
 
     /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::origin_rect) (Defined in [`WidgetExt`])
     fn origin_rect(&self, coord: Option<Coordinate>) -> Rect;
 
     /// Get the area inside the widget's paddings. <br>
     /// The default [`Coordinate`] was `World`.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::contents_rect) (Defined in [`WidgetExt`])
     fn contents_rect(&self, coord: Option<Coordinate>) -> Rect;
 
     /// Get the widget's background color.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::background) (Defined in [`WidgetExt`])
     fn background(&self) -> Color;
 
     /// Set the widget's background color.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_background) (Defined in [`WidgetExt`])
     fn set_background(&mut self, color: Color);
 
     /// Get the margins of the Widget. (top, right, bottom, left)
+    /// 
+    /// Go to[`Function defination`](WidgetExt::margins) (Defined in [`WidgetExt`])
     fn margins(&self) -> (i32, i32, i32, i32);
 
     /// Get the top margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::margin_top) (Defined in [`WidgetExt`])
     fn margin_top(&self) -> i32;
 
     /// Get the right margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::margin_right) (Defined in [`WidgetExt`])
     fn margin_right(&self) -> i32;
 
     /// Get the bottom margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::margin_bottom) (Defined in [`WidgetExt`])
     fn margin_bottom(&self) -> i32;
 
     /// Get the left margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::margin_left) (Defined in [`WidgetExt`])
     fn margin_left(&self) -> i32;
 
     /// Set the margins of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_margins) (Defined in [`WidgetExt`])
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32);
 
     /// Set the top margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_margin_top) (Defined in [`WidgetExt`])
     fn set_margin_top(&mut self, val: i32);
 
     /// Set the right margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_margin_right) (Defined in [`WidgetExt`])
     fn set_margin_right(&mut self, val: i32);
 
     /// Set the bottom margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_margin_bottom) (Defined in [`WidgetExt`])
     fn set_margin_bottom(&mut self, val: i32);
 
     /// Set the left margin of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_margin_left) (Defined in [`WidgetExt`])
     fn set_margin_left(&mut self, val: i32);
 
     /// Get the paddins of the Widget. (top, right, bottom, left)
+    /// 
+    /// Go to[`Function defination`](WidgetExt::paddings) (Defined in [`WidgetExt`])
     fn paddings(&self) -> (i32, i32, i32, i32);
 
     /// Get the top padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::padding_top) (Defined in [`WidgetExt`])
     fn padding_top(&self) -> i32;
 
     /// Get the right padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::padding_right) (Defined in [`WidgetExt`])
     fn padding_right(&self) -> i32;
 
     /// Get the bottom padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::padding_bottom) (Defined in [`WidgetExt`])
     fn padding_bottom(&self) -> i32;
 
     /// Get the left padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::padding_left) (Defined in [`WidgetExt`])
     fn padding_left(&self) -> i32;
 
     /// Set the paddings of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_paddings) (Defined in [`WidgetExt`])
     fn set_paddings(&mut self, top: i32, right: i32, bottom: i32, left: i32);
 
     /// Set the top padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_padding_top) (Defined in [`WidgetExt`])
     fn set_padding_top(&mut self, val: i32);
 
     /// Set the right padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_padding_right) (Defined in [`WidgetExt`])
     fn set_padding_right(&mut self, val: i32);
 
     /// Set the bottom padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_padding_bottom) (Defined in [`WidgetExt`])
     fn set_padding_bottom(&mut self, val: i32);
 
     /// Set the left padding of the Widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_padding_left) (Defined in [`WidgetExt`])
     fn set_padding_left(&mut self, val: i32);
 
     /// Set the borders of the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_borders) (Defined in [`WidgetExt`])
     fn set_borders(&mut self, top: f32, right: f32, bottom: f32, left: f32);
 
     /// Set the border style of the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_border_style) (Defined in [`WidgetExt`])
     fn set_border_style(&mut self, style: BorderStyle);
 
     /// Set the border color of the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_border_color) (Defined in [`WidgetExt`])
     fn set_border_color(&mut self, color: Color);
 
     /// Get the borders of the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::borders) (Defined in [`WidgetExt`])
     fn borders(&self) -> [f32; 4];
 
     /// Get the border style of the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::border_style) (Defined in [`WidgetExt`])
     fn border_style(&self) -> BorderStyle;
 
     /// Get the border color of the widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::border_color) (Defined in [`WidgetExt`])
     fn border_color(&self) -> Color;
 
     /// Set the system cursor shape.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::set_cursor_shape) (Defined in [`WidgetExt`])
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape);
 }
 
@@ -445,6 +560,14 @@ impl WidgetExt for Widget {
         font.set_scale_x(self.font.scale_x());
         font.set_skew_x(self.font.skew_x());
         font
+    }
+
+    fn set_font_family(&mut self, family: String) {
+        self.font_family = family
+    }
+
+    fn font_family(&self) -> &str {
+        &self.font_family
     }
 
     fn size(&self) -> Size {
@@ -684,8 +807,10 @@ impl WidgetExt for Widget {
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
 /// The trait provide some functions include the generic types.
 pub trait WidgetGenericExt {
+    /// Go to[`Function defination`](WidgetGenericExt::get_parent) (Defined in [`WidgetGenericExt`])
     fn get_parent<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
 
+    /// Go to[`Function defination`](WidgetGenericExt::get_child) (Defined in [`WidgetGenericExt`])
     fn get_child<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
 }
 
@@ -751,6 +876,8 @@ pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + Ob
 }
 
 pub trait WidgetImplExt: WidgetImpl {
+    /// @see [`Widget::child_internal`](Widget) <br>
+    /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T);
 }
 
