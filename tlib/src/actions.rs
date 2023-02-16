@@ -1,44 +1,47 @@
 #![allow(unused_variables)]
-/// The crate of actions system.
-///
-/// <examples>
-///
-/// ```
-/// use tlib::prelude::*;
-/// use tlib::actions::ActionHub;
-/// use tlib::object::{ObjectImpl, ObjectSubclass};
-/// use tlib::{signals, signal, emit};
-///
-/// #[extends_object]
-/// #[derive(Default)]
-/// pub struct Widget {}
-///
-/// impl ObjectSubclass for Widget {
-///     const NAME: &'static str = "Widget";
-///
-///     type Type = Widget;
-///
-///     type ParentType = Object;
-/// }
-///
-/// impl ObjectImpl for Widget {}
-///
-/// impl Widget {
-///     signals! {
-///         action_test();
-///     }
-/// }
-///
-/// fn main() {
-///     // Not necessary in actual use. //
-///     let mut action_hub = ActionHub::new();
-///     action_hub.initialize();
-///
-///     let widget: Widget = Object::new(&[]);
-///     widget.connect_action(widget.action_test(), |param| println!("Hello World!"));
-///     emit!(widget.action_test());
-/// }
-/// ```
+//! The crate of actions system in `tmui`.
+//!
+//! <examples>
+//!
+//! ```
+//! use tlib::prelude::*;
+//! use tlib::actions::ActionHub;
+//! use tlib::object::{ObjectImpl, ObjectSubclass};
+//! use tlib::{signals, signal, connect, emit};
+//!
+//! #[extends_object]
+//! #[derive(Default)]
+//! pub struct Widget {}
+//!
+//! impl ObjectSubclass for Widget {
+//!     const NAME: &'static str = "Widget";
+//!
+//!     type Type = Widget;
+//!
+//!     type ParentType = Object;
+//! }
+//!
+//! impl ObjectImpl for Widget {}
+//!
+//! impl Widget {
+//!     signals! {
+//!         action_test();
+//!     }
+//! 
+//!     fn slot(&self) {
+//!     }
+//! }
+//!
+//! fn main() {
+//!     // Not necessary in actual use. //
+//!     let mut action_hub = ActionHub::new();
+//!     action_hub.initialize();
+//!
+//!     let mut widget: Widget = Object::new(&[]);
+//!     connect!(widget, action_test(), widget, slot());
+//!     emit!(widget.action_test());
+//! }
+//! ```
 use crate::prelude::*;
 use lazy_static::lazy_static;
 use log::{error, warn};
@@ -448,24 +451,12 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc, thread, time::Duration, sync::atomic::Ordering};
-
+    use std::{rc::Rc, thread, time::Duration, sync::atomic::Ordering};
     use crate::{
         object::{ObjectImpl, ObjectSubclass},
         prelude::*, actions::ACTIVATE,
     };
-
     use super::ActionHub;
-
-    #[derive(Default)]
-    pub struct Inner {
-        num: i32,
-    }
-
-    #[derive(Default)]
-    pub struct Outter {
-        inner: Inner,
-    }
 
     #[extends_object]
     #[derive(Default)]
@@ -566,15 +557,5 @@ mod tests {
         let widget = Widget::new();
         let signal = signal!(&widget, "hello");
         println!("{}", signal)
-    }
-
-    #[test]
-    fn test_ptr() {
-        let mut inner = Inner::default();
-        let ptr = &mut inner as *mut Inner;
-        let outter = Outter { inner };
-        let outter = RefCell::new(outter);
-        unsafe { ptr.as_mut().unwrap().num = 100 };
-        println!("{}", outter.borrow().inner.num)
     }
 }

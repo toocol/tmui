@@ -34,32 +34,43 @@ impl ObjectImpl for Element {
 
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt: 'static {
+    /// Mark element's invalidate field to true, and element will be redrawed in next frame.
+    /// 
+    /// Go to[`Function defination`](ElementExt::update) (Defined in [`ElementExt`])
     fn update(&self);
 
+    /// Mark element's invalidate field to true, and element will be redrawed immediately.
+    /// 
+    /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
     fn force_update(&self);
 
+    /// Go to[`Function defination`](ElementExt::rect) (Defined in [`ElementExt`])
     fn rect(&self) -> Rect;
 
+    /// Go to[`Function defination`](ElementExt::set_fixed_width) (Defined in [`ElementExt`])
     fn set_fixed_width(&self, width: i32);
 
+    /// Go to[`Function defination`](ElementExt::set_fixed_height) (Defined in [`ElementExt`])
     fn set_fixed_height(&self, height: i32);
 
+    /// Go to[`Function defination`](ElementExt::set_fixed_x) (Defined in [`ElementExt`])
     fn set_fixed_x(&self, x: i32);
 
+    /// Go to[`Function defination`](ElementExt::set_fixed_y) (Defined in [`ElementExt`])
     fn set_fixed_y(&self, y: i32);
 
+    /// Go to[`Function defination`](ElementExt::invalidate) (Defined in [`ElementExt`])
     fn invalidate(&self) -> bool;
 
+    /// Go to[`Function defination`](ElementExt::validate) (Defined in [`ElementExt`])
     fn validate(&self);
 }
 
 impl ElementExt for Element {
-    /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     fn update(&self) {
         self.set_property("invalidate", true.to_value());
     }
 
-    /// Mark element's invalidate field to true, and element will be redrawed immediately.
     fn force_update(&self) {
         self.set_property("invalidate", true.to_value());
         // TODO: firgue out how to invoke `Board`'s `invalidate_visual` obligatory.

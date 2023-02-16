@@ -32,7 +32,7 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 ///
 /// impl ObjectImpl for SubObject {
 ///     // overwrite this method if you need to processing your own logic during object constructing.
-///     fn construct(&self) {
+///     fn construct(&mut self) {
 ///         self.parent_construct();
 ///         // Processing your own logic
 ///     }
@@ -54,10 +54,15 @@ impl Default for Object {
 }
 
 pub trait ObjectOperation {
+    /// Returns the type of the object.
+    /// 
+    /// Go to[`Function defination`](ObjectOperation::id) (Defined in [`ObjectOperation`])
     fn id(&self) -> u16;
 
+    /// Go to[`Function defination`](ObjectOperation::set_property) (Defined in [`ObjectOperation`])
     fn set_property(&self, name: &str, value: Value);
 
+    /// Go to[`Function defination`](ObjectOperation::get_property) (Defined in [`ObjectOperation`])
     fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>>;
 }
 
@@ -125,14 +130,19 @@ impl ObjectImpl for Object {
 }
 
 impl ObjectImplExt for Object {
+    /// Go to[`Function defination`](ObjectImplExt::parent_construct) (Defined in [`ObjectImplExt`])
     fn parent_construct(&mut self) {}
 }
 
 pub trait ObjectExt: StaticType {
     /// Returns `true` if the object is an instance of (can be cast to) `T`.
+    /// 
+    /// Go to[`Function defination`](ObjectExt::is) (Defined in [`ObjectExt`])
     fn is<T: StaticType>(&self) -> bool;
 
     /// Returns the type of the object.
+    /// 
+    /// Go to[`Function defination`](ObjectExt::type_) (Defined in [`ObjectExt`])
     fn type_(&self) -> Type;
 }
 
