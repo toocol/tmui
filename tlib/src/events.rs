@@ -1,4 +1,11 @@
-use crate::namespace::{KeyCode, KeyboardModifier, MouseButton};
+use std::mem::size_of;
+
+use crate::{
+    namespace::{KeyCode, KeyboardModifier, MouseButton, AsNumeric},
+    prelude::{StaticType, ToValue},
+    values::{FromBytes, FromValue, ToBytes},
+    Type, Value, implements_enum_value,
+};
 
 pub trait Event {
     fn type_(&self) -> EventType;
@@ -22,6 +29,33 @@ pub enum EventType {
     Resize,
     Paint,
 }
+impl From<u8> for EventType {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::None,
+            1 => Self::MouseButtonPress,
+            2 => Self::MouseButtonRelease,
+            3 => Self::MouseButtonDoubleClick,
+            4 => Self::MouseMove,
+            5 => Self::MouseWhell,
+            6 => Self::MouseEnter,
+            7 => Self::MouseLeave,
+            8 => Self::KeyPress,
+            9 => Self::KeyRelease,
+            10 => Self::FocusIn,
+            11 => Self::FocusOut,
+            12 => Self::Resize,
+            13 => Self::Paint,
+            _ => unimplemented!(),
+        }
+    }
+}
+impl AsNumeric<u8> for EventType {
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+implements_enum_value!(EventType, u8);
 
 /////////////////////////////////////////////////////////////////////////////////////
 /// [`KeyEvent`] Keyboard press/release events.
@@ -69,6 +103,15 @@ impl Event for KeyEvent {
         self.type_
     }
 }
+impl StaticType for KeyEvent {
+    fn static_type() -> Type {
+        Type::from_name("KeyEvent")
+    }
+
+    fn bytes_len() -> usize {
+        0
+    }
+}
 
 pub type Position = (i32, i32);
 /////////////////////////////////////////////////////////////////////////////////////
@@ -82,7 +125,12 @@ pub struct MouseEvent {
 }
 
 impl MouseEvent {
-    pub fn new(type_: EventType, position: Position, mouse_button: MouseButton, modifier: KeyboardModifier) -> Self {
+    pub fn new(
+        type_: EventType,
+        position: Position,
+        mouse_button: MouseButton,
+        modifier: KeyboardModifier,
+    ) -> Self {
         let type_ = match type_ {
             EventType::MouseButtonPress => type_,
             EventType::MouseButtonRelease => type_,

@@ -7,6 +7,88 @@ use std::mem::size_of;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+/// Use macro rules to implement [`StaticType`], [`ToBytes`], [`ToValue`], [`FromBytes`], [`FromValue`] automatically. <br>
+/// The enum use this macro should implements [`AsNumeric`], [`From<T>`].
+/// ### Example:
+/// ```
+/// use tlib::{
+///     prelude::{StaticType, ToValue},
+///     values::{FromBytes, FromValue, ToBytes},
+///     Type, Value,
+/// };
+/// use tlib::implements_enum_value;
+/// use tlib::namespace::AsNumeric;
+/// use std::mem::size_of;
+/// 
+/// #[repr(u8)]
+/// #[derive(Clone, Copy)]
+/// pub enum Enum {
+///     One = 0,
+///     Two,
+/// }
+/// impl AsNumeric<u8> for Enum {
+///     fn as_numeric(&self) -> u8 {
+///         *self as u8
+///     }
+/// }
+/// impl From<u8> for Enum {
+///     fn from(value: u8) -> Self {
+///         match value {
+///             0 => Self::One,
+///             1 => Self::Two,
+///             _ => unimplemented!(),
+///         }
+///     }
+/// }
+/// implements_enum_value!(Enum, u8);
+/// ```
+#[macro_export]
+macro_rules! implements_enum_value {
+    ($name:ident, $repr:ident) => {
+        impl StaticType for $name {
+            fn static_type() -> Type {
+                Type::from_name(stringify!($name))
+            }
+
+            fn bytes_len() -> usize {
+                size_of::<$repr>()
+            }
+        }
+
+        impl ToBytes for $name {
+            fn to_bytes(&self) -> Vec<u8> {
+                self.as_numeric().to_bytes()
+            }
+        }
+
+        impl ToValue for $name {
+            fn to_value(&self) -> Value {
+                Value::new(self)
+            }
+
+            fn value_type(&self) -> Type {
+                Self::static_type()
+            }
+        }
+
+        impl FromBytes for $name {
+            fn from_bytes(data: &[u8], len: usize) -> Self {
+                Self::from($repr::from_bytes(data, len))
+            }
+        }
+
+        impl FromValue for $name {
+            fn from_value(value: &Value) -> Self {
+                Self::from_bytes(value.data(), Self::bytes_len())
+            }
+        }
+    };
+}
+
+pub trait AsNumeric<T: ToBytes> {
+    fn as_numeric(&self) -> T;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`KeyCode`]
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,6 +239,11 @@ pub enum KeyCode {
     KeyHelp = 0x01000058,
     KeyDirectionL = 0x01000059,
     KeyDirectionR = 0x01000060,
+}
+impl AsNumeric<u32> for KeyCode {
+    fn as_numeric(&self) -> u32 {
+        *self as u32
+    }
 }
 impl From<u32> for KeyCode {
     fn from(value: u32) -> Self {
@@ -339,6 +426,7 @@ impl ToString for KeyCode {
         }
     }
 }
+implements_enum_value!(KeyCode, u32);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`KeyboardModifier`]
@@ -357,6 +445,11 @@ pub enum KeyboardModifier {
 
     KeyboardModifierMask,
     Combination(u32),
+}
+impl AsNumeric<u32> for KeyboardModifier {
+    fn as_numeric(&self) -> u32 {
+        self.as_u32()
+    }
 }
 impl KeyboardModifier {
     pub fn or(&self, other: KeyboardModifier) -> KeyboardModifier {
@@ -419,6 +512,7 @@ impl From<u32> for KeyboardModifier {
         }
     }
 }
+implements_enum_value!(KeyboardModifier, u32);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Align`]
@@ -430,6 +524,11 @@ pub enum Align {
     Start = 1,
     Center,
     End,
+}
+impl AsNumeric<u8> for Align {
+    fn as_numeric(&self) -> u8 {
+        self.as_u8()
+    }
 }
 impl Align {
     pub fn as_u8(&self) -> u8 {
@@ -450,39 +549,7 @@ impl From<u8> for Align {
         }
     }
 }
-impl StaticType for Align {
-    fn static_type() -> Type {
-        Type::from_name("Align")
-    }
-
-    fn bytes_len() -> usize {
-        size_of::<u8>()
-    }
-}
-impl ToBytes for Align {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.as_u8().to_bytes()
-    }
-}
-impl ToValue for Align {
-    fn to_value(&self) -> crate::Value {
-        Value::new(self)
-    }
-
-    fn value_type(&self) -> crate::Type {
-        Self::static_type()
-    }
-}
-impl FromBytes for Align {
-    fn from_bytes(data: &[u8], len: usize) -> Self {
-        Align::from(u8::from_bytes(data, len))
-    }
-}
-impl FromValue for Align {
-    fn from_value(value: &crate::Value) -> Self {
-        Align::from_bytes(value.data(), Self::bytes_len())
-    }
-}
+implements_enum_value!(Align, u8);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Coordinate`]
@@ -494,14 +561,44 @@ pub enum Coordinate {
     World = 0,
     Widget,
 }
+impl AsNumeric<u8> for Coordinate {
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+impl From<u8> for Coordinate {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::World,
+            1 => Self::Widget,
+            _ => unimplemented!(),
+        }
+    }
+}
+implements_enum_value!(Coordinate, u8);
 
 #[repr(u8)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Orientation {
     #[default]
     Horizontal = 0,
-    Vertical
+    Vertical,
 }
+impl AsNumeric<u8> for Orientation {
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+impl From<u8> for Orientation {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Horizontal,
+            1 => Self::Vertical,
+            _ => unimplemented!(),
+        }
+    }
+}
+implements_enum_value!(Orientation, u8);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Coordinate`]
@@ -515,6 +612,23 @@ pub enum BorderStyle {
     Double,
     Dashed,
 }
+impl AsNumeric<u8> for BorderStyle {
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+impl From<u8> for BorderStyle {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Solid,
+            1 => Self::Dotted,
+            2 => Self::Double,
+            3 => Self::Dashed,
+            _ => unimplemented!(),
+        }
+    }
+}
+implements_enum_value!(BorderStyle, u8);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`SystemCursorShape`]
@@ -603,39 +717,12 @@ impl From<u8> for SystemCursorShape {
         }
     }
 }
-impl StaticType for SystemCursorShape {
-    fn static_type() -> Type {
-        Type::from_name("SystemCursorShape")
-    }
-
-    fn bytes_len() -> usize {
-        size_of::<u8>()
+impl AsNumeric<u8> for SystemCursorShape {
+    fn as_numeric(&self) -> u8 {
+        self.as_u8()
     }
 }
-impl ToBytes for SystemCursorShape {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.as_u8().to_bytes()
-    }
-}
-impl ToValue for SystemCursorShape {
-    fn to_value(&self) -> crate::Value {
-        Value::new(self)
-    }
-
-    fn value_type(&self) -> crate::Type {
-        Self::static_type()
-    }
-}
-impl FromBytes for SystemCursorShape {
-    fn from_bytes(data: &[u8], len: usize) -> Self {
-        SystemCursorShape::from(u8::from_bytes(data, len))
-    }
-}
-impl FromValue for SystemCursorShape {
-    fn from_value(value: &crate::Value) -> Self {
-        SystemCursorShape::from_bytes(value.data(), Self::bytes_len())
-    }
-}
+implements_enum_value!(SystemCursorShape, u8);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Coordinate`]
@@ -649,6 +736,11 @@ pub enum MouseButton {
     RightButton,
     MiddleButton,
     Combination(u32),
+}
+impl AsNumeric<u32> for MouseButton {
+    fn as_numeric(&self) -> u32 {
+        self.as_u32()
+    }
 }
 impl MouseButton {
     pub fn or(&self, other: MouseButton) -> MouseButton {
@@ -688,12 +780,27 @@ impl From<u32> for MouseButton {
         }
     }
 }
+implements_enum_value!(MouseButton, u32);
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
 
-    use super::{Align, SystemCursorShape};
+    use super::{Align, KeyCode, KeyboardModifier, SystemCursorShape};
+
+    #[test]
+    fn test_key_code_value() {
+        let code = KeyCode::KeyBraceLeft;
+        let val = code.to_value();
+        assert_eq!(code, val.get::<KeyCode>())
+    }
+
+    #[test]
+    fn test_keyboard_modifier_value() {
+        let modifier = KeyboardModifier::MetaModifier;
+        let val = modifier.to_value();
+        assert_eq!(modifier, val.get::<KeyboardModifier>())
+    }
 
     #[test]
     fn test_align() {
