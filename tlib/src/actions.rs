@@ -43,7 +43,6 @@
 //! }
 //! ```
 use crate::prelude::*;
-use lazy_static::lazy_static;
 use log::{error, warn};
 use std::{
     cell::RefCell,
@@ -61,9 +60,7 @@ static INIT: Once = Once::new();
 pub static ACTIVATE: AtomicBool = AtomicBool::new(false);
 
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
-lazy_static! {
-    pub static ref ACTION_HUB: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
-}
+pub static ACTION_HUB: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
@@ -82,13 +79,13 @@ pub struct ActionHub {
     receiver: Receiver<(Signal, Option<Value>)>,
 }
 impl ActionHub {
-    pub fn new() -> Self {
+    pub fn new() -> Box<Self> {
         let (sender, receiver) = channel();
-        Self {
+        Box::new(Self {
             map: RefCell::new(Box::new(HashMap::new())),
             sender,
             receiver,
-        }
+        })
     }
 
     /// The owenership of `ActionHub` should manage by the caller who called [`initialize()`]
@@ -106,10 +103,10 @@ impl ActionHub {
     /// The thread initialize the `ActionHub` should be the `main` thread.
     ///
     /// This function should only call once.
-    pub fn initialize(&mut self) {
+    pub fn initialize(self: &mut Box<Self>) {
         INIT.call_once(|| {
             IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
-            ACTION_HUB.store(self as *mut ActionHub, std::sync::atomic::Ordering::SeqCst);
+            ACTION_HUB.store(self.as_mut(), std::sync::atomic::Ordering::SeqCst);
         });
     }
 

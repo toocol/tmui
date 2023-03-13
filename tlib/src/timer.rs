@@ -32,11 +32,11 @@ pub struct TimerHub {
 }
 
 impl TimerHub {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
             timers: RefCell::new(Box::new(HashMap::new())),
             once_timers: RefCell::new(Box::new(HashMap::new())),
-        }
+        })
     }
 
     pub fn instance<'a>() -> &'a Self {
@@ -53,10 +53,10 @@ impl TimerHub {
     }
 
     /// Intialize the `TimerHub`, this function should only call once.
-    pub fn initialize(&mut self) {
+    pub fn initialize(self: &mut Box<Self>) {
         INIT.call_once(|| {
             IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
-            TIMER_HUB.store(self as *mut TimerHub, std::sync::atomic::Ordering::SeqCst);
+            TIMER_HUB.store(self.as_mut(), std::sync::atomic::Ordering::SeqCst);
         });
     }
 

@@ -7,7 +7,7 @@ use crate::{
         painter::Painter,
     },
     platform::Message,
-    prelude::*,
+    prelude::*, util::skia_font_clone,
 };
 use log::debug;
 use skia_safe::Font;
@@ -544,22 +544,7 @@ impl WidgetExt for Widget {
     }
 
     fn font(&self) -> Font {
-        let mut font = Font::default();
-        font.set_force_auto_hinting(self.font.is_force_auto_hinting());
-        font.set_embedded_bitmaps(self.font.is_embedded_bitmaps());
-        font.set_subpixel(self.font.is_subpixel());
-        font.set_linear_metrics(self.font.is_linear_metrics());
-        font.set_embolden(self.font.is_embolden());
-        font.set_baseline_snap(self.font.is_baseline_snap());
-        font.set_edging(self.font.edging());
-        font.set_hinting(self.font.hinting());
-        if let Some(typeface) = self.font.typeface() {
-            font.set_typeface(typeface);
-        }
-        font.set_size(self.font.size());
-        font.set_scale_x(self.font.scale_x());
-        font.set_skew_x(self.font.skew_x());
-        font
+        skia_font_clone(&self.font)
     }
 
     fn set_font_family(&mut self, family: String) {
