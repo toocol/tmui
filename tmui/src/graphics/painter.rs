@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use super::figure::{Color, FRect, Transform};
-use crate::widget::WidgetImpl;
+use crate::{widget::WidgetImpl, util::skia_font_clone};
 use log::error;
 use skia_safe::{Canvas, Font, Paint, Path, Point};
 use std::cell::RefMut;
@@ -10,6 +10,12 @@ pub struct Painter<'a> {
     path: Path,
     paint: Paint,
     font: Option<Font>,
+    color: Option<Color>,
+    line_width: Option<f32>,
+
+    saved_font: Option<Font>,
+    saved_color: Option<Color>,
+    saved_line_width: Option<f32>,
 
     width: i32,
     height: i32,
@@ -28,6 +34,11 @@ impl<'a> Painter<'a> {
             path: Path::default(),
             paint: Paint::default(),
             font: None,
+            color: None,
+            line_width: None,
+            saved_font: None,
+            saved_color: None,
+            saved_line_width: None,
             width: rect.width(),
             height: rect.height(),
             x_offset: rect.x(),
@@ -49,6 +60,30 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn save(&mut self) {
         self.canvas.save();
+    }
+
+    /// Save the pen status: Color, Font, line width etc...
+    #[inline]
+    pub fn save_pen(&mut self) {
+        if let Some(ref font) = self.font {
+            self.saved_font = Some(skia_font_clone(font))
+        }
+        self.saved_color = self.color.clone();
+        self.saved_line_width = self.line_width.clone();
+    }
+
+    /// Restore the pen status
+    #[inline]
+    pub fn restore_pen(&mut self) {
+        if let Some(font) = self.saved_font.take() {
+            self.set_font(font)
+        }
+        if let Some(color) = self.saved_color.take() {
+            self.set_color(color)
+        }
+        if let Some(line_width) = self.saved_line_width.take() {
+            self.set_line_width(line_width)
+        }
     }
 
     /// Restore the canvas status.
@@ -91,6 +126,7 @@ impl<'a> Painter<'a> {
     /// Set the color of painter.
     #[inline]
     pub fn set_color(&mut self, color: Color) {
+        self.color = Some(color);
         self.paint.set_color(color);
     }
 
@@ -103,6 +139,7 @@ impl<'a> Painter<'a> {
     /// Set the stroke width of painter.
     #[inline]
     pub fn set_line_width(&mut self, width: f32) {
+        self.line_width = Some(width);
         self.paint.set_stroke_width(width);
     }
 
