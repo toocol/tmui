@@ -94,8 +94,9 @@ pub trait AsNumeric<T: ToBytes> {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// The enum to represent the key code on keyboard.
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, EnumIter)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, EnumIter, Default)]
 pub enum KeyCode {
+    #[default]
     Unknown = 0x00,
 
     // Unicode Basic Latin block (0x00-0x7f)
@@ -433,8 +434,9 @@ implements_enum_value!(KeyCode, u32);
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// The enum to represent the keyboard modifier.
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum KeyboardModifier {
+    #[default]
     NoModifier,
     ShiftModifier,
     ControlModifier,
@@ -786,7 +788,7 @@ implements_enum_value!(MouseButton, u32);
 mod tests {
     use crate::prelude::ToValue;
 
-    use super::{Align, KeyCode, KeyboardModifier, SystemCursorShape};
+    use super::{Align, KeyCode, KeyboardModifier, SystemCursorShape, Coordinate, Orientation, BorderStyle};
 
     #[test]
     fn test_key_code_value() {
@@ -803,9 +805,30 @@ mod tests {
     }
 
     #[test]
-    fn test_align() {
+    fn test_align_value() {
         let val = Align::Center.to_value();
         assert_eq!(val.get::<Align>(), Align::Center);
+    }
+
+    #[test]
+    fn test_coordinate_value() {
+        let coord = Coordinate::World;
+        let val = coord.to_value();
+        assert_eq!(val.get::<Coordinate>(), coord);
+    }
+
+    #[test]
+    fn test_orientation_value() {
+        let ori = Orientation::Vertical;
+        let val = ori.to_value();
+        assert_eq!(val.get::<Orientation>(), ori);
+    }
+
+    #[test]
+    fn test_border_style_value() {
+        let style = BorderStyle::Double;
+        let val = style.to_value();
+        assert_eq!(style, val.get::<BorderStyle>());
     }
 
     #[test]
