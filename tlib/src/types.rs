@@ -174,7 +174,7 @@ pub trait StaticType {
         Self::static_type()
     }
 
-    fn bytes_len_(&self) -> usize {
+    fn dyn_bytes_len(&self) -> usize {
         Self::bytes_len()
     }
 }
@@ -328,7 +328,7 @@ impl StaticType for String {
         0
     }
 
-    fn bytes_len_(&self) -> usize {
+    fn dyn_bytes_len(&self) -> usize {
         // An extra '\0'
         self.bytes().len() + 1
     }
@@ -343,7 +343,7 @@ impl StaticType for &str {
         0
     }
 
-    fn bytes_len_(&self) -> usize {
+    fn dyn_bytes_len(&self) -> usize {
         // An extra '\0'
         self.bytes().len() + 1
     }
@@ -358,10 +358,10 @@ impl<T: StaticType> StaticType for Vec<T> {
         T::bytes_len()
     }
 
-    fn bytes_len_(&self) -> usize {
+    fn dyn_bytes_len(&self) -> usize {
         let mut len = 0;
         for i in self.iter() {
-            len += i.bytes_len_();
+            len += i.dyn_bytes_len();
         }
         len
     }
@@ -415,7 +415,7 @@ pub trait IsA<T: ObjectType + StaticType>: ObjectType + StaticType + ObjectSubcl
 
     fn downcast_ref_mut<R: ObjectType + StaticType>(&mut self) -> Option<&mut R> {
         if Self::static_type().is_a(R::static_type()) {
-            Some(unsafe { &mut*(self as *mut Self as *mut R) })
+            Some(unsafe { &mut *(self as *mut Self as *mut R) })
         } else {
             None
         }

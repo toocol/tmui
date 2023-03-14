@@ -665,7 +665,7 @@ macro_rules! implements_tuple_value{
 
         impl <$($gtype: StaticType + ToBytes,)+> ToValue for ($($gtype,)+) {
             fn to_value(&self) -> Value {
-                let seg_len = vec![$(self.$index.bytes_len_(),)+];
+                let seg_len = vec![$(self.$index.dyn_bytes_len(),)+];
                 Value::new_with_seg_len(self, seg_len)
             }
 
