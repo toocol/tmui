@@ -253,7 +253,7 @@ impl Into<skia_safe::IPoint> for FPoint {
 
 impl StaticType for FPoint {
     fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Point")
+        tlib::Type::from_name("FPoint")
     }
 
     fn bytes_len() -> usize {

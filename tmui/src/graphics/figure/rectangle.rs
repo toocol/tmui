@@ -575,7 +575,7 @@ impl Into<Rect> for FRect {
 
 impl StaticType for FRect {
     fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Rect")
+        tlib::Type::from_name("FRect")
     }
 
     fn bytes_len() -> usize {

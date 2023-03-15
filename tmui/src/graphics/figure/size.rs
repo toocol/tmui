@@ -76,7 +76,7 @@ impl Sub for Size {
 
 impl StaticType for Size {
     fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Point")
+        tlib::Type::from_name("Size")
     }
 
     fn bytes_len() -> usize {
@@ -188,7 +188,7 @@ impl Sub for FSize {
 
 impl StaticType for FSize {
     fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Point")
+        tlib::Type::from_name("FSize")
     }
 
     fn bytes_len() -> usize {
