@@ -43,6 +43,15 @@ impl WidgetImpl for ScrollBar {
             return
         }
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
+        painter.draw_rect(content_rect);
+        painter.fill_rect(content_rect, self.background());
+
+        // Draw the slider.
+        let val = self.value();
+        let maximum = self.maximum();
+
+        let percentage = val as f32 / maximum as f32;
+        let start_pos = (self.size().height() as f32 * percentage) as i32;
     }
 }
 
