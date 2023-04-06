@@ -31,6 +31,11 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn parent_construct(&mut self) {
                         self.object.construct()
                     }
+
+                    #[inline]
+                    fn parent_on_property_set(&self, name: &str, value: &Value) {
+                        self.object.on_property_set(name, value)
+                    }
                 }
 
                 impl ObjectOperation for #name {
@@ -41,7 +46,7 @@ pub fn extends_object(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     #[inline]
                     fn set_property(&self, name: &str, value: Value) {
-                        self.object.on_property_set(name, &value);
+                        self.on_property_set(name, &value);
                         self.object.set_property(name, value)
                     }
 
@@ -97,6 +102,11 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn parent_construct(&mut self) {
                         self.element.construct()
                     }
+
+                    #[inline]
+                    fn parent_on_property_set(&self, name: &str, value: &Value) {
+                        self.element.on_property_set(name, value)
+                    }
                 }
 
                 impl ObjectOperation for #name {
@@ -107,8 +117,6 @@ pub fn extends_element(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     #[inline]
                     fn set_property(&self, name: &str, value: Value) {
-                        self.element.object.on_property_set(name, &value);
-                        self.element.on_property_set(name, &value);
                         self.on_property_set(name, &value);
 
                         self.element.object.set_property(name, value)
@@ -220,6 +228,11 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
                     fn parent_construct(&mut self) {
                         self.widget.construct()
                     }
+
+                    #[inline]
+                    fn parent_on_property_set(&self, name: &str, value: &Value) {
+                        self.widget.on_property_set(name, value)
+                    }
                 }
 
                 impl ObjectOperation for #name {
@@ -230,9 +243,6 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
 
                     #[inline]
                     fn set_property(&self, name: &str, value: Value) {
-                        self.widget.element.object.on_property_set(name, &value);
-                        self.widget.element.on_property_set(name, &value);
-                        self.widget.on_property_set(name, &value);
                         self.on_property_set(name, &value);
 
                         self.widget.element.object.set_property(name, value)
