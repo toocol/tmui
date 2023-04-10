@@ -842,7 +842,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////
 /// Every struct modified by proc-macro [`extends_widget`] should impl this trait manually.
-/// WidgetImpl's `paint()` function Will be proxy executated by ElementImpl `on_renderer` method .
+/// WidgetImpl's `paint()` function Will be proxy executated by [`ElementImpl::on_renderer`] method .
 #[allow(unused_variables)]
 #[allow(unused_mut)]
 pub trait WidgetImpl: WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl {
