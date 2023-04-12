@@ -1,7 +1,9 @@
+use crate::extend_object;
+use proc_macro2::Ident;
 use quote::quote;
-use syn::{DeriveInput, parse::Parser};
+use syn::{parse::Parser, DeriveInput};
 
-pub fn generate_extend_element(ast: &mut DeriveInput) -> proc_macro2::TokenStream {
+pub fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -11,116 +13,97 @@ pub fn generate_extend_element(ast: &mut DeriveInput) -> proc_macro2::TokenStrea
                         syn::Field::parse_named
                             .parse2(quote! {
                                 pub element: Element
-                            })
-                            .expect("Add field `element: Element` failed"),
+                            })?,
                     );
                 }
                 _ => (),
             }
 
-            return quote! {
+            let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
+                name,
+                "element",
+                vec!["element", "object"],
+            )?;
+
+            let element_trait_impl_clause = gen_element_trait_impl_clause(name, vec!["element"])?;
+
+            Ok(quote! {
                 #ast
 
-                impl ObjectImplExt for #name {
-                    #[inline]
-                    fn parent_construct(&mut self) {
-                        self.element.construct()
-                    }
+                #object_trait_impl_clause
 
-                    #[inline]
-                    fn parent_on_property_set(&self, name: &str, value: &Value) {
-                        self.element.on_property_set(name, value)
-                    }
-                }
-
-                impl ObjectOperation for #name {
-                    #[inline]
-                    fn id(&self) -> u16 {
-                        self.element.object.id()
-                    }
-
-                    #[inline]
-                    fn set_property(&self, name: &str, value: Value) {
-                        self.on_property_set(name, &value);
-
-                        self.element.object.set_property(name, value)
-                    }
-
-                    #[inline]
-                    fn get_property(&self, name: &str) -> Option<std::cell::Ref<Box<Value>>> {
-                        self.element.object.get_property(name)
-                    }
-                }
-
-                impl ElementExt for #name {
-                    #[inline]
-                    fn update(&self) {
-                        self.set_property("invalidate", true.to_value());
-                    }
-
-                    #[inline]
-                    fn force_update(&self) {
-                        self.set_property("invalidate", true.to_value());
-                    }
-
-                    #[inline]
-                    fn rect(&self) -> Rect {
-                        self.element.rect()
-                    }
-
-                    #[inline]
-                    fn set_fixed_width(&self, width: i32) {
-                        self.element.set_fixed_width(width)
-                    }
-
-                    #[inline]
-                    fn set_fixed_height(&self, height: i32) {
-                        self.element.set_fixed_height(height)
-                    }
-
-                    #[inline]
-                    fn set_fixed_x(&self, x: i32) {
-                        self.element.set_fixed_x(x)
-                    }
-
-                    #[inline]
-                    fn set_fixed_y(&self, y: i32) {
-                        self.element.set_fixed_y(y)
-                    }
-
-                    #[inline]
-                    fn invalidate(&self) -> bool {
-                        match self.get_property("invalidate") {
-                            Some(invalidate) => invalidate.get::<bool>(),
-                            None => false
-                        }
-                    }
-
-                    #[inline]
-                    fn validate(&self) {
-                        self.set_property("invalidate", false.to_value());
-                    }
-                }
+                #element_trait_impl_clause
 
                 impl ElementAcquire for #name {}
-
-                impl ActionExt for #name {}
-
-                impl ObjectType for #name {
-                    #[inline]
-                    fn object_type(&self) -> Type {
-                        Self::static_type()
-                    }
-                }
-
-                impl IsA<Object> for #name {}
-
-                impl IsA<Element> for #name {}
-
-                impl IsA<#name> for #name {}
-            }
-            .into();
+            })
         }
-        _ => panic!("`extends_object` has to be used with structs "),
+        _ => Err(syn::Error::new_spanned(
+            ast,
+            "`extends_element` has to be used with structs ",
+        )),
     }
+}
+
+pub fn gen_element_trait_impl_clause(
+    name: &Ident,
+    element_path: Vec<&'static str>,
+) -> syn::Result<proc_macro2::TokenStream> {
+    let element_path: Vec<_> = element_path
+        .iter()
+        .map(|s| Ident::new(s, name.span()))
+        .collect();
+
+    Ok(quote!(
+        impl ElementExt for #name {
+            #[inline]
+            fn update(&self) {
+                self.set_property("invalidate", true.to_value());
+            }
+
+            #[inline]
+            fn force_update(&self) {
+                self.set_property("invalidate", true.to_value());
+            }
+
+            #[inline]
+            fn rect(&self) -> Rect {
+                self.#(#element_path).*.rect()
+            }
+
+            #[inline]
+            fn set_fixed_width(&self, width: i32) {
+                self.#(#element_path).*.set_fixed_width(width)
+            }
+
+            #[inline]
+            fn set_fixed_height(&self, height: i32) {
+                self.#(#element_path).*.set_fixed_height(height)
+            }
+
+            #[inline]
+            fn set_fixed_x(&self, x: i32) {
+                self.#(#element_path).*.set_fixed_x(x)
+            }
+
+            #[inline]
+            fn set_fixed_y(&self, y: i32) {
+                self.#(#element_path).*.set_fixed_y(y)
+            }
+
+            #[inline]
+            fn invalidate(&self) -> bool {
+                match self.get_property("invalidate") {
+                    Some(invalidate) => invalidate.get::<bool>(),
+                    None => false
+                }
+            }
+
+            #[inline]
+            fn validate(&self) {
+                self.set_property("invalidate", false.to_value());
+            }
+        }
+
+        impl IsA<Element> for #name {}
+    ))
 }

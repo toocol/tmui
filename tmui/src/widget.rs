@@ -188,7 +188,7 @@ pub trait WidgetExt {
     /// ## Do not invoke this function directly.
     /// 
     /// Go to[`Function defination`](WidgetExt::set_parent) (Defined in [`WidgetExt`])
-    fn set_parent(&self, parent: *const dyn WidgetImpl);
+    fn set_parent(&self, parent: *mut dyn WidgetImpl);
 
     /// Get the raw pointer of child.
     /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
@@ -462,7 +462,7 @@ impl WidgetExt for Widget {
         self as *mut Self as *mut dyn ElementImpl
     }
 
-    fn set_parent(&self, parent: *const dyn WidgetImpl) {
+    fn set_parent(&self, parent: *mut dyn WidgetImpl) {
         *self.parent.borrow_mut() = Some(parent)
     }
 
