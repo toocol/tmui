@@ -1,5 +1,4 @@
 use std::mem::size_of;
-
 use tlib::{
     emit,
     namespace::{Orientation, KeyboardModifier},
@@ -7,8 +6,9 @@ use tlib::{
     signals,
     values::{FromBytes, FromValue, ToBytes},
 };
+use crate::{prelude::*, widget::WidgetImpl, graphics::painter::Painter};
 
-use crate::{prelude::*, widget::WidgetImpl};
+pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
 
 #[extends_widget]
 #[derive(Default)]
@@ -30,8 +30,30 @@ impl ObjectSubclass for ScrollBar {
 
     type ParentType = Widget;
 }
-impl ObjectImpl for ScrollBar {}
-impl WidgetImpl for ScrollBar {}
+
+impl ObjectImpl for ScrollBar {
+    fn construct(&mut self) {
+        self.width_request(DEFAULT_SCROLL_BAR_WIDTH)
+    }
+}
+
+impl WidgetImpl for ScrollBar {
+    fn paint(&mut self, mut painter: Painter) {
+        if self.size().height() <= 0 {
+            return
+        }
+        let content_rect = self.contents_rect(Some(Coordinate::Widget));
+        painter.draw_rect(content_rect);
+        painter.fill_rect(content_rect, self.background());
+
+        // Draw the slider.
+        let val = self.value();
+        let maximum = self.maximum();
+
+        let percentage = val as f32 / maximum as f32;
+        let start_pos = (self.size().height() as f32 * percentage) as i32;
+    }
+}
 
 pub trait ScrollBarSignal: ActionExt {
     signals! {
@@ -234,7 +256,7 @@ impl From<u8> for SliderAction {
 }
 impl StaticType for SliderAction {
     fn static_type() -> Type {
-        Type::from_name("SystemCursorShape")
+        Type::from_name("SliderAction")
     }
 
     fn bytes_len() -> usize {

@@ -132,6 +132,9 @@ impl ObjectImpl for Object {
 impl ObjectImplExt for Object {
     /// Go to[`Function defination`](ObjectImplExt::parent_construct) (Defined in [`ObjectImplExt`])
     fn parent_construct(&mut self) {}
+
+    /// Go to[`Function defination`](ObjectImplExt::parent_on_property_set) (Defined in [`ObjectImplExt`])
+    fn parent_on_property_set(&self, _name: &str, _value: &Value) {}
 }
 
 pub trait ObjectExt: StaticType {
@@ -177,17 +180,23 @@ impl<T: ObjectSubclass> StaticType for T {
 }
 
 pub trait ObjectImpl: ObjectImplExt {
+    /// Override this function should invoke `self.parent_construct()` manually.
     fn construct(&mut self) {
         self.parent_construct()
+    }
+
+    /// Override this function should invoke `self.parent_on_property_set()` manually.
+    fn on_property_set(&self, name: &str, value: &Value) {
+        self.parent_on_property_set(name, value)
     }
 
     /// `initialize()` will be called when widget as a `child` of another widget.
     /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}
-
-    fn on_property_set(&self, _name: &str, _value: &Value) {}
 }
 
 pub trait ObjectImplExt {
     fn parent_construct(&mut self);
+
+    fn parent_on_property_set(&self, name: &str, value: &Value);
 }

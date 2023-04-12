@@ -188,7 +188,7 @@ pub trait WidgetExt {
     /// ## Do not invoke this function directly.
     /// 
     /// Go to[`Function defination`](WidgetExt::set_parent) (Defined in [`WidgetExt`])
-    fn set_parent(&self, parent: *const dyn WidgetImpl);
+    fn set_parent(&self, parent: *mut dyn WidgetImpl);
 
     /// Get the raw pointer of child.
     /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
@@ -462,7 +462,7 @@ impl WidgetExt for Widget {
         self as *mut Self as *mut dyn ElementImpl
     }
 
-    fn set_parent(&self, parent: *const dyn WidgetImpl) {
+    fn set_parent(&self, parent: *mut dyn WidgetImpl) {
         *self.parent.borrow_mut() = Some(parent)
     }
 
@@ -842,10 +842,10 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////
 /// Every struct modified by proc-macro [`extends_widget`] should impl this trait manually.
-/// WidgetImpl's `paint()` function Will be proxy executated by ElementImpl `on_renderer` method .
+/// WidgetImpl's `paint()` function Will be proxy executated by [`ElementImpl::on_renderer`] method .
 #[allow(unused_variables)]
 #[allow(unused_mut)]
-pub trait WidgetImpl: WidgetExt + ElementExt + ObjectOperation + ObjectType + ObjectImpl {
+pub trait WidgetImpl: WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Size {
         let width = self.get_property("width-request").unwrap().get::<i32>();

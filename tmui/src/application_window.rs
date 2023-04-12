@@ -80,7 +80,7 @@ impl ApplicationWindow {
 }
 
 #[inline]
-fn child_initialize(mut parent: *const dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
+fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
