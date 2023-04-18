@@ -72,15 +72,15 @@ impl Widget {
 
     /// Notify all the child widget to invalidate.
     fn notify_invalidate(&self) {
-        if let Some(child) = self.get_raw_child() {
-            unsafe { child.as_ref().unwrap().update() }
+        if let Some(child) = self.get_raw_child_mut() {
+            unsafe { child.as_mut().unwrap().update() }
         }
     }
 
     /// Notify the child to change the visibility.
     fn notify_visible(&self, visible: bool) {
-        if let Some(child) = self.get_raw_child() {
-            let child = unsafe { child.as_ref().unwrap() };
+        if let Some(child) = self.get_raw_child_mut() {
+            let child = unsafe { child.as_mut().unwrap() };
             if visible {
                 child.show()
             } else {
@@ -112,7 +112,7 @@ impl ObjectImpl for Widget {
         debug!("`Widget` construct")
     }
 
-    fn on_property_set(&self, name: &str, value: &Value) {
+    fn on_property_set(&mut self, name: &str, value: &Value) {
         debug!("`Widget` on set property, name = {}", name);
 
         match name {
@@ -211,22 +211,22 @@ pub trait WidgetExt {
     /// Hide the Widget.
     /// 
     /// Go to[`Function defination`](WidgetExt::hide) (Defined in [`WidgetExt`])
-    fn hide(&self);
+    fn hide(&mut self);
 
     /// Show the Widget.
     /// 
     /// Go to[`Function defination`](WidgetExt::show) (Defined in [`WidgetExt`])
-    fn show(&self);
+    fn show(&mut self);
 
     /// Return true if widget is visble, otherwise, false is returned.
     /// 
     /// Go to[`Function defination`](WidgetExt::visible) (Defined in [`WidgetExt`])
-    fn visible(&self) -> bool;
+    fn visible(&mut self) -> bool;
 
     /// Setter of property `focus`.
     /// 
     /// Go to[`Function defination`](WidgetExt::set_focus) (Defined in [`WidgetExt`])
-    fn set_focus(&self, focus: bool);
+    fn set_focus(&mut self, focus: bool);
 
     /// Getter of property `focus`.
     /// 
@@ -236,27 +236,27 @@ pub trait WidgetExt {
     /// Resize the widget.
     /// 
     /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
-    fn resize(&self, width: i32, height: i32);
+    fn resize(&mut self, width: i32, height: i32);
 
     /// Request the widget's maximum width.
     /// 
     /// Go to[`Function defination`](WidgetExt::width_request) (Defined in [`WidgetExt`])
-    fn width_request(&self, width: i32);
+    fn width_request(&mut self, width: i32);
 
     /// Request the widget's maximum width.
     /// 
     /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
-    fn height_request(&self, width: i32);
+    fn height_request(&mut self, width: i32);
 
     /// Set alignment on the horizontal direction.
     /// 
     /// Go to[`Function defination`](WidgetExt::set_halign) (Defined in [`WidgetExt`])
-    fn set_halign(&self, halign: Align);
+    fn set_halign(&mut self, halign: Align);
 
     /// Set alignment on the vertical direction.
     /// 
     /// Go to[`Function defination`](WidgetExt::set_valign) (Defined in [`WidgetExt`])
-    fn set_valign(&self, valign: Align);
+    fn set_valign(&mut self, valign: Align);
 
     /// Get alignment on the horizontal direction.
     /// 
@@ -487,19 +487,19 @@ impl WidgetExt for Widget {
         }
     }
 
-    fn hide(&self) {
+    fn hide(&mut self) {
         self.set_property("visible", false.to_value())
     }
 
-    fn show(&self) {
+    fn show(&mut self) {
         self.set_property("visible", true.to_value())
     }
 
-    fn visible(&self) -> bool {
+    fn visible(&mut self) -> bool {
         self.get_property("visible").unwrap().get::<bool>()
     }
 
-    fn set_focus(&self, focus: bool) {
+    fn set_focus(&mut self, focus: bool) {
         self.set_property("focus", focus.to_value())
     }
 
@@ -507,26 +507,26 @@ impl WidgetExt for Widget {
         self.get_property("focus").unwrap().get::<bool>()
     }
 
-    fn resize(&self, width: i32, height: i32) {
+    fn resize(&mut self, width: i32, height: i32) {
         self.set_property("width", width.to_value());
         self.set_property("height", height.to_value());
     }
 
-    fn width_request(&self, width: i32) {
+    fn width_request(&mut self, width: i32) {
         self.set_property("width", width.to_value());
         self.set_property("width-request", width.to_value());
     }
 
-    fn height_request(&self, height: i32) {
+    fn height_request(&mut self, height: i32) {
         self.set_property("height", height.to_value());
         self.set_property("height-request", height.to_value());
     }
 
-    fn set_halign(&self, halign: Align) {
+    fn set_halign(&mut self, halign: Align) {
         self.set_property("halign", halign.to_value())
     }
 
-    fn set_valign(&self, valign: Align) {
+    fn set_valign(&mut self, valign: Align) {
         self.set_property("valign", valign.to_value())
     }
 

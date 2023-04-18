@@ -50,7 +50,7 @@ pub fn gen_object_trait_impl_clause(
             }
 
             #[inline]
-            fn parent_on_property_set(&self, name: &str, value: &Value) {
+            fn parent_on_property_set(&mut self, name: &str, value: &Value) {
                 self.#super_field.on_property_set(name, value)
             }
         }
@@ -62,13 +62,13 @@ pub fn gen_object_trait_impl_clause(
             }
 
             #[inline]
-            fn set_property(&self, name: &str, value: Value) {
+            fn set_property(&mut self, name: &str, value: Value) {
                 self.on_property_set(name, &value);
                 self.#(#object_path).*.set_property(name, value)
             }
 
             #[inline]
-            fn get_property(&self, name: &str) -> Option<std::cell::Ref<Box<Value>>> {
+            fn get_property(&self, name: &str) -> Option<&Value> {
                 self.#(#object_path).*.get_property(name)
             }
         }

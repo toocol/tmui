@@ -56,12 +56,12 @@ pub fn gen_element_trait_impl_clause(
     Ok(quote!(
         impl ElementExt for #name {
             #[inline]
-            fn update(&self) {
+            fn update(&mut self) {
                 self.set_property("invalidate", true.to_value());
             }
 
             #[inline]
-            fn force_update(&self) {
+            fn force_update(&mut self) {
                 self.set_property("invalidate", true.to_value());
             }
 
@@ -71,22 +71,22 @@ pub fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn set_fixed_width(&self, width: i32) {
+            fn set_fixed_width(&mut self, width: i32) {
                 self.#(#element_path).*.set_fixed_width(width)
             }
 
             #[inline]
-            fn set_fixed_height(&self, height: i32) {
+            fn set_fixed_height(&mut self, height: i32) {
                 self.#(#element_path).*.set_fixed_height(height)
             }
 
             #[inline]
-            fn set_fixed_x(&self, x: i32) {
+            fn set_fixed_x(&mut self, x: i32) {
                 self.#(#element_path).*.set_fixed_x(x)
             }
 
             #[inline]
-            fn set_fixed_y(&self, y: i32) {
+            fn set_fixed_y(&mut self, y: i32) {
                 self.#(#element_path).*.set_fixed_y(y)
             }
 
@@ -99,7 +99,7 @@ pub fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn validate(&self) {
+            fn validate(&mut self) {
                 self.set_property("invalidate", false.to_value());
             }
         }
