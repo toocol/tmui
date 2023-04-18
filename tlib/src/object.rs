@@ -38,6 +38,7 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 /// }
 /// ```
 #[derive(Debug)]
+#[derive(bevy_reflect::Reflect)]
 pub struct Object {
     id: u16,
     properties: HashMap<String, Box<Value>>,
@@ -83,7 +84,7 @@ impl Object {
     }
 
     pub fn primitive_get_property(&self, name: &str) -> Option<&Value> {
-        self.properties.get(name).and_then(|p| Some(&**p)).or(None)
+        self.properties.get(name).and_then(|p| Some(&**p))
     }
 }
 
@@ -158,6 +159,10 @@ impl<T: StaticType> ObjectExt for T {
 }
 
 pub trait IsSubclassable {}
+
+pub trait ParentType {
+    fn parent_type(&self) -> Type;
+}
 
 pub trait ObjectSubclass: 'static {
     const NAME: &'static str;

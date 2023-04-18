@@ -22,6 +22,12 @@ pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
                 #ast
 
                 #object_trait_impl_clause
+
+                impl ParentType for #name {
+                    fn parent_type(&self) -> Type {
+                        Object::static_type()
+                    }
+                }
             });
         }
         _ => Err(syn::Error::new_spanned(

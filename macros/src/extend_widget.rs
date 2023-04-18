@@ -38,6 +38,12 @@ pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
                 #widget_trait_impl_clause
 
                 impl WidgetAcquire for #name {}
+
+                impl ParentType for #name {
+                    fn parent_type(&self) -> Type {
+                        Widget::static_type()
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(

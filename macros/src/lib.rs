@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+mod extend_container;
 mod extend_element;
 mod extend_object;
 mod extend_widget;

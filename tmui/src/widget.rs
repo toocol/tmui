@@ -845,7 +845,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 /// WidgetImpl's `paint()` function Will be proxy executated by [`ElementImpl::on_renderer`] method .
 #[allow(unused_variables)]
 #[allow(unused_mut)]
-pub trait WidgetImpl: WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl {
+pub trait WidgetImpl: WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Size {
         let width = self.get_property("width-request").unwrap().get::<i32>();

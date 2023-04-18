@@ -35,6 +35,12 @@ pub fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2
                 #element_trait_impl_clause
 
                 impl ElementAcquire for #name {}
+
+                impl ParentType for #name {
+                    fn parent_type(&self) -> Type {
+                        Element::static_type()
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(
