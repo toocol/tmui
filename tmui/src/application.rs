@@ -10,6 +10,7 @@ use crate::{
     graphics::board::Board,
     platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
 };
+use bevy_reflect::TypeRegistry;
 use lazy_static::lazy_static;
 use std::{
     cell::RefCell,
@@ -33,6 +34,7 @@ lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
         AtomicPtr::new(null_mut());
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
+    pub static ref TYPE_REGISTRY: AtomicPtr<TypeRegistry> = AtomicPtr::new(null_mut());
     static ref OUTPUT_SENDER: AtomicPtr<Sender<Message>> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
@@ -91,6 +93,9 @@ impl Application {
 
     /// Start to run this application.
     pub fn run(&self) {
+        let mut type_registry = TypeRegistry::default();
+        TYPE_REGISTRY.store(&mut type_registry, Ordering::SeqCst);
+
         let (output_sender, output_receiver) = channel::<Message>();
         let (input_sender, input_receiver) = channel::<Message>();
 

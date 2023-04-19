@@ -33,6 +33,11 @@ pub struct Type {
     name: &'static str,
 }
 
+pub trait TypeRegister {
+    /// Register the reflect type info to [`bevy_reflect::TypeRegistry`] in this function.
+    fn type_register(&mut self);
+}
+
 impl Type {
     /// The fundamental type corresponding to `bool`
     pub const BOOL: Self = Self {
