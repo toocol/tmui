@@ -1,6 +1,7 @@
 use tmui::prelude::{Container, StaticType, IsA};
 use tmui::widget::{WidgetImpl, Widget};
 
+#[test]
 fn main() {
     let container = Container::default();
     test_type(&container)

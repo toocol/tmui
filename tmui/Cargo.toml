@@ -31,6 +31,3 @@ log4rs = "1.1.1"
 
 [[example]]
 name = "win32_window"
-
-[[test]]
-name = "container_test"
