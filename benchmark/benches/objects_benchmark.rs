@@ -1,3 +1,4 @@
+#![feature(trivial_bounds)]
 use std::collections::HashMap;
 
 use criterion::{criterion_group, criterion_main, Criterion};

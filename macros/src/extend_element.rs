@@ -28,6 +28,7 @@ pub fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2
             let element_trait_impl_clause = gen_element_trait_impl_clause(name, vec!["element"])?;
 
             Ok(quote! {
+                #[derive(bevy_reflect::Reflect)]
                 #ast
 
                 #object_trait_impl_clause

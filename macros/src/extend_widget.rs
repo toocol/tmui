@@ -29,6 +29,7 @@ pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
             let widget_trait_impl_clause = gen_widget_trait_impl_clause(name, vec!["widget"])?;
 
             Ok(quote! {
+                #[derive(bevy_reflect::Reflect)]
                 #ast
 
                 #object_trait_impl_clause

@@ -19,6 +19,7 @@ pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
                 gen_object_trait_impl_clause(name, "object", vec!["object"])?;
 
             return Ok(quote! {
+                #[derive(bevy_reflect::Reflect)]
                 #ast
 
                 #object_trait_impl_clause
