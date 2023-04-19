@@ -90,6 +90,11 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
+                self.#(#widget_path).*.get_raw_parent_mut()
+            }
+
+            #[inline]
             fn hide(&mut self) {
                 self.#(#widget_path).*.hide()
             }
