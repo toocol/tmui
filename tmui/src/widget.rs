@@ -11,7 +11,6 @@ use crate::{
 };
 use log::debug;
 use skia_safe::Font;
-use std::cell::RefCell;
 use tlib::{
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
@@ -20,8 +19,8 @@ use tlib::{
 
 #[extends_element]
 pub struct Widget {
-    parent: RefCell<Option<*const dyn WidgetImpl>>,
-    child: RefCell<Option<Box<dyn WidgetImpl>>>,
+    parent: Option<*const dyn WidgetImpl>,
+    child: Option<Box<dyn WidgetImpl>>,
 
     background: Color,
     font: Font,
@@ -62,23 +61,23 @@ impl Default for Widget {
 }
 
 impl Widget {
-    pub fn child_internal<T>(&self, child: T)
+    pub fn child_internal<T>(&mut self, child: T)
     where
         T: WidgetImpl + ElementImpl + IsA<Widget>,
     {
         let child = Box::new(child);
-        *self.child.borrow_mut() = Some(child);
+        self.child = Some(child);
     }
 
     /// Notify all the child widget to invalidate.
-    fn notify_invalidate(&self) {
+    fn notify_invalidate(&mut self) {
         if let Some(child) = self.get_raw_child_mut() {
             unsafe { child.as_mut().unwrap().update() }
         }
     }
 
     /// Notify the child to change the visibility.
-    fn notify_visible(&self, visible: bool) {
+    fn notify_visible(&mut self, visible: bool) {
         if let Some(child) = self.get_raw_child_mut() {
             let child = unsafe { child.as_mut().unwrap() };
             if visible {
@@ -188,7 +187,7 @@ pub trait WidgetExt {
     /// ## Do not invoke this function directly.
     /// 
     /// Go to[`Function defination`](WidgetExt::set_parent) (Defined in [`WidgetExt`])
-    fn set_parent(&self, parent: *mut dyn WidgetImpl);
+    fn set_parent(&mut self, parent: *mut dyn WidgetImpl);
 
     /// Get the raw pointer of child.
     /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
@@ -200,7 +199,7 @@ pub trait WidgetExt {
     /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
     /// 
     /// Go to[`Function defination`](WidgetExt::get_raw_child_mut) (Defined in [`WidgetExt`])
-    fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl>;
+    fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl>;
 
     /// Get the raw pointer of parent.
     /// Use [`get_parent()`](WidgetGenericExt::get_parent) instead.
@@ -462,26 +461,26 @@ impl WidgetExt for Widget {
         self as *mut Self as *mut dyn ElementImpl
     }
 
-    fn set_parent(&self, parent: *mut dyn WidgetImpl) {
-        *self.parent.borrow_mut() = Some(parent)
+    fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
+        self.parent = Some(parent)
     }
 
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        match self.child.borrow().as_ref() {
+        match self.child.as_ref() {
             Some(child) => Some(child.as_ref() as *const dyn WidgetImpl),
             None => None,
         }
     }
 
-    fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl> {
-        match self.child.borrow_mut().as_mut() {
+    fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
+        match self.child.as_mut() {
             Some(child) => Some(child.as_mut() as *mut dyn WidgetImpl),
             None => None,
         }
     }
 
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
-        match self.parent.borrow().as_ref() {
+        match self.parent.as_ref() {
             Some(parent) => Some(*parent),
             None => None,
         }
@@ -863,7 +862,7 @@ pub trait WidgetImpl: WidgetExt + ElementImpl + ElementExt + ObjectOperation + O
 pub trait WidgetImplExt: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
-    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T);
+    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&mut self, child: T);
 }
 
 #[cfg(test)]
@@ -904,7 +903,7 @@ mod tests {
 
     #[test]
     fn test_sub_widget() {
-        let widget: SubWidget = Object::new(&[("width", &&120), ("height", &&80)]);
+        let mut widget: SubWidget = Object::new(&[("width", &&120), ("height", &&80)]);
         assert_eq!(120, widget.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, widget.get_property("height").unwrap().get::<i32>());
 

@@ -66,14 +66,14 @@ impl ApplicationWindow {
         Object::new(&[("width", &width), ("height", &height)])
     }
 
-    pub fn size_probe(&self) {
+    pub fn size_probe(&mut self) {
         let child = self.get_raw_child_mut();
         if let Some(child) = child {
             child_width_probe(self.size(), self.size(), child);
         }
     }
 
-    pub fn position_probe(&self) {
+    pub fn position_probe(&mut self) {
         let child = self.get_raw_child_mut();
         child_position_probe(self, child)
     }

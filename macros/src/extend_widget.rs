@@ -70,7 +70,7 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn set_parent(&self, parent: *mut dyn WidgetImpl) {
+            fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
                 self.#(#widget_path).*.set_parent(parent)
             }
 
@@ -80,7 +80,7 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl> {
+            fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
                 self.#(#widget_path).*.get_raw_child_mut()
             }
 
@@ -338,7 +338,7 @@ pub fn gen_widget_trait_impl_clause(
 
         impl WidgetImplExt for #name {
             #[inline]
-            fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
+            fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&mut self, child: T) {
                 self.#(#widget_path).*.child_internal(child)
             }
         }

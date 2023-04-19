@@ -50,7 +50,7 @@ pub struct Application {
 
     platform_context: Option<Box<dyn PlatformContextWrapper>>,
 
-    on_activate: RefCell<Option<Arc<dyn Fn(&ApplicationWindow) + Send + Sync>>>,
+    on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
 }
 
 impl Application {
@@ -120,7 +120,7 @@ impl Application {
     /// UI components should create in here.
     pub fn connect_activate<F>(&self, f: F)
     where
-        F: Fn(&ApplicationWindow) + Send + Sync + 'static,
+        F: Fn(&mut ApplicationWindow) + Send + Sync + 'static,
     {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
     }
@@ -157,7 +157,7 @@ impl Application {
         backend_type: BackendType,
         mut output_sender: Sender<Message>,
         _input_receiver: Receiver<Message>,
-        on_activate: Option<Arc<dyn Fn(&ApplicationWindow) + Send + Sync>>,
+        on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
     ) {
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
@@ -193,7 +193,7 @@ impl Application {
         OUTPUT_SENDER.store(&mut output_sender as *mut Sender<Message>, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
-            on_activate(&window);
+            on_activate(&mut window);
             drop(on_activate);
         }
         ACTIVATE.store(true, Ordering::SeqCst);
