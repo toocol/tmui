@@ -66,15 +66,15 @@ impl ApplicationWindow {
         Object::new(&[("width", &width), ("height", &height)])
     }
 
-    pub fn size_probe(&self) {
-        let child = self.get_raw_child();
+    pub fn size_probe(&mut self) {
+        let child = self.get_raw_child_mut();
         if let Some(child) = child {
             child_width_probe(self.size(), self.size(), child);
         }
     }
 
-    pub fn position_probe(&self) {
-        let child = self.get_raw_child();
+    pub fn position_probe(&mut self) {
+        let child = self.get_raw_child_mut();
         child_position_probe(self, child)
     }
 }
@@ -94,8 +94,8 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
     }
 }
 
-fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn WidgetImpl) -> Size {
-    let widget_ref = unsafe { widget.as_ref().unwrap() };
+fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn WidgetImpl) -> Size {
+    let widget_ref = unsafe { widget.as_mut().unwrap() };
     if widget_ref.get_raw_child().is_none() {
         let size = widget_ref.size();
         if parent_size.width() != 0 && parent_size.height() != 0 {
@@ -117,7 +117,7 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
         return Size::new(image_rect.width(), image_rect.height());
     } else {
         let size = widget_ref.size();
-        let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child().unwrap());
+        let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap());
         if size.width() == 0 {
             widget_ref.width_request(child_size.width());
         }
@@ -131,10 +131,10 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *const dyn Wi
 #[inline]
 fn child_position_probe(
     mut parent: *const dyn WidgetImpl,
-    mut child: Option<*const dyn WidgetImpl>,
+    mut child: Option<*mut dyn WidgetImpl>,
 ) {
     while let Some(child_ptr) = child {
-        let child_ref = unsafe { child_ptr.as_ref().unwrap() };
+        let child_ref = unsafe { child_ptr.as_mut().unwrap() };
         let child_rect = child_ref.rect();
         let parent_rect = unsafe { parent.as_ref().unwrap().rect() };
 
@@ -172,6 +172,6 @@ fn child_position_probe(
         }
 
         parent = child_ptr;
-        child = child_ref.get_raw_child();
+        child = child_ref.get_raw_child_mut();
     }
 }

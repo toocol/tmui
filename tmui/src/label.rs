@@ -116,7 +116,7 @@ impl WidgetImpl for Label {
 
         let mut widths = vec![0f32; self.label.len()];
         font.get_widths(&self.label, &mut widths);
-        let width: f32 = widths.iter().sum();
+        let width: f32 = widths.into_iter().sum();
         let height = font.metrics().1.cap_height;
 
         let size = self.size();

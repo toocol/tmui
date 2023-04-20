@@ -2,7 +2,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -22,6 +22,12 @@ pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
                 #ast
 
                 #object_trait_impl_clause
+
+                impl ParentType for #name {
+                    fn parent_type(&self) -> Type {
+                        Object::static_type()
+                    }
+                }
             });
         }
         _ => Err(syn::Error::new_spanned(
@@ -31,7 +37,7 @@ pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
     }
 }
 
-pub fn gen_object_trait_impl_clause(
+pub(crate) fn gen_object_trait_impl_clause(
     name: &Ident,
     super_field: &'static str,
     object_path: Vec<&'static str>,
@@ -50,7 +56,7 @@ pub fn gen_object_trait_impl_clause(
             }
 
             #[inline]
-            fn parent_on_property_set(&self, name: &str, value: &Value) {
+            fn parent_on_property_set(&mut self, name: &str, value: &Value) {
                 self.#super_field.on_property_set(name, value)
             }
         }
@@ -62,13 +68,13 @@ pub fn gen_object_trait_impl_clause(
             }
 
             #[inline]
-            fn set_property(&self, name: &str, value: Value) {
+            fn set_property(&mut self, name: &str, value: Value) {
                 self.on_property_set(name, &value);
                 self.#(#object_path).*.set_property(name, value)
             }
 
             #[inline]
-            fn get_property(&self, name: &str) -> Option<std::cell::Ref<Box<Value>>> {
+            fn get_property(&self, name: &str) -> Option<&Value> {
                 self.#(#object_path).*.get_property(name)
             }
         }

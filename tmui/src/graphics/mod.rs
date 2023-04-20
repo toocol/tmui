@@ -40,9 +40,9 @@ mod tests {
 
     #[test]
     fn test_sub_element() {
-        let element = Object::new::<SubElement>(&[("prop1", &&12), ("prop2", &"12")]);
+        let mut element = Object::new::<SubElement>(&[("prop1", &&12), ("prop2", &"12")]);
         element.update();
-        assert_eq!(12, element.get_property("prop1").unwrap().get());
+        assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
         test_is_a(element);
     }

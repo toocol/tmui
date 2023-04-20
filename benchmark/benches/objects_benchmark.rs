@@ -22,7 +22,7 @@ pub fn object_downcast_test<T: IsA<Object>>(widget: &T) {
     let _ = widget.downcast_ref::<Widget>();
 }
 
-pub fn object_property_test(widget: &Widget, tuple: &(i32, i32, Vec<String>)) {
+pub fn object_property_test(widget: &mut Widget, tuple: &(i32, i32, Vec<String>)) {
     widget.set_property("property-1", tuple.to_value());
     let val = widget
         .get_property("property-1")
@@ -41,7 +41,7 @@ pub fn hashmap_property_test(
 }
 
 pub fn criterion_values(c: &mut Criterion) {
-    let widget: Widget = Object::new(&[]);
+    let mut widget: Widget = Object::new(&[]);
     let tuple = (
         i32::MAX,
         i32::MIN,
@@ -58,7 +58,7 @@ pub fn criterion_values(c: &mut Criterion) {
         b.iter(|| object_downcast_test(&widget))
     });
     c.bench_function("object-property-test", |b| {
-        b.iter(|| object_property_test(&widget, &tuple))
+        b.iter(|| object_property_test(&mut widget, &tuple))
     });
     c.bench_function("object-hashmap-property-test", |b| {
         b.iter(|| hashmap_property_test(&mut map, &tuple))

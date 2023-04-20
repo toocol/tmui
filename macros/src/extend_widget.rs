@@ -4,7 +4,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -38,6 +38,12 @@ pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
                 #widget_trait_impl_clause
 
                 impl WidgetAcquire for #name {}
+
+                impl ParentType for #name {
+                    fn parent_type(&self) -> Type {
+                        Widget::static_type()
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(
@@ -47,7 +53,7 @@ pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
     }
 }
 
-pub fn gen_widget_trait_impl_clause(
+pub(crate) fn gen_widget_trait_impl_clause(
     name: &Ident,
     widget_path: Vec<&'static str>,
 ) -> syn::Result<proc_macro2::TokenStream> {
@@ -64,7 +70,7 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn set_parent(&self, parent: *mut dyn WidgetImpl) {
+            fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
                 self.#(#widget_path).*.set_parent(parent)
             }
 
@@ -74,7 +80,7 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn get_raw_child_mut(&self) -> Option<*mut dyn WidgetImpl> {
+            fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
                 self.#(#widget_path).*.get_raw_child_mut()
             }
 
@@ -84,22 +90,27 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn hide(&self) {
+            fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
+                self.#(#widget_path).*.get_raw_parent_mut()
+            }
+
+            #[inline]
+            fn hide(&mut self) {
                 self.#(#widget_path).*.hide()
             }
 
             #[inline]
-            fn show(&self) {
+            fn show(&mut self) {
                 self.#(#widget_path).*.show()
             }
 
             #[inline]
-            fn visible(&self) -> bool {
+            fn visible(&mut self) -> bool {
                 self.#(#widget_path).*.visible()
             }
 
             #[inline]
-            fn set_focus(&self, focus: bool) {
+            fn set_focus(&mut self, focus: bool) {
                 self.#(#widget_path).*.set_focus(focus)
             }
 
@@ -109,27 +120,27 @@ pub fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn resize(&self, width: i32, height: i32) {
+            fn resize(&mut self, width: i32, height: i32) {
                 self.#(#widget_path).*.resize(width, height)
             }
 
             #[inline]
-            fn width_request(&self, width: i32) {
+            fn width_request(&mut self, width: i32) {
                 self.#(#widget_path).*.width_request(width)
             }
 
             #[inline]
-            fn height_request(&self, width: i32) {
+            fn height_request(&mut self, width: i32) {
                 self.#(#widget_path).*.height_request(width)
             }
 
             #[inline]
-            fn set_halign(&self, halign: Align) {
+            fn set_halign(&mut self, halign: Align) {
                 self.set_property("halign", halign.to_value())
             }
 
             #[inline]
-            fn set_valign(&self, valign: Align) {
+            fn set_valign(&mut self, valign: Align) {
                 self.set_property("valign", valign.to_value())
             }
 
@@ -332,7 +343,7 @@ pub fn gen_widget_trait_impl_clause(
 
         impl WidgetImplExt for #name {
             #[inline]
-            fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&self, child: T) {
+            fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&mut self, child: T) {
                 self.#(#widget_path).*.child_internal(child)
             }
         }

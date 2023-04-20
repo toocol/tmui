@@ -4,7 +4,6 @@ use crate::{
     values::{ToValue, Value},
 };
 use std::{
-    cell::{Ref, RefCell},
     collections::HashMap, sync::atomic::{AtomicU16, Ordering},
 };
 use log::debug;
@@ -41,14 +40,14 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 #[derive(Debug)]
 pub struct Object {
     id: u16,
-    properties: RefCell<HashMap<String, Box<Value>>>,
+    properties: HashMap<String, Box<Value>>,
 }
 
 impl Default for Object {
     fn default() -> Self {
         Self {
             id: ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
-            properties: RefCell::new(HashMap::new()),
+            properties: HashMap::new(),
         }
     }
 }
@@ -60,10 +59,10 @@ pub trait ObjectOperation {
     fn id(&self) -> u16;
 
     /// Go to[`Function defination`](ObjectOperation::set_property) (Defined in [`ObjectOperation`])
-    fn set_property(&self, name: &str, value: Value);
+    fn set_property(&mut self, name: &str, value: Value);
 
     /// Go to[`Function defination`](ObjectOperation::get_property) (Defined in [`ObjectOperation`])
-    fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>>;
+    fn get_property(&self, name: &str) -> Option<&Value>;
 }
 
 impl Object {
@@ -78,14 +77,13 @@ impl Object {
         obj
     }
 
-    pub fn primitive_set_property(&self, name: &str, value: Value) {
+    pub fn primitive_set_property(&mut self, name: &str, value: Value) {
         self.properties
-            .borrow_mut()
             .insert(name.to_string(), Box::new(value));
     }
 
-    pub fn primitive_get_property(&self, name: &str) -> Option<Ref<Box<Value>>> {
-        Ref::filter_map(self.properties.borrow(), |map| map.get(name)).ok()
+    pub fn primitive_get_property(&self, name: &str) -> Option<&Value> {
+        self.properties.get(name).and_then(|p| Some(&**p))
     }
 }
 
@@ -94,11 +92,11 @@ impl ObjectOperation for Object {
         self.id
     }
 
-    fn set_property(&self, name: &str, value: Value) {
+    fn set_property(&mut self, name: &str, value: Value) {
         self.primitive_set_property(name, value);
     }
 
-    fn get_property(&self, name: &str) -> Option<Ref<Box<Value>>> {
+    fn get_property(&self, name: &str) -> Option<&Value> {
         self.primitive_get_property(name)
     }
 }
@@ -134,7 +132,7 @@ impl ObjectImplExt for Object {
     fn parent_construct(&mut self) {}
 
     /// Go to[`Function defination`](ObjectImplExt::parent_on_property_set) (Defined in [`ObjectImplExt`])
-    fn parent_on_property_set(&self, _name: &str, _value: &Value) {}
+    fn parent_on_property_set(&mut self, _name: &str, _value: &Value) {}
 }
 
 pub trait ObjectExt: StaticType {
@@ -161,6 +159,10 @@ impl<T: StaticType> ObjectExt for T {
 
 pub trait IsSubclassable {}
 
+pub trait ParentType {
+    fn parent_type(&self) -> Type;
+}
+
 pub trait ObjectSubclass: 'static {
     const NAME: &'static str;
 
@@ -186,7 +188,7 @@ pub trait ObjectImpl: ObjectImplExt {
     }
 
     /// Override this function should invoke `self.parent_on_property_set()` manually.
-    fn on_property_set(&self, name: &str, value: &Value) {
+    fn on_property_set(&mut self, name: &str, value: &Value) {
         self.parent_on_property_set(name, value)
     }
 
@@ -198,5 +200,5 @@ pub trait ObjectImpl: ObjectImplExt {
 pub trait ObjectImplExt {
     fn parent_construct(&mut self);
 
-    fn parent_on_property_set(&self, name: &str, value: &Value);
+    fn parent_on_property_set(&mut self, name: &str, value: &Value);
 }

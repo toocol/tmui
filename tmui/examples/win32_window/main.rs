@@ -1,3 +1,4 @@
+#![feature(trivial_bounds)]
 mod test_widget;
 
 use test_widget::TestWidget;
@@ -17,7 +18,7 @@ fn main() {
     app.run();
 }
 
-fn build_ui(window: &ApplicationWindow) {
+fn build_ui(window: &mut ApplicationWindow) {
     let mut label = Label::new(Some("Hello World"));
     label.set_background(Color::CYAN);
     label.set_halign(Align::Center);

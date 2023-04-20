@@ -3,7 +3,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -35,6 +35,12 @@ pub fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2
                 #element_trait_impl_clause
 
                 impl ElementAcquire for #name {}
+
+                impl ParentType for #name {
+                    fn parent_type(&self) -> Type {
+                        Element::static_type()
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(
@@ -44,7 +50,7 @@ pub fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2
     }
 }
 
-pub fn gen_element_trait_impl_clause(
+pub(crate) fn gen_element_trait_impl_clause(
     name: &Ident,
     element_path: Vec<&'static str>,
 ) -> syn::Result<proc_macro2::TokenStream> {
@@ -56,12 +62,12 @@ pub fn gen_element_trait_impl_clause(
     Ok(quote!(
         impl ElementExt for #name {
             #[inline]
-            fn update(&self) {
+            fn update(&mut self) {
                 self.set_property("invalidate", true.to_value());
             }
 
             #[inline]
-            fn force_update(&self) {
+            fn force_update(&mut self) {
                 self.set_property("invalidate", true.to_value());
             }
 
@@ -71,22 +77,22 @@ pub fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn set_fixed_width(&self, width: i32) {
+            fn set_fixed_width(&mut self, width: i32) {
                 self.#(#element_path).*.set_fixed_width(width)
             }
 
             #[inline]
-            fn set_fixed_height(&self, height: i32) {
+            fn set_fixed_height(&mut self, height: i32) {
                 self.#(#element_path).*.set_fixed_height(height)
             }
 
             #[inline]
-            fn set_fixed_x(&self, x: i32) {
+            fn set_fixed_x(&mut self, x: i32) {
                 self.#(#element_path).*.set_fixed_x(x)
             }
 
             #[inline]
-            fn set_fixed_y(&self, y: i32) {
+            fn set_fixed_y(&mut self, y: i32) {
                 self.#(#element_path).*.set_fixed_y(y)
             }
 
@@ -99,7 +105,7 @@ pub fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn validate(&self) {
+            fn validate(&mut self) {
                 self.set_property("invalidate", false.to_value());
             }
         }

@@ -1,3 +1,4 @@
+#![feature(trivial_bounds)]
 pub mod application_window;
 pub mod application;
 pub mod clipboard;

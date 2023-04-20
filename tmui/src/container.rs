@@ -1,8 +1,10 @@
-use tlib::object::{ObjectSubclass, ObjectImpl};
+use tlib::object::{ObjectImpl, ObjectSubclass};
 
 use crate::{prelude::*, widget::WidgetImpl};
 
 #[extends_widget]
+#[derive(Default)]
+#[allow(dead_code)]
 pub struct Container {
     children: Vec<Box<dyn WidgetImpl>>,
 }
@@ -20,22 +22,14 @@ impl ObjectImpl for Container {}
 impl WidgetImpl for Container {}
 
 pub trait ContainerImpl {
-}
-
-pub trait ContainerExt {
+    /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
+    /// Get all the children in `Container`
     fn children(&self) -> Vec<&dyn WidgetImpl>;
-
-    fn add_child<T>(&self, child: T)
-        where T: WidgetImpl + IsA<Widget>;
 }
 
-impl ContainerExt for Container {
-    fn children(&self) -> Vec<&dyn WidgetImpl> {
-        todo!()
-    }
-
-    fn add_child<T>(&self, child: T)
-        where T: WidgetImpl + IsA<Widget> {
-        todo!()
-    }
+pub trait ContainerImplExt {
+    /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
+    fn add_child<T>(&mut self, child: T)
+    where
+        T: WidgetImpl + IsA<Widget>;
 }
