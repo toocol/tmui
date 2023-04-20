@@ -7,12 +7,10 @@ pub mod painter;
 
 #[cfg(test)]
 mod tests {
-    use super::element::{Element, ElementExt, ElementImpl, ElementAcquire};
+    use super::element::{Element, ElementAcquire, ElementExt, ElementImpl};
     use super::figure::Rect;
-    use tlib::{
-        object::{ObjectImpl, ObjectSubclass},
-        prelude::*,
-    };
+    use crate::prelude::*;
+    use tlib::object::{ObjectImpl, ObjectSubclass};
 
     #[extends_element]
     #[derive(Default)]
@@ -49,7 +47,7 @@ mod tests {
 
     fn test_is_a<T: IsA<Element>>(obj: T) {
         let element = obj.as_ref();
-        assert_eq!(12, element.get_property("prop1").unwrap().get());
+        assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 
         let element = obj.downcast_ref::<SubElement>().unwrap();

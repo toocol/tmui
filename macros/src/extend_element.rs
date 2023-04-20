@@ -41,6 +41,12 @@ pub(crate) fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc
                         Element::static_type()
                     }
                 }
+
+                impl InnerTypeRegister for #name {
+                    fn inner_type_register(&mut self, type_registry: &mut TypeRegistry) {
+                        type_registry.register::<#name, ReflectElementImpl>();
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(

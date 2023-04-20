@@ -21,13 +21,14 @@ impl ObjectImpl for Container {}
 
 impl WidgetImpl for Container {}
 
-pub trait ContainerImpl {
+#[reflect_trait]
+pub trait ContainerImpl: WidgetImpl {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children in `Container`
     fn children(&self) -> Vec<&dyn WidgetImpl>;
 }
 
-pub trait ContainerImplExt {
+pub trait ContainerImplExt: ContainerImpl {
     /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
     fn add_child<T>(&mut self, child: T)
     where

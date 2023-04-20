@@ -66,7 +66,7 @@ impl Default for Widget {
 impl Widget {
     pub fn child_internal<T>(&mut self, child: T)
     where
-        T: WidgetImpl + ElementImpl + IsA<Widget>,
+        T: WidgetImpl + IsA<Widget>,
     {
         let child = Box::new(child);
         self.child = Some(child);
@@ -860,6 +860,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 /// WidgetImpl's `paint()` function Will be proxy executated by [`ElementImpl::on_renderer`] method .
 #[allow(unused_variables)]
 #[allow(unused_mut)]
+#[reflect_trait]
 pub trait WidgetImpl:
     WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType
 {

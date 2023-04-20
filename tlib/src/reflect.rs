@@ -9,17 +9,14 @@ pub struct TypeRegistry {
 }
 
 impl TypeRegistry {
-    pub fn register<Type: Reflect, ReflectTrait: FromType<Type> + Any>(&mut self) {
+    pub fn register<T: Reflect, RT: FromType<T> + ReflectTrait>(&mut self) {
         self.registers
-            .entry(TypeId::of::<Type>())
+            .entry(TypeId::of::<T>())
             .or_insert(TypeRegistration {
                 data: Default::default(),
             })
             .data
-            .insert(
-                TypeId::of::<ReflectTrait>(),
-                Box::new(ReflectTrait::from_type()),
-            );
+            .insert(TypeId::of::<RT>(), Box::new(RT::from_type()));
     }
 
     pub fn get_type_data<T: ReflectTrait>(&self, obj: &dyn Reflect) -> Option<&T> {
@@ -36,20 +33,27 @@ pub struct TypeRegistration {
     data: HashMap<TypeId, Box<dyn ReflectTrait>>,
 }
 
+pub trait InnerTypeRegister {
+    /// Register the reflect type info to [`TypeRegistry`] in this function.
+    fn inner_type_register(&mut self, type_registry: &mut TypeRegistry);
+}
+
 pub trait Reflect: Any + 'static {
     fn as_any(&self) -> &dyn Any;
 
     fn as_mut_any(&mut self) -> &mut dyn Any;
 
     fn as_boxed_any(self: Box<Self>) -> Box<dyn Any>;
+
+    fn as_reflect(&self) -> &dyn Reflect;
+
+    fn as_mut_reflect(&mut self) -> &mut dyn Reflect;
+
+    fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect>;
 }
 
 pub trait ReflectTrait: Any + 'static {
     fn as_any(&self) -> &dyn Any;
-
-    fn as_mut_any(&mut self) -> &mut dyn Any;
-
-    fn as_boxed_any(self: Box<Self>) -> Box<dyn Any>;
 }
 
 pub trait FromType<T: Reflect>: ReflectTrait {

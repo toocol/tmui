@@ -109,6 +109,7 @@ impl ElementExt for Element {
 
 /// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>
 /// Each subclass which impl [`WidgetImpl`] will impl this trait automatically.
+#[reflect_trait]
 pub trait ElementImpl: ElementExt + ObjectImpl + ParentType + 'static {
     fn on_renderer(&mut self, cr: &DrawingContext);
 }

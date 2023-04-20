@@ -44,6 +44,12 @@ pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_
                         Widget::static_type()
                     }
                 }
+
+                impl InnerTypeRegister for #name {
+                    fn inner_type_register(&mut self, type_registry: &mut TypeRegistry) {
+                        type_registry.register::<#name, ReflectWidgetImpl>();
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(
