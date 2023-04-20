@@ -1,4 +1,3 @@
-use bevy_reflect::reflect_trait;
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
 use crate::{prelude::*, widget::WidgetImpl};
@@ -22,7 +21,6 @@ impl ObjectImpl for Container {}
 
 impl WidgetImpl for Container {}
 
-#[reflect_trait]
 pub trait ContainerImpl {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children in `Container`

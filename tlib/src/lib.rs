@@ -1,4 +1,3 @@
-#![feature(trivial_bounds)]
 pub mod actions;
 pub mod events;
 pub mod global;
@@ -9,6 +8,7 @@ pub mod timer;
 pub mod types;
 pub mod utils;
 pub mod values;
+pub mod reflect;
 
 pub use object::Object;
 pub use values::Value;

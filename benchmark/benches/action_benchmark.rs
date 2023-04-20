@@ -1,4 +1,3 @@
-#![feature(trivial_bounds)]
 use std::sync::atomic::Ordering;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};

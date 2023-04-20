@@ -123,14 +123,14 @@ mod tests {
     fn test_element() {
         let mut element = Object::new::<Element>(&[("prop1", &&12), ("prop2", &"12")]);
         element.update();
-        assert_eq!(12, element.get_property("prop1").unwrap().get());
+        assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
         test_is_a(element);
     }
 
     fn test_is_a<T: IsA<Element>>(obj: T) {
         let element = obj.as_ref();
-        assert_eq!(12, element.get_property("prop1").unwrap().get());
+        assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 
         let element = obj.downcast_ref::<Element>().unwrap();

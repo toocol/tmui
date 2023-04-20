@@ -2,7 +2,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -19,7 +19,6 @@ pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
                 gen_object_trait_impl_clause(name, "object", vec!["object"])?;
 
             return Ok(quote! {
-                #[derive(bevy_reflect::Reflect)]
                 #ast
 
                 #object_trait_impl_clause
@@ -38,7 +37,7 @@ pub fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
     }
 }
 
-pub fn gen_object_trait_impl_clause(
+pub(crate) fn gen_object_trait_impl_clause(
     name: &Ident,
     super_field: &'static str,
     object_path: Vec<&'static str>,

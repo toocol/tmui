@@ -10,7 +10,6 @@ use crate::{
     graphics::board::Board,
     platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
 };
-use bevy_reflect::TypeRegistry;
 use lazy_static::lazy_static;
 use std::{
     cell::RefCell,
@@ -27,7 +26,7 @@ use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
     timer::TimerHub,
-    utils::TimeStamp,
+    utils::TimeStamp, reflect::TypeRegistry,
 };
 
 lazy_static! {

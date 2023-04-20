@@ -2,7 +2,7 @@
 
 use std::{fmt::Debug, mem::size_of};
 
-use crate::object::ObjectSubclass;
+use crate::{object::ObjectSubclass, reflect::TypeRegistry};
 
 type TType = u8;
 const TTYPE_BOOL: TType = 0x01;
@@ -34,8 +34,8 @@ pub struct Type {
 }
 
 pub trait TypeRegister {
-    /// Register the reflect type info to [`bevy_reflect::TypeRegistry`] in this function.
-    fn type_register(&mut self);
+    /// Register the reflect type info to [`TypeRegistry`] in this function.
+    fn type_register(&mut self, type_registry: TypeRegistry);
 }
 
 impl Type {

@@ -11,7 +11,6 @@ tlib = { path = "../tlib/" }
 
 criterion = "0.4.0"
 regex = "*"
-bevy_reflect = "0.10.1"
 windows = { version = "0.43.0", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",

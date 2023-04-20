@@ -4,7 +4,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -29,7 +29,6 @@ pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
             let widget_trait_impl_clause = gen_widget_trait_impl_clause(name, vec!["widget"])?;
 
             Ok(quote! {
-                #[derive(bevy_reflect::Reflect)]
                 #ast
 
                 #object_trait_impl_clause
@@ -54,7 +53,7 @@ pub fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2:
     }
 }
 
-pub fn gen_widget_trait_impl_clause(
+pub(crate) fn gen_widget_trait_impl_clause(
     name: &Ident,
     widget_path: Vec<&'static str>,
 ) -> syn::Result<proc_macro2::TokenStream> {

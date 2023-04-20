@@ -12,7 +12,6 @@ use crate::{
     prelude::*,
     util::skia_font_clone,
 };
-use bevy_reflect::reflect_trait;
 use log::debug;
 use skia_safe::Font;
 use tlib::{
@@ -861,7 +860,6 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 /// WidgetImpl's `paint()` function Will be proxy executated by [`ElementImpl::on_renderer`] method .
 #[allow(unused_variables)]
 #[allow(unused_mut)]
-#[reflect_trait]
 pub trait WidgetImpl:
     WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType
 {
