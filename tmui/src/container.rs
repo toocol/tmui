@@ -25,8 +25,12 @@ pub trait ContainerAcquire: ContainerImpl + ContainerImplExt {}
 #[reflect_trait]
 pub trait ContainerImpl: WidgetImpl {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
-    /// Get all the children in `Container`
+    /// Get all the children ref in `Container`
     fn children(&self) -> Vec<&dyn WidgetImpl>;
+
+    /// Go to[`Function defination`](ContainerImpl::children_mut) (Defined in [`ContainerImpl`])
+    /// Get all the mut children ref in `Container`
+    fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl>;
 }
 
 pub trait ContainerImplExt: ContainerImpl {

@@ -4,7 +4,9 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_widget(
+    ast: &mut DeriveInput,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -14,10 +16,12 @@ pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_
                         pub widget: Widget
                     })?);
                 }
-                _ => return Err(syn::Error::new_spanned(
-                    ast,
-                    "`extend_widget` should defined on named fields struct.",
-                )),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        ast,
+                        "`extend_widget` should defined on named fields struct.",
+                    ))
+                }
             }
 
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
@@ -43,12 +47,14 @@ pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_
                 impl WidgetAcquire for #name {}
 
                 impl ParentType for #name {
+                    #[inline]
                     fn parent_type(&self) -> Type {
                         Widget::static_type()
                     }
                 }
 
                 impl InnerTypeRegister for #name {
+                    #[inline]
                     fn inner_type_register(&mut self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
                     }

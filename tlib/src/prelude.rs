@@ -1,4 +1,4 @@
-pub use macros::{extends_element, extends_object, extends_widget, reflect_trait};
+pub use macros::{extends_element, extends_object, extends_widget, extends_container, reflect_trait};
 
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal, ACTION_HUB};
 pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};

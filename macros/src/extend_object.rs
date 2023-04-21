@@ -14,10 +14,12 @@ pub(crate) fn generate_extend_object(
                         pub object: Object
                     })?);
                 }
-                _ => return Err(syn::Error::new_spanned(
-                    ast,
-                    "`extend_object` should defined on named fields struct.",
-                )),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        ast,
+                        "`extend_object` should defined on named fields struct.",
+                    ))
+                }
             }
 
             let object_trait_impl_clause =
@@ -29,12 +31,14 @@ pub(crate) fn generate_extend_object(
                 #object_trait_impl_clause
 
                 impl ParentType for #name {
+                    #[inline]
                     fn parent_type(&self) -> Type {
                         Object::static_type()
                     }
                 }
 
                 impl InnerTypeRegister for #name {
+                    #[inline]
                     fn inner_type_register(&mut self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectObjectImpl>();
                         type_registry.register::<#name, ReflectObjectImplExt>();

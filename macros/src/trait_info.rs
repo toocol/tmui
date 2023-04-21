@@ -1,7 +1,7 @@
-use syn::{ItemTrait, parse::Parse, Attribute, Token};
+use syn::{parse::Parse, Attribute, ItemTrait, Token};
 
 pub struct TraitInfo {
-    pub item_trait: ItemTrait
+    pub item_trait: ItemTrait,
 }
 
 impl Parse for TraitInfo {

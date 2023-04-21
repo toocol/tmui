@@ -11,8 +11,10 @@ pub(crate) fn generate_extend_container(
             match &mut struct_data.fields {
                 syn::Fields::Named(fields) => {
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
-                        pub container: Container,
-                        pub children: Vec<Box<dyn WidgetImpl>>,
+                        pub container: Container
+                    })?);
+                    fields.named.push(syn::Field::parse_named.parse2(quote! {
+                        pub children: Vec<Box<dyn WidgetImpl>>
                     })?);
                 }
                 _ => {
@@ -25,7 +27,7 @@ pub(crate) fn generate_extend_container(
 
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
-                "widget",
+                "container",
                 vec!["container", "widget", "element", "object"],
             )?;
 
@@ -49,12 +51,14 @@ pub(crate) fn generate_extend_container(
                 impl ContainerAcquire for #name {}
 
                 impl ParentType for #name {
+                    #[inline]
                     fn parent_type(&self) -> Type {
                         Container::static_type()
                     }
                 }
 
                 impl InnerTypeRegister for #name {
+                    #[inline]
                     fn inner_type_register(&mut self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
                         type_registry.register::<#name, ReflectContainerImpl>();
@@ -64,7 +68,7 @@ pub(crate) fn generate_extend_container(
         }
         _ => Err(syn::Error::new_spanned(
             ast,
-            "`extends_widget` has to be used with structs ",
+            "`extends_container` has to be used with structs ",
         )),
     }
 }
