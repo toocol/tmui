@@ -14,7 +14,10 @@ pub(crate) fn generate_extend_widget(ast: &mut DeriveInput) -> syn::Result<proc_
                         pub widget: Widget
                     })?);
                 }
-                _ => (),
+                _ => return Err(syn::Error::new_spanned(
+                    ast,
+                    "`extend_widget` should defined on named fields struct.",
+                )),
             }
 
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(

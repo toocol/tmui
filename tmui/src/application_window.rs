@@ -82,6 +82,7 @@ impl ApplicationWindow {
 #[inline]
 fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
+    let type_registry = TypeRegistry::instance();
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
         child_ref.set_parent(parent);
@@ -90,6 +91,8 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
         board.add_element(child_ref.as_element());
 
         child_ref.initialize();
+        child_ref.inner_type_register(type_registry);
+        child_ref.type_register(type_registry);
         child = child_ref.get_raw_child_mut();
     }
 }

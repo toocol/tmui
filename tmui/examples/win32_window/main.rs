@@ -1,4 +1,3 @@
-#![feature(trivial_bounds)]
 mod test_widget;
 
 use test_widget::TestWidget;

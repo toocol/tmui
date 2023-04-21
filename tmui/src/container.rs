@@ -1,13 +1,10 @@
-use tlib::object::{ObjectImpl, ObjectSubclass};
+use tlib::object::{ObjectSubclass, ObjectImpl, IsSubclassable};
 
 use crate::{prelude::*, widget::WidgetImpl};
 
 #[extends_widget]
 #[derive(Default)]
-#[allow(dead_code)]
-pub struct Container {
-    children: Vec<Box<dyn WidgetImpl>>,
-}
+pub struct Container {}
 
 impl ObjectSubclass for Container {
     const NAME: &'static str = "Container";
@@ -20,6 +17,10 @@ impl ObjectSubclass for Container {
 impl ObjectImpl for Container {}
 
 impl WidgetImpl for Container {}
+
+impl IsSubclassable for Container {}
+
+pub trait ContainerAcquire: ContainerImpl + ContainerImplExt {}
 
 #[reflect_trait]
 pub trait ContainerImpl: WidgetImpl {

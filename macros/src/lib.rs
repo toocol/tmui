@@ -38,6 +38,14 @@ pub fn extends_widget(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
+#[proc_macro_attribute]
+pub fn extends_container(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let mut ast = parse_macro_input!(input as DeriveInput);
+    match extend_container::generate_extend_container(&mut ast) {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
 
 #[proc_macro_attribute]
 pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {

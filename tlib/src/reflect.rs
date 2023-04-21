@@ -1,14 +1,43 @@
+use lazy_static::lazy_static;
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
+    ptr::null_mut,
+    sync::{atomic::AtomicPtr, Once},
 };
 
-#[derive(Default)]
+static INIT: Once = Once::new();
+lazy_static! {
+    pub(crate) static ref TYPE_REGISTRY: AtomicPtr<TypeRegistry> = AtomicPtr::new(null_mut());
+}
+
 pub struct TypeRegistry {
     registers: HashMap<TypeId, TypeRegistration>,
 }
 
 impl TypeRegistry {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
+            registers: Default::default(),
+        })
+    }
+
+    pub fn instance<'a>() -> &'a mut TypeRegistry {
+        unsafe {
+            TYPE_REGISTRY
+                .load(std::sync::atomic::Ordering::SeqCst)
+                .as_mut()
+                .expect("`TypeRegistry` is not initialized.")
+        }
+    }
+
+    /// Initialize the `TypeRegistry`, this function should only call once.
+    pub fn initialize(self: &mut Box<Self>) {
+        INIT.call_once(|| {
+            TYPE_REGISTRY.store(self.as_mut(), std::sync::atomic::Ordering::SeqCst);
+        })
+    }
+
     pub fn register<T: Reflect, RT: FromType<T> + ReflectTrait>(&mut self) {
         self.registers
             .entry(TypeId::of::<T>())
@@ -19,8 +48,16 @@ impl TypeRegistry {
             .insert(TypeId::of::<RT>(), Box::new(RT::from_type()));
     }
 
-    pub fn get_type_data<T: ReflectTrait>(&self, obj: &dyn Reflect) -> Option<&T> {
-        self.registers.get(&obj.type_id()).and_then(|registration| {
+    pub fn get_type_data<T: ReflectTrait>(obj: &dyn Reflect) -> Option<&T> {
+        unsafe {
+            TYPE_REGISTRY
+                .load(std::sync::atomic::Ordering::SeqCst)
+                .as_mut()
+        }
+        .expect("`TypeRegistry` is not initialized.")
+        .registers
+        .get(&obj.type_id())
+        .and_then(|registration| {
             registration
                 .data
                 .get(&TypeId::of::<T>())

@@ -16,7 +16,10 @@ pub(crate) fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc
                             })?,
                     );
                 }
-                _ => (),
+                _ => return Err(syn::Error::new_spanned(
+                    ast,
+                    "`extend_element` should defined on named fields struct.",
+                )),
             }
 
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(

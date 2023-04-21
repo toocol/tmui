@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{FromType, Reflect, ReflectTrait, TypeRegistry},
+    prelude::{FromType, Reflect, ReflectTrait, TypeRegistry, InnerTypeRegister},
     types::{IsA, ObjectType, StaticType, Type},
     values::{ToValue, Value},
 };
@@ -171,6 +171,10 @@ impl ObjectImplExt for Object {
     fn parent_on_property_set(&mut self, _name: &str, _value: &Value) {}
 }
 
+impl InnerTypeRegister for Object {
+    fn inner_type_register(&mut self, _: &mut TypeRegistry) {}
+}
+
 pub trait ObjectExt: StaticType {
     /// Returns `true` if the object is an instance of (can be cast to) `T`.
     ///
@@ -219,7 +223,7 @@ impl<T: ObjectSubclass> StaticType for T {
 
 #[reflect_trait]
 #[allow(unused_variables)]
-pub trait ObjectImpl: ObjectImplExt {
+pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister {
     /// Override this function should invoke `self.parent_construct()` manually.
     fn construct(&mut self) {
         self.parent_construct()
@@ -235,7 +239,7 @@ pub trait ObjectImpl: ObjectImplExt {
     fn initialize(&mut self) {}
 
     /// Override to register the reflect type info to [`TypeRegistry`] in this function.
-    fn type_register(&self, type_registry: TypeRegistry) {}
+    fn type_register(&self, type_registry: &mut TypeRegistry) {}
 }
 
 #[reflect_trait]

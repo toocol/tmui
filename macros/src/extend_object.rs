@@ -14,7 +14,10 @@ pub(crate) fn generate_extend_object(
                         pub object: Object
                     })?);
                 }
-                _ => (),
+                _ => return Err(syn::Error::new_spanned(
+                    ast,
+                    "`extend_object` should defined on named fields struct.",
+                )),
             }
 
             let object_trait_impl_clause =

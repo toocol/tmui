@@ -52,7 +52,8 @@ impl DoB for Bar {
 
 #[test]
 fn main() {
-    let mut registry = TypeRegistry::default();
+    let mut registry = TypeRegistry::new();
+    registry.initialize();
     registry.register::<Foo, ReflectDoA>();
     registry.register::<Foo, ReflectDoB>();
     registry.register::<Bar, ReflectDoB>();
@@ -61,11 +62,11 @@ fn main() {
     let list: Vec<Box<dyn Reflect>> = vec![Box::new(Foo::default()), Box::new(Bar::default())];
     for item in list.iter() {
         let item_ref = item.as_ref();
-        if let Some(reflect) = registry.get_type_data::<ReflectDoA>(item_ref) {
+        if let Some(reflect) = TypeRegistry::get_type_data::<ReflectDoA>(item_ref) {
             (reflect.get_func)(item_ref).do_a();
             cnt += 1;
         }
-        if let Some(reflect) = registry.get_type_data::<ReflectDoB>(item_ref) {
+        if let Some(reflect) = TypeRegistry::get_type_data::<ReflectDoB>(item_ref) {
             (reflect.get_func)(item_ref).do_b();
             cnt += 1;
         }
