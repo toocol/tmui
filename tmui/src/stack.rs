@@ -5,6 +5,7 @@ use crate::{
 };
 
 #[extends_container]
+#[derive(Default)]
 pub struct Stack {}
 
 impl ObjectSubclass for Stack {
@@ -35,5 +36,11 @@ impl ContainerImplExt for Stack {
         T: WidgetImpl + IsA<Widget>,
     {
         self.children.push(Box::new(child))
+    }
+}
+
+impl Stack {
+    pub fn new() -> Self {
+        Object::new(&[])
     }
 }
