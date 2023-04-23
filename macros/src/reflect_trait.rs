@@ -42,9 +42,9 @@ pub(crate) fn generate_reflect_trait(ast: &mut TraitInfo) -> syn::Result<proc_ma
         #item_trait
 
         pub struct #reflect_ident {
-            get_func: fn(&dyn Reflect) -> &dyn #trait_ident,
-            get_mut_func: fn(&mut dyn Reflect) -> &mut dyn #trait_ident,
-            get_boxed_func: fn(Box<dyn Reflect>) -> Box<dyn #trait_ident>,
+            pub get_func: fn(&dyn Reflect) -> &dyn #trait_ident,
+            pub get_mut_func: fn(&mut dyn Reflect) -> &mut dyn #trait_ident,
+            pub get_boxed_func: fn(Box<dyn Reflect>) -> Box<dyn #trait_ident>,
         }
 
         impl ReflectTrait for #reflect_ident {

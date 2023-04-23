@@ -72,7 +72,7 @@ pub struct TypeRegistration {
 
 pub trait InnerTypeRegister {
     /// Register the reflect type info to [`TypeRegistry`] in this function.
-    fn inner_type_register(&mut self, type_registry: &mut TypeRegistry);
+    fn inner_type_register(&self, type_registry: &mut TypeRegistry);
 }
 
 pub trait Reflect: Any + 'static {

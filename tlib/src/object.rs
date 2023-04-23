@@ -172,7 +172,7 @@ impl ObjectImplExt for Object {
 }
 
 impl InnerTypeRegister for Object {
-    fn inner_type_register(&mut self, _: &mut TypeRegistry) {}
+    fn inner_type_register(&self, _: &mut TypeRegistry) {}
 }
 
 pub trait ObjectExt: StaticType {

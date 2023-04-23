@@ -99,6 +99,18 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
 
 fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn WidgetImpl) -> Size {
     let widget_ref = unsafe { widget.as_mut().unwrap() };
+    let is_container = widget_ref.parent_type().is_a(Container::static_type());
+    let container_ref = if is_container {
+        if let Some(reflect) =
+            TypeRegistry::get_type_data::<ReflectContainerImpl>(widget_ref.as_reflect())
+        {
+            Some((reflect.get_func)(widget_ref.as_reflect()))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     if widget_ref.get_raw_child().is_none() {
         let size = widget_ref.size();
         if parent_size.width() != 0 && parent_size.height() != 0 {
@@ -120,7 +132,8 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn Widg
         return Size::new(image_rect.width(), image_rect.height());
     } else {
         let size = widget_ref.size();
-        let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap());
+        let child_size =
+            child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap());
         if size.width() == 0 {
             widget_ref.width_request(child_size.width());
         }
@@ -132,10 +145,7 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn Widg
 }
 
 #[inline]
-fn child_position_probe(
-    mut parent: *const dyn WidgetImpl,
-    mut child: Option<*mut dyn WidgetImpl>,
-) {
+fn child_position_probe(mut parent: *const dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
         let child_rect = child_ref.rect();
@@ -147,29 +157,29 @@ fn child_position_probe(
         match halign {
             Align::Start => child_ref.set_fixed_x(parent_rect.x() as i32 + child_ref.margin_left()),
             Align::Center => {
-                let offset =
-                    (parent_rect.width() - child_ref.rect().width()) as i32 / 2 + child_ref.margin_left();
+                let offset = (parent_rect.width() - child_ref.rect().width()) as i32 / 2
+                    + child_ref.margin_left();
                 child_ref.set_fixed_x(parent_rect.x() as i32 + offset)
             }
             Align::End => {
-                let offset =
-                    parent_rect.width() as i32 - child_ref.rect().width() as i32 + child_ref.margin_left();
+                let offset = parent_rect.width() as i32 - child_ref.rect().width() as i32
+                    + child_ref.margin_left();
                 child_ref.set_fixed_x(parent_rect.x() as i32 + offset)
             }
         }
 
         match valign {
-            Align::Start => {
-                child_ref.set_fixed_y(parent_rect.y() as i32 + child_rect.y() as i32 + child_ref.margin_top())
-            }
+            Align::Start => child_ref.set_fixed_y(
+                parent_rect.y() as i32 + child_rect.y() as i32 + child_ref.margin_top(),
+            ),
             Align::Center => {
-                let offset =
-                    (parent_rect.height() - child_ref.rect().height()) as i32 / 2 + child_ref.margin_top();
+                let offset = (parent_rect.height() - child_ref.rect().height()) as i32 / 2
+                    + child_ref.margin_top();
                 child_ref.set_fixed_y(parent_rect.y() as i32 + offset)
             }
             Align::End => {
-                let offset =
-                    parent_rect.height() as i32 - child_ref.rect().height() as i32 + child_ref.margin_top();
+                let offset = parent_rect.height() as i32 - child_ref.rect().height() as i32
+                    + child_ref.margin_top();
                 child_ref.set_fixed_y(parent_rect.y() as i32 + offset)
             }
         }

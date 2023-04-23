@@ -39,7 +39,7 @@ pub(crate) fn generate_extend_object(
 
                 impl InnerTypeRegister for #name {
                     #[inline]
-                    fn inner_type_register(&mut self, type_registry: &mut TypeRegistry) {
+                    fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectObjectImpl>();
                         type_registry.register::<#name, ReflectObjectImplExt>();
                         type_registry.register::<#name, ReflectObjectOperation>();

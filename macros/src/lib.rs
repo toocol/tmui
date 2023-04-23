@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+mod cast;
 mod extend_container;
 mod extend_element;
 mod extend_object;
@@ -7,6 +8,7 @@ mod extend_widget;
 mod reflect_trait;
 mod trait_info;
 
+use cast::CastInfo;
 use proc_macro::TokenStream;
 use syn::{self, parse_macro_input, DeriveInput};
 use trait_info::TraitInfo;
@@ -51,6 +53,16 @@ pub fn extends_container(_args: TokenStream, input: TokenStream) -> TokenStream 
 pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as TraitInfo);
     match reflect_trait::generate_reflect_trait(&mut ast) {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn cast(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as CastInfo);
+
+    match ast.expand() {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
