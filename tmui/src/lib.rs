@@ -8,6 +8,7 @@ pub mod graphics;
 pub mod prelude;
 pub mod widget;
 pub mod label;
+pub mod layout;
 pub mod container;
 pub mod scroll_bar;
 pub mod util;

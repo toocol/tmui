@@ -38,6 +38,14 @@ impl ContainerImplExt for TestContainer {
     }
 }
 
+impl Layout for TestContainer {
+    fn composition(&self) -> tmui::layout::Composition {
+        tmui::layout::Composition::Arrange
+    }
+
+    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl) {}
+}
+
 #[test]
 fn main() {
     let mut r = TypeRegistry::new();

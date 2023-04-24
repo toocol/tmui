@@ -11,3 +11,4 @@ pub use crate::widget::{Widget, WidgetExt, WidgetAcquire, WidgetImpl, WidgetImpl
 pub use crate::label::LabelSignal;
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::container::{Container, ContainerAcquire, ReflectContainerImpl};
+pub use crate::layout::Layout;

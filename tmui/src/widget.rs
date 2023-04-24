@@ -862,7 +862,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 #[allow(unused_mut)]
 #[reflect_trait]
 pub trait WidgetImpl:
-    WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType
+    WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType + Layout
 {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Size {
@@ -882,6 +882,59 @@ pub trait WidgetImplExt: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
     fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&mut self, child: T);
+}
+
+////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
+impl<T:WidgetAcquire> Layout for T {
+    fn composition(&self) -> crate::layout::Composition {
+        crate::layout::Composition::Default
+    }
+
+    fn position_layout(&mut self, _: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
+        let child_rect = self.rect();
+        let parent_rect = parent.rect();
+
+        let halign = self.get_property("halign").unwrap().get::<Align>();
+        let valign = self.get_property("valign").unwrap().get::<Align>();
+
+        match halign {
+            Align::Start => self.set_fixed_x(parent_rect.x() as i32 + self.margin_left()),
+            Align::Center => {
+                let offset = (parent_rect.width() - self.rect().width()) as i32 / 2
+                    + self.margin_left();
+                self.set_fixed_x(parent_rect.x() as i32 + offset)
+            }
+            Align::End => {
+                let offset = parent_rect.width() as i32 - self.rect().width() as i32
+                    + self.margin_left();
+                self.set_fixed_x(parent_rect.x() as i32 + offset)
+            }
+        }
+
+        match valign {
+            Align::Start => self.set_fixed_y(
+                parent_rect.y() as i32 + child_rect.y() as i32 + self.margin_top(),
+            ),
+            Align::Center => {
+                let offset = (parent_rect.height() - self.rect().height()) as i32 / 2
+                    + self.margin_top();
+                self.set_fixed_y(parent_rect.y() as i32 + offset)
+            }
+            Align::End => {
+                let offset = parent_rect.height() as i32 - self.rect().height() as i32
+                    + self.margin_top();
+                self.set_fixed_y(parent_rect.y() as i32 + offset)
+            }
+        }
+    }
+}
+
+impl Layout for Widget {
+    fn composition(&self) -> crate::layout::Composition {
+        crate::layout::Composition::Default
+    }
+
+    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl) {}
 }
 
 #[cfg(test)]
