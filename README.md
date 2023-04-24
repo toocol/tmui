@@ -18,7 +18,7 @@ fn main() {
     app.run();
 }
 
-fn build_ui(window: &ApplicationWindow) {
+fn build_ui(window: &mut ApplicationWindow) {
     let label = Label::new(Some("Hello World!"));
     window.child(label);
 }

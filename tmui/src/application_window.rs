@@ -11,6 +11,7 @@ use lazy_static::lazy_static;
 use log::debug;
 use skia_safe::Font;
 use std::{
+    collections::VecDeque,
     ptr::null_mut,
     sync::{
         atomic::{AtomicPtr, Ordering},
@@ -31,7 +32,7 @@ pub fn store_board(board: &mut Board) {
     })
 }
 
-#[extends_widget]
+#[extends(Widget)]
 #[derive(Default)]
 pub struct ApplicationWindow {}
 
@@ -75,13 +76,14 @@ impl ApplicationWindow {
 
     pub fn position_probe(&mut self) {
         let child = self.get_raw_child_mut();
-        child_position_probe(self, child)
+        child_position_probe(Some(self), Some(self), child)
     }
 }
 
 #[inline]
 fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
+    let type_registry = TypeRegistry::instance();
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
         child_ref.set_parent(parent);
@@ -90,14 +92,32 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
         board.add_element(child_ref.as_element());
 
         child_ref.initialize();
+        child_ref.inner_type_register(type_registry);
+        child_ref.type_register(type_registry);
         child = child_ref.get_raw_child_mut();
     }
 }
 
 fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn WidgetImpl) -> Size {
     let widget_ref = unsafe { widget.as_mut().unwrap() };
-    if widget_ref.get_raw_child().is_none() {
-        let size = widget_ref.size();
+    let raw_child = widget_ref.get_raw_child();
+    let size = widget_ref.size();
+
+    // Determine whether the widget is a container.
+    let is_container = widget_ref.parent_type().is_a(Container::static_type());
+    let container_ref = if is_container {
+        cast_mut!(widget_ref as ContainerImpl)
+    } else {
+        None
+    };
+    let children = if container_ref.is_some() {
+        Some(container_ref.unwrap().children_mut())
+    } else {
+        None
+    };
+
+    let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
+    if raw_child.is_none() && container_no_children {
         if parent_size.width() != 0 && parent_size.height() != 0 {
             if size.width() == 0 {
                 widget_ref.width_request(parent_size.width());
@@ -116,8 +136,16 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn Widg
         let image_rect = widget_ref.image_rect();
         return Size::new(image_rect.width(), image_rect.height());
     } else {
-        let size = widget_ref.size();
-        let child_size = child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap());
+        let child_size = if is_container {
+            let mut size = Size::default();
+            children
+                .unwrap()
+                .iter_mut()
+                .for_each(|child| size = size + child_width_probe(window_size, size, *child));
+            size
+        } else {
+            child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
+        };
         if size.width() == 0 {
             widget_ref.width_request(child_size.width());
         }
@@ -128,50 +156,47 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn Widg
     }
 }
 
-#[inline]
 fn child_position_probe(
-    mut parent: *const dyn WidgetImpl,
-    mut child: Option<*mut dyn WidgetImpl>,
+    mut previous: Option<*const dyn WidgetImpl>,
+    mut parent: Option<*const dyn WidgetImpl>,
+    mut widget: Option<*mut dyn WidgetImpl>,
 ) {
-    while let Some(child_ptr) = child {
-        let child_ref = unsafe { child_ptr.as_mut().unwrap() };
-        let child_rect = child_ref.rect();
-        let parent_rect = unsafe { parent.as_ref().unwrap().rect() };
+    let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
+    while let Some(widget_ptr) = widget {
+        let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
+        let previous_ref = unsafe { previous.as_ref().unwrap().as_ref().unwrap() };
+        let parent_ref = unsafe { parent.as_ref().unwrap().as_ref().unwrap() };
 
-        let halign = child_ref.get_property("halign").unwrap().get::<Align>();
-        let valign = child_ref.get_property("valign").unwrap().get::<Align>();
+        // Deal with the widget's postion.
+        widget_ref.position_layout(previous_ref, parent_ref);
 
-        match halign {
-            Align::Start => child_ref.set_fixed_x(parent_rect.x() as i32 + child_ref.margin_left()),
-            Align::Center => {
-                let offset =
-                    (parent_rect.width() - child_ref.rect().width()) as i32 / 2 + child_ref.margin_left();
-                child_ref.set_fixed_x(parent_rect.x() as i32 + offset)
-            }
-            Align::End => {
-                let offset =
-                    parent_rect.width() as i32 - child_ref.rect().width() as i32 + child_ref.margin_left();
-                child_ref.set_fixed_x(parent_rect.x() as i32 + offset)
-            }
+        // Determine whether the widget is a container.
+        let is_container = widget_ref.parent_type().is_a(Container::static_type());
+        let container_ref = if is_container {
+            cast_mut!(widget_ref as ContainerImpl)
+        } else {
+            None
+        };
+        let container_children = if container_ref.is_some() {
+            Some(container_ref.unwrap().children_mut())
+        } else {
+            None
+        };
+
+        if is_container {
+            container_children
+                .unwrap()
+                .iter_mut()
+                .for_each(|c| children.push_back(Some(*c)));
+        } else {
+            children.push_back(widget_ref.get_raw_child_mut());
         }
-
-        match valign {
-            Align::Start => {
-                child_ref.set_fixed_y(parent_rect.y() as i32 + child_rect.y() as i32 + child_ref.margin_top())
-            }
-            Align::Center => {
-                let offset =
-                    (parent_rect.height() - child_ref.rect().height()) as i32 / 2 + child_ref.margin_top();
-                child_ref.set_fixed_y(parent_rect.y() as i32 + offset)
-            }
-            Align::End => {
-                let offset =
-                    parent_rect.height() as i32 - child_ref.rect().height() as i32 + child_ref.margin_top();
-                child_ref.set_fixed_y(parent_rect.y() as i32 + offset)
-            }
-        }
-
-        parent = child_ptr;
-        child = child_ref.get_raw_child_mut();
+        widget = children.pop_front().take().unwrap();
+        previous = Some(widget_ptr);
+        parent = if let Some(c) = widget.as_ref() {
+            unsafe { c.as_ref().unwrap().get_raw_parent() }
+        } else {
+            None
+        };
     }
 }

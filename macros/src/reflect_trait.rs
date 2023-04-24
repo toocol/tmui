@@ -12,6 +12,7 @@ pub(crate) fn generate_reflect_trait(ast: &mut TraitInfo) -> syn::Result<proc_ma
             "Reflect trait should not have generic params.",
         ));
     }
+
     let span = item_trait.span();
     match item_trait {
         syn::ItemTrait { supertraits, .. } => {
@@ -41,26 +42,20 @@ pub(crate) fn generate_reflect_trait(ast: &mut TraitInfo) -> syn::Result<proc_ma
         #item_trait
 
         pub struct #reflect_ident {
-            get_func: fn(&dyn Reflect)  -> &dyn #trait_ident,
-            get_mut_func: fn(&mut dyn Reflect) -> &mut dyn #trait_ident,
-            get_boxed_func: fn(Box<dyn Reflect>) -> Box<dyn #trait_ident>,
+            pub get_func: fn(&dyn Reflect) -> &dyn #trait_ident,
+            pub get_mut_func: fn(&mut dyn Reflect) -> &mut dyn #trait_ident,
+            pub get_boxed_func: fn(Box<dyn Reflect>) -> Box<dyn #trait_ident>,
         }
 
         impl ReflectTrait for #reflect_ident {
+            #[inline]
             fn as_any(&self) -> &dyn Any {
-                self
-            }
-
-            fn as_mut_any(&mut self) -> &mut dyn Any {
-                self
-            }
-
-            fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
                 self
             }
         }
 
         impl<T: Reflect + #trait_ident> FromType<T> for #reflect_ident {
+            #[inline]
             fn from_type() -> Self {
                 Self {
                     get_func: |obj| obj.as_any().downcast_ref::<T>().unwrap(),

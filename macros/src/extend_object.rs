@@ -2,7 +2,9 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_object(
+    ast: &mut DeriveInput,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -12,7 +14,12 @@ pub(crate) fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_
                         pub object: Object
                     })?);
                 }
-                _ => (),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        ast,
+                        "`extend_object` should defined on named fields struct.",
+                    ))
+                }
             }
 
             let object_trait_impl_clause =
@@ -23,9 +30,21 @@ pub(crate) fn generate_extend_object(ast: &mut DeriveInput) -> syn::Result<proc_
 
                 #object_trait_impl_clause
 
+                impl ObjectAcquire for #name {}
+
                 impl ParentType for #name {
+                    #[inline]
                     fn parent_type(&self) -> Type {
                         Object::static_type()
+                    }
+                }
+
+                impl InnerTypeRegister for #name {
+                    #[inline]
+                    fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
+                        type_registry.register::<#name, ReflectObjectImpl>();
+                        type_registry.register::<#name, ReflectObjectImplExt>();
+                        type_registry.register::<#name, ReflectObjectOperation>();
                     }
                 }
             });
@@ -83,6 +102,38 @@ pub(crate) fn gen_object_trait_impl_clause(
             #[inline]
             fn object_type(&self) -> Type {
                 Self::static_type()
+            }
+        }
+
+        impl Reflect for #name {
+            #[inline]
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+
+            #[inline]
+            fn as_mut_any(&mut self) -> &mut dyn Any {
+                self
+            }
+
+            #[inline]
+            fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
+                self
+            }
+
+            #[inline]
+            fn as_reflect(&self) -> &dyn Reflect {
+                self
+            }
+
+            #[inline]
+            fn as_mut_reflect(&mut self) -> &mut dyn Reflect {
+                self
+            }
+
+            #[inline]
+            fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect> {
+                self
             }
         }
 

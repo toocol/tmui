@@ -10,7 +10,7 @@ use crate::{prelude::*, widget::WidgetImpl, graphics::painter::Painter};
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
 
-#[extends_widget]
+#[extends(Widget)]
 #[derive(Default)]
 pub struct ScrollBar {
     orientation: Orientation,

@@ -6,7 +6,7 @@ use tlib::{
     prelude::*,
 };
 
-#[extends_object]
+#[extends(Object)]
 #[derive(Default)]
 pub struct Widget {}
 impl ObjectSubclass for Widget {

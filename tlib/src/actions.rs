@@ -9,7 +9,7 @@
 //! use tlib::object::{ObjectImpl, ObjectSubclass};
 //! use tlib::{signals, signal, connect, emit};
 //!
-//! #[extends_object]
+//! #[extends(Object)]
 //! #[derive(Default)]
 //! pub struct Widget {}
 //!
@@ -455,7 +455,7 @@ mod tests {
     };
     use super::ActionHub;
 
-    #[extends_object]
+    #[extends(Object)]
     #[derive(Default)]
     pub struct Widget {}
 

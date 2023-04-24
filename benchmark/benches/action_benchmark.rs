@@ -9,7 +9,7 @@ use tlib::{
     signal, signals,
 };
 
-#[extends_object]
+#[extends(Object)]
 #[derive(Default)]
 struct Widget {}
 

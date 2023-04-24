@@ -9,7 +9,7 @@ lazy_static! {
     static ref COLORS: [Color; 3] = [Color::RED, Color::GREEN, Color::BLUE];
 }
 
-#[extends_widget]
+#[extends(Widget)]
 #[derive(Default)]
 pub struct TestWidget {
     idx: usize,

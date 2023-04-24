@@ -1,12 +1,16 @@
 #![allow(dead_code)]
 use crate::{
+    prelude::{FromType, Reflect, ReflectTrait, TypeRegistry, InnerTypeRegister},
     types::{IsA, ObjectType, StaticType, Type},
     values::{ToValue, Value},
 };
-use std::{
-    collections::HashMap, sync::atomic::{AtomicU16, Ordering},
-};
 use log::debug;
+use macros::reflect_trait;
+use std::{
+    any::Any,
+    collections::HashMap,
+    sync::atomic::{AtomicU16, Ordering},
+};
 
 static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 
@@ -17,7 +21,7 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 /// use tlib::prelude::*;
 /// use tlib::object::{ObjectImpl, ObjectSubclass};
 ///
-/// #[extends_object]
+/// #[extends(Object)]
 /// #[derive(Default)]
 /// pub struct SubObject {};
 ///
@@ -52,9 +56,10 @@ impl Default for Object {
     }
 }
 
+#[reflect_trait]
 pub trait ObjectOperation {
     /// Returns the type of the object.
-    /// 
+    ///
     /// Go to[`Function defination`](ObjectOperation::id) (Defined in [`ObjectOperation`])
     fn id(&self) -> u16;
 
@@ -78,8 +83,7 @@ impl Object {
     }
 
     pub fn primitive_set_property(&mut self, name: &str, value: Value) {
-        self.properties
-            .insert(name.to_string(), Box::new(value));
+        self.properties.insert(name.to_string(), Box::new(value));
     }
 
     pub fn primitive_get_property(&self, name: &str) -> Option<&Value> {
@@ -98,6 +102,38 @@ impl ObjectOperation for Object {
 
     fn get_property(&self, name: &str) -> Option<&Value> {
         self.primitive_get_property(name)
+    }
+}
+
+impl Reflect for Object {
+    #[inline]
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    #[inline]
+    fn as_boxed_any(self: Box<Self>) -> Box<dyn std::any::Any> {
+        self
+    }
+
+    #[inline]
+    fn as_reflect(&self) -> &dyn Reflect {
+        self
+    }
+
+    #[inline]
+    fn as_mut_reflect(&mut self) -> &mut dyn Reflect {
+        self
+    }
+
+    #[inline]
+    fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect> {
+        self
     }
 }
 
@@ -135,14 +171,18 @@ impl ObjectImplExt for Object {
     fn parent_on_property_set(&mut self, _name: &str, _value: &Value) {}
 }
 
+impl InnerTypeRegister for Object {
+    fn inner_type_register(&self, _: &mut TypeRegistry) {}
+}
+
 pub trait ObjectExt: StaticType {
     /// Returns `true` if the object is an instance of (can be cast to) `T`.
-    /// 
+    ///
     /// Go to[`Function defination`](ObjectExt::is) (Defined in [`ObjectExt`])
     fn is<T: StaticType>(&self) -> bool;
 
     /// Returns the type of the object.
-    /// 
+    ///
     /// Go to[`Function defination`](ObjectExt::type_) (Defined in [`ObjectExt`])
     fn type_(&self) -> Type;
 }
@@ -159,6 +199,7 @@ impl<T: StaticType> ObjectExt for T {
 
 pub trait IsSubclassable {}
 
+pub trait ObjectAcquire: ObjectImpl {}
 pub trait ParentType {
     fn parent_type(&self) -> Type;
 }
@@ -181,7 +222,9 @@ impl<T: ObjectSubclass> StaticType for T {
     }
 }
 
-pub trait ObjectImpl: ObjectImplExt {
+#[reflect_trait]
+#[allow(unused_variables)]
+pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister {
     /// Override this function should invoke `self.parent_construct()` manually.
     fn construct(&mut self) {
         self.parent_construct()
@@ -195,8 +238,12 @@ pub trait ObjectImpl: ObjectImplExt {
     /// `initialize()` will be called when widget as a `child` of another widget.
     /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}
+
+    /// Override to register the reflect type info to [`TypeRegistry`] in this function.
+    fn type_register(&self, type_registry: &mut TypeRegistry) {}
 }
 
+#[reflect_trait]
 pub trait ObjectImplExt {
     fn parent_construct(&mut self);
 

@@ -16,14 +16,14 @@ pub use types::Type;
 
 #[cfg(test)]
 mod tests {
-    use macros::extends_object;
+    use macros::extends;
 
     use crate::{
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
     };
 
-    #[extends_object]
+    #[extends(Object)]
     #[derive(Default)]
     pub struct TestObject {}
 

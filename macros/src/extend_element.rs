@@ -3,20 +3,24 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_extend_element(
+    ast: &mut DeriveInput,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
                 syn::Fields::Named(fields) => {
-                    fields.named.push(
-                        syn::Field::parse_named
-                            .parse2(quote! {
-                                pub element: Element
-                            })?,
-                    );
+                    fields.named.push(syn::Field::parse_named.parse2(quote! {
+                        pub element: Element
+                    })?);
                 }
-                _ => (),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        ast,
+                        "`extend_element` should defined on named fields struct.",
+                    ))
+                }
             }
 
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
@@ -37,8 +41,16 @@ pub(crate) fn generate_extend_element(ast: &mut DeriveInput) -> syn::Result<proc
                 impl ElementAcquire for #name {}
 
                 impl ParentType for #name {
+                    #[inline]
                     fn parent_type(&self) -> Type {
                         Element::static_type()
+                    }
+                }
+
+                impl InnerTypeRegister for #name {
+                    #[inline]
+                    fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
+                        type_registry.register::<#name, ReflectElementImpl>();
                     }
                 }
             })

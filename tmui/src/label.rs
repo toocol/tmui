@@ -7,7 +7,7 @@ use log::debug;
 use tlib::{object::{ObjectImpl, ObjectSubclass}, signals, emit};
 use widestring::U16String;
 
-#[extends_widget]
+#[extends(Widget)]
 pub struct Label {
     label: Vec<u16>,
     text_halign: Align,
