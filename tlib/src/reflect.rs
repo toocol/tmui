@@ -11,17 +11,71 @@ lazy_static! {
     pub(crate) static ref TYPE_REGISTRY: AtomicPtr<TypeRegistry> = AtomicPtr::new(null_mut());
 }
 
+/// User register the type reflect info by override the function [`type_register()`](crate::object::ObjectImpl::type_register).<br>
+/// Framwork level type reflect info will write in proc-macros like [`extends_object`](macros::extends_container),[`extends_widget`](macros::extends_widget)...
+/// by implementing [`InnerTypeRegister`].<br>
+/// User can use macros [`cast!`](macros::cast!), [`cast_mut!`](macros::cast_mut!) or [`cast_boxed!`](macros::cast_boxed!) to cast runtime dyn trait object(ref).
+/// 
+/// ## example
+/// ```ignore
+/// use crate::prelude::*;
+/// use crate::object::ObjectSubclass;
+/// 
+/// #[extends_object]
+/// struct Foo {}
+/// 
+/// #[reflect_trait]
+/// trait DoA {
+///     fn do_a(&self);
+/// }
+/// impl DoA for Foo {
+///     fn do_a(&self) {}
+/// }
+/// 
+/// #[reflect_trait]
+/// trait DoB {
+///     fn do_b(&self);
+/// }
+/// impl DoB for Foo {
+///     fn do_b(&self) {}
+/// }
+/// 
+/// impl ObjectSubclass for Foo {
+///    const NAME: &'static str = "Foo";
+///
+///     type Type = Foo;
+///
+///     type ParentType = Object; 
+/// }
+/// impl ObjectImpl for Foo {
+///     fn type_register(&self, type_registry: &mut TypeRegistry) {
+///         type_registry.register::<Foo, DoA>();
+///         type_registry.register::<Foo, DoB>();
+///     }
+/// }
+/// 
+/// fn cast(foo: &dyn DoA) {
+///     if let Some(do_b) = cast!(foo as DoB) {
+///         do_b.do_b();
+///     }
+/// }
+/// ```
 pub struct TypeRegistry {
     registers: HashMap<TypeId, TypeRegistration>,
 }
 
 impl TypeRegistry {
+    /// Create a boxed TypeRegistry.
     pub fn new() -> Box<Self> {
+        if INIT.is_completed() {
+            panic!("`TypeRegistry` can only create once. (TypeRegistry::new)")
+        }
         Box::new(Self {
             registers: Default::default(),
         })
     }
 
+    /// Get the single instance of Registry.
     pub fn instance<'a>() -> &'a mut TypeRegistry {
         unsafe {
             TYPE_REGISTRY
@@ -75,6 +129,8 @@ pub trait InnerTypeRegister {
     fn inner_type_register(&self, type_registry: &mut TypeRegistry);
 }
 
+/// Auto implemented by defined [`extends_object`](macros::extends_object), [`extends_element`](macros::extends_element),
+/// [`extend_widget`](macros::extends_widget)... on struct.
 pub trait Reflect: Any + 'static {
     fn as_any(&self) -> &dyn Any;
 
@@ -89,6 +145,7 @@ pub trait Reflect: Any + 'static {
     fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect>;
 }
 
+/// implemented for trait which defined proc-macro [`reflect_trait`](macros::reflect_trait())
 pub trait ReflectTrait: Any + 'static {
     fn as_any(&self) -> &dyn Any;
 }

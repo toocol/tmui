@@ -42,18 +42,33 @@ impl ContainerImplExt for TestContainer {
 fn main() {
     let mut r = TypeRegistry::new();
     r.initialize();
-    let c = Object::new::<TestContainer>(&[]);
+    let mut c = Object::new::<TestContainer>(&[]);
     c.inner_type_register(r.as_mut());
-    cast_test(&c)
+    cast_test(&c);
+    cast_mut_test(&mut c);
+    cast_boxed_test(Box::new(c));
 }
 
 fn cast_test(widget: &dyn WidgetImpl) {
     let mut c = false;
-    if let Some(reflect) = TypeRegistry::get_type_data::<ReflectContainerImpl>(widget.as_reflect())
-    {
-        let _ = (reflect.get_func)(widget.as_reflect());
+    if let Some(_) = cast!(widget as ContainerImpl) {
         c = true;
     }
-    assert!(c)
-    // let container = cast!(widget as ContainerImpl);
+    assert!(c);
+}
+
+fn cast_mut_test(widget: &mut dyn WidgetImpl) {
+    let mut c = false;
+    if let Some(_) = cast_mut!(widget as ContainerImpl) {
+        c = true;
+    }
+    assert!(c);
+}
+
+fn cast_boxed_test(widget: Box<dyn WidgetImpl>) {
+    let mut c = false;
+    if let Some(_) = cast_boxed!(widget as ContainerImpl) {
+        c = true;
+    }
+    assert!(c);
 }

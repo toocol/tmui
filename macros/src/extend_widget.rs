@@ -359,6 +359,9 @@ pub(crate) fn gen_widget_trait_impl_clause(
         impl WidgetImplExt for #name {
             #[inline]
             fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&mut self, child: T) {
+                if self.parent_type().is_a(Container::static_type()) {
+                    panic!("function `child()` was invalid in `Container`")
+                }
                 self.#(#widget_path).*.child_internal(child)
             }
         }

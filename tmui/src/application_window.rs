@@ -99,19 +99,13 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
 
 fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn WidgetImpl) -> Size {
     let widget_ref = unsafe { widget.as_mut().unwrap() };
-    let is_container = widget_ref.parent_type().is_a(Container::static_type());
-    let container_ref = if is_container {
-        if let Some(reflect) =
-            TypeRegistry::get_type_data::<ReflectContainerImpl>(widget_ref.as_reflect())
-        {
-            Some((reflect.get_func)(widget_ref.as_reflect()))
-        } else {
-            None
-        }
+    let container_ref = cast!(widget_ref as ContainerImpl);
+    let children = if container_ref.is_some() {
+        Some(container_ref.unwrap().children())
     } else {
         None
     };
-    if widget_ref.get_raw_child().is_none() {
+    if widget_ref.get_raw_child().is_none() && children.is_none() {
         let size = widget_ref.size();
         if parent_size.width() != 0 && parent_size.height() != 0 {
             if size.width() == 0 {
@@ -144,7 +138,6 @@ fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn Widg
     }
 }
 
-#[inline]
 fn child_position_probe(mut parent: *const dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };

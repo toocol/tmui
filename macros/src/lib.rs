@@ -61,8 +61,25 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn cast(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as CastInfo);
-
     match ast.expand() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn cast_mut(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as CastInfo);
+    match ast.expand_mut() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn cast_boxed(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as CastInfo);
+    match ast.expand_boxed() {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
