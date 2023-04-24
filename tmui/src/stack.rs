@@ -4,7 +4,7 @@ use crate::{
     prelude::*,
 };
 
-#[extends_container]
+#[extends(Container)]
 #[derive(Default)]
 pub struct Stack {}
 

@@ -30,6 +30,8 @@ pub(crate) fn generate_extend_object(
 
                 #object_trait_impl_clause
 
+                impl ObjectAcquire for #name {}
+
                 impl ParentType for #name {
                     #[inline]
                     fn parent_type(&self) -> Type {

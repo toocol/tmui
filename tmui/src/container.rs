@@ -2,7 +2,7 @@ use tlib::object::{ObjectSubclass, ObjectImpl, IsSubclassable};
 
 use crate::{prelude::*, widget::WidgetImpl};
 
-#[extends_widget]
+#[extends(Widget)]
 #[derive(Default)]
 pub struct Container {}
 

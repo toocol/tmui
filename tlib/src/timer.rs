@@ -109,7 +109,7 @@ impl TimerHub {
 }
 
 /// Timing trigger `timeout()` sginal.
-#[extends_object]
+#[extends(Object)]
 pub struct Timer {
     duration: Duration,
     last_strike: SystemTime,
@@ -225,7 +225,7 @@ mod tests {
     };
     use std::{sync::atomic::Ordering, time::Duration};
 
-    #[extends_object]
+    #[extends(Object)]
     #[derive(Default)]
     pub struct Widget {
         num: i32,

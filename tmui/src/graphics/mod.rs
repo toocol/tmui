@@ -12,7 +12,7 @@ mod tests {
     use crate::prelude::*;
     use tlib::object::{ObjectImpl, ObjectSubclass};
 
-    #[extends_element]
+    #[extends(Element)]
     #[derive(Default)]
     pub struct SubElement {}
 

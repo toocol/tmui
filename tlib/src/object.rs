@@ -21,7 +21,7 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 /// use tlib::prelude::*;
 /// use tlib::object::{ObjectImpl, ObjectSubclass};
 ///
-/// #[extends_object]
+/// #[extends(Object)]
 /// #[derive(Default)]
 /// pub struct SubObject {};
 ///
@@ -199,6 +199,7 @@ impl<T: StaticType> ObjectExt for T {
 
 pub trait IsSubclassable {}
 
+pub trait ObjectAcquire: ObjectImpl {}
 pub trait ParentType {
     fn parent_type(&self) -> Type;
 }

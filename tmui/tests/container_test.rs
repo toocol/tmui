@@ -3,7 +3,7 @@ use tmui::container::{ContainerImpl, ContainerImplExt};
 use tmui::prelude::*;
 use tmui::widget::{Widget, WidgetImpl};
 
-#[extends_container]
+#[extends(Container)]
 #[derive(Default)]
 pub struct TestContainer {}
 

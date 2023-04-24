@@ -1,13 +1,10 @@
-pub use macros::{
-    cast, cast_boxed, cast_mut, extends_container, extends_element, extends_object, extends_widget,
-    reflect_trait,
-};
+pub use macros::{cast, cast_boxed, cast_mut, extends, reflect_trait};
 
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal, ACTION_HUB};
 pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{
-    Object, ObjectExt, ObjectImpl, ObjectImplExt, ObjectOperation, ParentType, ReflectObjectImpl,
-    ReflectObjectImplExt, ReflectObjectOperation,
+    Object, ObjectAcquire, ObjectExt, ObjectImpl, ObjectImplExt, ObjectOperation, ParentType,
+    ReflectObjectImpl, ReflectObjectImplExt, ReflectObjectOperation,
 };
 pub use crate::reflect::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry};
 pub use crate::timer::TimerSignal;

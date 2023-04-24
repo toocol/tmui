@@ -11,7 +11,7 @@ pub trait DoB {
     fn do_b(&self);
 }
 
-#[extends_object]
+#[extends(Object)]
 #[derive(Default)]
 pub struct Foo {}
 impl ObjectSubclass for Foo {
@@ -33,7 +33,7 @@ impl DoB for Foo {
     }
 }
 
-#[extends_object]
+#[extends(Object)]
 #[derive(Default)]
 pub struct Bar {}
 impl ObjectSubclass for Bar {

@@ -32,7 +32,7 @@ pub fn store_board(board: &mut Board) {
     })
 }
 
-#[extends_widget]
+#[extends(Widget)]
 #[derive(Default)]
 pub struct ApplicationWindow {}
 

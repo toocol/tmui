@@ -12,7 +12,7 @@ lazy_static! {
 }
 
 /// User register the type reflect info by override the function [`type_register()`](crate::object::ObjectImpl::type_register).<br>
-/// Framwork level type reflect info will write in proc-macros like [`extends_object`](macros::extends_container),[`extends_widget`](macros::extends_widget)...
+/// Framwork level type reflect info will write in proc-macro [`extends`](macros::extends) 
 /// by implementing [`InnerTypeRegister`].<br>
 /// User can use macros [`cast!`](macros::cast!), [`cast_mut!`](macros::cast_mut!) or [`cast_boxed!`](macros::cast_boxed!) to cast runtime dyn trait object(ref).
 /// 
@@ -21,7 +21,7 @@ lazy_static! {
 /// use crate::prelude::*;
 /// use crate::object::ObjectSubclass;
 /// 
-/// #[extends_object]
+/// #[extends(Object)]
 /// struct Foo {}
 /// 
 /// #[reflect_trait]
@@ -129,8 +129,7 @@ pub trait InnerTypeRegister {
     fn inner_type_register(&self, type_registry: &mut TypeRegistry);
 }
 
-/// Auto implemented by defined [`extends_object`](macros::extends_object), [`extends_element`](macros::extends_element),
-/// [`extend_widget`](macros::extends_widget)... on struct.
+/// Auto implemented by defined [`extends`](macros::extends) on struct.
 pub trait Reflect: Any + 'static {
     fn as_any(&self) -> &dyn Any;
 

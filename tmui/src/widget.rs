@@ -20,7 +20,7 @@ use tlib::{
     signals,
 };
 
-#[extends_element]
+#[extends(Element)]
 pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
     child: Option<Box<dyn WidgetImpl>>,
@@ -943,7 +943,7 @@ mod tests {
     use crate::{prelude::*, widget::WidgetGenericExt};
     use tlib::object::{ObjectImpl, ObjectSubclass};
 
-    #[extends_widget]
+    #[extends(Widget)]
     #[derive(Default)]
     struct SubWidget {}
 
@@ -958,7 +958,7 @@ mod tests {
 
     impl WidgetImpl for SubWidget {}
 
-    #[extends_widget]
+    #[extends(Widget)]
     #[derive(Default)]
     struct ChildWidget {}
 
