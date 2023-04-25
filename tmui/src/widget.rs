@@ -900,40 +900,52 @@ impl<T: WidgetAcquire> Layout for T {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
-        let widget_rect = self.rect();
-        let parent_rect = parent.rect();
+    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
+        base_widget_position_layout(self, previous, parent)
+    }
+}
 
-        let halign = self.get_property("halign").unwrap().get::<Align>();
-        let valign = self.get_property("valign").unwrap().get::<Align>();
+pub(crate) fn base_widget_position_layout(
+    widget: &mut dyn WidgetImpl,
+    _: &dyn WidgetImpl,
+    parent: &dyn WidgetImpl,
+) {
+    if parent.parent_type().is_a(Container::static_type()) {
+        return;
+    }
+    let widget_rect = widget.rect();
+    let parent_rect = parent.rect();
 
-        match halign {
-            Align::Start => self.set_fixed_x(parent_rect.x() as i32 + self.margin_left()),
-            Align::Center => {
-                let offset =
-                    (parent_rect.width() - self.rect().width()) as i32 / 2 + self.margin_left();
-                self.set_fixed_x(parent_rect.x() as i32 + offset)
-            }
-            Align::End => {
-                let offset =
-                    parent_rect.width() as i32 - self.rect().width() as i32 + self.margin_left();
-                self.set_fixed_x(parent_rect.x() as i32 + offset)
-            }
+    let halign = widget.get_property("halign").unwrap().get::<Align>();
+    let valign = widget.get_property("valign").unwrap().get::<Align>();
+
+    match halign {
+        Align::Start => widget.set_fixed_x(parent_rect.x() as i32 + widget.margin_left()),
+        Align::Center => {
+            let offset =
+                (parent_rect.width() - widget.rect().width()) as i32 / 2 + widget.margin_left();
+            widget.set_fixed_x(parent_rect.x() as i32 + offset)
         }
+        Align::End => {
+            let offset =
+                parent_rect.width() as i32 - widget.rect().width() as i32 + widget.margin_left();
+            widget.set_fixed_x(parent_rect.x() as i32 + offset)
+        }
+    }
 
-        match valign {
-            Align::Start => self
-                .set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + self.margin_top()),
-            Align::Center => {
-                let offset =
-                    (parent_rect.height() - self.rect().height()) as i32 / 2 + self.margin_top();
-                self.set_fixed_y(parent_rect.y() as i32 + offset)
-            }
-            Align::End => {
-                let offset =
-                    parent_rect.height() as i32 - self.rect().height() as i32 + self.margin_top();
-                self.set_fixed_y(parent_rect.y() as i32 + offset)
-            }
+    match valign {
+        Align::Start => {
+            widget.set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + widget.margin_top())
+        }
+        Align::Center => {
+            let offset =
+                (parent_rect.height() - widget.rect().height()) as i32 / 2 + widget.margin_top();
+            widget.set_fixed_y(parent_rect.y() as i32 + offset)
+        }
+        Align::End => {
+            let offset =
+                parent_rect.height() as i32 - widget.rect().height() as i32 + widget.margin_top();
+            widget.set_fixed_y(parent_rect.y() as i32 + offset)
         }
     }
 }
