@@ -15,12 +15,13 @@ use once_cell::sync::Lazy;
 use skia_safe::Font;
 use std::{
     collections::{HashMap, VecDeque},
-    ptr::null_mut,
+    ptr::{null_mut, NonNull},
     sync::{
         atomic::{AtomicPtr, Ordering},
         mpsc::{SendError, Sender},
         Once,
     },
+    thread::{self, ThreadId},
 };
 use tlib::{
     connect, emit,
@@ -33,9 +34,7 @@ lazy_static! {
 }
 
 /// Store the [`Board`] as raw ptr.
-pub(crate) fn store_board(
-    board: &mut Board
-) {
+pub(crate) fn store_board(board: &mut Board) {
     INIT.call_once(move || {
         BOARD.store(board, Ordering::SeqCst);
     })
@@ -59,6 +58,7 @@ impl ObjectSubclass for ApplicationWindow {
 impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_window_id(self.id());
         debug!(
             "`ApplicationWindow` construct: static_type: {}",
             Self::static_type().name()
@@ -67,7 +67,7 @@ impl ObjectImpl for ApplicationWindow {
 
     fn initialize(&mut self) {
         connect!(self, size_changed(), self, when_size_change(Size));
-        child_initialize(self, self.get_raw_child_mut());
+        child_initialize(self, self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
     }
 }
@@ -78,17 +78,64 @@ impl WidgetImpl for ApplicationWindow {
 
 impl ApplicationWindow {
     pub fn new(width: i32, height: i32) -> ApplicationWindow {
-        let window: ApplicationWindow = Object::new(&[("width", &width), ("height", &height)]);
-        Self::windows_layouts().insert(window.id(), Box::new(LayoutManager::default()));
+        let thread_id = thread::current().id();
+        let mut window: ApplicationWindow = Object::new(&[("width", &width), ("height", &height)]);
+        Self::windows().insert(
+            window.id(),
+            (
+                thread_id,
+                NonNull::new(&mut window),
+                Box::new(LayoutManager::default()),
+            ),
+        );
         window
     }
 
-    pub(crate) fn windows_layouts() -> &'static mut HashMap<u16, Box<LayoutManager>> {
-        static mut WINDOW_LAYOUTS: Lazy<HashMap<u16, Box<LayoutManager>>> = Lazy::new(|| {
-            let m: HashMap<u16, Box<LayoutManager>> = HashMap::new();
-            m
-        });
-        unsafe { &mut WINDOW_LAYOUTS }
+    pub(crate) fn windows() -> &'static mut HashMap<
+        u16,
+        (
+            ThreadId,
+            Option<NonNull<ApplicationWindow>>,
+            Box<LayoutManager>,
+        ),
+    > {
+        static mut WINDOWS: Lazy<
+            HashMap<
+                u16,
+                (
+                    ThreadId,
+                    Option<NonNull<ApplicationWindow>>,
+                    Box<LayoutManager>,
+                ),
+            >,
+        > = Lazy::new(|| HashMap::new());
+        unsafe { &mut WINDOWS }
+    }
+
+    pub(crate) fn layout_of<'a>(id: u16) -> &'a mut LayoutManager {
+        let current_thread_id = thread::current().id();
+        let (thread_id, _, layout) = Self::windows()
+            .get_mut(&id)
+            .expect(&format!("Unkonwn application window with id: {}", id));
+        if current_thread_id != *thread_id {
+            panic!("Execute `ApplicationWindow::layout_of()` in the wrong thrad.");
+        }
+        layout.as_mut()
+    }
+
+    pub fn window_of<'a>(id: u16) -> &'a mut ApplicationWindow {
+        let current_thread_id = thread::current().id();
+        let (thread_id, window, _) = Self::windows()
+            .get_mut(&id)
+            .expect(&format!("Unkonwn application window with id: {}", id));
+        if current_thread_id != *thread_id {
+            panic!("Execute `ApplicationWindow::window_of()` in the wrong thrad.");
+        }
+        unsafe { window.unwrap().as_mut() }
+    }
+
+    pub fn send_message_with_id(id: u16, message: Message) -> Result<(), SendError<Message>> {
+        Self::window_of(id).send_message(message)
     }
 
     pub fn send_message(&self, message: Message) -> Result<(), SendError<Message>> {
@@ -103,10 +150,7 @@ impl ApplicationWindow {
     }
 
     pub(crate) fn when_size_change(&mut self, size: Size) {
-        Self::windows_layouts()
-            .get_mut(&self.id())
-            .unwrap()
-            .set_window_size(size);
+        Self::layout_of(self.id()).set_window_size(size);
     }
 
     pub(crate) fn activate(&mut self) {
@@ -118,14 +162,15 @@ impl ApplicationWindow {
     }
 
     pub(crate) fn window_layout_change(&mut self) {
-        Self::windows_layouts()
-            .get_mut(&self.id())
-            .unwrap()
-            .layout_change(self)
+        Self::layout_of(self.id()).layout_change(self)
     }
 }
 
-fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
+fn child_initialize(
+    mut parent: *mut dyn WidgetImpl,
+    mut child: Option<*mut dyn WidgetImpl>,
+    window_id: u16,
+) {
     let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
     let type_registry = TypeRegistry::instance();
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
@@ -139,6 +184,7 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
         child_ref.initialize();
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
+        child_ref.set_window_id(window_id);
 
         // Determine whether the widget is a container.
         let is_container = child_ref.parent_type().is_a(Container::static_type());

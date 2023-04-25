@@ -1,7 +1,7 @@
 use std::ptr::NonNull;
 
 use crate::{
-    application::Application,
+    application_window::ApplicationWindow,
     graphics::{
         drawing_context::DrawingContext,
         element::ElementImpl,
@@ -14,9 +14,10 @@ use crate::{
 };
 use skia_safe::Font;
 use tlib::{
+    emit,
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
-    signals, emit,
+    signals,
 };
 
 #[extends(Element)]
@@ -176,7 +177,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     }
 }
 
-pub trait WidgetAcquire: WidgetImpl {}
+pub trait WidgetAcquire: WidgetImpl + Default {}
 
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
@@ -575,6 +576,7 @@ impl WidgetExt for Widget {
     fn image_rect(&self) -> Rect {
         let mut rect = self.rect();
 
+        // Rect add the margins.
         let (top, right, bottom, left) = self.margins();
         rect.set_x(rect.x() - left);
         rect.set_y(rect.y() - top);
@@ -797,7 +799,11 @@ impl WidgetExt for Widget {
     }
 
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
-        Application::send_message(Message::message_set_cursor_shape(cursor))
+        ApplicationWindow::send_message_with_id(
+            self.window_id(),
+            Message::message_set_cursor_shape(cursor),
+        )
+        .unwrap()
     }
 }
 
@@ -859,7 +865,14 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 #[allow(unused_mut)]
 #[reflect_trait]
 pub trait WidgetImpl:
-    WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType + Layout
+    WidgetExt
+    + ElementImpl
+    + ElementExt
+    + ObjectOperation
+    + ObjectType
+    + ObjectImpl
+    + ParentType
+    + Layout
 {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Size {
@@ -882,7 +895,7 @@ pub trait WidgetImplExt: WidgetImpl {
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
-impl<T:WidgetAcquire> Layout for T {
+impl<T: WidgetAcquire> Layout for T {
     fn composition(&self) -> crate::layout::Composition {
         crate::layout::Composition::Default
     }
@@ -897,29 +910,28 @@ impl<T:WidgetAcquire> Layout for T {
         match halign {
             Align::Start => self.set_fixed_x(parent_rect.x() as i32 + self.margin_left()),
             Align::Center => {
-                let offset = (parent_rect.width() - self.rect().width()) as i32 / 2
-                    + self.margin_left();
+                let offset =
+                    (parent_rect.width() - self.rect().width()) as i32 / 2 + self.margin_left();
                 self.set_fixed_x(parent_rect.x() as i32 + offset)
             }
             Align::End => {
-                let offset = parent_rect.width() as i32 - self.rect().width() as i32
-                    + self.margin_left();
+                let offset =
+                    parent_rect.width() as i32 - self.rect().width() as i32 + self.margin_left();
                 self.set_fixed_x(parent_rect.x() as i32 + offset)
             }
         }
 
         match valign {
-            Align::Start => self.set_fixed_y(
-                parent_rect.y() as i32 + widget_rect.y() as i32 + self.margin_top(),
-            ),
+            Align::Start => self
+                .set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + self.margin_top()),
             Align::Center => {
-                let offset = (parent_rect.height() - self.rect().height()) as i32 / 2
-                    + self.margin_top();
+                let offset =
+                    (parent_rect.height() - self.rect().height()) as i32 / 2 + self.margin_top();
                 self.set_fixed_y(parent_rect.y() as i32 + offset)
             }
             Align::End => {
-                let offset = parent_rect.height() as i32 - self.rect().height() as i32
-                    + self.margin_top();
+                let offset =
+                    parent_rect.height() as i32 - self.rect().height() as i32 + self.margin_top();
                 self.set_fixed_y(parent_rect.y() as i32 + offset)
             }
         }

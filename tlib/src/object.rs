@@ -192,7 +192,7 @@ impl<T: StaticType> ObjectExt for T {
 
 pub trait IsSubclassable {}
 
-pub trait ObjectAcquire: ObjectImpl {}
+pub trait ObjectAcquire: ObjectImpl + Default {}
 pub trait ParentType {
     fn parent_type(&self) -> Type;
 }

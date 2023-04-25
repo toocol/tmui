@@ -34,7 +34,6 @@ lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
-    static ref OUTPUT_SENDER: AtomicPtr<Sender<Message>> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
@@ -58,19 +57,6 @@ impl Application {
     /// Get the builder [`ApplicationBuilder`] of `Application`.
     pub fn builder() -> ApplicationBuilder {
         ApplicationBuilder::default()
-    }
-
-    /// Send the [`Message`] to the platform process thread.
-    #[inline]
-    pub fn send_message(message: Message) {
-        unsafe {
-            OUTPUT_SENDER
-                .load(Ordering::SeqCst)
-                .as_ref()
-                .unwrap()
-                .send(message)
-                .expect("`Application` send message failed.")
-        }
     }
 
     /// Determine whether the current thread is the UI main thread.
@@ -149,7 +135,7 @@ impl Application {
 
     fn ui_main(
         backend_type: BackendType,
-        mut output_sender: Sender<Message>,
+        output_sender: Sender<Message>,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
     ) {
@@ -183,7 +169,6 @@ impl Application {
 
         let mut window = Box::new(ApplicationWindow::new(backend.width(), backend.height()));
         APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
-        OUTPUT_SENDER.store(&mut output_sender as *mut Sender<Message>, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);

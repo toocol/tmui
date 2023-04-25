@@ -30,17 +30,17 @@ impl LayoutManager {
     }
 
     pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        // Deal with the width first
+        // Deal with the size first
         let child = widget.get_raw_child_mut();
         if let Some(child) = child {
-            self.child_width_probe(self.window_size, widget.size(), child);
+            self.child_size_probe(self.window_size, widget.size(), child);
         }
 
         // Deal with the position
         self.child_position_probe(Some(widget), Some(widget), child)
     }
 
-    pub(crate) fn child_width_probe(
+    pub(crate) fn child_size_probe(
         &self,
         window_size: Size,
         parent_size: Size,
@@ -89,7 +89,7 @@ impl LayoutManager {
                 match composition {
                     Composition::Overlay => {
                         children.unwrap().iter_mut().for_each(|child| {
-                            child_size.max(self.child_width_probe(window_size, child_size, *child));
+                            child_size.max(self.child_size_probe(window_size, child_size, *child));
                         });
                     }
                     Composition::HorizontalArrange => {
@@ -101,13 +101,13 @@ impl LayoutManager {
                     _ => {
                         children.unwrap().iter_mut().for_each(|child| {
                             child_size =
-                                child_size + self.child_width_probe(window_size, child_size, *child)
+                                child_size + self.child_size_probe(window_size, child_size, *child)
                         });
                     }
                 }
                 child_size
             } else {
-                self.child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
+                self.child_size_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
             };
             if size.width() == 0 {
                 widget_ref.width_request(child_size.width());
