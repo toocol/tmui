@@ -202,6 +202,7 @@ impl Application {
         ACTIVATE.store(true, Ordering::SeqCst);
 
         board.add_element(&mut window);
+        window.register_window(output_sender);
         window.initialize();
         window.size_probe();
         window.position_probe();
@@ -214,7 +215,7 @@ impl Application {
             let now = TimeStamp::timestamp_micros();
             if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
-                output_sender.send(Message::MESSAGE_VSNYC).unwrap();
+                window.send_message(Message::message_vsync()).unwrap();
             }
 
             timer_hub.check_timers();

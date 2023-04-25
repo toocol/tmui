@@ -4,6 +4,7 @@ use crate::{
         figure::{Color, Size},
         painter::Painter,
     },
+    platform::Message,
     prelude::*,
     widget::WidgetImpl,
 };
@@ -15,6 +16,7 @@ use std::{
     ptr::null_mut,
     sync::{
         atomic::{AtomicPtr, Ordering},
+        mpsc::{Sender, SendError},
         Once,
     },
 };
@@ -34,7 +36,9 @@ pub fn store_board(board: &mut Board) {
 
 #[extends(Widget)]
 #[derive(Default)]
-pub struct ApplicationWindow {}
+pub struct ApplicationWindow {
+    output_sender: Option<Sender<Message>>,
+}
 
 impl ObjectSubclass for ApplicationWindow {
     const NAME: &'static str = "ApplicationWindow";
@@ -67,6 +71,17 @@ impl ApplicationWindow {
         Object::new(&[("width", &width), ("height", &height)])
     }
 
+    pub fn register_window(&mut self, sender: Sender<Message>) {
+        self.output_sender = Some(sender)
+    }
+
+    pub fn send_message(&self, message: Message) -> Result<(), SendError<Message>> {
+        self.output_sender
+            .as_ref()
+            .expect("`ApplicationWindow` did not register the output sender.")
+            .send(message)
+    }
+
     pub fn size_probe(&mut self) {
         let child = self.get_raw_child_mut();
         if let Some(child) = child {
@@ -80,7 +95,6 @@ impl ApplicationWindow {
     }
 }
 
-#[inline]
 fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
     let type_registry = TypeRegistry::instance();

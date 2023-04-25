@@ -15,10 +15,12 @@ unsafe impl Sync for Message {}
 impl Message {
     pub const MESSAGE_VSNYC: Message = Message(CODE_VSYNC, None);
 
+    #[inline]
     pub fn message_vsync() -> Self {
         Self::MESSAGE_VSNYC
     }
 
+    #[inline]
     pub fn message_set_cursor_shape(cursor: SystemCursorShape) -> Self {
         Message(CODE_SET_CURSOR_SHAPE, Some(cursor.to_value()))
     }
