@@ -8,7 +8,7 @@ use crate::{
     application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
+    platform::{Message, PlatformContext, PlatformIpc, PlatformType},
 };
 use lazy_static::lazy_static;
 use std::{
@@ -30,7 +30,7 @@ use tlib::{
 };
 
 lazy_static! {
-    pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
+    pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
     static ref OUTPUT_SENDER: AtomicPtr<Sender<Message>> = AtomicPtr::new(null_mut());
@@ -48,7 +48,7 @@ pub struct Application {
     platform_type: PlatformType,
     backend_type: BackendType,
 
-    platform_context: Option<Box<dyn PlatformContextWrapper>>,
+    platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
 
     on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
 }
@@ -97,7 +97,8 @@ impl Application {
         let (output_sender, output_receiver) = channel::<Message>();
         let (input_sender, input_receiver) = channel::<Message>();
 
-        let platform_context = self.platform_context.as_ref().unwrap();
+        let mut platform_mut = self.platform_context.borrow_mut();
+        let platform_context = platform_mut.as_mut().unwrap();
         platform_context.set_input_sender(input_sender);
 
         // Create the `UI` main thread.
@@ -149,9 +150,9 @@ impl Application {
                 platform_context = PlatformMacos::new(&title, width, height).wrap()
             }
         }
-        self.platform_context = Some(platform_context);
+        self.platform_context = RefCell::new(Some(platform_context));
         PLATFORM_CONTEXT.store(
-            self.platform_context.as_mut().unwrap() as *mut Box<dyn PlatformContextWrapper>,
+            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>,
             Ordering::SeqCst,
         );
     }

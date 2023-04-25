@@ -11,10 +11,8 @@ pub struct PlatformIpc {
     back_bitmap: Bitmap,
 }
 
-impl PlatformContext for PlatformIpc {
-    type Type = PlatformIpc;
-
-    fn new(title: &str, width: i32, height: i32) -> Self {
+impl PlatformIpc {
+    pub fn new(title: &str, width: i32, height: i32) -> Self {
         Self {
             title: title.to_string(),
             width,
@@ -24,6 +22,13 @@ impl PlatformContext for PlatformIpc {
         }
     }
 
+    // Wrap trait `PlatfomContext` with [`Box`].
+    pub fn wrap(self) -> Box<dyn PlatformContext> {
+        Box::new(self)
+    }
+}
+
+impl PlatformContext for PlatformIpc {
     fn title(&self) -> &str {
         &self.title
     }
