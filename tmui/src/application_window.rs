@@ -4,23 +4,28 @@ use crate::{
         figure::{Color, Size},
         painter::Painter,
     },
+    layout::LayoutManager,
     platform::Message,
     prelude::*,
-    widget::WidgetImpl,
+    widget::{WidgetImpl, WidgetSignals},
 };
 use lazy_static::lazy_static;
 use log::debug;
+use once_cell::sync::Lazy;
 use skia_safe::Font;
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     ptr::null_mut,
     sync::{
         atomic::{AtomicPtr, Ordering},
-        mpsc::{Sender, SendError},
+        mpsc::{SendError, Sender},
         Once,
     },
 };
-use tlib::object::{ObjectImpl, ObjectSubclass};
+use tlib::{
+    connect, emit,
+    object::{ObjectImpl, ObjectSubclass},
+};
 
 static INIT: Once = Once::new();
 lazy_static! {
@@ -28,9 +33,11 @@ lazy_static! {
 }
 
 /// Store the [`Board`] as raw ptr.
-pub fn store_board(board: &mut Board) {
+pub(crate) fn store_board(
+    board: &mut Board
+) {
     INIT.call_once(move || {
-        BOARD.store(board as *mut Board, Ordering::SeqCst);
+        BOARD.store(board, Ordering::SeqCst);
     })
 }
 
@@ -38,6 +45,7 @@ pub fn store_board(board: &mut Board) {
 #[derive(Default)]
 pub struct ApplicationWindow {
     output_sender: Option<Sender<Message>>,
+    activated: bool,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -58,7 +66,9 @@ impl ObjectImpl for ApplicationWindow {
     }
 
     fn initialize(&mut self) {
-        child_initialize(self, self.get_raw_child_mut())
+        connect!(self, size_changed(), self, when_size_change(Size));
+        child_initialize(self, self.get_raw_child_mut());
+        emit!(self.size_changed(), self.size());
     }
 }
 
@@ -68,11 +78,17 @@ impl WidgetImpl for ApplicationWindow {
 
 impl ApplicationWindow {
     pub fn new(width: i32, height: i32) -> ApplicationWindow {
-        Object::new(&[("width", &width), ("height", &height)])
+        let window: ApplicationWindow = Object::new(&[("width", &width), ("height", &height)]);
+        Self::windows_layouts().insert(window.id(), Box::new(LayoutManager::default()));
+        window
     }
 
-    pub fn register_window(&mut self, sender: Sender<Message>) {
-        self.output_sender = Some(sender)
+    pub(crate) fn windows_layouts() -> &'static mut HashMap<u16, Box<LayoutManager>> {
+        static mut WINDOW_LAYOUTS: Lazy<HashMap<u16, Box<LayoutManager>>> = Lazy::new(|| {
+            let m: HashMap<u16, Box<LayoutManager>> = HashMap::new();
+            m
+        });
+        unsafe { &mut WINDOW_LAYOUTS }
     }
 
     pub fn send_message(&self, message: Message) -> Result<(), SendError<Message>> {
@@ -82,22 +98,37 @@ impl ApplicationWindow {
             .send(message)
     }
 
-    pub fn size_probe(&mut self) {
-        let child = self.get_raw_child_mut();
-        if let Some(child) = child {
-            child_width_probe(self.size(), self.size(), child);
-        }
+    pub fn is_activate(&self) -> bool {
+        self.activated
     }
 
-    pub fn position_probe(&mut self) {
-        let child = self.get_raw_child_mut();
-        child_position_probe(Some(self), Some(self), child)
+    pub(crate) fn when_size_change(&mut self, size: Size) {
+        Self::windows_layouts()
+            .get_mut(&self.id())
+            .unwrap()
+            .set_window_size(size);
+    }
+
+    pub(crate) fn activate(&mut self) {
+        self.activated = true;
+    }
+
+    pub(crate) fn register_window(&mut self, sender: Sender<Message>) {
+        self.output_sender = Some(sender)
+    }
+
+    pub(crate) fn window_layout_change(&mut self) {
+        Self::windows_layouts()
+            .get_mut(&self.id())
+            .unwrap()
+            .layout_change(self)
     }
 }
 
 fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn WidgetImpl>) {
     let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
     let type_registry = TypeRegistry::instance();
+    let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
         child_ref.set_parent(parent);
@@ -108,86 +139,11 @@ fn child_initialize(mut parent: *mut dyn WidgetImpl, mut child: Option<*mut dyn 
         child_ref.initialize();
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
-        child = child_ref.get_raw_child_mut();
-    }
-}
-
-fn child_width_probe(window_size: Size, parent_size: Size, widget: *mut dyn WidgetImpl) -> Size {
-    let widget_ref = unsafe { widget.as_mut().unwrap() };
-    let raw_child = widget_ref.get_raw_child();
-    let size = widget_ref.size();
-
-    // Determine whether the widget is a container.
-    let is_container = widget_ref.parent_type().is_a(Container::static_type());
-    let container_ref = if is_container {
-        cast_mut!(widget_ref as ContainerImpl)
-    } else {
-        None
-    };
-    let children = if container_ref.is_some() {
-        Some(container_ref.unwrap().children_mut())
-    } else {
-        None
-    };
-
-    let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
-    if raw_child.is_none() && container_no_children {
-        if parent_size.width() != 0 && parent_size.height() != 0 {
-            if size.width() == 0 {
-                widget_ref.width_request(parent_size.width());
-            }
-            if size.height() == 0 {
-                widget_ref.height_request(parent_size.height());
-            }
-        } else {
-            if size.width() == 0 {
-                widget_ref.width_request(window_size.width());
-            }
-            if size.height() == 0 {
-                widget_ref.height_request(window_size.height());
-            }
-        }
-        let image_rect = widget_ref.image_rect();
-        return Size::new(image_rect.width(), image_rect.height());
-    } else {
-        let child_size = if is_container {
-            let mut size = Size::default();
-            children
-                .unwrap()
-                .iter_mut()
-                .for_each(|child| size = size + child_width_probe(window_size, size, *child));
-            size
-        } else {
-            child_width_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
-        };
-        if size.width() == 0 {
-            widget_ref.width_request(child_size.width());
-        }
-        if size.height() == 0 {
-            widget_ref.height_request(child_size.height());
-        }
-        return widget_ref.size();
-    }
-}
-
-fn child_position_probe(
-    mut previous: Option<*const dyn WidgetImpl>,
-    mut parent: Option<*const dyn WidgetImpl>,
-    mut widget: Option<*mut dyn WidgetImpl>,
-) {
-    let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
-    while let Some(widget_ptr) = widget {
-        let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
-        let previous_ref = unsafe { previous.as_ref().unwrap().as_ref().unwrap() };
-        let parent_ref = unsafe { parent.as_ref().unwrap().as_ref().unwrap() };
-
-        // Deal with the widget's postion.
-        widget_ref.position_layout(previous_ref, parent_ref);
 
         // Determine whether the widget is a container.
-        let is_container = widget_ref.parent_type().is_a(Container::static_type());
+        let is_container = child_ref.parent_type().is_a(Container::static_type());
         let container_ref = if is_container {
-            cast_mut!(widget_ref as ContainerImpl)
+            cast_mut!(child_ref as ContainerImpl)
         } else {
             None
         };
@@ -203,14 +159,9 @@ fn child_position_probe(
                 .iter_mut()
                 .for_each(|c| children.push_back(Some(*c)));
         } else {
-            children.push_back(widget_ref.get_raw_child_mut());
+            children.push_back(child_ref.get_raw_child_mut());
         }
-        widget = children.pop_front().take().unwrap();
-        previous = Some(widget_ptr);
-        parent = if let Some(c) = widget.as_ref() {
-            unsafe { c.as_ref().unwrap().get_raw_parent() }
-        } else {
-            None
-        };
+
+        child = children.pop_front().take().unwrap();
     }
 }

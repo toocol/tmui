@@ -12,12 +12,11 @@ use crate::{
     prelude::*,
     util::skia_font_clone,
 };
-use log::debug;
 use skia_safe::Font;
 use tlib::{
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
-    signals,
+    signals, emit,
 };
 
 #[extends(Element)]
@@ -110,21 +109,19 @@ impl ObjectImpl for Widget {
 
         self.show();
         self.set_focus(false);
-
-        debug!("`Widget` construct")
     }
 
     fn on_property_set(&mut self, name: &str, value: &Value) {
-        debug!("`Widget` on set property, name = {}", name);
-
         match name {
             "width" => {
                 let width = value.get::<i32>();
                 self.set_fixed_width(width);
+                emit!(self.size_changed(), self.size());
             }
             "height" => {
                 let height = value.get::<i32>();
                 self.set_fixed_height(height);
+                emit!(self.size_changed(), self.size());
             }
             "invalidate" => {
                 let invalidate = value.get::<bool>();
@@ -891,7 +888,7 @@ impl<T:WidgetAcquire> Layout for T {
     }
 
     fn position_layout(&mut self, _: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
-        let child_rect = self.rect();
+        let widget_rect = self.rect();
         let parent_rect = parent.rect();
 
         let halign = self.get_property("halign").unwrap().get::<Align>();
@@ -913,7 +910,7 @@ impl<T:WidgetAcquire> Layout for T {
 
         match valign {
             Align::Start => self.set_fixed_y(
-                parent_rect.y() as i32 + child_rect.y() as i32 + self.margin_top(),
+                parent_rect.y() as i32 + widget_rect.y() as i32 + self.margin_top(),
             ),
             Align::Center => {
                 let offset = (parent_rect.height() - self.rect().height()) as i32 / 2

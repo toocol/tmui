@@ -40,7 +40,7 @@ impl ContainerImplExt for TestContainer {
 
 impl Layout for TestContainer {
     fn composition(&self) -> tmui::layout::Composition {
-        tmui::layout::Composition::Arrange
+        tmui::layout::Composition::HorizontalArrange
     }
 
     fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl) {}

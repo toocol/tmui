@@ -3,7 +3,6 @@ use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     prelude::*,
 };
-use log::debug;
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends(Object)]
@@ -27,7 +26,6 @@ impl ObjectImpl for Element {
     fn construct(&mut self) {
         self.parent_construct();
         self.update();
-        debug!("`Element` construct")
     }
 }
 

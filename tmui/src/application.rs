@@ -25,8 +25,9 @@ use std::{
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
+    reflect::TypeRegistry,
     timer::TimerHub,
-    utils::TimeStamp, reflect::TypeRegistry,
+    utils::TimeStamp,
 };
 
 lazy_static! {
@@ -57,17 +58,6 @@ impl Application {
     /// Get the builder [`ApplicationBuilder`] of `Application`.
     pub fn builder() -> ApplicationBuilder {
         ApplicationBuilder::default()
-    }
-
-    /// Get the main application window([`ApplicationWindow`]).
-    /// There was only one application window in tmui.
-    #[inline]
-    pub fn application_window<'a>() -> &'a ApplicationWindow {
-        if !Self::is_ui_thread() {
-            panic!("`Application::application_window()` should only call in the UI `main` thread.");
-        }
-
-        unsafe { APPLICATION_WINDOW.load(Ordering::SeqCst).as_mut().unwrap() }
     }
 
     /// Send the [`Message`] to the platform process thread.
@@ -187,13 +177,12 @@ impl Application {
             }
         }
 
-        // Create the `Board`.
+        // Prepare ApplicationWindow env: Create the `Board`, windows layouts
         let mut board = Board::new(backend.surface());
         store_board(&mut board);
 
-        let mut window: ApplicationWindow =
-            ApplicationWindow::new(backend.width(), backend.height());
-        APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
+        let mut window = Box::new(ApplicationWindow::new(backend.width(), backend.height()));
+        APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
         OUTPUT_SENDER.store(&mut output_sender as *mut Sender<Message>, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
@@ -202,11 +191,11 @@ impl Application {
         }
         ACTIVATE.store(true, Ordering::SeqCst);
 
-        board.add_element(&mut window);
+        board.add_element(window.as_mut());
         window.register_window(output_sender);
         window.initialize();
-        window.size_probe();
-        window.position_probe();
+        window.window_layout_change();
+        window.activate();
 
         let mut last_frame = 0u128;
         let mut update;

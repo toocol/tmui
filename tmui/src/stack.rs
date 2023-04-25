@@ -44,7 +44,43 @@ impl Layout for Stack {
         crate::layout::Composition::Overlay
     }
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {}
+    fn position_layout(&mut self, previous: &dyn WidgetImpl, _: &dyn WidgetImpl) {
+        let widget_rect = self.rect();
+        let previous_rect = previous.rect();
+
+        let halign = self.get_property("halign").unwrap().get::<Align>();
+        let valign = self.get_property("valign").unwrap().get::<Align>();
+
+        match halign {
+            Align::Start => self.set_fixed_x(previous_rect.x() as i32 + self.margin_left()),
+            Align::Center => {
+                let offset = (previous_rect.width() - self.rect().width()) as i32 / 2
+                    + self.margin_left();
+                self.set_fixed_x(previous_rect.x() as i32 + offset)
+            }
+            Align::End => {
+                let offset = previous_rect.width() as i32 - self.rect().width() as i32
+                    + self.margin_left();
+                self.set_fixed_x(previous_rect.x() as i32 + offset)
+            }
+        }
+
+        match valign {
+            Align::Start => self.set_fixed_y(
+                previous_rect.y() as i32 + widget_rect.y() as i32 + self.margin_top(),
+            ),
+            Align::Center => {
+                let offset = (previous_rect.height() - self.rect().height()) as i32 / 2
+                    + self.margin_top();
+                self.set_fixed_y(previous_rect.y() as i32 + offset)
+            }
+            Align::End => {
+                let offset = previous_rect.height() as i32 - self.rect().height() as i32
+                    + self.margin_top();
+                self.set_fixed_y(previous_rect.y() as i32 + offset)
+            }
+        }
+    }
 }
 
 impl Stack {

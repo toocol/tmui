@@ -29,6 +29,16 @@ impl Size {
     pub fn height(&self) -> i32 {
         self.height
     }
+
+    pub fn max(&mut self, size: Size) {
+        self.width = self.width.max(size.width);
+        self.height = self.height.max(size.height);
+    }
+
+    pub fn min(&mut self, size: Size) {
+        self.width = self.width.min(size.width);
+        self.height = self.height.min(size.height);
+    }
 }
 
 impl From<(i32, i32)> for Size {

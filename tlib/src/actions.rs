@@ -43,7 +43,7 @@
 //! }
 //! ```
 use crate::prelude::*;
-use log::{error, warn};
+use log::{error, debug};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -126,10 +126,10 @@ impl ActionHub {
                         .iter()
                         .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
                 } else {
-                    warn!("Unconnected action: {}", signal.signal());
+                    debug!("Unconnected action: {}", signal.signal());
                 }
             } else {
-                warn!("Unconnected action: {}", signal.signal());
+                debug!("Unconnected action: {}", signal.signal());
             }
         }
     }
@@ -237,10 +237,10 @@ impl ActionHub {
                             .iter()
                             .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
                     } else {
-                        warn!("Unconnected action: {}", name);
+                        debug!("Unconnected action: {}", name);
                     }
                 } else {
-                    warn!("Unconnected action: {}", name);
+                    debug!("Unconnected action: {}", name);
                 }
             } else {
                 self.sender
