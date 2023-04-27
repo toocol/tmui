@@ -11,6 +11,7 @@ use crate::{
     platform::{Message, PlatformContext, PlatformIpc, PlatformType},
 };
 use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -29,6 +30,7 @@ use tlib::{
     timer::TimerHub,
     utils::TimeStamp,
 };
+use tokio::runtime::{Runtime, Builder};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -63,6 +65,17 @@ impl Application {
     #[inline]
     pub fn is_ui_thread() -> bool {
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
+    }
+
+    pub fn tokio_runtime() -> &'static Runtime {
+        static TOKIO_RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+            Builder::new_multi_thread()
+                .worker_threads(1)
+                .enable_all()
+                .build()
+                .unwrap()
+        });
+        &TOKIO_RUNTIME
     }
 
     /// Start to run this application.
@@ -167,7 +180,7 @@ impl Application {
         let mut board = Board::new(backend.surface());
         store_board(&mut board);
 
-        let mut window = Box::new(ApplicationWindow::new(backend.width(), backend.height()));
+        let mut window = ApplicationWindow::new(backend.width(), backend.height());
         APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {

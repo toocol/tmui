@@ -77,20 +77,21 @@ impl WidgetImpl for ApplicationWindow {
 }
 
 impl ApplicationWindow {
-    pub fn new(width: i32, height: i32) -> ApplicationWindow {
+    pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
-        let mut window: ApplicationWindow = Object::new(&[("width", &width), ("height", &height)]);
+        let mut window: Box<ApplicationWindow> = Box::new(Object::new(&[("width", &width), ("height", &height)]));
         Self::windows().insert(
             window.id(),
             (
                 thread_id,
-                NonNull::new(&mut window),
+                NonNull::new(window.as_mut()),
                 Box::new(LayoutManager::default()),
             ),
         );
         window
     }
 
+    /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     pub(crate) fn windows() -> &'static mut HashMap<
         u16,
         (
