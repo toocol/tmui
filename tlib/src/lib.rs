@@ -1,4 +1,5 @@
 pub mod actions;
+pub mod r#async;
 pub mod events;
 pub mod global;
 pub mod namespace;
@@ -13,6 +14,10 @@ pub mod reflect;
 pub use object::Object;
 pub use values::Value;
 pub use types::Type;
+
+pub mod tokio {
+    pub use tokio::*;
+}
 
 #[cfg(test)]
 mod tests {

@@ -19,8 +19,6 @@ pub struct Value {
     /// field for `tuple` value.
     seg_len: Option<Vec<usize>>,
 }
-unsafe impl Sync for Value {}
-unsafe impl Send for Value {}
 
 impl Value {
     pub fn new<T: StaticType + ToBytes>(data: &T) -> Self {
@@ -42,6 +40,15 @@ impl Value {
             value_type: T::static_type(),
             element_len: None,
             seg_len: Some(seg_len),
+        }
+    }
+
+    pub fn empty() -> Self {
+        Value {
+            data: vec![],
+            value_type: Type::NONE,
+            element_len: None,
+            seg_len: None,
         }
     }
 
@@ -92,6 +99,16 @@ pub trait ToValue {
     ///
     /// This is the type of the value to be returned by `to_value`.
     fn value_type(&self) -> Type;
+}
+
+impl ToValue for () {
+    fn to_value(&self) -> Value {
+        Value::empty()
+    }
+
+    fn value_type(&self) -> Type {
+        Type::NONE
+    }
 }
 
 impl<T: ToValue + StaticType> ToValue for &T {

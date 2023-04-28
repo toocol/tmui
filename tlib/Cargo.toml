@@ -10,5 +10,7 @@ macros = { path = "../macros/" }
 
 log = "0.4"
 lazy_static = "1.4.0"
+once_cell = "1.17.0"
 strum = "0.24.1"
 strum_macros = "0.24"
+tokio = { version = "1.28.0", features = ["full"] }

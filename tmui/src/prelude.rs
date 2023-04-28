@@ -2,6 +2,7 @@ pub use tlib::prelude::*;
 pub use tlib::signal;
 pub use std::cell::Ref;
 
+pub use tlib::tokio;
 pub use skia_safe::font::Font;
 pub use crate::graphics::figure::Color;
 pub use crate::graphics::drawing_context::DrawingContext;
