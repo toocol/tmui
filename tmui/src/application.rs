@@ -11,7 +11,6 @@ use crate::{
     platform::{Message, PlatformContext, PlatformIpc, PlatformType},
 };
 use lazy_static::lazy_static;
-use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -26,11 +25,9 @@ use std::{
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
-    reflect::TypeRegistry,
     timer::TimerHub,
-    utils::TimeStamp,
+    utils::TimeStamp, prelude::tokio_runtime,
 };
-use tokio::runtime::{Runtime, Builder};
 
 lazy_static! {
     pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -67,21 +64,10 @@ impl Application {
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
     }
 
-    pub fn tokio_runtime() -> &'static Runtime {
-        static TOKIO_RUNTIME: Lazy<Runtime> = Lazy::new(|| {
-            Builder::new_multi_thread()
-                .worker_threads(1)
-                .enable_all()
-                .build()
-                .unwrap()
-        });
-        &TOKIO_RUNTIME
-    }
-
     /// Start to run this application.
     pub fn run(&self) {
-        let mut type_registry = TypeRegistry::new();
-        type_registry.initialize();
+        // Setup the async runtime
+        let _guard = tokio_runtime().enter();
 
         let (output_sender, output_receiver) = channel::<Message>();
         let (input_sender, input_receiver) = channel::<Message>();
@@ -208,6 +194,7 @@ impl Application {
 
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
+            tlib::r#async::async_callbacks();
             thread::sleep(Duration::from_nanos(1));
         }
     }

@@ -6,11 +6,13 @@ mod extend_element;
 mod extend_object;
 mod extend_widget;
 mod reflect_trait;
+mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
 use proc_macro::TokenStream;
 use syn::{self, parse::Parse, parse_macro_input, DeriveInput, Ident};
+use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
 
 struct ExtendAttr {
@@ -24,12 +26,12 @@ impl Parse for ExtendAttr {
 }
 
 /// Let struct to extend specific type.<br>
-/// This macro will implement a large number of traits automatically, 
+/// This macro will implement a large number of traits automatically,
 /// enable struct to obtain corresponding functions.<br>
 /// ### Supported extends type:
 ///     - Object
 ///     - Element
-///     - Widget 
+///     - Widget
 ///     - Container
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -54,10 +56,10 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        _ => (syn::Error::new_spanned(
+        _ => syn::Error::new_spanned(
             ast,
             format!("`{}` was not supported to extends.", extend_str),
-        ))
+        )
         .to_compile_error()
         .into(),
     }
@@ -71,11 +73,11 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
 /// #[reflect_trait]
 /// pub trait Trait {}
 /// impl Trait for Foo {}
-/// 
+///
 /// impl ObjectImpl for Foo {
 ///     fn type_register(&self, type_registry: &mut TypeRegistry) {
 ///         type_registry.register::<Foo, Trait>();
-///     } 
+///     }
 /// }
 /// ...
 /// ```
@@ -86,6 +88,11 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
+}
+
+#[proc_macro]
+pub fn tasync(input: TokenStream) -> TokenStream {
+    parse_macro_input!(input as AsyncTaskParser).expand().into()
 }
 
 #[proc_macro]

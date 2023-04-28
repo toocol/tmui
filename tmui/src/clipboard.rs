@@ -1,5 +1,9 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
+use std::{
+    borrow::Borrow,
+    sync::Mutex,
+};
 
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -9,21 +13,21 @@ pub enum ClipboardLevel {
 }
 
 pub struct Clipboard {
-    text: Option<String>,
+    text: Mutex<Option<String>>,
     os_clipboard_ctx: ClipboardContext,
 }
 
 impl Clipboard {
     pub fn new() -> Self {
         Self {
-            text: None,
+            text: Mutex::new(None),
             os_clipboard_ctx: ClipboardContext::new().expect("Get `ClipboardContext` failed."),
         }
     }
 
     pub fn text(&mut self, level: ClipboardLevel) -> Option<String> {
         match level {
-            ClipboardLevel::Application => self.text.clone(),
+            ClipboardLevel::Application => (*self.text.lock().unwrap().borrow()).clone(),
             ClipboardLevel::Os => self
                 .os_clipboard_ctx
                 .get_contents()
@@ -33,10 +37,11 @@ impl Clipboard {
 
     pub fn set_text<T: ToString>(&mut self, text: T, level: ClipboardLevel) {
         match level {
-            ClipboardLevel::Application => self.text = Some(text.to_string()),
+            ClipboardLevel::Application => {
+                let _ = self.text.lock().unwrap().insert(text.to_string());
+            }
             ClipboardLevel::Os => {
-                let r = self.os_clipboard_ctx
-                    .set_contents(text.to_string());
+                let r = self.os_clipboard_ctx.set_contents(text.to_string());
                 if r.is_err() {
                     error!("`Clipboard` set text failed, level=Os.")
                 }

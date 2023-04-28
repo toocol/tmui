@@ -52,8 +52,7 @@ impl DoB for Bar {
 
 #[test]
 fn main() {
-    let mut registry = TypeRegistry::new();
-    registry.initialize();
+    let registry = TypeRegistry::instance();
     registry.register::<Foo, ReflectDoA>();
     registry.register::<Foo, ReflectDoB>();
     registry.register::<Bar, ReflectDoB>();

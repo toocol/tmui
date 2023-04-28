@@ -48,10 +48,9 @@ impl Layout for TestContainer {
 
 #[test]
 fn main() {
-    let mut r = TypeRegistry::new();
-    r.initialize();
+    let r = TypeRegistry::instance();
     let mut c = Object::new::<TestContainer>(&[]);
-    c.inner_type_register(r.as_mut());
+    c.inner_type_register(r);
     cast_test(&c);
     cast_mut_test(&mut c);
     cast_boxed_test(Box::new(c));

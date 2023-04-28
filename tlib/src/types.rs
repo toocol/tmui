@@ -5,6 +5,7 @@ use std::{fmt::Debug, mem::size_of};
 use crate::object::ObjectSubclass;
 
 type TType = u8;
+const TTYPE_NONE: TType = 0x00;
 const TTYPE_BOOL: TType = 0x01;
 const TTYPE_I8: TType = 0x02;
 const TTYPE_U8: TType = 0x03;
@@ -34,6 +35,12 @@ pub struct Type {
 }
 
 impl Type {
+    /// The fundamental type corresponding to `()`
+    pub const NONE: Self = Self {
+        ttype: TTYPE_NONE,
+        name: "()",
+    };
+
     /// The fundamental type corresponding to `bool`
     pub const BOOL: Self = Self {
         ttype: TTYPE_BOOL,
