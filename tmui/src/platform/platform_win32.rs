@@ -32,10 +32,8 @@ pub struct PlatformWin32 {
 unsafe impl Send for PlatformWin32 {}
 unsafe impl Sync for PlatformWin32 {}
 
-impl PlatformContext for PlatformWin32 {
-    type Type = PlatformWin32;
-
-    fn new(title: &str, width: i32, height: i32) -> Self {
+impl PlatformWin32 {
+    pub(crate) fn new(title: &str, width: i32, height: i32) -> Self {
         unsafe {
             let hins = GetModuleHandleW(None).unwrap();
             assert!(hins.0 != 0);
@@ -89,6 +87,13 @@ impl PlatformContext for PlatformWin32 {
         }
     }
 
+    // Wrap trait `PlatfomContext` with [`Box`].
+    pub(crate) fn wrap(self) -> Box<dyn PlatformContext> {
+        Box::new(self)
+    }
+}
+
+impl PlatformContext for PlatformWin32 {
     fn title(&self) -> &str {
         &self.title
     }

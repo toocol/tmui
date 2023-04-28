@@ -23,6 +23,14 @@ impl Parse for ExtendAttr {
     }
 }
 
+/// Let struct to extend specific type.<br>
+/// This macro will implement a large number of traits automatically, 
+/// enable struct to obtain corresponding functions.<br>
+/// ### Supported extends type:
+///     - Object
+///     - Element
+///     - Widget 
+///     - Container
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
@@ -55,6 +63,22 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
+/// Enable the trait has the ability of reflect, create the trait reflect struct.<br>
+/// The struct implemented the reflected trait should defined [`extends`](crate::extends),
+/// and register the reflect info to [`TypeRegistry`] in function [`ObjectImpl::type_register()`], like: <br>
+/// ```ignore
+/// ...
+/// #[reflect_trait]
+/// pub trait Trait {}
+/// impl Trait for Foo {}
+/// 
+/// impl ObjectImpl for Foo {
+///     fn type_register(&self, type_registry: &mut TypeRegistry) {
+///         type_registry.register::<Foo, Trait>();
+///     } 
+/// }
+/// ...
+/// ```
 #[proc_macro_attribute]
 pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as TraitInfo);

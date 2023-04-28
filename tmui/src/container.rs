@@ -20,7 +20,7 @@ impl WidgetImpl for Container {}
 
 impl IsSubclassable for Container {}
 
-pub trait ContainerAcquire: ContainerImpl + ContainerImplExt {}
+pub trait ContainerAcquire: ContainerImpl + ContainerImplExt + Default {}
 
 #[reflect_trait]
 pub trait ContainerImpl: WidgetImpl {

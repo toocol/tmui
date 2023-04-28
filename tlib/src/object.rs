@@ -4,7 +4,6 @@ use crate::{
     types::{IsA, ObjectType, StaticType, Type},
     values::{ToValue, Value},
 };
-use log::debug;
 use macros::reflect_trait;
 use std::{
     any::Any,
@@ -155,13 +154,7 @@ impl ObjectType for Object {
 
 impl IsA<Object> for Object {}
 
-impl ObjectImpl for Object {
-    fn construct(&mut self) {
-        debug!("`Object` construct")
-    }
-
-    fn initialize(&mut self) {}
-}
+impl ObjectImpl for Object {}
 
 impl ObjectImplExt for Object {
     /// Go to[`Function defination`](ObjectImplExt::parent_construct) (Defined in [`ObjectImplExt`])
@@ -199,7 +192,7 @@ impl<T: StaticType> ObjectExt for T {
 
 pub trait IsSubclassable {}
 
-pub trait ObjectAcquire: ObjectImpl {}
+pub trait ObjectAcquire: ObjectImpl + Default {}
 pub trait ParentType {
     fn parent_type(&self) -> Type;
 }

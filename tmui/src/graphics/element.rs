@@ -3,12 +3,12 @@ use tlib::{
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     prelude::*,
 };
-use log::debug;
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends(Object)]
 #[derive(Default)]
 pub struct Element {
+    window_id: u16,
     rect: Rect,
 }
 
@@ -27,12 +27,21 @@ impl ObjectImpl for Element {
     fn construct(&mut self) {
         self.parent_construct();
         self.update();
-        debug!("`Element` construct")
     }
 }
 
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt: 'static {
+    /// Set the application window id which the element belongs to.
+    /// 
+    /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
+    fn set_window_id(&mut self, id: u16);
+    
+    /// Get the application window id which the element belongs to.
+    /// 
+    /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
+    fn window_id(&self) -> u16;
+
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     /// 
     /// Go to[`Function defination`](ElementExt::update) (Defined in [`ElementExt`])
@@ -66,6 +75,14 @@ pub trait ElementExt: 'static {
 }
 
 impl ElementExt for Element {
+    fn set_window_id(&mut self, id: u16) {
+        self.window_id = id
+    }
+
+    fn window_id(&self) -> u16 {
+        self.window_id
+    }
+
     fn update(&mut self) {
         self.set_property("invalidate", true.to_value());
     }
@@ -114,7 +131,7 @@ pub trait ElementImpl: ElementExt + ObjectImpl + ParentType + 'static {
     fn on_renderer(&mut self, cr: &DrawingContext);
 }
 
-pub trait ElementAcquire: ElementImpl {}
+pub trait ElementAcquire: ElementImpl + Default {}
 
 #[cfg(test)]
 mod tests {

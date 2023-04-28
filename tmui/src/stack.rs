@@ -1,8 +1,8 @@
-use tlib::object::{ObjectImpl, ObjectSubclass};
 use crate::{
     container::{ContainerImpl, ContainerImplExt},
-    prelude::*,
+    prelude::*, widget::base_widget_position_layout,
 };
+use tlib::object::{ObjectImpl, ObjectSubclass};
 
 #[extends(Container)]
 #[derive(Default)]
@@ -44,7 +44,14 @@ impl Layout for Stack {
         crate::layout::Composition::Overlay
     }
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {}
+    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
+        base_widget_position_layout(self, previous, parent);
+
+        // deal with the children's position
+        let children_cnt = self.children().len();
+        let position = self.rect().top_left();
+        for child in self.children_mut().iter_mut() {}
+    }
 }
 
 impl Stack {

@@ -74,6 +74,16 @@ pub(crate) fn gen_element_trait_impl_clause(
     Ok(quote!(
         impl ElementExt for #name {
             #[inline]
+            fn set_window_id(&mut self, id: u16) {
+                self.#(#element_path).*.set_window_id(id)
+            }
+
+            #[inline]
+            fn window_id(&self) -> u16 {
+                self.#(#element_path).*.window_id()
+            }
+
+            #[inline]
             fn update(&mut self) {
                 self.set_property("invalidate", true.to_value());
             }

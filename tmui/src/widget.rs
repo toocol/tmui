@@ -1,7 +1,7 @@
 use std::ptr::NonNull;
 
 use crate::{
-    application::Application,
+    application_window::ApplicationWindow,
     graphics::{
         drawing_context::DrawingContext,
         element::ElementImpl,
@@ -12,9 +12,9 @@ use crate::{
     prelude::*,
     util::skia_font_clone,
 };
-use log::debug;
 use skia_safe::Font;
 use tlib::{
+    emit,
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{IsSubclassable, ObjectImpl, ObjectSubclass},
     signals,
@@ -110,21 +110,19 @@ impl ObjectImpl for Widget {
 
         self.show();
         self.set_focus(false);
-
-        debug!("`Widget` construct")
     }
 
     fn on_property_set(&mut self, name: &str, value: &Value) {
-        debug!("`Widget` on set property, name = {}", name);
-
         match name {
             "width" => {
                 let width = value.get::<i32>();
                 self.set_fixed_width(width);
+                emit!(self.size_changed(), self.size());
             }
             "height" => {
                 let height = value.get::<i32>();
                 self.set_fixed_height(height);
+                emit!(self.size_changed(), self.size());
             }
             "invalidate" => {
                 let invalidate = value.get::<bool>();
@@ -179,7 +177,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     }
 }
 
-pub trait WidgetAcquire: WidgetImpl {}
+pub trait WidgetAcquire: WidgetImpl + Default {}
 
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
@@ -578,6 +576,7 @@ impl WidgetExt for Widget {
     fn image_rect(&self) -> Rect {
         let mut rect = self.rect();
 
+        // Rect add the margins.
         let (top, right, bottom, left) = self.margins();
         rect.set_x(rect.x() - left);
         rect.set_y(rect.y() - top);
@@ -800,7 +799,11 @@ impl WidgetExt for Widget {
     }
 
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
-        Application::send_message(Message::message_set_cursor_shape(cursor))
+        ApplicationWindow::send_message_with_id(
+            self.window_id(),
+            Message::message_set_cursor_shape(cursor),
+        )
+        .unwrap()
     }
 }
 
@@ -862,7 +865,14 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
 #[allow(unused_mut)]
 #[reflect_trait]
 pub trait WidgetImpl:
-    WidgetExt + ElementImpl + ElementExt + ObjectOperation + ObjectType + ObjectImpl + ParentType + Layout
+    WidgetExt
+    + ElementImpl
+    + ElementExt
+    + ObjectOperation
+    + ObjectType
+    + ObjectImpl
+    + ParentType
+    + Layout
 {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Size {
@@ -885,46 +895,57 @@ pub trait WidgetImplExt: WidgetImpl {
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
-impl<T:WidgetAcquire> Layout for T {
+impl<T: WidgetAcquire> Layout for T {
     fn composition(&self) -> crate::layout::Composition {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
-        let child_rect = self.rect();
-        let parent_rect = parent.rect();
+    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
+        base_widget_position_layout(self, previous, parent)
+    }
+}
 
-        let halign = self.get_property("halign").unwrap().get::<Align>();
-        let valign = self.get_property("valign").unwrap().get::<Align>();
+pub(crate) fn base_widget_position_layout(
+    widget: &mut dyn WidgetImpl,
+    _: &dyn WidgetImpl,
+    parent: &dyn WidgetImpl,
+) {
+    if parent.parent_type().is_a(Container::static_type()) {
+        return;
+    }
+    let widget_rect = widget.rect();
+    let parent_rect = parent.rect();
 
-        match halign {
-            Align::Start => self.set_fixed_x(parent_rect.x() as i32 + self.margin_left()),
-            Align::Center => {
-                let offset = (parent_rect.width() - self.rect().width()) as i32 / 2
-                    + self.margin_left();
-                self.set_fixed_x(parent_rect.x() as i32 + offset)
-            }
-            Align::End => {
-                let offset = parent_rect.width() as i32 - self.rect().width() as i32
-                    + self.margin_left();
-                self.set_fixed_x(parent_rect.x() as i32 + offset)
-            }
+    let halign = widget.get_property("halign").unwrap().get::<Align>();
+    let valign = widget.get_property("valign").unwrap().get::<Align>();
+
+    match halign {
+        Align::Start => widget.set_fixed_x(parent_rect.x() as i32 + widget.margin_left()),
+        Align::Center => {
+            let offset =
+                (parent_rect.width() - widget.rect().width()) as i32 / 2 + widget.margin_left();
+            widget.set_fixed_x(parent_rect.x() as i32 + offset)
         }
+        Align::End => {
+            let offset =
+                parent_rect.width() as i32 - widget.rect().width() as i32 + widget.margin_left();
+            widget.set_fixed_x(parent_rect.x() as i32 + offset)
+        }
+    }
 
-        match valign {
-            Align::Start => self.set_fixed_y(
-                parent_rect.y() as i32 + child_rect.y() as i32 + self.margin_top(),
-            ),
-            Align::Center => {
-                let offset = (parent_rect.height() - self.rect().height()) as i32 / 2
-                    + self.margin_top();
-                self.set_fixed_y(parent_rect.y() as i32 + offset)
-            }
-            Align::End => {
-                let offset = parent_rect.height() as i32 - self.rect().height() as i32
-                    + self.margin_top();
-                self.set_fixed_y(parent_rect.y() as i32 + offset)
-            }
+    match valign {
+        Align::Start => {
+            widget.set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + widget.margin_top())
+        }
+        Align::Center => {
+            let offset =
+                (parent_rect.height() - widget.rect().height()) as i32 / 2 + widget.margin_top();
+            widget.set_fixed_y(parent_rect.y() as i32 + offset)
+        }
+        Align::End => {
+            let offset =
+                parent_rect.height() as i32 - widget.rect().height() as i32 + widget.margin_top();
+            widget.set_fixed_y(parent_rect.y() as i32 + offset)
         }
     }
 }

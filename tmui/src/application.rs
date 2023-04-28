@@ -8,9 +8,10 @@ use crate::{
     application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::{Message, PlatformContext, PlatformContextWrapper, PlatformIpc, PlatformType},
+    platform::{Message, PlatformContext, PlatformIpc, PlatformType},
 };
 use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -25,15 +26,16 @@ use std::{
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
+    reflect::TypeRegistry,
     timer::TimerHub,
-    utils::TimeStamp, reflect::TypeRegistry,
+    utils::TimeStamp,
 };
+use tokio::runtime::{Runtime, Builder};
 
 lazy_static! {
-    pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContextWrapper>> =
+    pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
     pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
-    static ref OUTPUT_SENDER: AtomicPtr<Sender<Message>> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
@@ -48,7 +50,7 @@ pub struct Application {
     platform_type: PlatformType,
     backend_type: BackendType,
 
-    platform_context: Option<Box<dyn PlatformContextWrapper>>,
+    platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
 
     on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
 }
@@ -59,34 +61,21 @@ impl Application {
         ApplicationBuilder::default()
     }
 
-    /// Get the main application window([`ApplicationWindow`]).
-    /// There was only one application window in tmui.
-    #[inline]
-    pub fn application_window<'a>() -> &'a ApplicationWindow {
-        if !Self::is_ui_thread() {
-            panic!("`Application::application_window()` should only call in the UI `main` thread.");
-        }
-
-        unsafe { APPLICATION_WINDOW.load(Ordering::SeqCst).as_mut().unwrap() }
-    }
-
-    /// Send the [`Message`] to the platform process thread.
-    #[inline]
-    pub fn send_message(message: Message) {
-        unsafe {
-            OUTPUT_SENDER
-                .load(Ordering::SeqCst)
-                .as_ref()
-                .unwrap()
-                .send(message)
-                .expect("`Application` send message failed.")
-        }
-    }
-
     /// Determine whether the current thread is the UI main thread.
     #[inline]
     pub fn is_ui_thread() -> bool {
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
+    }
+
+    pub fn tokio_runtime() -> &'static Runtime {
+        static TOKIO_RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+            Builder::new_multi_thread()
+                .worker_threads(1)
+                .enable_all()
+                .build()
+                .unwrap()
+        });
+        &TOKIO_RUNTIME
     }
 
     /// Start to run this application.
@@ -97,7 +86,8 @@ impl Application {
         let (output_sender, output_receiver) = channel::<Message>();
         let (input_sender, input_receiver) = channel::<Message>();
 
-        let platform_context = self.platform_context.as_ref().unwrap();
+        let mut platform_mut = self.platform_context.borrow_mut();
+        let platform_context = platform_mut.as_mut().unwrap();
         platform_context.set_input_sender(input_sender);
 
         // Create the `UI` main thread.
@@ -149,16 +139,16 @@ impl Application {
                 platform_context = PlatformMacos::new(&title, width, height).wrap()
             }
         }
-        self.platform_context = Some(platform_context);
+        self.platform_context = RefCell::new(Some(platform_context));
         PLATFORM_CONTEXT.store(
-            self.platform_context.as_mut().unwrap() as *mut Box<dyn PlatformContextWrapper>,
+            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>,
             Ordering::SeqCst,
         );
     }
 
     fn ui_main(
         backend_type: BackendType,
-        mut output_sender: Sender<Message>,
+        output_sender: Sender<Message>,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
     ) {
@@ -186,14 +176,12 @@ impl Application {
             }
         }
 
-        // Create the `Board`.
+        // Prepare ApplicationWindow env: Create the `Board`, windows layouts
         let mut board = Board::new(backend.surface());
         store_board(&mut board);
 
-        let mut window: ApplicationWindow =
-            ApplicationWindow::new(backend.width(), backend.height());
-        APPLICATION_WINDOW.store(&mut window as *mut ApplicationWindow, Ordering::SeqCst);
-        OUTPUT_SENDER.store(&mut output_sender as *mut Sender<Message>, Ordering::SeqCst);
+        let mut window = ApplicationWindow::new(backend.width(), backend.height());
+        APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);
@@ -201,10 +189,11 @@ impl Application {
         }
         ACTIVATE.store(true, Ordering::SeqCst);
 
-        board.add_element(&mut window);
+        board.add_element(window.as_mut());
+        window.register_window(output_sender);
         window.initialize();
-        window.size_probe();
-        window.position_probe();
+        window.window_layout_change();
+        window.activate();
 
         let mut last_frame = 0u128;
         let mut update;
@@ -214,7 +203,7 @@ impl Application {
             let now = TimeStamp::timestamp_micros();
             if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
-                output_sender.send(Message::MESSAGE_VSNYC).unwrap();
+                window.send_message(Message::message_vsync()).unwrap();
             }
 
             timer_hub.check_timers();
