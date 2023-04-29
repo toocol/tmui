@@ -1,7 +1,7 @@
 pub use macros::{cast, cast_boxed, cast_mut, extends, reflect_trait, tasync};
 
 pub use crate::r#async::{AsyncTask, tokio_runtime, async_tasks};
-pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal, ACTION_HUB};
+pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
 pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{
     Object, ObjectAcquire, ObjectExt, ObjectImpl, ObjectImplExt, ObjectOperation, ParentType,

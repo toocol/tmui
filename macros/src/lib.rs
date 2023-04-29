@@ -90,6 +90,32 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
+/// Crate and run an async task in tokio worker threads. <br>
+/// The return value in async block must implements [`tmui::tlib::values::ToValue`] trait. 
+/// If there is no return value, `()` was needed.
+/// ### without callback:
+/// ```ignore
+/// tasync!({
+///     ...
+/// });
+/// ```
+/// ### with callback:
+/// ```ignore
+/// tasync!({
+///     ...  
+/// } => {
+///     ...
+/// });
+/// ```
+/// ### callback with return value:
+/// ```ignore
+/// tasync!({
+///     ...  
+///    "result"
+/// } => |result| {
+///     ...
+/// });
+/// ```
 #[proc_macro]
 pub fn tasync(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as AsyncTaskParser).expand().into()

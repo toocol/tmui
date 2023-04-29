@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use tlib::{object::{ObjectImpl, ObjectSubclass}, timer::Timer, connect};
+use tlib::{object::{ObjectImpl, ObjectSubclass}, timer::Timer, connect, disconnect};
 use tmui::{prelude::*, widget::WidgetImpl, graphics::figure::Color};
 use log::debug;
 use lazy_static::lazy_static;
@@ -49,8 +49,14 @@ impl TestWidget {
         self.idx += 1;
         if self.idx >= 3 {
             self.idx = 0;
+            self.timer.stop();
+            disconnect!(self.timer, timeout(), null, null);
         }
         self.set_background(COLORS[self.idx]);
         self.update();
+
+        tasync!({
+            debug!("timeout async")
+        });
     }
 }

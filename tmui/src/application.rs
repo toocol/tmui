@@ -66,9 +66,6 @@ impl Application {
 
     /// Start to run this application.
     pub fn run(&self) {
-        // Setup the async runtime
-        let _guard = tokio_runtime().enter();
-
         let (output_sender, output_receiver) = channel::<Message>();
         let (input_sender, input_receiver) = channel::<Message>();
 
@@ -140,6 +137,9 @@ impl Application {
     ) {
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+
+        // Setup the async runtime
+        let _guard = tokio_runtime().enter();
 
         let platform = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_ref().unwrap() };
 
