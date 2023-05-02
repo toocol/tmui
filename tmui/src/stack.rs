@@ -37,8 +37,8 @@ impl ContainerImplExt for Stack {
 }
 
 impl Layout for Stack {
-    fn composition(&self) -> crate::layout::Composition {
-        crate::layout::Composition::Overlay
+    fn composition(&self) -> Composition {
+        Composition::Overlay
     }
 
     fn position_layout(

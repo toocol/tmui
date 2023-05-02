@@ -138,7 +138,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "Container" => match extend_container::expand(&mut ast) {
+        "Container" => match extend_container::expand(&mut ast, true) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -151,8 +151,8 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-#[proc_macro_derive(Layout, attributes(children))]
-pub fn layout_derive(_: TokenStream) -> TokenStream {
+#[proc_macro_derive(Childrenable, attributes(children))]
+pub fn childrenable_derive(_: TokenStream) -> TokenStream {
     TokenStream::new()
 }
 

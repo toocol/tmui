@@ -10,6 +10,7 @@ use tlib::{
 pub struct Element {
     window_id: u16,
     rect: Rect,
+    fixed_size: bool,
 }
 
 impl ObjectSubclass for Element {
@@ -65,6 +66,12 @@ pub trait ElementExt: 'static {
 
     /// Go to[`Function defination`](ElementExt::validate) (Defined in [`ElementExt`])
     fn validate(&mut self);
+
+    /// Go to[`Function defination`](ElementExt::is_fixed_size) (Defined in [`ElementExt`])
+    fn is_fixed_size(&self) -> bool;
+
+    /// Go to[`Function defination`](ElementExt::unfixed_size) (Defined in [`ElementExt`])
+    fn unfixed_size(&mut self);
 }
 
 impl ElementExt for Element {
@@ -90,10 +97,12 @@ impl ElementExt for Element {
     }
 
     fn set_fixed_width(&mut self, width: i32) {
+        self.fixed_size = true;
         self.rect.set_width(width)
     }
 
     fn set_fixed_height(&mut self, height: i32) {
+        self.fixed_size = true;
         self.rect.set_height(height)
     }
 
@@ -114,6 +123,14 @@ impl ElementExt for Element {
 
     fn validate(&mut self) {
         self.set_property("invalidate", false.to_value());
+    }
+
+    fn is_fixed_size(&self) -> bool {
+        self.fixed_size
+    }
+
+    fn unfixed_size(&mut self) {
+        self.fixed_size = false
     }
 }
 

@@ -30,6 +30,26 @@ impl Size {
         self.height
     }
 
+    #[inline]
+    pub fn set_width(&mut self, width: i32) {
+        self.width = width
+    }
+
+    #[inline]
+    pub fn set_height(&mut self, height: i32) {
+        self.height = height
+    }
+
+    #[inline]
+    pub fn add_width(&mut self, width: i32) {
+        self.width += width
+    }
+
+    #[inline]
+    pub fn add_height(&mut self, height: i32) {
+        self.height += height 
+    }
+
     pub fn max(&mut self, size: Size) {
         self.width = self.width.max(size.width);
         self.height = self.height.max(size.height);
@@ -150,6 +170,36 @@ impl FSize {
     #[inline]
     pub fn height(&self) -> f32 {
         self.height
+    }
+
+    #[inline]
+    pub fn set_width(&mut self, width: f32) {
+        self.width = width
+    }
+
+    #[inline]
+    pub fn set_height(&mut self, height: f32) {
+        self.height = height
+    }
+
+    #[inline]
+    pub fn add_width(&mut self, width: f32) {
+        self.width += width
+    }
+
+    #[inline]
+    pub fn add_height(&mut self, height: f32) {
+        self.height += height 
+    }
+
+    pub fn max(&mut self, size: FSize) {
+        self.width = self.width.max(size.width);
+        self.height = self.height.max(size.height);
+    }
+
+    pub fn min(&mut self, size: FSize) {
+        self.width = self.width.min(size.width);
+        self.height = self.height.min(size.height);
     }
 }
 

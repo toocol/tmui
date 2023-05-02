@@ -10,7 +10,7 @@ pub(crate) fn expand(
 ) -> syn::Result<proc_macro2::TokenStream> {
     match layout {
         "Stack" => {
-            let mut token = extend_container::expand(ast)?;
+            let mut token = extend_container::expand(ast, false)?;
             let name = &ast.ident;
 
             let children_fields = get_children_fields(ast);
@@ -55,6 +55,14 @@ pub(crate) fn expand(
                         manage_by_container: bool,
                     ) {
                         Stack::container_position_layout(self, previous, parent, manage_by_container)
+                    }
+                }
+
+                impl ObjectChildrenConstruct for #name {
+                    fn children_construct(&mut self) {
+                        #(
+                            self.#children_fields.construct()
+                        )*
                     }
                 }
             ));

@@ -21,6 +21,12 @@ use tlib::{
     signals,
 };
 
+/// Size hint for widget:
+/// 0: minimum size hint
+/// 1: normal size hint
+/// 2: maximum size hint
+pub type SizeHint = (Size, Size, Size);
+
 #[extends(Element)]
 pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
@@ -290,7 +296,7 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::font_family) (Defined in [`WidgetExt`])
     fn font_family(&self) -> &str;
 
-    /// Get the size of widget.
+    /// Get the size of widget. The size does not include the margins.
     ///
     /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
     fn size(&self) -> Size;
@@ -871,10 +877,8 @@ pub trait WidgetImpl:
     + Layout
 {
     /// Invoke this function when widget's size change.
-    fn size_hint(&mut self) -> Size {
-        let width = self.get_property("width-request").unwrap().get::<i32>();
-        let height = self.get_property("height-request").unwrap().get::<i32>();
-        Size::new(width, height)
+    fn size_hint(&mut self) -> Option<SizeHint> {
+        None
     }
 
     /// Invoke this function when renderering.

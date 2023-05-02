@@ -1,6 +1,6 @@
 mod layout_widget;
 
-use layout_widget::CustomWidget;
+use layout_widget::LayoutWidget;
 use tmui::{application::Application, application_window::ApplicationWindow, widget::WidgetImplExt};
 
 fn main() {
@@ -18,5 +18,5 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(CustomWidget::new())
+    window.child(LayoutWidget::new())
 }

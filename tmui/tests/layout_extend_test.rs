@@ -2,7 +2,7 @@ use tlib::object::ObjectSubclass;
 use tmui::{prelude::*, label::Label};
 
 #[extends(Widget, Layout(Stack))]
-#[derive(Default, Layout)]
+#[derive(Default, Childrenable)]
 struct TestWidget {
     #[children]
     label: Label,

@@ -26,6 +26,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 name,
                 "widget",
                 vec!["widget", "element", "object"],
+                false
             )?;
 
             let element_trait_impl_clause =

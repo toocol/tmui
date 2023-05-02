@@ -21,7 +21,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             }
 
             let object_trait_impl_clause =
-                gen_object_trait_impl_clause(name, "object", vec!["object"])?;
+                gen_object_trait_impl_clause(name, "object", vec!["object"], false)?;
 
             return Ok(quote! {
                 #ast
@@ -58,6 +58,7 @@ pub(crate) fn gen_object_trait_impl_clause(
     name: &Ident,
     super_field: &'static str,
     object_path: Vec<&'static str>,
+    children_construct: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let super_field = Ident::new(super_field, name.span());
     let object_path: Vec<_> = object_path
@@ -65,10 +66,18 @@ pub(crate) fn gen_object_trait_impl_clause(
         .map(|s| Ident::new(s, name.span()))
         .collect();
 
+    let mut children_construct_clause = proc_macro2::TokenStream::new();
+    if children_construct {
+        children_construct_clause.extend(quote!(
+            self.children_construct();
+        ))
+    }
+
     Ok(quote!(
         impl ObjectImplExt for #name {
             #[inline]
             fn parent_construct(&mut self) {
+                #children_construct_clause
                 self.#super_field.construct()
             }
 

@@ -85,6 +85,7 @@ impl LayoutManager {
 
         let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
         if raw_child.is_none() && container_no_children {
+            let _size_hint = widget_ref.size_hint();
             if parent_size.width() != 0 && parent_size.height() != 0 {
                 if size.width() == 0 {
                     widget_ref.width_request(parent_size.width());
@@ -111,8 +112,20 @@ impl LayoutManager {
                             child_size.max(self.child_size_probe(window_size, child_size, *child));
                         });
                     }
-                    Composition::HorizontalArrange => {}
-                    Composition::VerticalArrange => {}
+                    Composition::HorizontalArrange => {
+                        children.unwrap().iter_mut().for_each(|child| {
+                            let inner = self.child_size_probe(window_size, size, *child);
+                            child_size.set_height(child_size.height().max(inner.height()));
+                            child_size.add_width(inner.width());
+                        });
+                    }
+                    Composition::VerticalArrange => {
+                        children.unwrap().iter_mut().for_each(|child| {
+                            let inner = self.child_size_probe(window_size, size, *child);
+                            child_size.set_width(child_size.width().max(inner.width()));
+                            child_size.add_height(inner.height());
+                        });
+                    }
                     _ => {
                         children.unwrap().iter_mut().for_each(|child| {
                             child_size =

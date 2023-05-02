@@ -146,6 +146,7 @@ impl Label {
             .expect("`Label` encode u16 string to utf-8 string failed.");
         self.label = U16String::from_str(text).as_slice().to_vec();
         emit!(self.text_changed(), old, text);
+        self.update()
     }
 
     pub fn set_color(&mut self, color: Color) {
