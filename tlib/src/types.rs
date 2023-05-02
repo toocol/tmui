@@ -427,10 +427,6 @@ pub trait IsA<T: ObjectType + StaticType>: ObjectType + StaticType + ObjectSubcl
             None
         }
     }
-
-    fn as_ref(&self) -> &Self::Type {
-        unsafe { &*(self as *const Self as *const Self::Type) }
-    }
 }
 
 #[cfg(test)]

@@ -29,10 +29,6 @@ impl Default for Label {
 
 impl ObjectSubclass for Label {
     const NAME: &'static str = "Label";
-
-    type Type = Label;
-
-    type ParentType = Widget;
 }
 
 impl ObjectImpl for Label {}

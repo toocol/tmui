@@ -18,10 +18,6 @@ mod tests {
 
     impl ObjectSubclass for SubElement {
         const NAME: &'static str = "SubElement";
-
-        type Type = SubElement;
-
-        type ParentType = Element;
     }
 
     impl ObjectImpl for SubElement {
@@ -46,7 +42,7 @@ mod tests {
     }
 
     fn test_is_a<T: IsA<Element>>(obj: T) {
-        let element = obj.as_ref();
+        let element = obj.downcast_ref::<SubElement>().unwrap();
         assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 

@@ -18,10 +18,6 @@ pub struct TestWidget {
 
 impl ObjectSubclass for TestWidget {
     const NAME: &'static str = "TestWidget";
-
-    type Type = TestWidget;
-
-    type ParentType = Widget;
 }
 
 impl ObjectImpl for TestWidget {

@@ -16,10 +16,6 @@ pub trait DoB {
 pub struct Foo {}
 impl ObjectSubclass for Foo {
     const NAME: &'static str = "Foo";
-
-    type Type = Foo;
-
-    type ParentType = Object;
 }
 impl ObjectImpl for Foo {}
 impl DoA for Foo {
@@ -38,10 +34,6 @@ impl DoB for Foo {
 pub struct Bar {}
 impl ObjectSubclass for Bar {
     const NAME: &'static str = "Bar";
-
-    type Type = Bar;
-
-    type ParentType = Object;
 }
 impl ObjectImpl for Bar {}
 impl DoB for Bar {

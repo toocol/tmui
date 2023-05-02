@@ -7,10 +7,6 @@ pub struct VBox {}
 
 impl ObjectSubclass for VBox {
     const NAME: &'static str = "VBox";
-
-    type Type = VBox;
-
-    type ParentType = Container;
 }
 
 impl ObjectImpl for VBox {}
@@ -40,5 +36,5 @@ impl Layout for VBox {
         crate::layout::Composition::VerticalArrange
     }
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {}
+    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl, manage_by_container: bool) {}
 }

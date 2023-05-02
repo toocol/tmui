@@ -56,7 +56,7 @@ impl Default for Object {
 }
 
 #[reflect_trait]
-pub trait ObjectOperation {
+pub trait ObjectOperation: TypeName {
     /// Returns the type of the object.
     ///
     /// Go to[`Function defination`](ObjectOperation::id) (Defined in [`ObjectOperation`])
@@ -136,14 +136,8 @@ impl Reflect for Object {
     }
 }
 
-impl IsSubclassable for Object {}
-
 impl ObjectSubclass for Object {
     const NAME: &'static str = "Object";
-
-    type Type = Object;
-
-    type ParentType = Object;
 }
 
 impl ObjectType for Object {
@@ -190,8 +184,6 @@ impl<T: StaticType> ObjectExt for T {
     }
 }
 
-pub trait IsSubclassable {}
-
 pub trait ObjectAcquire: ObjectImpl + Default {}
 pub trait ParentType {
     fn parent_type(&self) -> Type;
@@ -199,10 +191,6 @@ pub trait ParentType {
 
 pub trait ObjectSubclass: 'static {
     const NAME: &'static str;
-
-    type Type: ObjectExt + ObjectOperation + ObjectType;
-
-    type ParentType: IsSubclassable + ObjectExt + ObjectOperation + ObjectType;
 }
 
 impl<T: ObjectSubclass> StaticType for T {
@@ -212,6 +200,16 @@ impl<T: ObjectSubclass> StaticType for T {
 
     fn bytes_len() -> usize {
         0
+    }
+}
+
+pub trait TypeName {
+    fn type_name(&self) -> &'static str;
+}
+
+impl <T: ObjectSubclass> TypeName for T {
+    fn type_name(&self) -> &'static str {
+        Self::NAME
     }
 }
 

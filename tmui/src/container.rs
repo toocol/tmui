@@ -1,5 +1,4 @@
-use tlib::object::{ObjectSubclass, ObjectImpl, IsSubclassable};
-
+use tlib::object::{ObjectSubclass, ObjectImpl};
 use crate::{prelude::*, widget::WidgetImpl};
 
 #[extends(Widget)]
@@ -8,17 +7,11 @@ pub struct Container {}
 
 impl ObjectSubclass for Container {
     const NAME: &'static str = "Container";
-
-    type Type = Container;
-
-    type ParentType = Widget;
 }
 
 impl ObjectImpl for Container {}
 
 impl WidgetImpl for Container {}
-
-impl IsSubclassable for Container {}
 
 pub trait ContainerAcquire: ContainerImpl + ContainerImplExt + Default {}
 

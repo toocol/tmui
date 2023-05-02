@@ -11,10 +11,6 @@ use tlib::{
 pub struct Widget {}
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";
-
-    type Type = Widget;
-
-    type ParentType = Object;
 }
 impl ObjectImpl for Widget {}
 

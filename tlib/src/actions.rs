@@ -58,20 +58,21 @@ use std::{
 
 static INIT: Once = Once::new();
 pub static ACTIVATE: AtomicBool = AtomicBool::new(false);
+type ActionsMap = Box<
+    HashMap<
+        u16,
+        (
+            HashSet<u16>,
+            HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>,
+        ),
+    >,
+>;
 
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: Box<
-        HashMap<
-            u16,
-            (
-                HashSet<u16>,
-                HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>,
-            ),
-        >,
-    >,
+    map: ActionsMap,
     sender: Sender<(Signal, Option<Value>)>,
     receiver: Receiver<(Signal, Option<Value>)>,
 }
@@ -454,10 +455,6 @@ mod tests {
 
     impl ObjectSubclass for Widget {
         const NAME: &'static str = "Widget";
-
-        type Type = Widget;
-
-        type ParentType = Object;
     }
 
     impl ObjectImpl for Widget {}

@@ -1,6 +1,6 @@
 use super::{drawing_context::DrawingContext, figure::Rect};
 use tlib::{
-    object::{IsSubclassable, ObjectImpl, ObjectSubclass},
+    object::{ObjectImpl, ObjectSubclass},
     prelude::*,
 };
 
@@ -12,15 +12,8 @@ pub struct Element {
     rect: Rect,
 }
 
-/// Mark `Element` as is subclassable.
-impl IsSubclassable for Element {}
-
 impl ObjectSubclass for Element {
     const NAME: &'static str = "Element";
-
-    type Type = Element;
-
-    type ParentType = tlib::Object;
 }
 
 impl ObjectImpl for Element {
@@ -147,7 +140,7 @@ mod tests {
     }
 
     fn test_is_a<T: IsA<Element>>(obj: T) {
-        let element = obj.as_ref();
+        let element = obj.downcast_ref::<Element>().unwrap();
         assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 

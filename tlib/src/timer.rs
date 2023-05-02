@@ -206,10 +206,6 @@ impl TimerSignal for Timer {}
 
 impl ObjectSubclass for Timer {
     const NAME: &'static str = "Timer";
-
-    type Type = Timer;
-
-    type ParentType = Object;
 }
 
 impl ObjectImpl for Timer {}
@@ -233,10 +229,6 @@ mod tests {
 
     impl ObjectSubclass for Widget {
         const NAME: &'static str = "Widget";
-
-        type Type = Widget;
-
-        type ParentType = Object;
     }
 
     impl ObjectImpl for Widget {}
