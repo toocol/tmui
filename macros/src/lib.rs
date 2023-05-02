@@ -5,23 +5,84 @@ mod extend_container;
 mod extend_element;
 mod extend_object;
 mod extend_widget;
+mod layout;
 mod reflect_trait;
 mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
 use proc_macro::TokenStream;
-use syn::{self, parse::Parse, parse_macro_input, DeriveInput, Ident};
+use quote::ToTokens;
+use syn::{self, parse::Parse, parse_macro_input, DeriveInput, Ident, Meta, Token};
 use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
 
 struct ExtendAttr {
     extend: Ident,
+    layout_meta: Option<Meta>,
+    layout: Option<String>,
+}
+impl ExtendAttr {
+    fn error<T: ToTokens>(span: T, msg: &'static str) -> syn::Result<Self> {
+        Err(syn::Error::new_spanned(span, msg))
+    }
 }
 impl Parse for ExtendAttr {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let extend: Ident = input.parse()?;
-        Ok(Self { extend })
+        let mut layout = None;
+        let layout_meta = if let Some(_) = input.parse::<Option<Token!(,)>>()? {
+            let layout_meta = input.parse::<Meta>()?;
+            if let Meta::List(syn::MetaList {
+                ref path,
+                ref nested,
+                ..
+            }) = layout_meta
+            {
+                if let Some(ident) = path.get_ident() {
+                    if ident.to_string() != "Layout" {
+                        return Self::error(
+                            layout_meta,
+                            "Only support attribute formmat `Layout(xxx)`",
+                        );
+                    }
+
+                    if nested.len() != 1 {
+                        return Self::error(
+                            layout_meta,
+                            "Only support attribute formmat `Layout(xxx)`",
+                        );
+                    }
+
+                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) = nested.first() {
+                        if let Some(layout_ident) = path.get_ident() {
+                            layout = Some(layout_ident.to_string())
+                        }
+                    } else {
+                        return Self::error(
+                            layout_meta,
+                            "Only support attribute formmat `Layout(xxx)`",
+                        );
+                    }
+                } else {
+                    return Self::error(
+                        layout_meta,
+                        "Only support attribute formmat `Layout(xxx)`",
+                    );
+                }
+                eprintln!("{:?}", path);
+            } else {
+                return Self::error(layout_meta, "Only support attribute formmat `Layout(xxx)`");
+            }
+            Some(layout_meta)
+        } else {
+            None
+        };
+        Ok(Self {
+            extend,
+            layout_meta,
+            layout,
+        })
     }
 }
 
@@ -33,26 +94,51 @@ impl Parse for ExtendAttr {
 ///     - Element
 ///     - Widget
 ///     - Container
+/// ### Supported layouts:
+///     - Stack
+///     - VBox
+///     - HBox
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
     let mut ast = parse_macro_input!(input as DeriveInput);
 
     let extend_str = extend_attr.extend.to_string();
+    if extend_str != "Widget" && extend_attr.layout_meta.is_some() {
+        return syn::Error::new_spanned(
+            extend_attr.layout_meta.unwrap(),
+            format!(
+                "`{}` was not supported layout, only `Widget` has layout.",
+                extend_str
+            ),
+        )
+        .to_compile_error()
+        .into();
+    }
     match extend_str.as_str() {
-        "Object" => match extend_object::generate_extend_object(&mut ast) {
+        "Object" => match extend_object::expand(&mut ast) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Element" => match extend_element::generate_extend_element(&mut ast) {
+        "Element" => match extend_element::expand(&mut ast) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Widget" => match extend_widget::generate_extend_widget(&mut ast) {
-            Ok(tkn) => tkn.into(),
-            Err(e) => e.to_compile_error().into(),
+        "Widget" => match extend_attr.layout {
+            Some(ref layout) => match extend_widget::expand_with_layout(
+                &mut ast,
+                extend_attr.layout_meta.as_ref().unwrap(),
+                layout,
+            ) {
+                Ok(tkn) => tkn.into(),
+                Err(e) => e.to_compile_error().into(),
+            },
+            None => match extend_widget::expand(&mut ast) {
+                Ok(tkn) => tkn.into(),
+                Err(e) => e.to_compile_error().into(),
+            },
         },
-        "Container" => match extend_container::generate_extend_container(&mut ast) {
+        "Container" => match extend_container::expand(&mut ast) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -63,6 +149,11 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
         .to_compile_error()
         .into(),
     }
+}
+
+#[proc_macro_derive(Layout, attributes(children))]
+pub fn layout_derive(_: TokenStream) -> TokenStream {
+    TokenStream::new()
 }
 
 /// Enable the trait has the ability of reflect, create the trait reflect struct.<br>
@@ -90,6 +181,32 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
+/// Crate and run an async task in tokio worker threads. <br>
+/// The return value in async block must implements [`tmui::tlib::values::ToValue`] trait.
+/// If there is no return value, `()` was needed.
+/// ### without callback:
+/// ```ignore
+/// tasync!({
+///     ...
+/// });
+/// ```
+/// ### with callback:
+/// ```ignore
+/// tasync!({
+///     ...  
+/// } => {
+///     ...
+/// });
+/// ```
+/// ### callback with return value:
+/// ```ignore
+/// tasync!({
+///     ...  
+///    "result"
+/// } => |result| {
+///     ...
+/// });
+/// ```
 #[proc_macro]
 pub fn tasync(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as AsyncTaskParser).expand().into()

@@ -25,10 +25,6 @@ pub struct ScrollBar {
 
 impl ObjectSubclass for ScrollBar {
     const NAME: &'static str = "ScrollBar";
-
-    type Type = ScrollBar;
-
-    type ParentType = Widget;
 }
 
 impl ObjectImpl for ScrollBar {

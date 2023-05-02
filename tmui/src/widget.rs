@@ -8,6 +8,7 @@ use crate::{
         figure::{Color, Size},
         painter::Painter,
     },
+    layout::LayoutManager,
     platform::Message,
     prelude::*,
     util::skia_font_clone,
@@ -16,7 +17,7 @@ use skia_safe::Font;
 use tlib::{
     emit,
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
-    object::{IsSubclassable, ObjectImpl, ObjectSubclass},
+    object::{ObjectImpl, ObjectSubclass},
     signals,
 };
 
@@ -94,12 +95,7 @@ impl Widget {
 
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";
-
-    type Type = Widget;
-    type ParentType = Object;
 }
-
-impl IsSubclassable for Widget {}
 
 impl ObjectImpl for Widget {
     fn construct(&mut self) {
@@ -900,53 +896,13 @@ impl<T: WidgetAcquire> Layout for T {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
-        base_widget_position_layout(self, previous, parent)
-    }
-}
-
-pub(crate) fn base_widget_position_layout(
-    widget: &mut dyn WidgetImpl,
-    _: &dyn WidgetImpl,
-    parent: &dyn WidgetImpl,
-) {
-    if parent.parent_type().is_a(Container::static_type()) {
-        return;
-    }
-    let widget_rect = widget.rect();
-    let parent_rect = parent.rect();
-
-    let halign = widget.get_property("halign").unwrap().get::<Align>();
-    let valign = widget.get_property("valign").unwrap().get::<Align>();
-
-    match halign {
-        Align::Start => widget.set_fixed_x(parent_rect.x() as i32 + widget.margin_left()),
-        Align::Center => {
-            let offset =
-                (parent_rect.width() - widget.rect().width()) as i32 / 2 + widget.margin_left();
-            widget.set_fixed_x(parent_rect.x() as i32 + offset)
-        }
-        Align::End => {
-            let offset =
-                parent_rect.width() as i32 - widget.rect().width() as i32 + widget.margin_left();
-            widget.set_fixed_x(parent_rect.x() as i32 + offset)
-        }
-    }
-
-    match valign {
-        Align::Start => {
-            widget.set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + widget.margin_top())
-        }
-        Align::Center => {
-            let offset =
-                (parent_rect.height() - widget.rect().height()) as i32 / 2 + widget.margin_top();
-            widget.set_fixed_y(parent_rect.y() as i32 + offset)
-        }
-        Align::End => {
-            let offset =
-                parent_rect.height() as i32 - widget.rect().height() as i32 + widget.margin_top();
-            widget.set_fixed_y(parent_rect.y() as i32 + offset)
-        }
+    fn position_layout(
+        &mut self,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    ) {
+        LayoutManager::base_widget_position_layout(self, previous, parent, manage_by_container)
     }
 }
 
@@ -955,7 +911,7 @@ impl Layout for Widget {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl) {}
+    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl, _: bool) {}
 }
 
 #[cfg(test)]
@@ -970,9 +926,6 @@ mod tests {
 
     impl ObjectSubclass for SubWidget {
         const NAME: &'static str = "SubWidget";
-
-        type Type = SubWidget;
-        type ParentType = Widget;
     }
 
     impl ObjectImpl for SubWidget {}
@@ -985,9 +938,6 @@ mod tests {
 
     impl ObjectSubclass for ChildWidget {
         const NAME: &'static str = "ChildWidget";
-
-        type Type = SubWidget;
-        type ParentType = Widget;
     }
 
     impl ObjectImpl for ChildWidget {}

@@ -9,10 +9,6 @@ pub struct TestContainer {}
 
 impl ObjectSubclass for TestContainer {
     const NAME: &'static str = "TestContainer";
-
-    type Type = TestContainer;
-
-    type ParentType = Container;
 }
 
 impl ObjectImpl for TestContainer {}
@@ -43,7 +39,7 @@ impl Layout for TestContainer {
         tmui::layout::Composition::HorizontalArrange
     }
 
-    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl) {}
+    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl, _: bool) {}
 }
 
 #[test]

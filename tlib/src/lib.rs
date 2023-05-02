@@ -34,10 +34,6 @@ mod tests {
 
     impl ObjectSubclass for TestObject {
         const NAME: &'static str = "TestObject";
-
-        type Type = TestObject;
-
-        type ParentType = Object;
     }
 
     impl ObjectImpl for TestObject {
@@ -61,11 +57,6 @@ mod tests {
         assert_eq!("TestObject", test_obj.type_().name());
         assert!(test_obj.is::<TestObject>());
         assert_eq!("val", test_obj.get_property("property").unwrap().get::<String>());
-
-        let test_obj = obj.as_ref();
-        assert_eq!("TestObject", test_obj.type_().name());
-        assert!(test_obj.is::<TestObject>());
-        assert_eq!("val", test_obj.get_property("property").unwrap().get::<String>())
     }
 
     #[test]

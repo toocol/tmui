@@ -1,6 +1,7 @@
 use crate::{
     container::{ContainerImpl, ContainerImplExt},
-    prelude::*, widget::base_widget_position_layout,
+    layout::{ContainerLayout, LayoutManager},
+    prelude::*,
 };
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
@@ -10,10 +11,6 @@ pub struct Stack {}
 
 impl ObjectSubclass for Stack {
     const NAME: &'static str = "Stack";
-
-    type Type = Stack;
-
-    type ParentType = Container;
 }
 
 impl ObjectImpl for Stack {}
@@ -44,13 +41,32 @@ impl Layout for Stack {
         crate::layout::Composition::Overlay
     }
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl) {
-        base_widget_position_layout(self, previous, parent);
+    fn position_layout(
+        &mut self,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    ) {
+        Stack::container_position_layout(self, previous, parent, manage_by_container)
+    }
+}
+
+impl ContainerLayout for Stack {
+    fn container_position_layout<T: WidgetImpl + ContainerImpl>(
+        widget: &mut T,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    ) {
+        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
 
         // deal with the children's position
-        let children_cnt = self.children().len();
-        let position = self.rect().top_left();
-        for child in self.children_mut().iter_mut() {}
+        let widget_ptr = widget as *const dyn WidgetImpl;
+        let mut previous = unsafe { widget_ptr.as_ref().unwrap() };
+        for child in widget.children_mut().into_iter() {
+            child.position_layout(previous, previous, true);
+            previous = child;
+        }
     }
 }
 

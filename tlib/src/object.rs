@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{FromType, Reflect, ReflectTrait, TypeRegistry, InnerTypeRegister},
-    types::{IsA, ObjectType, StaticType, Type},
+    prelude::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry},
+    types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
 use macros::reflect_trait;
@@ -136,14 +136,8 @@ impl Reflect for Object {
     }
 }
 
-impl IsSubclassable for Object {}
-
 impl ObjectSubclass for Object {
     const NAME: &'static str = "Object";
-
-    type Type = Object;
-
-    type ParentType = Object;
 }
 
 impl ObjectType for Object {
@@ -190,8 +184,6 @@ impl<T: StaticType> ObjectExt for T {
     }
 }
 
-pub trait IsSubclassable {}
-
 pub trait ObjectAcquire: ObjectImpl + Default {}
 pub trait ParentType {
     fn parent_type(&self) -> Type;
@@ -199,10 +191,6 @@ pub trait ParentType {
 
 pub trait ObjectSubclass: 'static {
     const NAME: &'static str;
-
-    type Type: ObjectExt + ObjectOperation + ObjectType;
-
-    type ParentType: IsSubclassable + ObjectExt + ObjectOperation + ObjectType;
 }
 
 impl<T: ObjectSubclass> StaticType for T {
@@ -215,9 +203,21 @@ impl<T: ObjectSubclass> StaticType for T {
     }
 }
 
+pub trait TypeName {
+    fn type_name(&self) -> &'static str;
+}
+
+impl<T: ObjectSubclass> TypeName for T {
+    fn type_name(&self) -> &'static str {
+        Self::NAME
+    }
+}
+
+impl<T: ObjectType> TypeDowncast for T {}
+
 #[reflect_trait]
 #[allow(unused_variables)]
-pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister {
+pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
     /// Override this function should invoke `self.parent_construct()` manually.
     fn construct(&mut self) {
         self.parent_construct()

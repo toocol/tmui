@@ -27,7 +27,7 @@
 //!     signals! {
 //!         action_test();
 //!     }
-//! 
+//!
 //!     fn slot(&self) {
 //!     }
 //! }
@@ -43,14 +43,14 @@
 //! }
 //! ```
 use crate::prelude::*;
-use log::{error, debug};
+use log::{debug, error};
+use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fmt::Display,
-    ptr::null_mut,
     sync::{
-        atomic::{AtomicBool, AtomicPtr, Ordering},
+        atomic::{AtomicBool, Ordering},
         mpsc::{channel, Receiver, Sender},
         Once,
     },
@@ -58,23 +58,21 @@ use std::{
 
 static INIT: Once = Once::new();
 pub static ACTIVATE: AtomicBool = AtomicBool::new(false);
+type ActionsMap = Box<
+    HashMap<
+        u16,
+        (
+            HashSet<u16>,
+            HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>,
+        ),
+    >,
+>;
 
 thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
-pub static ACTION_HUB: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
-    map: RefCell<
-        Box<
-            HashMap<
-                u16,
-                (
-                    HashSet<u16>,
-                    HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>,
-                ),
-            >,
-        >,
-    >,
+    map: ActionsMap,
     sender: Sender<(Signal, Option<Value>)>,
     receiver: Receiver<(Signal, Option<Value>)>,
 }
@@ -82,20 +80,16 @@ impl ActionHub {
     pub fn new() -> Box<Self> {
         let (sender, receiver) = channel();
         Box::new(Self {
-            map: RefCell::new(Box::new(HashMap::new())),
+            map: Box::new(HashMap::new()),
             sender,
             receiver,
         })
     }
 
-    /// The owenership of `ActionHub` should manage by the caller who called [`initialize()`]
-    pub fn instance<'a>() -> &'a Self {
-        let action_hub = ACTION_HUB.load(std::sync::atomic::Ordering::SeqCst);
-        unsafe {
-            action_hub
-                .as_ref()
-                .expect("`ActionHub` was not initialized, or already dead.")
-        }
+    /// Get the singleton instance of `ActionHub`
+    pub fn instance() -> &'static mut Self {
+        static mut ACTION_HUB: Lazy<Box<ActionHub>> = Lazy::new(|| ActionHub::new());
+        unsafe { &mut ACTION_HUB }
     }
 
     /// Initialize the `ActionHub`, the instance should be managed by the caller.
@@ -106,7 +100,6 @@ impl ActionHub {
     pub fn initialize(self: &mut Box<Self>) {
         INIT.call_once(|| {
             IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
-            ACTION_HUB.store(self.as_mut(), std::sync::atomic::Ordering::SeqCst);
         });
     }
 
@@ -120,7 +113,7 @@ impl ActionHub {
         while let Ok(action) = self.receiver.try_recv() {
             let signal = action.0;
             let param = action.1;
-            if let Some((_, emiter_map)) = self.map.borrow().get(&signal.emiter_id) {
+            if let Some((_, emiter_map)) = self.map.get(&signal.emiter_id) {
                 if let Some(actions) = emiter_map.get(signal.signal()) {
                     actions
                         .iter()
@@ -135,7 +128,7 @@ impl ActionHub {
     }
 
     pub fn connect_action<F: Fn(&Option<Value>) + 'static>(
-        &self,
+        &mut self,
         signal: Signal,
         target: u16,
         f: F,
@@ -150,7 +143,7 @@ impl ActionHub {
             return;
         }
 
-        let mut map_ref = self.map.borrow_mut();
+        let map_ref = self.map.as_mut();
         let (target_set, signal_map) = map_ref
             .entry(signal.emiter_id)
             .or_insert((HashSet::new(), HashMap::new()));
@@ -164,7 +157,7 @@ impl ActionHub {
     }
 
     pub fn disconnect_action(
-        &self,
+        &mut self,
         emiter: Option<u16>,
         signal: Option<&str>,
         target: Option<u16>,
@@ -175,7 +168,7 @@ impl ActionHub {
             }
         });
 
-        let mut map_ref = self.map.borrow_mut();
+        let map_ref = self.map.as_mut();
 
         // When disconnect with specified signal(`signal.is_some()`),
         // we assume that other signals also hold the action function of the target id,
@@ -231,7 +224,7 @@ impl ActionHub {
         IS_MAIN_THREAD.with(|is_main| {
             let name = signal.signal();
             if *is_main.borrow() {
-                if let Some((_, emiter_map)) = self.map.borrow().get(&signal.emiter_id) {
+                if let Some((_, emiter_map)) = self.map.get(&signal.emiter_id) {
                     if let Some(actions) = emiter_map.get(name) {
                         actions
                             .iter()
@@ -448,12 +441,13 @@ impl Action {
 
 #[cfg(test)]
 mod tests {
-    use std::{rc::Rc, thread, time::Duration, sync::atomic::Ordering};
-    use crate::{
-        object::{ObjectImpl, ObjectSubclass},
-        prelude::*, actions::ACTIVATE,
-    };
     use super::ActionHub;
+    use crate::{
+        actions::ACTIVATE,
+        object::{ObjectImpl, ObjectSubclass},
+        prelude::*,
+    };
+    use std::{rc::Rc, sync::atomic::Ordering, thread, time::Duration};
 
     #[extends(Object)]
     #[derive(Default)]
@@ -461,10 +455,6 @@ mod tests {
 
     impl ObjectSubclass for Widget {
         const NAME: &'static str = "Widget";
-
-        type Type = Widget;
-
-        type ParentType = Object;
     }
 
     impl ObjectImpl for Widget {}

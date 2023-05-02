@@ -30,3 +30,6 @@ log4rs = "1.1.1"
 
 [[example]]
 name = "win32_window"
+
+[[example]]
+name = "layout_widget"

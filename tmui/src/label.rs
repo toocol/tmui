@@ -29,10 +29,6 @@ impl Default for Label {
 
 impl ObjectSubclass for Label {
     const NAME: &'static str = "Label";
-
-    type Type = Label;
-
-    type ParentType = Widget;
 }
 
 impl ObjectImpl for Label {}
@@ -49,6 +45,7 @@ impl LabelSignal for Label {}
 
 impl WidgetImpl for Label {
     fn paint(&mut self, mut painter: Painter) {
+        debug!("Paint label.");
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
         let font = self.font();
@@ -137,6 +134,10 @@ impl Label {
             label.font_changed();
         }
         label
+    }
+
+    pub fn text(&self) -> String {
+        U16String::from_vec(self.label.clone()).to_string().unwrap()
     }
 
     pub fn set_text(&mut self, text: &str) {

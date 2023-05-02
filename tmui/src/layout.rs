@@ -1,4 +1,9 @@
-use crate::{container::Container, graphics::figure::Size, prelude::*, widget::WidgetImpl};
+use crate::{
+    container::{Container, ContainerImpl},
+    graphics::figure::Size,
+    prelude::*,
+    widget::WidgetImpl,
+};
 use log::debug;
 use std::collections::VecDeque;
 
@@ -15,7 +20,21 @@ pub enum Composition {
 pub trait Layout {
     fn composition(&self) -> Composition;
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl);
+    fn position_layout(
+        &mut self,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    );
+}
+
+pub trait ContainerLayout {
+    fn container_position_layout<T: WidgetImpl + ContainerImpl>(
+        widget: &mut T,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    );
 }
 
 #[derive(Default)]
@@ -92,12 +111,8 @@ impl LayoutManager {
                             child_size.max(self.child_size_probe(window_size, child_size, *child));
                         });
                     }
-                    Composition::HorizontalArrange => {
-
-                    }
-                    Composition::VerticalArrange => {
-
-                    }
+                    Composition::HorizontalArrange => {}
+                    Composition::VerticalArrange => {}
                     _ => {
                         children.unwrap().iter_mut().for_each(|child| {
                             child_size =
@@ -132,7 +147,7 @@ impl LayoutManager {
             let parent_ref = unsafe { parent.as_ref().unwrap().as_ref().unwrap() };
 
             // Deal with the widget's postion.
-            widget_ref.position_layout(previous_ref, parent_ref);
+            widget_ref.position_layout(previous_ref, parent_ref, false);
 
             // Determine whether the widget is a container.
             let is_container = widget_ref.parent_type().is_a(Container::static_type());
@@ -162,6 +177,51 @@ impl LayoutManager {
             } else {
                 None
             };
+        }
+    }
+
+    pub(crate) fn base_widget_position_layout(
+        widget: &mut dyn WidgetImpl,
+        _: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    ) {
+        if parent.parent_type().is_a(Container::static_type()) && !manage_by_container {
+            return;
+        }
+        let widget_rect = widget.rect();
+        let parent_rect = parent.rect();
+
+        let halign = widget.get_property("halign").unwrap().get::<Align>();
+        let valign = widget.get_property("valign").unwrap().get::<Align>();
+
+        match halign {
+            Align::Start => widget.set_fixed_x(parent_rect.x() as i32 + widget.margin_left()),
+            Align::Center => {
+                let offset =
+                    (parent_rect.width() - widget.rect().width()) as i32 / 2 + widget.margin_left();
+                widget.set_fixed_x(parent_rect.x() as i32 + offset)
+            }
+            Align::End => {
+                let offset = parent_rect.width() as i32 - widget.rect().width() as i32
+                    + widget.margin_left();
+                widget.set_fixed_x(parent_rect.x() as i32 + offset)
+            }
+        }
+
+        match valign {
+            Align::Start => widget
+                .set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + widget.margin_top()),
+            Align::Center => {
+                let offset = (parent_rect.height() - widget.rect().height()) as i32 / 2
+                    + widget.margin_top();
+                widget.set_fixed_y(parent_rect.y() as i32 + offset)
+            }
+            Align::End => {
+                let offset = parent_rect.height() as i32 - widget.rect().height() as i32
+                    + widget.margin_top();
+                widget.set_fixed_y(parent_rect.y() as i32 + offset)
+            }
         }
     }
 }
