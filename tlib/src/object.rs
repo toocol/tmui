@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{FromType, Reflect, ReflectTrait, TypeRegistry, InnerTypeRegister},
-    types::{IsA, ObjectType, StaticType, Type},
+    prelude::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry},
+    types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
 use macros::reflect_trait;
@@ -56,7 +56,7 @@ impl Default for Object {
 }
 
 #[reflect_trait]
-pub trait ObjectOperation: TypeName {
+pub trait ObjectOperation {
     /// Returns the type of the object.
     ///
     /// Go to[`Function defination`](ObjectOperation::id) (Defined in [`ObjectOperation`])
@@ -207,15 +207,17 @@ pub trait TypeName {
     fn type_name(&self) -> &'static str;
 }
 
-impl <T: ObjectSubclass> TypeName for T {
+impl<T: ObjectSubclass> TypeName for T {
     fn type_name(&self) -> &'static str {
         Self::NAME
     }
 }
 
+impl<T: ObjectType> TypeDowncast for T {}
+
 #[reflect_trait]
 #[allow(unused_variables)]
-pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister {
+pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
     /// Override this function should invoke `self.parent_construct()` manually.
     fn construct(&mut self) {
         self.parent_construct()

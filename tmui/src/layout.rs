@@ -1,4 +1,9 @@
-use crate::{container::Container, graphics::figure::Size, prelude::*, widget::WidgetImpl};
+use crate::{
+    container::{Container, ContainerImpl},
+    graphics::figure::Size,
+    prelude::*,
+    widget::WidgetImpl,
+};
 use log::debug;
 use std::collections::VecDeque;
 
@@ -15,7 +20,21 @@ pub enum Composition {
 pub trait Layout {
     fn composition(&self) -> Composition;
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl, manage_by_container: bool);
+    fn position_layout(
+        &mut self,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    );
+}
+
+pub trait ContainerLayout {
+    fn container_position_layout<T: WidgetImpl + ContainerImpl>(
+        widget: &mut T,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    );
 }
 
 #[derive(Default)]

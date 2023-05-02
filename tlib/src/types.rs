@@ -411,21 +411,34 @@ pub trait ObjectType: 'static {
     fn object_type(&self) -> Type;
 }
 
-pub trait IsA<T: ObjectType + StaticType>: ObjectType + StaticType + ObjectSubclass {
-    fn downcast_ref<R: ObjectType + StaticType>(&self) -> Option<&R> {
-        if Self::static_type().is_a(R::static_type()) {
-            Some(unsafe { &*(self as *const Self as *const R) })
-        } else {
-            None
-        }
+pub trait IsA<T: ObjectType + StaticType>:
+    ObjectType + StaticType + ObjectSubclass + TypeDowncast
+{
+}
+
+pub trait TypeDowncast: ObjectType + Sized {
+    fn downcast_ref<R: StaticType>(&self) -> Option<&R> {
+        downcast_ref::<Self, R>(self)
     }
 
-    fn downcast_ref_mut<R: ObjectType + StaticType>(&mut self) -> Option<&mut R> {
-        if Self::static_type().is_a(R::static_type()) {
-            Some(unsafe { &mut *(self as *mut Self as *mut R) })
-        } else {
-            None
-        }
+    fn downcast_ref_mut<R: StaticType>(&mut self) -> Option<&mut R> {
+        downcast_ref_mut::<Self, R>(self)
+    }
+}
+
+pub fn downcast_ref<T: ObjectType, R: StaticType>(obj: &T) -> Option<&R> {
+    if obj.object_type().is_a(R::static_type()) {
+        Some(unsafe { &*(obj as *const T as *const R) })
+    } else {
+        None
+    }
+}
+
+pub fn downcast_ref_mut<T: ObjectType, R: StaticType>(obj: &mut T) -> Option<&mut R> {
+    if obj.object_type().is_a(R::static_type()) {
+        Some(unsafe { &mut *(obj as *mut T as *mut R) })
+    } else {
+        None
     }
 }
 

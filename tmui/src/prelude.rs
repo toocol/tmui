@@ -11,5 +11,6 @@ pub use crate::graphics::figure::{Point, Rect, Size};
 pub use crate::widget::{Widget, WidgetExt, WidgetAcquire, WidgetImpl, WidgetImplExt, ReflectWidgetImpl, WidgetSignals};
 pub use crate::label::LabelSignal;
 pub use crate::scroll_bar::ScrollBarSignal;
-pub use crate::container::{Container, ContainerAcquire, ReflectContainerImpl};
-pub use crate::layout::Layout;
+pub use crate::container::{Container, ContainerAcquire, ReflectContainerImpl, ContainerImpl, ContainerImplExt};
+pub use crate::layout::{Layout, ContainerLayout, Composition};
+pub use crate::stack::Stack;

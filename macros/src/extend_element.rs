@@ -3,9 +3,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn generate_extend_element(
-    ast: &mut DeriveInput,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {

@@ -75,7 +75,8 @@ impl WidgetImpl for ApplicationWindow {
 impl ApplicationWindow {
     pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
-        let mut window: Box<ApplicationWindow> = Box::new(Object::new(&[("width", &width), ("height", &height)]));
+        let mut window: Box<ApplicationWindow> =
+            Box::new(Object::new(&[("width", &width), ("height", &height)]));
         Self::windows().insert(
             window.id(),
             (
@@ -173,12 +174,9 @@ fn child_initialize(
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
-        child_ref.set_parent(parent);
-        parent = child_ptr;
 
         board.add_element(child_ref.as_element());
 
-        child_ref.initialize();
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
         child_ref.set_window_id(window_id);
@@ -186,6 +184,7 @@ fn child_initialize(
         // Determine whether the widget is a container.
         let is_container = child_ref.parent_type().is_a(Container::static_type());
         let container_ref = if is_container {
+            debug!("Checked Container.");
             cast_mut!(child_ref as ContainerImpl)
         } else {
             None
@@ -197,13 +196,19 @@ fn child_initialize(
         };
 
         if is_container {
-            container_children
-                .unwrap()
-                .iter_mut()
-                .for_each(|c| children.push_back(Some(*c)));
+            container_children.unwrap().iter_mut().for_each(|c| {
+                c.set_parent(child_ptr);
+                children.push_back(Some(*c))
+            });
         } else {
             children.push_back(child_ref.get_raw_child_mut());
+            if child_ref.get_raw_parent().is_none() {
+                child_ref.set_parent(parent);
+            }
+            parent = child_ptr;
         }
+
+        child_ref.initialize();
 
         child = children.pop_front().take().unwrap();
     }

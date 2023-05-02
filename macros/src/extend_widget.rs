@@ -1,12 +1,10 @@
-use crate::extend_element;
-use crate::extend_object;
+use crate::{extend_element, extend_object, layout};
 use proc_macro2::Ident;
 use quote::quote;
+use syn::Meta;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn generate_extend_widget(
-    ast: &mut DeriveInput,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -66,6 +64,14 @@ pub(crate) fn generate_extend_widget(
             "`extends_widget` has to be used with structs ",
         )),
     }
+}
+
+pub(crate) fn expand_with_layout(
+    ast: &mut DeriveInput,
+    layout_meta: &Meta,
+    layout: &str,
+) -> syn::Result<proc_macro2::TokenStream> {
+    layout::expand(ast, layout_meta, layout)
 }
 
 pub(crate) fn gen_widget_trait_impl_clause(

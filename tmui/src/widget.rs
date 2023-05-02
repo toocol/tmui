@@ -8,9 +8,10 @@ use crate::{
         figure::{Color, Size},
         painter::Painter,
     },
+    layout::LayoutManager,
     platform::Message,
     prelude::*,
-    util::skia_font_clone, layout::LayoutManager,
+    util::skia_font_clone,
 };
 use skia_safe::Font;
 use tlib::{
@@ -895,7 +896,12 @@ impl<T: WidgetAcquire> Layout for T {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, previous: &dyn WidgetImpl, parent: &dyn WidgetImpl, manage_by_container: bool) {
+    fn position_layout(
+        &mut self,
+        previous: &dyn WidgetImpl,
+        parent: &dyn WidgetImpl,
+        manage_by_container: bool,
+    ) {
         LayoutManager::base_widget_position_layout(self, previous, parent, manage_by_container)
     }
 }

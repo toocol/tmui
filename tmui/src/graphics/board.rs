@@ -1,4 +1,5 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
+use log::debug;
 use skia_safe::Surface;
 use std::{cell::RefCell, ptr::NonNull};
 
@@ -24,6 +25,10 @@ impl Board {
     }
 
     pub fn add_element(&mut self, element: *mut dyn ElementImpl) {
+        debug!(
+            "`Board` add element: {}",
+            unsafe { element.as_ref().unwrap() }.type_name()
+        );
         self.element_list.push(RefCell::new(NonNull::new(element)))
     }
 
