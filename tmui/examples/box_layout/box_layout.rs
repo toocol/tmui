@@ -22,6 +22,9 @@ impl ObjectImpl for BoxLayout {
 
         self.set_homogeneous(true);
 
+        self.width_request(100);
+        self.set_background(Color::CYAN);
+
         self.label_1.set_background(Color::RED);
         self.label_1.set_margin_top(10);
 
