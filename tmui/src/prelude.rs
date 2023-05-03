@@ -12,9 +12,10 @@ pub use crate::graphics::element::{
 pub use crate::graphics::figure::Color;
 pub use crate::graphics::figure::{Point, Rect, Size};
 pub use crate::label::LabelSignal;
-pub use crate::layout::{Composition, ContainerLayout, Layout};
+pub use crate::layout::{Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::stack::Stack;
+pub use crate::vbox::VBox;
 pub use crate::widget::{
     ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt, WidgetSignals,
 };

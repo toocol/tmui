@@ -2,7 +2,11 @@ use crate::{extend_element, extend_object, extend_widget};
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn expand(ast: &mut DeriveInput, impl_children_construct: bool) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    impl_children_construct: bool,
+    has_content_alignment: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -14,6 +18,17 @@ pub(crate) fn expand(ast: &mut DeriveInput, impl_children_construct: bool) -> sy
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub children: Vec<Box<dyn WidgetImpl>>
                     })?);
+                    if has_content_alignment {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            content_halign: Align
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            content_valign: Align
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            homogeneous: bool
+                        })?);
+                    }
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -27,7 +42,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, impl_children_construct: bool) -> sy
                 name,
                 "container",
                 vec!["container", "widget", "element", "object"],
-                true
+                true,
             )?;
 
             let element_trait_impl_clause = extend_element::gen_element_trait_impl_clause(
@@ -44,6 +59,12 @@ pub(crate) fn expand(ast: &mut DeriveInput, impl_children_construct: bool) -> sy
                     impl ObjectChildrenConstruct for #name {}
                 ))
             }
+
+            let reflect_content_alignment = if has_content_alignment {
+                quote!(type_registry.register::<#name, ReflectContentAlignment>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
 
             Ok(quote!(
                 #ast
@@ -71,6 +92,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, impl_children_construct: bool) -> sy
                         type_registry.register::<#name, ReflectWidgetImpl>();
                         type_registry.register::<#name, ReflectContainerImpl>();
                         type_registry.register::<#name, ReflectObjectChildrenConstruct>();
+                        #reflect_content_alignment
                     }
                 }
             ))

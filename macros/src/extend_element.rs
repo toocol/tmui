@@ -84,12 +84,12 @@ pub(crate) fn gen_element_trait_impl_clause(
 
             #[inline]
             fn update(&mut self) {
-                self.set_property("invalidate", true.to_value());
+                self.#(#element_path).*.update()
             }
 
             #[inline]
             fn force_update(&mut self) {
-                self.set_property("invalidate", true.to_value());
+                self.#(#element_path).*.force_update()
             }
 
             #[inline]
@@ -119,15 +119,12 @@ pub(crate) fn gen_element_trait_impl_clause(
 
             #[inline]
             fn invalidate(&self) -> bool {
-                match self.get_property("invalidate") {
-                    Some(invalidate) => invalidate.get::<bool>(),
-                    None => false
-                }
+                self.#(#element_path).*.invalidate()
             }
 
             #[inline]
             fn validate(&mut self) {
-                self.set_property("invalidate", false.to_value());
+                self.#(#element_path).*.validate()
             }
 
             #[inline]

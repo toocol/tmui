@@ -29,6 +29,9 @@ windows = { version = "0.43.0", features = [
 log4rs = "1.1.1"
 
 [[example]]
+name = "box_layout"
+
+[[example]]
 name = "win32_window"
 
 [[example]]

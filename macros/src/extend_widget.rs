@@ -152,8 +152,8 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn height_request(&mut self, width: i32) {
-                self.#(#widget_path).*.height_request(width)
+            fn height_request(&mut self, height: i32) {
+                self.#(#widget_path).*.height_request(height)
             }
 
             #[inline]

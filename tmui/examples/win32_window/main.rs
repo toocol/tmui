@@ -1,7 +1,13 @@
 mod test_widget;
 
 use test_widget::TestWidget;
-use tmui::{application::Application, application_window::ApplicationWindow, widget::{WidgetImplExt, WidgetExt}, label::Label, prelude::{Color, Align}};
+use tmui::{
+    application::Application,
+    application_window::ApplicationWindow,
+    label::Label,
+    prelude::{Align, Color, ContentAlignment},
+    widget::{WidgetExt, WidgetImplExt},
+};
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
@@ -24,8 +30,8 @@ fn build_ui(window: &mut ApplicationWindow) {
     label.set_valign(Align::Center);
     label.width_request(200);
     label.height_request(40);
-    label.set_text_halign(Align::End);
-    label.set_text_valign(Align::End);
+    label.set_content_halign(Align::End);
+    label.set_content_valign(Align::End);
     label.set_size(30);
     label.set_margin_left(50);
     label.set_margin_top(50);
@@ -33,11 +39,24 @@ fn build_ui(window: &mut ApplicationWindow) {
 
     let mut test_widget = TestWidget::new();
     test_widget.set_background(Color::RED);
-    test_widget.width_request(1280);
-    test_widget.height_request(800);
+    test_widget.width_request(400);
+    test_widget.height_request(300);
     test_widget.set_halign(Align::Center);
     test_widget.set_valign(Align::Center);
 
+    let mut w1 = TestWidget::new();
+    let mut w2 = TestWidget::new();
+    let mut w3 = TestWidget::new();
+    let mut w4 = TestWidget::new();
+    let mut w5 = TestWidget::new();
+    w5.set_halign(Align::Center);
+    w5.set_valign(Align::Center);
+
     test_widget.child(label);
-    window.child(test_widget)
+    w1.child(test_widget);
+    w2.child(w1);
+    w3.child(w2);
+    w4.child(w3);
+    w5.child(w4);
+    window.child(w5)
 }

@@ -75,6 +75,7 @@ dependencies = [
  "regex",
  "tipc",
  "tlib",
+ "tmui",
  "windows",
 ]
 

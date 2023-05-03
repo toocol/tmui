@@ -1,15 +1,23 @@
-use crate::prelude::*;
+use crate::{prelude::*, layout::LayoutManager};
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
 #[derive(Default)]
-pub struct HBox {}
+pub struct HBox {
+    content_halign: Align,
+    content_valign: Align,
+    homogeneous: bool,
+}
 
 impl ObjectSubclass for HBox {
     const NAME: &'static str = "HBox";
 }
 
-impl ObjectImpl for HBox {}
+impl ObjectImpl for HBox {
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<HBox, ReflectContentAlignment>();
+    }
+}
 
 impl WidgetImpl for HBox {}
 
@@ -34,7 +42,7 @@ impl ContainerImplExt for HBox {
 
 impl Layout for HBox {
     fn composition(&self) -> Composition {
-        Composition::HorizontalArrange
+        HBox::static_composition()
     }
 
     fn position_layout(
@@ -48,12 +56,54 @@ impl Layout for HBox {
 }
 
 impl ContainerLayout for HBox {
+    fn static_composition() -> Composition {
+        Composition::HorizontalArrange
+    }
+
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
         previous: &dyn WidgetImpl,
         parent: &dyn WidgetImpl,
         manage_by_container: bool,
     ) {
-        todo!()
+        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+    }
+}
+
+impl ContentAlignment for HBox {
+    #[inline]
+    fn homogeneous(&self) -> bool {
+        self.homogeneous
+    }
+
+    #[inline]
+    fn set_homogeneous(&mut self,homogeneous:bool) {
+        self.homogeneous = homogeneous
+    }
+
+    #[inline]
+    fn content_halign(&self) -> Align {
+        self.content_halign
+    }
+
+    #[inline]
+    fn content_valign(&self) -> Align {
+        self.content_valign
+    }
+
+    #[inline]
+    fn set_content_halign(&mut self, halign: Align) {
+        self.content_halign = halign
+    }
+
+    #[inline]
+    fn set_content_valign(&mut self, valign: Align) {
+        self.content_valign = valign
+    }
+}
+
+impl HBox {
+    pub fn new() -> Self {
+        Object::new(&[])
     }
 }

@@ -38,7 +38,7 @@ impl ContainerImplExt for Stack {
 
 impl Layout for Stack {
     fn composition(&self) -> Composition {
-        Composition::Overlay
+        Stack::static_composition()
     }
 
     fn position_layout(
@@ -52,6 +52,10 @@ impl Layout for Stack {
 }
 
 impl ContainerLayout for Stack {
+    fn static_composition() -> Composition {
+        Composition::Overlay
+    }
+
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
         previous: &dyn WidgetImpl,

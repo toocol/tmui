@@ -21,7 +21,7 @@ pub struct LayoutWidget {
 }
 
 impl ObjectSubclass for LayoutWidget {
-    const NAME: &'static str = "CustomWidget";
+    const NAME: &'static str = "LayoutWidget";
 }
 
 impl ObjectImpl for LayoutWidget {
@@ -29,7 +29,6 @@ impl ObjectImpl for LayoutWidget {
         self.parent_construct();
 
         self.label.set_background(Color::CYAN);
-        self.label.set_text("Hello World");
         let mut font = self.label.font();
         font.set_typeface(
             FontTypeface::builder()
@@ -40,8 +39,8 @@ impl ObjectImpl for LayoutWidget {
         );
         font.set_size(20.);
         self.label.set_font(font);
-        self.label.set_text_halign(Align::Center);
-        self.label.set_text_valign(Align::Center);
+        self.label.set_content_halign(Align::Center);
+        self.label.set_content_valign(Align::Center);
         self.label.set_halign(Align::Center);
         self.label.set_valign(Align::Center);
         self.label.width_request(200);
@@ -55,8 +54,9 @@ impl ObjectImpl for LayoutWidget {
     }
 
     fn initialize(&mut self) {
-        connect!(self.timer, timeout(), self, change_text());
         connect!(self.label, text_changed(), self, text_changed(String:0, String:1));
+        connect!(self.timer, timeout(), self, change_text());
+        self.label.set_text("Hello World");
         self.timer.start(Duration::from_secs(1));
     }
 }

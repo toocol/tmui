@@ -1,29 +1,31 @@
-use crate::{
-    graphics::painter::Painter,
-    prelude::*,
-    widget::WidgetImpl,
-};
+use crate::{graphics::painter::Painter, layout::ContentAlignment, prelude::*, widget::WidgetImpl};
 use log::debug;
-use tlib::{object::{ObjectImpl, ObjectSubclass}, signals, emit};
+use tlib::{
+    emit,
+    object::{ObjectImpl, ObjectSubclass},
+    signals,
+};
 use widestring::U16String;
 
 #[extends(Widget)]
 pub struct Label {
     label: Vec<u16>,
-    text_halign: Align,
-    text_valign: Align,
+    content_halign: Align,
+    content_valign: Align,
     color: Color,
 }
 
 impl Default for Label {
     fn default() -> Self {
-        Self {
+        let mut label = Self {
             label: Default::default(),
-            text_halign: Default::default(),
-            text_valign: Default::default(),
+            content_halign: Default::default(),
+            content_valign: Default::default(),
             color: Color::BLACK,
             widget: Default::default(),
-        }
+        };
+        label.font_changed();
+        label
     }
 }
 
@@ -31,7 +33,11 @@ impl ObjectSubclass for Label {
     const NAME: &'static str = "Label";
 }
 
-impl ObjectImpl for Label {}
+impl ObjectImpl for Label {
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Label, ReflectContentAlignment>();
+    }
+}
 
 pub trait LabelSignal: ActionExt {
     signals! {
@@ -78,31 +84,31 @@ impl WidgetImpl for Label {
         painter.set_font(font);
 
         let mut draw_point = content_rect.bottom_left();
-        match self.text_halign {
-            Align::Start => {},
+        match self.content_halign {
+            Align::Start => {}
             Align::Center => {
                 let offset = (content_rect.width() - text_width) / 2;
                 draw_point.set_x(draw_point.x() + offset);
-            },
+            }
             Align::End => {
                 let offset = content_rect.width() - text_width;
                 draw_point.set_x(draw_point.x() + offset);
-            },
+            }
         };
-        match self.text_valign {
+        match self.content_valign {
             Align::Start => {
-                let offset = content_rect.height() - metrics.cap_height as i32;
+                let offset = content_rect.height() - metrics.cap_height as i32 - 2;
                 draw_point.set_y(draw_point.y() - offset);
-            },
+            }
             Align::Center => {
                 let offset = (content_rect.height() - metrics.cap_height as i32) / 2;
                 draw_point.set_y(draw_point.y() - offset);
-            },
-            Align::End => {},
+            }
+            Align::End => {}
         };
         debug!(
-            "Paint label, contents rect = {:?}, draw point = {:?}",
-            content_rect, draw_point
+            "Paint label(Widget coordinate) contents rect = {:?}, draw point = {:?}, text = {}",
+            content_rect, draw_point, &text
         );
         painter.draw_text(&text, draw_point);
     }
@@ -120,7 +126,7 @@ impl WidgetImpl for Label {
 
         if width > size.width() as f32 || height > size.height() as f32 {
             self.width_request(width as i32 + 10);
-            self.height_request(height as i32 + 2);
+            self.height_request(height as i32 + 4);
         }
     }
 }
@@ -146,6 +152,7 @@ impl Label {
             .expect("`Label` encode u16 string to utf-8 string failed.");
         self.label = U16String::from_str(text).as_slice().to_vec();
         emit!(self.text_changed(), old, text);
+        self.font_changed();
         self.update()
     }
 
@@ -158,20 +165,34 @@ impl Label {
         font.set_size(size as f32);
         self.set_font(font);
     }
+}
 
-    pub fn set_text_halign(&mut self, align: Align) {
-        self.text_halign = align
+impl ContentAlignment for Label {
+    #[inline]
+    fn homogeneous(&self) -> bool {
+        true
     }
 
-    pub fn set_text_valign(&mut self, align: Align) {
-        self.text_valign = align
+    #[inline]
+    fn set_homogeneous(&mut self, _: bool) {}
+
+    #[inline]
+    fn content_halign(&self) -> Align {
+        self.content_halign
     }
 
-    pub fn text_halign(&self) -> Align {
-        self.text_halign
+    #[inline]
+    fn content_valign(&self) -> Align {
+        self.content_valign
     }
 
-    pub fn text_valign(&self) -> Align {
-        self.text_valign
+    #[inline]
+    fn set_content_halign(&mut self, halign: Align) {
+        self.content_halign = halign
+    }
+
+    #[inline]
+    fn set_content_valign(&mut self, valign: Align) {
+        self.content_valign = valign
     }
 }

@@ -145,6 +145,9 @@ impl ObjectImpl for Widget {
 
 impl WidgetImpl for Widget {}
 
+/////////////////////////////////////////////////////////////////////////////////
+/// Renderering function for Widget.
+/////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         if !self.visible() {

@@ -1,7 +1,8 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use log::debug;
 use skia_safe::Surface;
 use std::{cell::RefCell, ptr::NonNull};
+
+thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
 
 /// Basic drawing Board with Skia surface.
 ///
@@ -16,6 +17,7 @@ pub struct Board {
 }
 
 impl Board {
+    #[inline]
     pub fn new(surface: (Surface, Surface)) -> Self {
         Self {
             front_surface: RefCell::new(surface.0),
@@ -24,27 +26,34 @@ impl Board {
         }
     }
 
+    #[inline]
+    pub fn notify_update() {
+        NOTIFY_UPDATE.with(|notify_update| *notify_update.borrow_mut() = true)
+    }
+
+    #[inline]
     pub fn add_element(&mut self, element: *mut dyn ElementImpl) {
-        debug!(
-            "`Board` add element: {}",
-            unsafe { element.as_ref().unwrap() }.type_name()
-        );
         self.element_list.push(RefCell::new(NonNull::new(element)))
     }
 
     pub fn invalidate_visual(&self) -> bool {
-        let mut update = false;
-        // The parent elements always at the end of `element_list`.
-        // We should renderer the parent elements first.
-        for element in self.element_list.iter() {
-            let element = unsafe { element.borrow_mut().as_mut().unwrap().as_mut() };
-            if element.invalidate() {
-                let cr = DrawingContext::new(self, element.rect());
-                element.on_renderer(&cr);
-                element.validate();
-                update = true;
+        NOTIFY_UPDATE.with(|notify_update| {
+            let mut update = false;
+            if *notify_update.borrow() {
+                // The parent elements always at the end of `element_list`.
+                // We should renderer the parent elements first.
+                for element in self.element_list.iter() {
+                    let element = unsafe { element.borrow_mut().as_mut().unwrap().as_mut() };
+                    if element.invalidate() {
+                        let cr = DrawingContext::new(self);
+                        element.on_renderer(&cr);
+                        element.validate();
+                        update = true;
+                    }
+                }
+                *notify_update.borrow_mut() = false
             }
-        }
-        update
+            update
+        })
     }
 }

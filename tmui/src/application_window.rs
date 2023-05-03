@@ -147,6 +147,10 @@ impl ApplicationWindow {
         self.activated
     }
 
+    pub fn window_layout_change(&mut self) {
+        Self::layout_of(self.id()).layout_change(self)
+    }
+
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
     }
@@ -157,10 +161,6 @@ impl ApplicationWindow {
 
     pub(crate) fn register_window(&mut self, sender: Sender<Message>) {
         self.output_sender = Some(sender)
-    }
-
-    pub(crate) fn window_layout_change(&mut self) {
-        Self::layout_of(self.id()).layout_change(self)
     }
 }
 
@@ -184,7 +184,6 @@ fn child_initialize(
         // Determine whether the widget is a container.
         let is_container = child_ref.parent_type().is_a(Container::static_type());
         let container_ref = if is_container {
-            debug!("Checked Container.");
             cast_mut!(child_ref as ContainerImpl)
         } else {
             None
