@@ -1,9 +1,9 @@
 use tlib::object::ObjectSubclass;
 use tmui::{prelude::*, label::Label};
 
-#[extends(Widget, Layout(VBox))]
+#[extends(Widget, Layout(HBox))]
 #[derive(Default, Childrenable)]
-pub struct BoxLayout {
+pub struct HBoxLayout {
     #[children]
     label_1: Label,
     #[children]
@@ -12,27 +12,27 @@ pub struct BoxLayout {
     label_3: Label,
 }
 
-impl ObjectSubclass for BoxLayout {
-    const NAME: &'static str = "BoxLayout";
+impl ObjectSubclass for HBoxLayout {
+    const NAME: &'static str = "HBoxLayout";
 }
 
-impl ObjectImpl for BoxLayout {
+impl ObjectImpl for HBoxLayout {
     fn construct(&mut self) {
         self.parent_construct();
 
         self.set_homogeneous(true);
 
-        self.width_request(100);
-        self.set_background(Color::CYAN);
-
         self.label_1.set_background(Color::RED);
         self.label_1.set_margin_top(10);
+        self.label_1.set_margin_left(5);
 
         self.label_2.set_background(Color::BLUE);
         self.label_2.set_margin_top(10);
+        self.label_2.set_margin_left(5);
 
         self.label_3.set_background(Color::YELLOW);
         self.label_3.set_margin_top(10);
+        self.label_3.set_margin_left(5);
     }
 
     fn initialize(&mut self) {
@@ -42,10 +42,4 @@ impl ObjectImpl for BoxLayout {
     }
 }
 
-impl WidgetImpl for BoxLayout {}
-
-impl BoxLayout {
-    pub fn new() -> Self {
-        Object::new(&[])
-    }
-}
+impl WidgetImpl for HBoxLayout {}

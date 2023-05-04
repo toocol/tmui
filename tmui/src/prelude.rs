@@ -16,6 +16,7 @@ pub use crate::layout::{Composition, ContainerLayout, ContentAlignment, Layout, 
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::stack::Stack;
 pub use crate::vbox::VBox;
+pub use crate::hbox::HBox;
 pub use crate::widget::{
     ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt, WidgetSignals,
 };

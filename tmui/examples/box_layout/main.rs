@@ -1,6 +1,7 @@
-pub mod box_layout;
+pub mod hbox_layout;
+pub mod vbox_layout;
 
-use box_layout::BoxLayout;
+use vbox_layout::VBoxLayout;
 use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
@@ -18,5 +19,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(BoxLayout::new())
+    window.set_background(Color::from_rgb(100, 100, 100));
+    window.child(VBoxLayout::new())
 }

@@ -88,7 +88,7 @@ impl ContainerLayout for VBox {
         // If homogenous was true, VBox's children's alignments was ignored, should managed by VBox's `content_halign` and `content_valign`.
         // Otherwise the position should manage by contents' own alignment.
         if homogeneous {
-            vbox_layout_homogeous(widget, content_halign, content_valign)
+            vbox_layout_homogeneous(widget, content_halign, content_valign)
         } else {
             vbox_layout_non_homogeneous(widget)
         }
@@ -133,7 +133,7 @@ impl VBox {
     }
 }
 
-fn vbox_layout_homogeous<T: WidgetImpl + ContainerImpl>(
+fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     widget: &mut T,
     content_halign: Align,
     content_valign: Align,
@@ -151,9 +151,11 @@ fn vbox_layout_homogeous<T: WidgetImpl + ContainerImpl>(
         };
     debug_assert!(parent_rect.height() >= children_total_height);
 
-    let mut start_offset = parent_rect.y();
-    let mut center_offset = (parent_rect.height() - children_total_height) / 2 + parent_rect.y();
-    let mut end_offset = parent_rect.height() - children_total_height + parent_rect.y();
+    let mut offset = match content_valign {
+        Align::Start => parent_rect.y(),
+        Align::Center => (parent_rect.height() - children_total_height) / 2 + parent_rect.y(),
+        Align::End => parent_rect.height() - children_total_height + parent_rect.y(),
+    };
 
     for child in widget.children_mut().iter_mut() {
         debug!("Layout widget position: {}", child.type_name());
@@ -169,20 +171,8 @@ fn vbox_layout_homogeous<T: WidgetImpl + ContainerImpl>(
             }
         }
 
-        match content_valign {
-            Align::Start => {
-                child.set_fixed_y(start_offset + child.margin_top());
-                start_offset += child.image_rect().height();
-            },
-            Align::Center => {
-                child.set_fixed_y(center_offset + child.margin_top());
-                center_offset += child.image_rect().height();
-            }
-            Align::End => {
-                child.set_fixed_y(end_offset + child.margin_top());
-                end_offset += child.image_rect().height();
-            }
-        }
+        child.set_fixed_y(offset + child.margin_top());
+        offset += child.image_rect().height();
     }
 }
 

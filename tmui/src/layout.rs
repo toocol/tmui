@@ -224,27 +224,24 @@ impl LayoutManager {
         match halign {
             Align::Start => widget.set_fixed_x(parent_rect.x() + widget.margin_left()),
             Align::Center => {
-                let offset =
-                    (parent_rect.width() - widget.rect().width()) / 2 + widget.margin_left();
+                let offset = (parent_rect.width() - widget_rect.width()) / 2 + widget.margin_left();
                 widget.set_fixed_x(parent_rect.x() + offset)
             }
             Align::End => {
-                let offset = parent_rect.width() - widget.rect().width() + widget.margin_left();
+                let offset = parent_rect.width() - widget_rect.width() + widget.margin_left();
                 widget.set_fixed_x(parent_rect.x() + offset)
             }
         }
 
         match valign {
-            Align::Start => {
-                widget.set_fixed_y(parent_rect.y() + widget_rect.y() + widget.margin_top())
-            }
+            Align::Start => widget.set_fixed_y(parent_rect.y() + widget.margin_top()),
             Align::Center => {
                 let offset =
-                    (parent_rect.height() - widget.rect().height()) / 2 + widget.margin_top();
+                    (parent_rect.height() - widget_rect.height()) / 2 + widget.margin_top();
                 widget.set_fixed_y(parent_rect.y() + offset)
             }
             Align::End => {
-                let offset = parent_rect.height() - widget.rect().height() + widget.margin_top();
+                let offset = parent_rect.height() - widget_rect.height() + widget.margin_top();
                 widget.set_fixed_y(parent_rect.y() + offset)
             }
         }
