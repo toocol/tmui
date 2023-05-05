@@ -11,11 +11,9 @@ pub struct RasterBackend {
     back_buffer: Bitmap,
 }
 
-impl Backend for RasterBackend {
-    type Type = RasterBackend;
-
-    fn new(front: Bitmap, back: Bitmap) -> Self::Type {
-        Self {
+impl RasterBackend {
+    pub fn new(front: Bitmap, back: Bitmap) -> Box<Self> {
+        Box::new(Self {
             image_info: ImageInfo::new(
                 (front.width() as i32, front.height() as i32),
                 ColorType::BGRA8888,
@@ -24,9 +22,11 @@ impl Backend for RasterBackend {
             ),
             front_buffer: front,
             back_buffer: back,
-        }
+        })
     }
+}
 
+impl Backend for RasterBackend {
     fn surface(&self) -> (Surface, Surface) {
         let front_surface = Surface::new_raster_direct(
             &self.image_info,

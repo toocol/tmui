@@ -1,4 +1,5 @@
 use super::{Message, PlatformContext};
+use tlib::prelude::SystemCursorShape;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
@@ -44,6 +45,16 @@ impl WindowProcess {
                 }
                 Event::UserEvent(Message::VSync) => {
                     window.request_redraw();
+                }
+                Event::UserEvent(Message::SetCursorShape(cursor)) => {
+                    match cursor {
+                        SystemCursorShape::BlankCursor => window.set_cursor_visible(false),
+                        _ => {
+                            window.set_cursor_visible(true);
+                            window.set_cursor_icon(cursor.into())
+                        }
+                    }
+                    
                 }
                 Event::RedrawRequested(_) => {
                     // Redraw the application.

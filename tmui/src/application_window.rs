@@ -5,7 +5,7 @@ use crate::{
         painter::Painter,
     },
     layout::LayoutManager,
-    platform::Message,
+    platform::{Message, window_context::OutputSender},
     prelude::*,
     widget::{WidgetImpl, WidgetSignals},
 };
@@ -13,7 +13,6 @@ use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
 use skia_safe::Font;
-use winit::event_loop::{EventLoopProxy, EventLoopClosed};
 use std::{
     collections::{HashMap, VecDeque},
     ptr::{null_mut, NonNull},
@@ -43,7 +42,7 @@ pub(crate) fn store_board(board: &mut Board) {
 #[extends(Widget)]
 #[derive(Default)]
 pub struct ApplicationWindow {
-    output_sender: Option<EventLoopProxy<Message>>,
+    output_sender: Option<OutputSender>,
     activated: bool,
 }
 
@@ -132,15 +131,16 @@ impl ApplicationWindow {
         unsafe { window.unwrap().as_mut() }
     }
 
-    pub fn send_message_with_id(id: u16, message: Message) -> Result<(), EventLoopClosed<Message>> {
+    pub fn send_message_with_id(id: u16, message: Message) {
         Self::window_of(id).send_message(message)
     }
 
-    pub fn send_message(&self, message: Message) -> Result<(), EventLoopClosed<Message>> {
-        self.output_sender
-            .as_ref()
-            .expect("`ApplicationWindow` did not register the output sender.")
-            .send_event(message)
+    pub fn send_message(&self, message: Message) {
+        match self.output_sender {
+            Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
+            Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
+            None => panic!("`ApplicationWindow` did not register the output_sender.")
+        }
     }
 
     pub fn is_activate(&self) -> bool {
@@ -159,7 +159,7 @@ impl ApplicationWindow {
         self.activated = true;
     }
 
-    pub(crate) fn register_window(&mut self, sender: EventLoopProxy<Message>) {
+    pub(crate) fn register_window(&mut self, sender: OutputSender) {
         self.output_sender = Some(sender)
     }
 }

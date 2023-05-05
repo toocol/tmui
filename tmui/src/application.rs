@@ -8,10 +8,12 @@ use crate::{
     application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::{Message, PlatformContext, PlatformIpc, PlatformType},
+    platform::{
+        window_context::{OutputSender, WindowContext},
+        Message, PlatformContext, PlatformIpc, PlatformType,
+    },
 };
 use lazy_static::lazy_static;
-use winit::event_loop::EventLoopProxy;
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -26,14 +28,16 @@ use std::{
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
+    prelude::tokio_runtime,
     timer::TimerHub,
-    utils::TimeStamp, prelude::tokio_runtime,
+    utils::TimeStamp,
 };
 
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
-    pub(crate) static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
+    pub(crate) static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> =
+        AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
@@ -78,13 +82,18 @@ impl Application {
         let on_activate = self.on_activate.borrow().clone();
         *self.on_activate.borrow_mut() = None;
 
-        let (window, event_loop, event_loop_proxy) = platform_context.create_window();
+        let mut window_context = platform_context.create_window();
+        let output_sender = match window_context {
+            WindowContext::Ipc(.., ref mut output) => output.take().unwrap(),
+            WindowContext::Default(.., ref mut output) => output.take().unwrap(),
+        };
+
         thread::Builder::new()
             .name("tmui-main".to_string())
-            .spawn(move || Self::ui_main(backend_type, event_loop_proxy, input_receiver, on_activate))
+            .spawn(move || Self::ui_main(backend_type, output_sender, input_receiver, on_activate))
             .unwrap();
 
-        platform_context.platform_main(window, event_loop);
+        platform_context.platform_main(window_context);
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>
@@ -126,7 +135,7 @@ impl Application {
 
     fn ui_main(
         backend_type: BackendType,
-        output_sender: EventLoopProxy<Message>,
+        output_sender: OutputSender,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
     ) {
@@ -147,13 +156,13 @@ impl Application {
         timer_hub.initialize();
 
         // Create the [`Backend`] based on the backend type specified by the user.
-        let backend;
+        let backend: Box<dyn Backend>;
         match backend_type {
             BackendType::Raster => {
-                backend = RasterBackend::new(platform.front_bitmap(), platform.back_bitmap()).wrap()
+                backend = RasterBackend::new(platform.front_bitmap(), platform.back_bitmap())
             }
             BackendType::OpenGL => {
-                backend = OpenGLBackend::new(platform.front_bitmap(), platform.back_bitmap()).wrap()
+                backend = OpenGLBackend::new(platform.front_bitmap(), platform.back_bitmap())
             }
         }
 
@@ -184,7 +193,7 @@ impl Application {
             let now = TimeStamp::timestamp_micros();
             if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
-                window.send_message(Message::VSync).unwrap();
+                window.send_message(Message::VSync);
             }
 
             timer_hub.check_timers();

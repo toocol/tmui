@@ -11,13 +11,16 @@ pub struct OpenGLBackend {
     back_buffer: Bitmap,
 }
 
-impl Backend for OpenGLBackend {
-    type Type = OpenGLBackend;
-
-    fn new(front: Bitmap, back: Bitmap) -> Self::Type {
-        Self { front_buffer: front, back_buffer: back }
+impl OpenGLBackend {
+    pub fn new(front: Bitmap, back: Bitmap) -> Box<Self> {
+        Box::new(Self {
+            front_buffer: front,
+            back_buffer: back,
+        })
     }
+}
 
+impl Backend for OpenGLBackend {
     fn surface(&self) -> (Surface, Surface) {
         todo!()
     }

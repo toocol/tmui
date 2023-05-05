@@ -809,7 +809,6 @@ impl WidgetExt for Widget {
             self.window_id(),
             Message::SetCursorShape(cursor),
         )
-        .unwrap()
     }
 }
 
