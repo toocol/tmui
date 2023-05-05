@@ -11,12 +11,13 @@ use crate::{
     platform::{Message, PlatformContext, PlatformIpc, PlatformType},
 };
 use lazy_static::lazy_static;
+use winit::event_loop::EventLoopProxy;
 use std::{
     cell::RefCell,
     ptr::null_mut,
     sync::{
         atomic::{AtomicPtr, Ordering},
-        mpsc::{channel, Receiver, Sender},
+        mpsc::{channel, Receiver},
         Arc,
     },
     thread,
@@ -30,9 +31,9 @@ use tlib::{
 };
 
 lazy_static! {
-    pub static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
+    pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
-    pub static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
+    pub(crate) static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
@@ -40,8 +41,8 @@ pub const FRAME_INTERVAL: u128 = 16000;
 
 #[derive(Default)]
 pub struct Application {
-    width: i32,
-    height: i32,
+    width: u32,
+    height: u32,
     title: String,
 
     platform_type: PlatformType,
@@ -66,7 +67,6 @@ impl Application {
 
     /// Start to run this application.
     pub fn run(&self) {
-        let (output_sender, output_receiver) = channel::<Message>();
         let (input_sender, input_receiver) = channel::<Message>();
 
         let mut platform_mut = self.platform_context.borrow_mut();
@@ -78,18 +78,13 @@ impl Application {
         let on_activate = self.on_activate.borrow().clone();
         *self.on_activate.borrow_mut() = None;
 
+        let (window, event_loop, event_loop_proxy) = platform_context.create_window();
         thread::Builder::new()
             .name("tmui-main".to_string())
-            .spawn(move || Self::ui_main(backend_type, output_sender, input_receiver, on_activate))
+            .spawn(move || Self::ui_main(backend_type, event_loop_proxy, input_receiver, on_activate))
             .unwrap();
 
-        loop {
-            if let Ok(msg) = output_receiver.try_recv() {
-                platform_context.send_message(msg);
-            }
-            platform_context.handle_platform_event();
-            thread::sleep(Duration::from_nanos(1));
-        }
+        platform_context.platform_main(window, event_loop);
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>
@@ -131,7 +126,7 @@ impl Application {
 
     fn ui_main(
         backend_type: BackendType,
-        output_sender: Sender<Message>,
+        output_sender: EventLoopProxy<Message>,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
     ) {
@@ -166,7 +161,7 @@ impl Application {
         let mut board = Board::new(backend.surface());
         store_board(&mut board);
 
-        let mut window = ApplicationWindow::new(backend.width(), backend.height());
+        let mut window = ApplicationWindow::new(backend.width() as i32, backend.height() as i32);
         APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
@@ -189,7 +184,7 @@ impl Application {
             let now = TimeStamp::timestamp_micros();
             if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
-                window.send_message(Message::message_vsync()).unwrap();
+                window.send_message(Message::VSync).unwrap();
             }
 
             timer_hub.check_timers();
@@ -206,8 +201,8 @@ pub struct ApplicationBuilder {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,
     title: Option<String>,
-    width: Option<i32>,
-    height: Option<i32>,
+    width: Option<u32>,
+    height: Option<u32>,
 }
 
 impl ApplicationBuilder {
@@ -250,12 +245,12 @@ impl ApplicationBuilder {
         self
     }
 
-    pub fn width(mut self, width: i32) -> Self {
+    pub fn width(mut self, width: u32) -> Self {
         self.width = Some(width);
         self
     }
 
-    pub fn height(mut self, height: i32) -> Self {
+    pub fn height(mut self, height: u32) -> Self {
         self.height = Some(height);
         self
     }

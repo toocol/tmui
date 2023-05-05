@@ -9,8 +9,8 @@ pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{
     Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl,
 };
-pub use crate::graphics::figure::Color;
-pub use crate::graphics::figure::{Point, Rect, Size};
+pub use crate::graphics::figure::{Point, Rect, Size, Color};
+pub use crate::graphics::board::Board;
 pub use crate::label::LabelSignal;
 pub use crate::layout::{Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment};
 pub use crate::scroll_bar::ScrollBarSignal;

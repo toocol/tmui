@@ -44,19 +44,6 @@ fn build_ui(window: &mut ApplicationWindow) {
     test_widget.set_halign(Align::Center);
     test_widget.set_valign(Align::Center);
 
-    let mut w1 = TestWidget::new();
-    let mut w2 = TestWidget::new();
-    let mut w3 = TestWidget::new();
-    let mut w4 = TestWidget::new();
-    let mut w5 = TestWidget::new();
-    w5.set_halign(Align::Center);
-    w5.set_valign(Align::Center);
-
     test_widget.child(label);
-    w1.child(test_widget);
-    w2.child(w1);
-    w3.child(w2);
-    w4.child(w3);
-    w5.child(w4);
-    window.child(w5)
+    window.child(test_widget)
 }

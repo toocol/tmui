@@ -82,6 +82,7 @@ impl Widget {
     /// Notify all the child widget to invalidate.
     fn notify_invalidate(&mut self) {
         if let Some(child) = self.get_raw_child_mut() {
+            println!("notify invalidate");
             unsafe { child.as_mut().unwrap().update() }
         }
     }
@@ -806,7 +807,7 @@ impl WidgetExt for Widget {
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
         ApplicationWindow::send_message_with_id(
             self.window_id(),
-            Message::message_set_cursor_shape(cursor),
+            Message::SetCursorShape(cursor),
         )
         .unwrap()
     }

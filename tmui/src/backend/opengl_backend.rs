@@ -22,11 +22,11 @@ impl Backend for OpenGLBackend {
         todo!()
     }
 
-    fn width(&self) -> i32 {
+    fn width(&self) -> u32 {
         self.front_buffer.width()
     }
 
-    fn height(&self) -> i32 {
+    fn height(&self) -> u32 {
         self.front_buffer.height()
     }
 }

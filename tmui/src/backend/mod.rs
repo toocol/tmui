@@ -25,17 +25,17 @@ pub trait Backend: Sized + 'static {
 
     fn surface(&self) -> (Surface, Surface);
 
-    fn width(&self) -> i32;
+    fn width(&self) -> u32;
 
-    fn height(&self) -> i32;
+    fn height(&self) -> u32;
 }
 
 pub trait BackendWrapper {
     fn surface(&self) -> (Surface, Surface);
 
-    fn width(&self) -> i32;
+    fn width(&self) -> u32;
 
-    fn height(&self) -> i32;
+    fn height(&self) -> u32;
 }
 
 impl<T: Backend> BackendWrapper for RefCell<T> {
@@ -43,11 +43,11 @@ impl<T: Backend> BackendWrapper for RefCell<T> {
         self.borrow().surface()
     }
 
-    fn width(&self) -> i32 {
+    fn width(&self) -> u32 {
         self.borrow().width()
     }
 
-    fn height(&self) -> i32 {
+    fn height(&self) -> u32 {
         self.borrow().height()
     }
 }

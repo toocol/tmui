@@ -13,12 +13,12 @@ use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
 use skia_safe::Font;
+use winit::event_loop::{EventLoopProxy, EventLoopClosed};
 use std::{
     collections::{HashMap, VecDeque},
     ptr::{null_mut, NonNull},
     sync::{
         atomic::{AtomicPtr, Ordering},
-        mpsc::{SendError, Sender},
         Once,
     },
     thread::{self, ThreadId},
@@ -43,7 +43,7 @@ pub(crate) fn store_board(board: &mut Board) {
 #[extends(Widget)]
 #[derive(Default)]
 pub struct ApplicationWindow {
-    output_sender: Option<Sender<Message>>,
+    output_sender: Option<EventLoopProxy<Message>>,
     activated: bool,
 }
 
@@ -132,15 +132,15 @@ impl ApplicationWindow {
         unsafe { window.unwrap().as_mut() }
     }
 
-    pub fn send_message_with_id(id: u16, message: Message) -> Result<(), SendError<Message>> {
+    pub fn send_message_with_id(id: u16, message: Message) -> Result<(), EventLoopClosed<Message>> {
         Self::window_of(id).send_message(message)
     }
 
-    pub fn send_message(&self, message: Message) -> Result<(), SendError<Message>> {
+    pub fn send_message(&self, message: Message) -> Result<(), EventLoopClosed<Message>> {
         self.output_sender
             .as_ref()
             .expect("`ApplicationWindow` did not register the output sender.")
-            .send(message)
+            .send_event(message)
     }
 
     pub fn is_activate(&self) -> bool {
@@ -159,7 +159,7 @@ impl ApplicationWindow {
         self.activated = true;
     }
 
-    pub(crate) fn register_window(&mut self, sender: Sender<Message>) {
+    pub(crate) fn register_window(&mut self, sender: EventLoopProxy<Message>) {
         self.output_sender = Some(sender)
     }
 }

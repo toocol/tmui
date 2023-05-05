@@ -11,7 +11,6 @@ pub struct Element {
     window_id: u16,
     rect: Rect,
     fixed_size: bool,
-    invalidate: bool,
 }
 
 impl ObjectSubclass for Element {
@@ -88,13 +87,13 @@ impl ElementExt for Element {
 
     #[inline]
     fn update(&mut self) {
-        self.invalidate = true;
+        self.set_property("invalidate", true.to_value());
         Board::notify_update()
     }
 
     #[inline]
     fn force_update(&mut self) {
-        self.invalidate = true;
+        self.set_property("invalidate", true.to_value());
         // TODO: invoke `Board`'s `invalidate_visual` obligatory.
     }
 
@@ -127,12 +126,15 @@ impl ElementExt for Element {
 
     #[inline]
     fn invalidate(&self) -> bool {
-        self.invalidate
+        match self.get_property("invalidate") {
+            Some(val) => val.get(),
+            None => true,
+        }
     }
 
     #[inline]
     fn validate(&mut self) {
-        self.invalidate = false
+        self.set_property("invalidate", false.to_value())
     }
 
     #[inline]
