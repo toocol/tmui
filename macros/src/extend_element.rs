@@ -25,6 +25,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 name,
                 "element",
                 vec!["element", "object"],
+                false,
             )?;
 
             let element_trait_impl_clause = gen_element_trait_impl_clause(name, vec!["element"])?;
@@ -84,6 +85,7 @@ pub(crate) fn gen_element_trait_impl_clause(
             #[inline]
             fn update(&mut self) {
                 self.set_property("invalidate", true.to_value());
+                Board::notify_update()
             }
 
             #[inline]
@@ -118,15 +120,22 @@ pub(crate) fn gen_element_trait_impl_clause(
 
             #[inline]
             fn invalidate(&self) -> bool {
-                match self.get_property("invalidate") {
-                    Some(invalidate) => invalidate.get::<bool>(),
-                    None => false
-                }
+                self.#(#element_path).*.invalidate()
             }
 
             #[inline]
             fn validate(&mut self) {
-                self.set_property("invalidate", false.to_value());
+                self.#(#element_path).*.validate()
+            }
+
+            #[inline]
+            fn is_fixed_size(&self) -> bool {
+                self.#(#element_path).*.is_fixed_size()
+            }
+
+            #[inline]
+            fn unfixed_size(&mut self) {
+                self.#(#element_path).*.unfixed_size()
             }
         }
 

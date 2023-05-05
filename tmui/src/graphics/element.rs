@@ -1,4 +1,4 @@
-use super::{drawing_context::DrawingContext, figure::Rect};
+use super::{drawing_context::DrawingContext, figure::Rect, board::Board};
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
@@ -10,6 +10,7 @@ use tlib::{
 pub struct Element {
     window_id: u16,
     rect: Rect,
+    fixed_size: bool,
 }
 
 impl ObjectSubclass for Element {
@@ -65,55 +66,85 @@ pub trait ElementExt: 'static {
 
     /// Go to[`Function defination`](ElementExt::validate) (Defined in [`ElementExt`])
     fn validate(&mut self);
+
+    /// Go to[`Function defination`](ElementExt::is_fixed_size) (Defined in [`ElementExt`])
+    fn is_fixed_size(&self) -> bool;
+
+    /// Go to[`Function defination`](ElementExt::unfixed_size) (Defined in [`ElementExt`])
+    fn unfixed_size(&mut self);
 }
 
 impl ElementExt for Element {
+    #[inline]
     fn set_window_id(&mut self, id: u16) {
         self.window_id = id
     }
 
+    #[inline]
     fn window_id(&self) -> u16 {
         self.window_id
     }
 
+    #[inline]
     fn update(&mut self) {
         self.set_property("invalidate", true.to_value());
+        Board::notify_update()
     }
 
+    #[inline]
     fn force_update(&mut self) {
         self.set_property("invalidate", true.to_value());
-        // TODO: firgue out how to invoke `Board`'s `invalidate_visual` obligatory.
+        // TODO: invoke `Board`'s `invalidate_visual` obligatory.
     }
 
+    #[inline]
     fn rect(&self) -> Rect {
         self.rect
     }
 
+    #[inline]
     fn set_fixed_width(&mut self, width: i32) {
+        self.fixed_size = true;
         self.rect.set_width(width)
     }
 
+    #[inline]
     fn set_fixed_height(&mut self, height: i32) {
+        self.fixed_size = true;
         self.rect.set_height(height)
     }
 
+    #[inline]
     fn set_fixed_x(&mut self, x: i32) {
         self.rect.set_x(x)
     }
 
+    #[inline]
     fn set_fixed_y(&mut self, y: i32) {
         self.rect.set_y(y)
     }
 
+    #[inline]
     fn invalidate(&self) -> bool {
         match self.get_property("invalidate") {
-            Some(invalidate) => invalidate.get::<bool>(),
-            None => false
+            Some(val) => val.get(),
+            None => true,
         }
     }
 
+    #[inline]
     fn validate(&mut self) {
-        self.set_property("invalidate", false.to_value());
+        self.set_property("invalidate", false.to_value())
+    }
+
+    #[inline]
+    fn is_fixed_size(&self) -> bool {
+        self.fixed_size
+    }
+
+    #[inline]
+    fn unfixed_size(&mut self) {
+        self.fixed_size = false
     }
 }
 

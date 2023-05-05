@@ -1,7 +1,8 @@
-mod layout_widget;
+pub mod hbox_layout;
+pub mod vbox_layout;
 
-use layout_widget::LayoutWidget;
-use tmui::{application::Application, application_window::ApplicationWindow, widget::WidgetImplExt};
+use vbox_layout::VBoxLayout;
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
@@ -9,7 +10,7 @@ fn main() {
     let app = Application::builder()
         .width(1280)
         .height(800)
-        .title("Custom Widget")
+        .title("Box layout")
         .build();
 
     app.connect_activate(build_ui);
@@ -18,5 +19,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(LayoutWidget::new())
+    window.set_background(Color::from_rgb(100, 100, 100));
+    window.child(VBoxLayout::new())
 }

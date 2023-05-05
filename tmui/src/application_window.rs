@@ -13,12 +13,12 @@ use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
 use skia_safe::Font;
+use winit::event_loop::{EventLoopProxy, EventLoopClosed};
 use std::{
     collections::{HashMap, VecDeque},
     ptr::{null_mut, NonNull},
     sync::{
         atomic::{AtomicPtr, Ordering},
-        mpsc::{SendError, Sender},
         Once,
     },
     thread::{self, ThreadId},
@@ -43,7 +43,7 @@ pub(crate) fn store_board(board: &mut Board) {
 #[extends(Widget)]
 #[derive(Default)]
 pub struct ApplicationWindow {
-    output_sender: Option<Sender<Message>>,
+    output_sender: Option<EventLoopProxy<Message>>,
     activated: bool,
 }
 
@@ -132,19 +132,23 @@ impl ApplicationWindow {
         unsafe { window.unwrap().as_mut() }
     }
 
-    pub fn send_message_with_id(id: u16, message: Message) -> Result<(), SendError<Message>> {
+    pub fn send_message_with_id(id: u16, message: Message) -> Result<(), EventLoopClosed<Message>> {
         Self::window_of(id).send_message(message)
     }
 
-    pub fn send_message(&self, message: Message) -> Result<(), SendError<Message>> {
+    pub fn send_message(&self, message: Message) -> Result<(), EventLoopClosed<Message>> {
         self.output_sender
             .as_ref()
             .expect("`ApplicationWindow` did not register the output sender.")
-            .send(message)
+            .send_event(message)
     }
 
     pub fn is_activate(&self) -> bool {
         self.activated
+    }
+
+    pub fn window_layout_change(&mut self) {
+        Self::layout_of(self.id()).layout_change(self)
     }
 
     pub(crate) fn when_size_change(&mut self, size: Size) {
@@ -155,12 +159,8 @@ impl ApplicationWindow {
         self.activated = true;
     }
 
-    pub(crate) fn register_window(&mut self, sender: Sender<Message>) {
+    pub(crate) fn register_window(&mut self, sender: EventLoopProxy<Message>) {
         self.output_sender = Some(sender)
-    }
-
-    pub(crate) fn window_layout_change(&mut self) {
-        Self::layout_of(self.id()).layout_change(self)
     }
 }
 
@@ -184,7 +184,6 @@ fn child_initialize(
         // Determine whether the widget is a container.
         let is_container = child_ref.parent_type().is_a(Container::static_type());
         let container_ref = if is_container {
-            debug!("Checked Container.");
             cast_mut!(child_ref as ContainerImpl)
         } else {
             None

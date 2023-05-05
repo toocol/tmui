@@ -1,18 +1,20 @@
-use super::PlatformContext;
+use winit::{window::Window, event_loop::EventLoop};
+
+use super::{PlatformContext, Message};
 use crate::graphics::bitmap::Bitmap;
 use std::{ptr::null_mut, sync::mpsc::Sender};
 
-pub struct PlatformIpc {
+pub(crate) struct PlatformIpc {
     title: String,
-    width: i32,
-    height: i32,
+    width: u32,
+    height: u32,
 
     front_bitmap: Bitmap,
     back_bitmap: Bitmap,
 }
 
 impl PlatformIpc {
-    pub fn new(title: &str, width: i32, height: i32) -> Self {
+    pub fn new(title: &str, width: u32, height: u32) -> Self {
         Self {
             title: title.to_string(),
             width,
@@ -33,21 +35,17 @@ impl PlatformContext for PlatformIpc {
         &self.title
     }
 
-    fn width(&self) -> i32 {
+    fn width(&self) -> u32 {
         self.width
     }
 
-    fn height(&self) -> i32 {
+    fn height(&self) -> u32 {
         self.height
     }
 
-    fn resize(&mut self, width: i32, height: i32) {
+    fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
-        todo!()
-    }
-
-    fn close(&self) {
         todo!()
     }
 
@@ -59,15 +57,23 @@ impl PlatformContext for PlatformIpc {
         self.back_bitmap
     }
 
-    fn handle_platform_event(&self) {
-        todo!()
-    }
-
-    fn send_message(&self, _message: super::Message) {
-        todo!()
-    }
-
     fn set_input_sender(&mut self, _input_sender: Sender<super::Message>) {
+        todo!()
+    }
+
+    fn input_sender(&self) -> &Sender<super::Message> {
+        todo!()
+    }
+
+    fn create_window(&mut self) -> (winit::window::Window, winit::event_loop::EventLoop<super::Message>, winit::event_loop::EventLoopProxy<super::Message>) {
+        todo!()
+    }
+
+    fn platform_main(&self, _window: Window, _event_loop: EventLoop<Message>) {
+        todo!()
+    }
+
+    fn redraw(&self) {
         todo!()
     }
 }

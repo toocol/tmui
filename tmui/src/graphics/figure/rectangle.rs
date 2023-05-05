@@ -37,6 +37,16 @@ impl Rect {
     }
 
     #[inline]
+    pub fn size(&self) -> Size {
+        Size::new(self.width, self.height)
+    }
+
+    #[inline]
+    pub fn point(&self) -> Point {
+        Point::new(self.x, self.y)
+    }
+
+    #[inline]
     pub fn x(&self) -> i32 {
         self.x
     }
@@ -352,6 +362,16 @@ impl FRect {
             width: point.x() + size.width(),
             height: point.y() + size.height(),
         }
+    }
+
+    #[inline]
+    pub fn size(&self) -> FSize {
+        FSize::new(self.width, self.height)
+    }
+
+    #[inline]
+    pub fn point(&self) -> FPoint {
+        FPoint::new(self.x, self.y)
     }
 
     #[inline]

@@ -325,6 +325,7 @@ macro_rules! emit {
     }};
 }
 
+/// #### Signal/Slot should connect in `ObjectImpl::initialize()` function, or be connected after application was activated(after UI building).
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! connect {

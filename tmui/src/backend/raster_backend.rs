@@ -17,7 +17,7 @@ impl Backend for RasterBackend {
     fn new(front: Bitmap, back: Bitmap) -> Self::Type {
         Self {
             image_info: ImageInfo::new(
-                (front.width(), front.height()),
+                (front.width() as i32, front.height() as i32),
                 ColorType::BGRA8888,
                 AlphaType::Premul,
                 ColorSpace::new_srgb(),
@@ -49,11 +49,11 @@ impl Backend for RasterBackend {
         (front_surface, back_surface)
     }
 
-    fn width(&self) -> i32 {
+    fn width(&self) -> u32 {
         self.front_buffer.width()
     }
 
-    fn height(&self) -> i32 {
+    fn height(&self) -> u32 {
         self.front_buffer.height()
     }
 }

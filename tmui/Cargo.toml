@@ -17,6 +17,8 @@ lazy_static = "1.4.0"
 once_cell = "1.17.0"
 widestring = "1.0.2"
 clipboard = "0.5.0"
+winit = "0.28.3"
+raw_window_handle = { package = "raw-window-handle", version = "0.5" }
 
 windows = { version = "0.43.0", features = [
     "Win32_Foundation",
@@ -27,6 +29,9 @@ windows = { version = "0.43.0", features = [
 
 [dev-dependencies]
 log4rs = "1.1.1"
+
+[[example]]
+name = "box_layout"
 
 [[example]]
 name = "win32_window"

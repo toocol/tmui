@@ -10,9 +10,9 @@ pub struct Bitmap {
     /// Bytes number of a row.
     row_bytes: usize,
     /// The width of `Bitmap`.
-    width: i32,
+    width: u32,
     /// The height of `Bitmap`.
-    height: i32,
+    height: u32,
     /// This bitmap has been rendered and is ready to display.
     prepared: bool,
 }
@@ -21,7 +21,7 @@ unsafe impl Sync for Bitmap {}
 
 impl Bitmap {
     /// Constructer to create the `Bitmap`.
-    pub fn new(pointer: *mut c_void, width: i32, height: i32) -> Self {
+    pub fn new(pointer: *mut c_void, width: u32, height: u32) -> Self {
         Self {
             raw_pointer: NonNull::new(pointer),
             total_bytes: (width * height * 4) as usize,
@@ -47,11 +47,11 @@ impl Bitmap {
         self.row_bytes
     }
 
-    pub fn width(&self) -> i32 {
+    pub fn width(&self) -> u32 {
         self.width
     }
 
-    pub fn height(&self) -> i32 {
+    pub fn height(&self) -> u32 {
         self.height
     }
 

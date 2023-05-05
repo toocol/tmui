@@ -21,6 +21,12 @@ use tlib::{
     signals,
 };
 
+/// Size hint for widget:
+/// 0: minimum size hint
+/// 1: normal size hint
+/// 2: maximum size hint
+pub type SizeHint = (Size, Size, Size);
+
 #[extends(Element)]
 pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
@@ -76,6 +82,7 @@ impl Widget {
     /// Notify all the child widget to invalidate.
     fn notify_invalidate(&mut self) {
         if let Some(child) = self.get_raw_child_mut() {
+            println!("notify invalidate");
             unsafe { child.as_mut().unwrap().update() }
         }
     }
@@ -139,6 +146,9 @@ impl ObjectImpl for Widget {
 
 impl WidgetImpl for Widget {}
 
+/////////////////////////////////////////////////////////////////////////////////
+/// Renderering function for Widget.
+/////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         if !self.visible() {
@@ -290,7 +300,7 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::font_family) (Defined in [`WidgetExt`])
     fn font_family(&self) -> &str;
 
-    /// Get the size of widget.
+    /// Get the size of widget. The size does not include the margins.
     ///
     /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
     fn size(&self) -> Size;
@@ -797,7 +807,7 @@ impl WidgetExt for Widget {
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
         ApplicationWindow::send_message_with_id(
             self.window_id(),
-            Message::message_set_cursor_shape(cursor),
+            Message::SetCursorShape(cursor),
         )
         .unwrap()
     }
@@ -871,10 +881,8 @@ pub trait WidgetImpl:
     + Layout
 {
     /// Invoke this function when widget's size change.
-    fn size_hint(&mut self) -> Size {
-        let width = self.get_property("width-request").unwrap().get::<i32>();
-        let height = self.get_property("height-request").unwrap().get::<i32>();
-        Size::new(width, height)
+    fn size_hint(&mut self) -> Option<SizeHint> {
+        None
     }
 
     /// Invoke this function when renderering.

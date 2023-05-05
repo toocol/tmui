@@ -29,12 +29,31 @@ pub trait Layout {
 }
 
 pub trait ContainerLayout {
+    fn static_composition() -> Composition;
+
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
         previous: &dyn WidgetImpl,
         parent: &dyn WidgetImpl,
         manage_by_container: bool,
     );
+}
+
+#[reflect_trait]
+pub trait ContentAlignment {
+    /// Container will mmanage the contents' position if the homogeneous was `true`.
+    /// Otherwise the contents' position will layouted by their own alignment.
+    fn homogeneous(&self) -> bool;
+
+    fn set_homogeneous(&mut self, homogeneous: bool);
+
+    fn content_halign(&self) -> Align;
+
+    fn content_valign(&self) -> Align;
+
+    fn set_content_halign(&mut self, halign: Align);
+
+    fn set_content_valign(&mut self, valign: Align);
 }
 
 #[derive(Default)]
@@ -52,15 +71,14 @@ impl LayoutManager {
         // Deal with the size first
         let child = widget.get_raw_child_mut();
         if let Some(child) = child {
-            self.child_size_probe(self.window_size, widget.size(), child);
+            Self::child_size_probe(self.window_size, widget.size(), child);
         }
 
         // Deal with the position
-        self.child_position_probe(Some(widget), Some(widget), child)
+        Self::child_position_probe(Some(widget), Some(widget), child)
     }
 
     pub(crate) fn child_size_probe(
-        &self,
         window_size: Size,
         parent_size: Size,
         widget: *mut dyn WidgetImpl,
@@ -85,6 +103,7 @@ impl LayoutManager {
 
         let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
         if raw_child.is_none() && container_no_children {
+            let _size_hint = widget_ref.size_hint();
             if parent_size.width() != 0 && parent_size.height() != 0 {
                 if size.width() == 0 {
                     widget_ref.width_request(parent_size.width());
@@ -100,29 +119,36 @@ impl LayoutManager {
                     widget_ref.height_request(window_size.height());
                 }
             }
-            let image_rect = widget_ref.image_rect();
-            return Size::new(image_rect.width(), image_rect.height());
+
+            widget_ref.image_rect().size()
         } else {
             let child_size = if is_container {
                 let mut child_size = Size::default();
                 match composition {
                     Composition::Overlay => {
                         children.unwrap().iter_mut().for_each(|child| {
-                            child_size.max(self.child_size_probe(window_size, child_size, *child));
+                            child_size.max(Self::child_size_probe(window_size, size, *child));
                         });
                     }
-                    Composition::HorizontalArrange => {}
-                    Composition::VerticalArrange => {}
-                    _ => {
+                    Composition::HorizontalArrange => {
                         children.unwrap().iter_mut().for_each(|child| {
-                            child_size =
-                                child_size + self.child_size_probe(window_size, child_size, *child)
+                            let inner = Self::child_size_probe(window_size, size, *child);
+                            child_size.set_height(child_size.height().max(inner.height()));
+                            child_size.add_width(inner.width());
                         });
                     }
+                    Composition::VerticalArrange => {
+                        children.unwrap().iter_mut().for_each(|child| {
+                            let inner = Self::child_size_probe(window_size, size, *child);
+                            child_size.set_width(child_size.width().max(inner.width()));
+                            child_size.add_height(inner.height());
+                        });
+                    }
+                    _ => unimplemented!(),
                 }
                 child_size
             } else {
-                self.child_size_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
+                Self::child_size_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
             };
             if size.width() == 0 {
                 widget_ref.width_request(child_size.width());
@@ -130,12 +156,12 @@ impl LayoutManager {
             if size.height() == 0 {
                 widget_ref.height_request(child_size.height());
             }
-            return widget_ref.size();
+
+            widget_ref.image_rect().size()
         }
     }
 
     pub(crate) fn child_position_probe(
-        &self,
         mut previous: Option<*const dyn WidgetImpl>,
         mut parent: Option<*const dyn WidgetImpl>,
         mut widget: Option<*mut dyn WidgetImpl>,
@@ -196,31 +222,27 @@ impl LayoutManager {
         let valign = widget.get_property("valign").unwrap().get::<Align>();
 
         match halign {
-            Align::Start => widget.set_fixed_x(parent_rect.x() as i32 + widget.margin_left()),
+            Align::Start => widget.set_fixed_x(parent_rect.x() + widget.margin_left()),
             Align::Center => {
-                let offset =
-                    (parent_rect.width() - widget.rect().width()) as i32 / 2 + widget.margin_left();
-                widget.set_fixed_x(parent_rect.x() as i32 + offset)
+                let offset = (parent_rect.width() - widget_rect.width()) / 2 + widget.margin_left();
+                widget.set_fixed_x(parent_rect.x() + offset)
             }
             Align::End => {
-                let offset = parent_rect.width() as i32 - widget.rect().width() as i32
-                    + widget.margin_left();
-                widget.set_fixed_x(parent_rect.x() as i32 + offset)
+                let offset = parent_rect.width() - widget_rect.width() + widget.margin_left();
+                widget.set_fixed_x(parent_rect.x() + offset)
             }
         }
 
         match valign {
-            Align::Start => widget
-                .set_fixed_y(parent_rect.y() as i32 + widget_rect.y() as i32 + widget.margin_top()),
+            Align::Start => widget.set_fixed_y(parent_rect.y() + widget.margin_top()),
             Align::Center => {
-                let offset = (parent_rect.height() - widget.rect().height()) as i32 / 2
-                    + widget.margin_top();
-                widget.set_fixed_y(parent_rect.y() as i32 + offset)
+                let offset =
+                    (parent_rect.height() - widget_rect.height()) / 2 + widget.margin_top();
+                widget.set_fixed_y(parent_rect.y() + offset)
             }
             Align::End => {
-                let offset = parent_rect.height() as i32 - widget.rect().height() as i32
-                    + widget.margin_top();
-                widget.set_fixed_y(parent_rect.y() as i32 + offset)
+                let offset = parent_rect.height() - widget_rect.height() + widget.margin_top();
+                widget.set_fixed_y(parent_rect.y() + offset)
             }
         }
     }

@@ -510,6 +510,9 @@ impl ToBytes for String {
 }
 impl FromBytes for String {
     fn from_bytes(data: &[u8], _: usize) -> Self {
+        if data.len() == 0 {
+            return "".to_string()
+        }
         let data = if data[data.len() - 1] == 0 {
             &data[0..data.len() - 1]
         } else {

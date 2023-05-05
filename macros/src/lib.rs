@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 mod cast;
+mod extend_attr;
 mod extend_container;
 mod extend_element;
 mod extend_object;
@@ -11,80 +12,11 @@ mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
+use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
-use quote::ToTokens;
-use syn::{self, parse::Parse, parse_macro_input, DeriveInput, Ident, Meta, Token};
+use syn::{self, parse_macro_input, DeriveInput};
 use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
-
-struct ExtendAttr {
-    extend: Ident,
-    layout_meta: Option<Meta>,
-    layout: Option<String>,
-}
-impl ExtendAttr {
-    fn error<T: ToTokens>(span: T, msg: &'static str) -> syn::Result<Self> {
-        Err(syn::Error::new_spanned(span, msg))
-    }
-}
-impl Parse for ExtendAttr {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let extend: Ident = input.parse()?;
-        let mut layout = None;
-        let layout_meta = if let Some(_) = input.parse::<Option<Token!(,)>>()? {
-            let layout_meta = input.parse::<Meta>()?;
-            if let Meta::List(syn::MetaList {
-                ref path,
-                ref nested,
-                ..
-            }) = layout_meta
-            {
-                if let Some(ident) = path.get_ident() {
-                    if ident.to_string() != "Layout" {
-                        return Self::error(
-                            layout_meta,
-                            "Only support attribute formmat `Layout(xxx)`",
-                        );
-                    }
-
-                    if nested.len() != 1 {
-                        return Self::error(
-                            layout_meta,
-                            "Only support attribute formmat `Layout(xxx)`",
-                        );
-                    }
-
-                    if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) = nested.first() {
-                        if let Some(layout_ident) = path.get_ident() {
-                            layout = Some(layout_ident.to_string())
-                        }
-                    } else {
-                        return Self::error(
-                            layout_meta,
-                            "Only support attribute formmat `Layout(xxx)`",
-                        );
-                    }
-                } else {
-                    return Self::error(
-                        layout_meta,
-                        "Only support attribute formmat `Layout(xxx)`",
-                    );
-                }
-                eprintln!("{:?}", path);
-            } else {
-                return Self::error(layout_meta, "Only support attribute formmat `Layout(xxx)`");
-            }
-            Some(layout_meta)
-        } else {
-            None
-        };
-        Ok(Self {
-            extend,
-            layout_meta,
-            layout,
-        })
-    }
-}
 
 /// Let struct to extend specific type.<br>
 /// This macro will implement a large number of traits automatically,
@@ -138,7 +70,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "Container" => match extend_container::expand(&mut ast) {
+        "Container" => match extend_container::expand(&mut ast, true, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -151,8 +83,8 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-#[proc_macro_derive(Layout, attributes(children))]
-pub fn layout_derive(_: TokenStream) -> TokenStream {
+#[proc_macro_derive(Childrenable, attributes(children))]
+pub fn childrenable_derive(_: TokenStream) -> TokenStream {
     TokenStream::new()
 }
 

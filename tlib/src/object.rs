@@ -242,3 +242,8 @@ pub trait ObjectImplExt {
 
     fn parent_on_property_set(&mut self, name: &str, value: &Value);
 }
+
+#[reflect_trait]
+pub trait ObjectChildrenConstruct {
+    fn children_construct(&mut self) {}
+}
