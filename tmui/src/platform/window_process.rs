@@ -54,7 +54,6 @@ impl WindowProcess {
                             window.set_cursor_icon(cursor.into())
                         }
                     }
-                    
                 }
                 Event::RedrawRequested(_) => {
                     // Redraw the application.

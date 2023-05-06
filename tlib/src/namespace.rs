@@ -721,7 +721,7 @@ impl Into<CursorIcon> for SystemCursorShape {
             Self::SizeBDiagCursor => CursorIcon::NeResize,
             Self::SizeFDiagCursor => CursorIcon::SwResize,
             Self::SizeAllCursor => CursorIcon::NeswResize,
-            Self::BlankCursor => panic!("Should use `set_cursor_visible()` instead."),
+            Self::BlankCursor => panic!("Should use `Window::set_cursor_visible()` instead."),
             Self::SplitVCursor => CursorIcon::RowResize,
             Self::SplitHCursor => CursorIcon::ColResize,
             Self::PointingHandCursor => CursorIcon::Hand,

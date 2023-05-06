@@ -5,7 +5,7 @@ use crate::{
         painter::Painter,
     },
     layout::LayoutManager,
-    platform::{Message, window_context::OutputSender},
+    platform::{window_context::OutputSender, Message},
     prelude::*,
     widget::{WidgetImpl, WidgetSignals},
 };
@@ -71,6 +71,12 @@ impl WidgetImpl for ApplicationWindow {
     fn paint(&mut self, mut _painter: Painter) {}
 }
 
+type ApplicationWindowContext = (
+    ThreadId,
+    Option<NonNull<ApplicationWindow>>,
+    Box<LayoutManager>,
+);
+
 impl ApplicationWindow {
     pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
@@ -88,24 +94,9 @@ impl ApplicationWindow {
     }
 
     /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
-    pub(crate) fn windows() -> &'static mut HashMap<
-        u16,
-        (
-            ThreadId,
-            Option<NonNull<ApplicationWindow>>,
-            Box<LayoutManager>,
-        ),
-    > {
-        static mut WINDOWS: Lazy<
-            HashMap<
-                u16,
-                (
-                    ThreadId,
-                    Option<NonNull<ApplicationWindow>>,
-                    Box<LayoutManager>,
-                ),
-            >,
-        > = Lazy::new(|| HashMap::new());
+    pub(crate) fn windows() -> &'static mut HashMap<u16, ApplicationWindowContext> {
+        static mut WINDOWS: Lazy<HashMap<u16, ApplicationWindowContext>> =
+            Lazy::new(|| HashMap::new());
         unsafe { &mut WINDOWS }
     }
 
@@ -139,7 +130,7 @@ impl ApplicationWindow {
         match self.output_sender {
             Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
             Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
-            None => panic!("`ApplicationWindow` did not register the output_sender.")
+            None => panic!("`ApplicationWindow` did not register the output_sender."),
         }
     }
 

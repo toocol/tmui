@@ -30,8 +30,6 @@ pub(crate) struct PlatformWin32 {
     hwnd: Option<HWND>,
     input_sender: Option<Sender<Message>>,
 }
-unsafe impl Send for PlatformWin32 {}
-unsafe impl Sync for PlatformWin32 {}
 
 impl PlatformWin32 {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
