@@ -46,3 +46,7 @@ harness = false
 [[bench]]
 name = "size_probe_benchmark"
 harness = false
+
+[[bench]]
+name = "color_format_benchmark"
+harness = false

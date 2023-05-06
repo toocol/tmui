@@ -14,11 +14,11 @@ fn test_win32_bitmapinfo() {
     bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-pub fn criterion_values(c: &mut Criterion) {
+pub fn criterion_wind32window(c: &mut Criterion) {
     c.bench_function("win32_bitmapinfo_test", |b| {
         b.iter(|| test_win32_bitmapinfo())
     });
 }
 
-criterion_group!(benches, criterion_values);
+criterion_group!(benches, criterion_wind32window);
 criterion_main!(benches);
