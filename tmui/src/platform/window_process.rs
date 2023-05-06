@@ -1,10 +1,11 @@
 use super::{Message, PlatformContext};
-use tlib::prelude::SystemCursorShape;
+use tlib::{prelude::SystemCursorShape, utils::TimeStamp};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::Window,
 };
+use log::debug;
 
 pub(crate) struct WindowProcess;
 
@@ -44,6 +45,7 @@ impl WindowProcess {
                     window.request_redraw();
                 }
                 Event::UserEvent(Message::VSync) => {
+                    debug!("<Received> VSync time track: {}", TimeStamp::timestamp_micros());
                     window.request_redraw();
                 }
                 Event::UserEvent(Message::SetCursorShape(cursor)) => {

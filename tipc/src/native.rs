@@ -339,7 +339,7 @@ impl IpcAdapter {
     }
 }
 
-#[link(name = "ipc-adapter", kind = "static")]
+#[link(name = "ipc-native", kind = "static")]
 extern "C" {
     fn next_key() -> c_int;
     fn connect_to(name: *const c_char) -> c_int;

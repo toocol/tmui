@@ -32,6 +32,7 @@ use tlib::{
     timer::TimerHub,
     utils::TimeStamp,
 };
+use log::debug;
 
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -193,6 +194,7 @@ impl Application {
             let now = TimeStamp::timestamp_micros();
             if now - last_frame >= FRAME_INTERVAL && update {
                 last_frame = now;
+                debug!("<Generate> VSync time track: {}", now);
                 window.send_message(Message::VSync);
             }
 
