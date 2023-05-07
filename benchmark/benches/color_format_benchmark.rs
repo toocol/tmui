@@ -1,11 +1,11 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use tlib::global::rgba_to_argb_convert;
+use tlib::color_convert::{rgba_to_argb_convert, ColorConvert, ColorFormat};
 
 fn my_benchmark(c: &mut Criterion) {
     let mut v = vec![0; 3840 * 2160 * 4];
     c.bench_function("color_format_convert_3840_2160", |b| {
         // Benchmark the parallel function call using criterion's `black_box` method
-        b.iter(|| rgba_to_argb_convert(black_box(&mut v)))
+        b.iter(|| ColorConvert::convert(black_box(&mut v), ColorFormat::Rgba8888, ColorFormat::Argb8888))
     });
 
     v = vec![0; 1920 * 1080 * 4];

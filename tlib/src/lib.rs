@@ -1,5 +1,6 @@
 pub mod actions;
 pub mod r#async;
+pub mod color_convert;
 pub mod events;
 pub mod global;
 pub mod namespace;

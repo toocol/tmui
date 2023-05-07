@@ -3,6 +3,8 @@ use std::{
     slice,
 };
 
+use crate::ipc_event::IpcEvent;
+
 const IPC_NUM_NATIVE_EVT_MSG_SIZE: usize = 1024;
 
 #[derive(Debug)]
@@ -59,6 +61,33 @@ impl NativeEvent {
 
 pub(crate) struct IpcAdapter;
 impl IpcAdapter {
+    // Master
+    /// Create the shared pixels.
+    pub fn create_master_context(name: &str, width: i32, height: i32) -> i32 {
+        unsafe {
+            let c_str = CString::new(name).unwrap();
+            return create_master_context(c_str.as_ptr(), width, height);
+        }
+    }
+
+    /// terminate and delete the shared pixels by id.
+    pub fn terminate_by_master(id: i32) -> i32 {
+        unsafe { return terminate_by_master(id) }
+    }
+
+    pub fn get_primary_buffer_master(id: i32) -> *mut u8 {
+        unsafe { return get_primary_buffer_master(id) }
+    }
+
+    pub fn get_secondary_buffer_master(id: i32) -> *mut u8 {
+        unsafe { return get_secondary_buffer_master(id) }
+    }
+
+    fn send_event_master(id: i32, evt: IpcEvent) {
+        unsafe { send_event_master(id, evt) }
+    }
+
+    // Slave
     /// Acquire next avaliable key of connection.
     pub fn next_key() -> i32 {
         unsafe {
@@ -278,13 +307,7 @@ impl IpcAdapter {
         unsafe { fire_mouse_exited_event(key, modifiers, timestamp) }
     }
 
-    pub fn fire_mouse_move_event(
-        key: i32,
-        x: f64,
-        y: f64,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
+    pub fn fire_mouse_move_event(key: i32, x: f64, y: f64, modifiers: i32, timestamp: i64) -> bool {
         unsafe { fire_mouse_move_event(key, x, y, modifiers, timestamp) }
     }
 
@@ -341,6 +364,14 @@ impl IpcAdapter {
 
 #[link(name = "ipc-native", kind = "static")]
 extern "C" {
+    // Master
+    fn create_master_context(name: *const c_char, width: c_int, height: c_int) -> c_int;
+    fn terminate_by_master(id: c_int) -> c_int;
+    fn get_primary_buffer_master(id: c_int) -> *mut u8;
+    fn get_secondary_buffer_master(id: c_int) -> *mut u8;
+    fn send_event_master(id: c_int, evt: IpcEvent);
+
+    // Slave
     fn next_key() -> c_int;
     fn connect_to(name: *const c_char) -> c_int;
     fn terminate_at(key: c_int) -> bool;
