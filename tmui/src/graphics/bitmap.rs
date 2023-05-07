@@ -21,6 +21,7 @@ unsafe impl Sync for Bitmap {}
 
 impl Bitmap {
     /// Constructer to create the `Bitmap`.
+    #[inline]
     pub fn new(pointer: *mut c_void, width: u32, height: u32) -> Self {
         Self {
             raw_pointer: NonNull::new(pointer),
@@ -32,6 +33,7 @@ impl Bitmap {
         }
     }
 
+    #[inline]
     pub fn as_ptr(&self) -> *mut c_void {
         self.raw_pointer
             .as_ref()
@@ -39,20 +41,23 @@ impl Bitmap {
             .as_ptr()
     }
 
+    #[inline]
     pub fn get_pixels(&self) -> &'static mut [u8] {
         unsafe { slice::from_raw_parts_mut(self.as_ptr() as *mut u8, self.total_bytes) }
     }
 
+    #[inline]
     pub fn row_bytes(&self) -> usize {
         self.row_bytes
     }
 
+    #[inline]
     pub fn width(&self) -> u32 {
         self.width
     }
 
+    #[inline]
     pub fn height(&self) -> u32 {
         self.height
     }
-
 }

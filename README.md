@@ -1,5 +1,5 @@
 # tmui
-**_Simple ui kit base on Skia._**  
+**_Cross platfom gui kit based on Skia._**  
 
 ## Example
 ```rust

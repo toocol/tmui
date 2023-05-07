@@ -9,8 +9,9 @@ use std::sync::mpsc::Sender;
 pub use message::*;
 pub(crate) use platform_ipc::*;
 pub(crate) use platform_win32::*;
-use winit::{event_loop::{EventLoop, EventLoopProxy}, window::Window};
 use crate::graphics::bitmap::Bitmap;
+
+use self::window_context::WindowContext;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -55,10 +56,10 @@ pub(crate) trait PlatformContext: 'static {
     fn input_sender(&self) -> &Sender<Message>;
 
     /// Create the window and event loop of the specific platform.
-    fn create_window(&mut self) -> (Window, EventLoop<Message>, EventLoopProxy<Message>);
+    fn create_window(&mut self) -> WindowContext;
 
     /// The platform main function.
-    fn platform_main(&self, window: Window, event_loop: EventLoop<Message>);
+    fn platform_main(&self, window_context: WindowContext);
 
     /// Redraw the window.
     fn redraw(&self);

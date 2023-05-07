@@ -6,6 +6,7 @@ use crate::{
 use std::mem::size_of;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use winit::window::CursorIcon;
 
 /// Use macro rules to implement [`StaticType`], [`ToBytes`], [`ToValue`], [`FromBytes`], [`FromValue`] automatically. <br>
 /// The enum use this macro should implements [`AsNumeric`], [`From<T>`].
@@ -643,12 +644,18 @@ pub enum SystemCursorShape {
     UpArrowCursor,
     CrossCursor,
     WaitCursor,
-    IBeamCursor,
+    TextCursor,
+    VerticalTextCursor,
+
+    // Cursors for adjusting window size elements.
     SizeVerCursor,
     SizeHorCursor,
+    // right-top left-bottom
     SizeBDiagCursor,
+    // left-top right-bottom
     SizeFDiagCursor,
     SizeAllCursor,
+
     BlankCursor,
     SplitVCursor,
     SplitHCursor,
@@ -661,34 +668,11 @@ pub enum SystemCursorShape {
     DragCopyCursor,
     DragMoveCursor,
     DragLinkCursor,
-}
-impl SystemCursorShape {
-    pub fn as_u8(&self) -> u8 {
-        match self {
-            SystemCursorShape::ArrowCursor => 0,
-            SystemCursorShape::UpArrowCursor => 1,
-            SystemCursorShape::CrossCursor => 2,
-            SystemCursorShape::WaitCursor => 3,
-            SystemCursorShape::IBeamCursor => 4,
-            SystemCursorShape::SizeVerCursor => 5,
-            SystemCursorShape::SizeHorCursor => 6,
-            SystemCursorShape::SizeBDiagCursor => 7,
-            SystemCursorShape::SizeFDiagCursor => 8,
-            SystemCursorShape::SizeAllCursor => 9,
-            SystemCursorShape::BlankCursor => 10,
-            SystemCursorShape::SplitVCursor => 11,
-            SystemCursorShape::SplitHCursor => 12,
-            SystemCursorShape::PointingHandCursor => 13,
-            SystemCursorShape::ForbiddenCursor => 14,
-            SystemCursorShape::WhatsThisCursor => 15,
-            SystemCursorShape::BusyCursor => 16,
-            SystemCursorShape::OpenHandCursor => 17,
-            SystemCursorShape::ClosedHandCursor => 18,
-            SystemCursorShape::DragCopyCursor => 19,
-            SystemCursorShape::DragMoveCursor => 20,
-            SystemCursorShape::DragLinkCursor => 21,
-        }
-    }
+
+    ZoomInCursor,
+    ZoomOutCursor,
+
+    CellCursor,
 }
 impl From<u8> for SystemCursorShape {
     fn from(n: u8) -> Self {
@@ -697,31 +681,67 @@ impl From<u8> for SystemCursorShape {
             1 => SystemCursorShape::UpArrowCursor,
             2 => SystemCursorShape::CrossCursor,
             3 => SystemCursorShape::WaitCursor,
-            4 => SystemCursorShape::IBeamCursor,
-            5 => SystemCursorShape::SizeVerCursor,
-            6 => SystemCursorShape::SizeHorCursor,
-            7 => SystemCursorShape::SizeBDiagCursor,
-            8 => SystemCursorShape::SizeFDiagCursor,
-            9 => SystemCursorShape::SizeAllCursor,
-            10 => SystemCursorShape::BlankCursor,
-            11 => SystemCursorShape::SplitVCursor,
-            12 => SystemCursorShape::SplitHCursor,
-            13 => SystemCursorShape::PointingHandCursor,
-            14 => SystemCursorShape::ForbiddenCursor,
-            15 => SystemCursorShape::WhatsThisCursor,
-            16 => SystemCursorShape::BusyCursor,
-            17 => SystemCursorShape::OpenHandCursor,
-            18 => SystemCursorShape::ClosedHandCursor,
-            19 => SystemCursorShape::DragCopyCursor,
-            20 => SystemCursorShape::DragMoveCursor,
-            21 => SystemCursorShape::DragLinkCursor,
+            4 => SystemCursorShape::TextCursor,
+            5 => SystemCursorShape::VerticalTextCursor,
+            6 => SystemCursorShape::SizeVerCursor,
+            7 => SystemCursorShape::SizeHorCursor,
+            8 => SystemCursorShape::SizeBDiagCursor,
+            9 => SystemCursorShape::SizeFDiagCursor,
+            10 => SystemCursorShape::SizeAllCursor,
+            11 => SystemCursorShape::BlankCursor,
+            12 => SystemCursorShape::SplitVCursor,
+            13 => SystemCursorShape::SplitHCursor,
+            14 => SystemCursorShape::PointingHandCursor,
+            15 => SystemCursorShape::ForbiddenCursor,
+            16 => SystemCursorShape::WhatsThisCursor,
+            17 => SystemCursorShape::BusyCursor,
+            18 => SystemCursorShape::OpenHandCursor,
+            19 => SystemCursorShape::ClosedHandCursor,
+            20 => SystemCursorShape::DragCopyCursor,
+            21 => SystemCursorShape::DragMoveCursor,
+            22 => SystemCursorShape::DragLinkCursor,
+            23 => SystemCursorShape::ZoomInCursor,
+            24 => SystemCursorShape::ZoomOutCursor,
+            25 => SystemCursorShape::CellCursor,
             _ => unimplemented!(),
+        }
+    }
+}
+impl Into<CursorIcon> for SystemCursorShape {
+    fn into(self) -> CursorIcon {
+        match self {
+            Self::ArrowCursor => CursorIcon::Default,
+            Self::UpArrowCursor => CursorIcon::Arrow,
+            Self::CrossCursor => CursorIcon::Crosshair,
+            Self::WaitCursor => CursorIcon::Wait,
+            Self::TextCursor => CursorIcon::Text,
+            Self::VerticalTextCursor => CursorIcon::VerticalText,
+            Self::SizeVerCursor => CursorIcon::NResize,
+            Self::SizeHorCursor => CursorIcon::SResize,
+            Self::SizeBDiagCursor => CursorIcon::NeResize,
+            Self::SizeFDiagCursor => CursorIcon::SwResize,
+            Self::SizeAllCursor => CursorIcon::NeswResize,
+            Self::BlankCursor => panic!("Should use `Window::set_cursor_visible()` instead."),
+            Self::SplitVCursor => CursorIcon::RowResize,
+            Self::SplitHCursor => CursorIcon::ColResize,
+            Self::PointingHandCursor => CursorIcon::Hand,
+            Self::ForbiddenCursor => CursorIcon::NotAllowed,
+            Self::WhatsThisCursor => CursorIcon::Help,
+            Self::BusyCursor => CursorIcon::Progress,
+            Self::OpenHandCursor => CursorIcon::Grab,
+            Self::ClosedHandCursor => CursorIcon::Grabbing,
+            Self::DragCopyCursor => CursorIcon::Copy,
+            Self::DragMoveCursor => CursorIcon::Move,
+            Self::DragLinkCursor => CursorIcon::Alias,
+            Self::ZoomInCursor => CursorIcon::ZoomIn,
+            Self::ZoomOutCursor => CursorIcon::ZoomOut,
+            Self::CellCursor => CursorIcon::Cell,
         }
     }
 }
 impl AsNumeric<u8> for SystemCursorShape {
     fn as_numeric(&self) -> u8 {
-        self.as_u8()
+        *self as u8
     }
 }
 implements_enum_value!(SystemCursorShape, u8);

@@ -1,8 +1,12 @@
-use winit::{window::Window, event_loop::EventLoop};
-
-use super::{PlatformContext, Message};
+use super::{
+    window_context::{OutputSender, WindowContext},
+    Message, PlatformContext,
+};
 use crate::graphics::bitmap::Bitmap;
-use std::{ptr::null_mut, sync::mpsc::Sender};
+use std::{
+    ptr::null_mut,
+    sync::mpsc::{channel, Sender},
+};
 
 pub(crate) struct PlatformIpc {
     title: String,
@@ -65,11 +69,12 @@ impl PlatformContext for PlatformIpc {
         todo!()
     }
 
-    fn create_window(&mut self) -> (winit::window::Window, winit::event_loop::EventLoop<super::Message>, winit::event_loop::EventLoopProxy<super::Message>) {
-        todo!()
+    fn create_window(&mut self) -> WindowContext {
+        let (output_sender, output_receiver) = channel::<Message>();
+        WindowContext::Ipc(output_receiver, Some(OutputSender::Sender(output_sender)))
     }
 
-    fn platform_main(&self, _window: Window, _event_loop: EventLoop<Message>) {
+    fn platform_main(&self, _window_context: WindowContext) {
         todo!()
     }
 

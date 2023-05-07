@@ -1,4 +1,5 @@
 #![cfg(target_os = "windows")]
+use super::window_context::{OutputSender, WindowContext};
 use super::Message;
 use super::{window_process, PlatformContext};
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
@@ -9,9 +10,9 @@ use std::{
 };
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 use winit::dpi::{PhysicalSize, Size};
-use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy};
+use winit::event_loop::EventLoopBuilder;
 use winit::platform::windows::WindowExtWindows;
-use winit::window::{Window, WindowBuilder};
+use winit::window::WindowBuilder;
 
 pub(crate) struct PlatformWin32 {
     title: String,
@@ -29,8 +30,6 @@ pub(crate) struct PlatformWin32 {
     hwnd: Option<HWND>,
     input_sender: Option<Sender<Message>>,
 }
-unsafe impl Send for PlatformWin32 {}
-unsafe impl Sync for PlatformWin32 {}
 
 impl PlatformWin32 {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
@@ -95,13 +94,7 @@ impl PlatformContext for PlatformWin32 {
         self.input_sender.as_ref().unwrap()
     }
 
-    fn create_window(
-        &mut self,
-    ) -> (
-        winit::window::Window,
-        EventLoop<Message>,
-        EventLoopProxy<Message>,
-    ) {
+    fn create_window(&mut self) -> WindowContext {
         let event_loop = EventLoopBuilder::<Message>::with_user_event().build();
 
         let window = WindowBuilder::new()
@@ -112,16 +105,30 @@ impl PlatformContext for PlatformWin32 {
 
         self.hwnd = Some(HWND(window.hwnd()));
         let event_loop_proxy = event_loop.create_proxy();
-        (window, event_loop, event_loop_proxy)
+
+        WindowContext::Default(
+            window,
+            event_loop,
+            Some(OutputSender::EventLoopProxy(event_loop_proxy)),
+        )
     }
 
-    fn platform_main(&self, window: Window, event_loop: EventLoop<Message>) {
+    fn platform_main(&self, window_context: WindowContext) {
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
                 .as_ref()
                 .expect("`PLATFORM_WIN32` is None.");
-            window_process::WindowProcess::new().event_handle(platform.as_ref(), window, event_loop)
+
+            if let WindowContext::Default(window, event_loop, _) = window_context {
+                window_process::WindowProcess::new().event_handle(
+                    platform.as_ref(),
+                    window,
+                    event_loop,
+                )
+            } else {
+                panic!("Invalid window context.")
+            }
         }
     }
 

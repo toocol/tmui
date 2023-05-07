@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+
 #[inline]
 pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
     assert!(max >= min);
@@ -50,4 +52,10 @@ pub fn is_null_64(d: f64) -> bool {
 #[inline]
 pub fn is_null_32(f: f32) -> bool {
     f == 0.
+}
+
+#[inline]
+pub fn cpu_nums() -> &'static usize {
+    static CPU_NUMS: Lazy<usize> = Lazy::new(|| num_cpus::get());
+    &CPU_NUMS
 }
