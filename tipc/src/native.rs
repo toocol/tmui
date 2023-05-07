@@ -63,6 +63,7 @@ pub(crate) struct IpcAdapter;
 impl IpcAdapter {
     // Master
     /// Create the shared pixels.
+    #[inline]
     pub fn create_master_context(name: &str, width: i32, height: i32) -> i32 {
         unsafe {
             let c_str = CString::new(name).unwrap();
@@ -71,24 +72,44 @@ impl IpcAdapter {
     }
 
     /// terminate and delete the shared pixels by id.
+    #[inline]
     pub fn terminate_by_master(id: i32) -> i32 {
         unsafe { return terminate_by_master(id) }
     }
 
+    /// Get the primary buffer on master side.
+    #[inline]
     pub fn get_primary_buffer_master(id: i32) -> *mut u8 {
         unsafe { return get_primary_buffer_master(id) }
     }
 
+    /// Get the secondary buffer on master side.
+    #[inline]
     pub fn get_secondary_buffer_master(id: i32) -> *mut u8 {
         unsafe { return get_secondary_buffer_master(id) }
     }
 
-    fn send_event_master(id: i32, evt: IpcEvent) {
+    /// Master send the event.
+    #[inline]
+    pub fn send_event_master(id: i32, evt: IpcEvent) {
         unsafe { send_event_master(id, evt) }
+    }
+
+    /// Blocked recived the event from slave.
+    #[inline]
+    pub fn recv_from_slave(id: i32) -> IpcEvent {
+        unsafe { return recv_from_slave(id) }
+    }
+
+    /// Non-blocked recived the event from slave.
+    #[inline]
+    pub fn try_recv_from_slave(id: i32) -> IpcEvent {
+        unsafe { return try_recv_from_slave(id) }
     }
 
     // Slave
     /// Acquire next avaliable key of connection.
+    #[inline]
     pub fn next_key() -> i32 {
         unsafe {
             return next_key();
@@ -96,6 +117,7 @@ impl IpcAdapter {
     }
 
     /// Connect to the shared memory by name;
+    #[inline]
     pub fn connect_to(name: &str) -> i32 {
         unsafe {
             let c_str = CString::new(name).unwrap();
@@ -104,6 +126,7 @@ impl IpcAdapter {
     }
 
     /// Terminate the shared memory connection by key.
+    #[inline]
     pub fn terminate_at(key: i32) -> bool {
         unsafe {
             return terminate_at(key);
@@ -111,13 +134,33 @@ impl IpcAdapter {
     }
 
     /// Judge whether the shared memory corresponding to the key is connected.
+    #[inline]
     pub fn is_connected(key: i32) -> bool {
         unsafe {
             return is_connected(key);
         }
     }
 
+    /// Slave send the event.
+    #[inline]
+    pub fn send_event_slave(id: i32, evt: IpcEvent) {
+        unsafe { send_event_slave(id, evt) }
+    }
+
+    /// Blocked recived the event from master.
+    #[inline]
+    pub fn recv_from_master(id: i32) -> IpcEvent {
+        unsafe { return recv_from_master(id) }
+    }
+
+    /// Non-blocked recived the event from slave.
+    #[inline]
+    pub fn try_recv_from_master(id: i32) -> IpcEvent {
+        unsafe { return try_recv_from_master(id) }
+    }
+
     /// Block send msg to shared memory server side with response.
+    #[inline]
     pub fn send_msg(key: i32, msg: &str, shared_string_type: i32) -> String {
         unsafe {
             let c_str = CString::new(msg).unwrap();
@@ -131,11 +174,13 @@ impl IpcAdapter {
     }
 
     /// Determain whether has native events.
+    #[inline]
     pub fn has_events(key: i32) -> bool {
         unsafe { has_native_events(key) }
     }
 
-    ///  Get the native event.
+    /// Get the native event.
+    #[inline]
     pub fn get_native_event(key: i32) -> NativeEvent {
         unsafe {
             let bytes = get_native_event(key);
@@ -144,11 +189,13 @@ impl IpcAdapter {
     }
 
     /// Drop the native event.
+    #[inline]
     pub fn drop_native_event(key: i32) {
         unsafe { drop_native_event(key) }
     }
 
     /// Resize the teminal emulator.
+    #[inline]
     pub fn resize(key: i32, width: i32, height: i32) {
         unsafe {
             resize(key, width, height);
@@ -156,16 +203,19 @@ impl IpcAdapter {
     }
 
     /// Toggle buffer between primary/secondary buffer.
+    #[inline]
     pub fn toggle_buffer(key: c_int) {
         unsafe { toggle_buffer(key) }
     }
 
     /// When the native image buffer was changed, the property of dirty was true.
+    #[inline]
     pub fn is_dirty(key: i32) -> bool {
         unsafe { is_dirty(key) }
     }
 
     /// Client request redraw the native image buffer.
+    #[inline]
     pub fn redraw(key: i32, x: i32, y: i32, w: i32, h: i32) {
         unsafe {
             redraw(key, x, y, w, h);
@@ -173,6 +223,7 @@ impl IpcAdapter {
     }
 
     /// Set the native image buffer was dirty.
+    #[inline]
     pub fn set_dirty(key: i32, value: bool) {
         unsafe {
             set_dirty(key, value);
@@ -180,6 +231,7 @@ impl IpcAdapter {
     }
 
     /// Set true when the native image buffer was rendering completed, set false otherwise.
+    #[inline]
     pub fn set_buffer_ready(key: i32, is_buffer_ready: bool) {
         unsafe {
             set_buffer_ready(key, is_buffer_ready);
@@ -187,77 +239,92 @@ impl IpcAdapter {
     }
 
     /// Get the native image buffer redering state.
+    #[inline]
     pub fn is_buffer_ready(key: i32) -> bool {
         unsafe { is_buffer_ready(key) }
     }
 
     /// Get the width of native image buffer.
+    #[inline]
     pub fn get_w(key: i32) -> i32 {
         unsafe { get_w(key) }
     }
 
     /// Get the height of native image buffer.
+    #[inline]
     pub fn get_h(key: i32) -> i32 {
         unsafe { get_h(key) }
     }
 
     /// Tell terminal emulator to request focus or not.
+    #[inline]
     pub fn request_focus(key: i32, is_focus: bool, timestamp: i64) -> bool {
         unsafe { request_focus(key, is_focus, timestamp) }
     }
 
     /// Get the primary native image buffer.
+    #[inline]
     pub fn get_primary_buffer(key: i32) -> *mut u8 {
         unsafe { get_primary_buffer(key) }
     }
 
     /// Get the secondary native image buffer.
+    #[inline]
     pub fn get_secondary_buffer(key: i32) -> *mut u8 {
         unsafe { get_secondary_buffer(key) }
     }
 
     /// Thread lock the common resource.
+    #[inline]
     pub fn lock(key: i32) -> bool {
         unsafe { lock(key) }
     }
 
     /// Thread lock the common resource with timeout.
+    #[inline]
     pub fn lock_timeout(key: i32, timeout: i64) -> bool {
         unsafe { lock_timeout(key, timeout) }
     }
 
     /// Unlock the common resource.
+    #[inline]
     pub fn unlock(key: i32) {
         unsafe { unlock(key) }
     }
 
     /// Blocking wait for native image buffer changes.
+    #[inline]
     pub fn wait_for_buffer_changes(key: i32) {
         unsafe { wait_for_buffer_changes(key) }
     }
 
     /// Whether the native image buffer has changed.
+    #[inline]
     pub fn has_buffer_changes(key: i32) -> bool {
         unsafe { has_buffer_changes(key) }
     }
 
     /// Get current native image buffer status
+    #[inline]
     pub fn buffer_status(key: i32) -> i32 {
         unsafe { buffer_status(key) }
     }
 
     /// Thread lock the primary native image buffer.
+    #[inline]
     pub fn lock_buffer(key: i32) -> bool {
         unsafe { lock_buffer(key) }
     }
 
     /// Thread unlock the primary native image buffer.
+    #[inline]
     pub fn unlock_buffer(key: i32) {
         unsafe {
             unlock_buffer(key);
         }
     }
 
+    #[inline]
     pub fn fire_mouse_pressed_event(
         key: i32,
         n_press: i32,
@@ -270,6 +337,7 @@ impl IpcAdapter {
         unsafe { fire_mouse_pressed_event(key, n_press, x, y, buttons, modifiers, timestamp) }
     }
 
+    #[inline]
     pub fn fire_mouse_released_event(
         key: i32,
         x: f64,
@@ -281,6 +349,7 @@ impl IpcAdapter {
         unsafe { fire_mouse_released_event(key, x, y, buttons, modifiers, timestamp) }
     }
 
+    #[inline]
     pub fn fire_mouse_clicked_event(
         key: i32,
         x: f64,
@@ -293,6 +362,7 @@ impl IpcAdapter {
         unsafe { fire_mouse_clicked_event(key, x, y, buttons, modifiers, click_count, timestamp) }
     }
 
+    #[inline]
     pub fn fire_mouse_entered_event(
         key: i32,
         x: f64,
@@ -303,14 +373,17 @@ impl IpcAdapter {
         unsafe { fire_mouse_entered_event(key, x, y, modifiers, timestamp) }
     }
 
+    #[inline]
     pub fn fire_mouse_exited_event(key: i32, modifiers: i32, timestamp: i64) -> bool {
         unsafe { fire_mouse_exited_event(key, modifiers, timestamp) }
     }
 
+    #[inline]
     pub fn fire_mouse_move_event(key: i32, x: f64, y: f64, modifiers: i32, timestamp: i64) -> bool {
         unsafe { fire_mouse_move_event(key, x, y, modifiers, timestamp) }
     }
 
+    #[inline]
     pub fn fire_mouse_wheel_event(
         key: i32,
         x: f64,
@@ -322,6 +395,7 @@ impl IpcAdapter {
         unsafe { fire_mouse_wheel_event(key, x, y, amount, modifiers, timestamp) }
     }
 
+    #[inline]
     pub fn fire_key_pressed_event(
         key: i32,
         characters: &str,
@@ -335,6 +409,7 @@ impl IpcAdapter {
         }
     }
 
+    #[inline]
     pub fn fire_key_released_event(
         key: i32,
         characters: &str,
@@ -348,6 +423,7 @@ impl IpcAdapter {
         }
     }
 
+    #[inline]
     pub fn fire_key_typed_event(
         key: i32,
         characters: &str,
@@ -370,12 +446,17 @@ extern "C" {
     fn get_primary_buffer_master(id: c_int) -> *mut u8;
     fn get_secondary_buffer_master(id: c_int) -> *mut u8;
     fn send_event_master(id: c_int, evt: IpcEvent);
+    fn recv_from_slave(id: c_int) -> IpcEvent;
+    fn try_recv_from_slave(id: c_int) -> IpcEvent;
 
     // Slave
     fn next_key() -> c_int;
     fn connect_to(name: *const c_char) -> c_int;
     fn terminate_at(key: c_int) -> bool;
     fn is_connected(key: c_int) -> bool;
+    fn send_event_slave(id: c_int, evt: IpcEvent);
+    fn recv_from_master(id: c_int) -> IpcEvent;
+    fn try_recv_from_master(id: c_int) -> IpcEvent;
     fn send_msg(key: c_int, msg: *const c_char, shared_string_type: c_int) -> *const c_char;
     fn has_native_events(key: c_int) -> bool;
     fn get_native_event(key: c_int) -> *mut u8;

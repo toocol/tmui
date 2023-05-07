@@ -1,4 +1,4 @@
-use crate::{native::IpcAdapter, ipc_channel::{IpcSender, IpcReceiver, self}};
+use crate::{native::IpcAdapter, ipc_channel::{IpcSender, IpcReceiver, self}, ipc_event::IpcEvent};
 use core::slice;
 use std::ffi::c_void;
 
@@ -59,6 +59,21 @@ impl IpcMaster {
     #[inline]
     pub fn secondary_buffer_raw_pointer(&self) -> *mut c_void {
         self.secondary_buffer_raw_pointer as *mut c_void
+    }
+
+    #[inline]
+    pub fn send(&self, evt: IpcEvent) {
+        self.sender.send(evt)
+    }
+
+    #[inline]
+    pub fn recv(&self) -> IpcEvent {
+        self.receiver.recv()
+    }
+
+    #[inline]
+    pub fn try_recv(&self) -> IpcEvent {
+        self.receiver.try_recv()
     }
 
     #[inline]
