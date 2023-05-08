@@ -1,9 +1,9 @@
 use std::{
-    ffi::{c_char, c_int, c_longlong, CString},
+    ffi::{c_char, c_int, c_longlong, CStr, CString},
     slice,
 };
 
-use crate::ipc_event::IpcEvent;
+use crate::ipc_event::{CIpcEvent, IpcEvent};
 
 const IPC_NUM_NATIVE_EVT_MSG_SIZE: usize = 1024;
 
@@ -91,19 +91,19 @@ impl IpcAdapter {
 
     /// Master send the event.
     #[inline]
-    pub fn send_event_master(id: i32, evt: IpcEvent) {
+    pub fn send_event_master(id: i32, evt: CIpcEvent) {
         unsafe { send_event_master(id, evt) }
     }
 
     /// Blocked recived the event from slave.
     #[inline]
-    pub fn recv_from_slave(id: i32) -> IpcEvent {
+    pub fn recv_from_slave(id: i32) -> CIpcEvent {
         unsafe { return recv_from_slave(id) }
     }
 
     /// Non-blocked recived the event from slave.
     #[inline]
-    pub fn try_recv_from_slave(id: i32) -> IpcEvent {
+    pub fn try_recv_from_slave(id: i32) -> CIpcEvent {
         unsafe { return try_recv_from_slave(id) }
     }
 
@@ -143,19 +143,19 @@ impl IpcAdapter {
 
     /// Slave send the event.
     #[inline]
-    pub fn send_event_slave(id: i32, evt: IpcEvent) {
+    pub fn send_event_slave(id: i32, evt: CIpcEvent) {
         unsafe { send_event_slave(id, evt) }
     }
 
     /// Blocked recived the event from master.
     #[inline]
-    pub fn recv_from_master(id: i32) -> IpcEvent {
+    pub fn recv_from_master(id: i32) -> CIpcEvent {
         unsafe { return recv_from_master(id) }
     }
 
     /// Non-blocked recived the event from slave.
     #[inline]
-    pub fn try_recv_from_master(id: i32) -> IpcEvent {
+    pub fn try_recv_from_master(id: i32) -> CIpcEvent {
         unsafe { return try_recv_from_master(id) }
     }
 
@@ -445,18 +445,18 @@ extern "C" {
     fn terminate_by_master(id: c_int) -> c_int;
     fn get_primary_buffer_master(id: c_int) -> *mut u8;
     fn get_secondary_buffer_master(id: c_int) -> *mut u8;
-    fn send_event_master(id: c_int, evt: IpcEvent);
-    fn recv_from_slave(id: c_int) -> IpcEvent;
-    fn try_recv_from_slave(id: c_int) -> IpcEvent;
+    fn send_event_master(id: c_int, evt: CIpcEvent);
+    fn recv_from_slave(id: c_int) -> CIpcEvent;
+    fn try_recv_from_slave(id: c_int) -> CIpcEvent;
 
     // Slave
     fn next_key() -> c_int;
     fn connect_to(name: *const c_char) -> c_int;
     fn terminate_at(key: c_int) -> bool;
     fn is_connected(key: c_int) -> bool;
-    fn send_event_slave(id: c_int, evt: IpcEvent);
-    fn recv_from_master(id: c_int) -> IpcEvent;
-    fn try_recv_from_master(id: c_int) -> IpcEvent;
+    fn send_event_slave(id: c_int, evt: CIpcEvent);
+    fn recv_from_master(id: c_int) -> CIpcEvent;
+    fn try_recv_from_master(id: c_int) -> CIpcEvent;
     fn send_msg(key: c_int, msg: *const c_char, shared_string_type: c_int) -> *const c_char;
     fn has_native_events(key: c_int) -> bool;
     fn get_native_event(key: c_int) -> *mut u8;

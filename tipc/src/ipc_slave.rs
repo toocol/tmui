@@ -2,7 +2,7 @@ use core::slice;
 use std::ffi::c_void;
 
 use crate::{
-    ipc_channel::{self, IpcReceiver, IpcSender},
+    ipc_channel::{self, IpcReceiver, IpcSender, IpcError},
     native::IpcAdapter, ipc_event::IpcEvent,
 };
 
@@ -71,6 +71,11 @@ impl IpcSlave {
     #[inline]
     pub fn send(&self, evt: IpcEvent) {
         self.sender.send(evt)
+    }
+
+    #[inline]
+    pub fn send_with_response(&self, evt: IpcEvent) -> Result<String, IpcError> {
+        self.sender.send_with_response(evt)
     }
 
     #[inline]
