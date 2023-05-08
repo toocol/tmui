@@ -1,9 +1,8 @@
+use crate::ipc_event::CIpcEvent;
 use std::{
-    ffi::{c_char, c_int, c_longlong, CStr, CString},
+    ffi::{c_char, c_int, c_longlong, CString},
     slice,
 };
-
-use crate::ipc_event::{CIpcEvent, IpcEvent};
 
 const IPC_NUM_NATIVE_EVT_MSG_SIZE: usize = 1024;
 
@@ -173,27 +172,6 @@ impl IpcAdapter {
         }
     }
 
-    /// Determain whether has native events.
-    #[inline]
-    pub fn has_events(key: i32) -> bool {
-        unsafe { has_native_events(key) }
-    }
-
-    /// Get the native event.
-    #[inline]
-    pub fn get_native_event(key: i32) -> NativeEvent {
-        unsafe {
-            let bytes = get_native_event(key);
-            NativeEvent::from_bytes(bytes)
-        }
-    }
-
-    /// Drop the native event.
-    #[inline]
-    pub fn drop_native_event(key: i32) {
-        unsafe { drop_native_event(key) }
-    }
-
     /// Resize the teminal emulator.
     #[inline]
     pub fn resize(key: i32, width: i32, height: i32) {
@@ -212,14 +190,6 @@ impl IpcAdapter {
     #[inline]
     pub fn is_dirty(key: i32) -> bool {
         unsafe { is_dirty(key) }
-    }
-
-    /// Client request redraw the native image buffer.
-    #[inline]
-    pub fn redraw(key: i32, x: i32, y: i32, w: i32, h: i32) {
-        unsafe {
-            redraw(key, x, y, w, h);
-        }
     }
 
     /// Set the native image buffer was dirty.
@@ -254,12 +224,6 @@ impl IpcAdapter {
     #[inline]
     pub fn get_h(key: i32) -> i32 {
         unsafe { get_h(key) }
-    }
-
-    /// Tell terminal emulator to request focus or not.
-    #[inline]
-    pub fn request_focus(key: i32, is_focus: bool, timestamp: i64) -> bool {
-        unsafe { request_focus(key, is_focus, timestamp) }
     }
 
     /// Get the primary native image buffer.
@@ -323,119 +287,6 @@ impl IpcAdapter {
             unlock_buffer(key);
         }
     }
-
-    #[inline]
-    pub fn fire_mouse_pressed_event(
-        key: i32,
-        n_press: i32,
-        x: f64,
-        y: f64,
-        buttons: i32,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe { fire_mouse_pressed_event(key, n_press, x, y, buttons, modifiers, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_mouse_released_event(
-        key: i32,
-        x: f64,
-        y: f64,
-        buttons: i32,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe { fire_mouse_released_event(key, x, y, buttons, modifiers, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_mouse_clicked_event(
-        key: i32,
-        x: f64,
-        y: f64,
-        buttons: i32,
-        modifiers: i32,
-        click_count: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe { fire_mouse_clicked_event(key, x, y, buttons, modifiers, click_count, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_mouse_entered_event(
-        key: i32,
-        x: f64,
-        y: f64,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe { fire_mouse_entered_event(key, x, y, modifiers, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_mouse_exited_event(key: i32, modifiers: i32, timestamp: i64) -> bool {
-        unsafe { fire_mouse_exited_event(key, modifiers, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_mouse_move_event(key: i32, x: f64, y: f64, modifiers: i32, timestamp: i64) -> bool {
-        unsafe { fire_mouse_move_event(key, x, y, modifiers, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_mouse_wheel_event(
-        key: i32,
-        x: f64,
-        y: f64,
-        amount: f64,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe { fire_mouse_wheel_event(key, x, y, amount, modifiers, timestamp) }
-    }
-
-    #[inline]
-    pub fn fire_key_pressed_event(
-        key: i32,
-        characters: &str,
-        key_code: i32,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe {
-            let characters = CString::new(characters).unwrap();
-            fire_key_pressed_event(key, characters.as_ptr(), key_code, modifiers, timestamp)
-        }
-    }
-
-    #[inline]
-    pub fn fire_key_released_event(
-        key: i32,
-        characters: &str,
-        key_code: i32,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe {
-            let characters = CString::new(characters).unwrap();
-            fire_key_released_event(key, characters.as_ptr(), key_code, modifiers, timestamp)
-        }
-    }
-
-    #[inline]
-    pub fn fire_key_typed_event(
-        key: i32,
-        characters: &str,
-        key_code: i32,
-        modifiers: i32,
-        timestamp: i64,
-    ) -> bool {
-        unsafe {
-            let characters = CString::new(characters).unwrap();
-            fire_key_typed_event(key, characters.as_ptr(), key_code, modifiers, timestamp)
-        }
-    }
 }
 
 #[link(name = "ipc-native", kind = "static")]
@@ -458,19 +309,14 @@ extern "C" {
     fn recv_from_master(id: c_int) -> CIpcEvent;
     fn try_recv_from_master(id: c_int) -> CIpcEvent;
     fn send_msg(key: c_int, msg: *const c_char, shared_string_type: c_int) -> *const c_char;
-    fn has_native_events(key: c_int) -> bool;
-    fn get_native_event(key: c_int) -> *mut u8;
-    fn drop_native_event(key: c_int);
     fn resize(key: c_int, width: c_int, height: c_int);
     fn toggle_buffer(key: c_int);
     fn is_dirty(key: c_int) -> bool;
-    fn redraw(key: c_int, x: c_int, y: c_int, w: c_int, h: c_int);
     fn set_dirty(key: c_int, value: bool);
     fn set_buffer_ready(key: c_int, is_buffer_ready: bool);
     fn is_buffer_ready(key: c_int) -> bool;
     fn get_w(key: c_int) -> c_int;
     fn get_h(key: c_int) -> c_int;
-    fn request_focus(key: c_int, is_focus: bool, timestamp: c_longlong) -> bool;
     fn get_primary_buffer(key: c_int) -> *mut u8;
     fn get_secondary_buffer(key: c_int) -> *mut u8;
     fn lock(key: c_int) -> bool;
@@ -481,74 +327,4 @@ extern "C" {
     fn buffer_status(key: c_int) -> i32;
     fn lock_buffer(key: c_int) -> bool;
     fn unlock_buffer(key: c_int);
-    fn fire_mouse_pressed_event(
-        key: c_int,
-        n_press: i32,
-        x: f64,
-        y: f64,
-        buttons: c_int,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_mouse_released_event(
-        key: c_int,
-        x: f64,
-        y: f64,
-        buttons: c_int,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_mouse_clicked_event(
-        key: c_int,
-        x: f64,
-        y: f64,
-        buttons: c_int,
-        modifiers: c_int,
-        click_count: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_mouse_entered_event(
-        key: c_int,
-        x: f64,
-        y: f64,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_mouse_exited_event(key: c_int, modifiers: c_int, timestamp: c_longlong) -> bool;
-    fn fire_mouse_move_event(
-        key: c_int,
-        x: f64,
-        y: f64,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_mouse_wheel_event(
-        key: c_int,
-        x: f64,
-        y: f64,
-        amount: f64,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_key_pressed_event(
-        key: c_int,
-        characters: *const c_char,
-        key_code: c_int,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_key_released_event(
-        key: c_int,
-        characters: *const c_char,
-        key_code: c_int,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
-    fn fire_key_typed_event(
-        key: c_int,
-        characters: *const c_char,
-        key_code: c_int,
-        modifiers: c_int,
-        timestamp: c_longlong,
-    ) -> bool;
 }
