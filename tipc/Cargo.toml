@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 tlib = { path = "../tlib/" }
+
+log = "0.4"

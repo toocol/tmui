@@ -48,6 +48,11 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
+    pub fn path(&self) -> Path {
+        Path::new()
+    }
+
+    #[inline]
     pub fn set_transform(&mut self, transform: Transform, combined: bool) {
         if combined {
             self.transform = self.transform * transform;
@@ -130,6 +135,11 @@ impl<'a> Painter<'a> {
         self.paint.set_color(color);
     }
 
+    #[inline]
+    pub fn set_style(&mut self, style: skia_safe::paint::Style) {
+        self.paint.set_style(style);
+    }
+
     /// Get the stroke width of painter.
     #[inline]
     pub fn line_width(&self) -> f32 {
@@ -141,6 +151,12 @@ impl<'a> Painter<'a> {
     pub fn set_line_width(&mut self, width: f32) {
         self.line_width = Some(width);
         self.paint.set_stroke_width(width);
+    }
+
+    /// Set the stroke cap.
+    #[inline]
+    pub fn set_stroke_cap(&mut self, cap: skia_safe::PaintCap) {
+        self.paint.set_stroke_cap(cap);
     }
 
     /// Stroke and fill the specified Rect with offset.
@@ -229,6 +245,11 @@ impl<'a> Painter<'a> {
         point.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_point(point, &self.paint);
+    }
+
+    #[inline]
+    pub fn draw_path(&mut self, path: &mut Path) {
+        self.canvas.draw_path(path, &self.paint);
     }
 
     /// Draw a pixmap.

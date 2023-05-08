@@ -2,8 +2,8 @@ use core::slice;
 use std::ffi::c_void;
 
 use crate::{
-    ipc_channel::{self, IpcReceiver, IpcSender},
-    native::IpcAdapter,
+    ipc_channel::{self, IpcReceiver, IpcSender, IpcError},
+    native::IpcAdapter, ipc_event::IpcEvent,
 };
 
 pub struct IpcSlave {
@@ -66,5 +66,25 @@ impl IpcSlave {
     #[inline]
     pub fn secondary_buffer_raw_pointer(&self) -> *mut c_void {
         self.secondary_buffer_raw_pointer as *mut c_void
+    }
+
+    #[inline]
+    pub fn send(&self, evt: IpcEvent) {
+        self.sender.send(evt)
+    }
+
+    #[inline]
+    pub fn send_with_response(&self, evt: IpcEvent) -> Result<String, IpcError> {
+        self.sender.send_with_response(evt)
+    }
+
+    #[inline]
+    pub fn recv(&self) -> IpcEvent {
+        self.receiver.recv()
+    }
+
+    #[inline]
+    pub fn try_recv(&self) -> IpcEvent {
+        self.receiver.try_recv()
     }
 }
