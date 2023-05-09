@@ -28,7 +28,7 @@ pub enum IpcEvent {
 }
 
 #[repr(C, i32)]
-pub enum CIpcEvent {
+pub(crate) enum CIpcEvent {
     None = 0,
     /// (characters, key_code, modifier, timestamp)
     KeyPressedEvent(*const c_char, i32, i32, i64) = 1,

@@ -9,3 +9,12 @@ edition = "2021"
 tlib = { path = "../tlib/" }
 
 log = "0.4"
+
+[dev-dependencies]
+ctrlc = "3.2.5"
+
+[[example]]
+name = "ipc_test"
+dependencies = [
+    "ctrlc = \"3.2.5\""
+]
