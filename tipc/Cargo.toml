@@ -16,5 +16,5 @@ ctrlc = "3.2.5"
 [[example]]
 name = "ipc_test"
 dependencies = [
-    "ctrlc = \"3.2.5\""
+    "ctrlc"
 ]

@@ -1,6 +1,7 @@
-use crate::ipc_event::CIpcEvent;
+use crate::ipc_event::{CIpcEvent, IpcEvent};
 use std::{
     ffi::{c_char, c_int, c_longlong, CString},
+    os::raw,
 };
 
 pub(crate) struct IpcAdapter;
@@ -36,15 +37,24 @@ impl IpcAdapter {
     /// Master send the event.
     #[inline]
     pub fn send_event_master(id: i32, evt: CIpcEvent) {
-        unsafe { send_event_master(id, evt) }
+        let raw_ptr = match &evt {
+            CIpcEvent::KeyPressedEvent(ptr, _, _, _) => Some(*ptr),
+            CIpcEvent::KeyReleasedEvent(ptr, _, _, _) => Some(*ptr),
+            CIpcEvent::NativeEvent(ptr, _) => Some(*ptr),
+            CIpcEvent::SharedMessage(ptr, _) => Some(*ptr),
+            _ => None,
+        };
+        unsafe { send_event_master(id, evt) };
+        // Release the C style string.
+        if let Some(ptr) = raw_ptr {
+            let _ = unsafe { CString::from_raw(ptr as *mut i8) };
+        }
     }
 
     /// Blocked recived the event from slave.
     #[inline]
     pub fn recv_from_slave(id: i32) -> CIpcEvent {
-        unsafe { 
-            return recv_from_slave(id)
-        }
+        unsafe { return recv_from_slave(id) }
     }
 
     /// Non-blocked recived the event from slave.
@@ -128,7 +138,18 @@ impl IpcAdapter {
     /// Slave send the event.
     #[inline]
     pub fn send_event_slave(id: i32, evt: CIpcEvent) {
-        unsafe { send_event_slave(id, evt) }
+        let raw_ptr = match &evt {
+            CIpcEvent::KeyPressedEvent(ptr, _, _, _) => Some(*ptr),
+            CIpcEvent::KeyReleasedEvent(ptr, _, _, _) => Some(*ptr),
+            CIpcEvent::NativeEvent(ptr, _) => Some(*ptr),
+            CIpcEvent::SharedMessage(ptr, _) => Some(*ptr),
+            _ => None,
+        };
+        unsafe { send_event_slave(id, evt) };
+        // Release the C style string.
+        if let Some(ptr) = raw_ptr {
+            let _ = unsafe { CString::from_raw(ptr as *mut i8) };
+        }
     }
 
     /// Blocked recived the event from master.
