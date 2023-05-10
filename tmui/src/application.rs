@@ -7,7 +7,7 @@ use crate::platform::PlatformWin32;
 use crate::{
     application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
-    graphics::board::Board,
+    graphics::{board::Board, cpu_balance::CpuBalance},
     platform::{
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
@@ -23,16 +23,14 @@ use std::{
         Arc,
     },
     thread,
-    time::Duration,
+    time::Instant,
 };
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
     prelude::tokio_runtime,
     timer::TimerHub,
-    utils::TimeStamp,
 };
-use log::debug;
 
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -186,22 +184,44 @@ impl Application {
         window.window_layout_change();
         window.activate();
 
-        let mut last_frame = 0u128;
-        let mut update;
+        let mut cpu_balance = CpuBalance::new();
+        let mut last_frame = Instant::now();
+        let mut update = true;
+        let mut frame_cnt = 0;
+        let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
         loop {
-            update = board.invalidate_visual();
+            cpu_balance.loop_start();
+            let elapsed = last_frame.elapsed();
 
-            let now = TimeStamp::timestamp_micros();
-            if now - last_frame >= FRAME_INTERVAL && update {
-                last_frame = now;
-                debug!("<Generate> VSync time track: {}", now);
-                window.send_message(Message::VSync);
-            }
+            update = if elapsed.as_micros() >= FRAME_INTERVAL {
+                last_frame = Instant::now();
+                let frame_time = elapsed.as_micros() as f32 / 1000.;
+                frame_cnt += 1;
+                match frame_time as i32 {
+                    0..=16 => time_17 += 1,
+                    17..=19 => time_17_20 += 1,
+                    20..=24 => time_20_25 += 1,
+                    _ => time_25 += 1,
+                }
+                println!(
+                    "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
+                    time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
+                );
+                let update = board.invalidate_visual();
+                if update {
+                    window.send_message(Message::VSync);
+                    cpu_balance.add_payload();
+                }
+                update
+            } else {
+                update
+            };
 
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
-            thread::sleep(Duration::from_nanos(1));
+            cpu_balance.payload_check();
+            cpu_balance.sleep(update);
         }
     }
 }
@@ -263,6 +283,17 @@ impl ApplicationBuilder {
 
     pub fn height(mut self, height: u32) -> Self {
         self.height = Some(height);
+        self
+    }
+
+    /// Set the cpu payload threshold (`payloads/per sec`).<br>
+    /// When the program payload exceeds the threshold,
+    /// the program will increase CPU usage to generate frame data more accurately in time. <br>
+    ///
+    /// `payload`: Including component rendering, user input, and ipc events, all count as a payload. <br>
+    /// The default threshold was `40`.
+    pub fn cpu_payload_threshold(self, threshold: usize) -> Self {
+        CpuBalance::set_payload_threshold(threshold);
         self
     }
 }

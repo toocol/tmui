@@ -16,7 +16,7 @@ use std::{
         atomic::{AtomicPtr, Ordering},
         Once,
     },
-    time::{Duration, SystemTime},
+    time::{Duration, Instant, SystemTime},
 };
 
 static INIT: Once = Once::new();
@@ -210,6 +210,27 @@ impl ObjectSubclass for Timer {
 
 impl ObjectImpl for Timer {}
 
+/// More accurate sleep, resulting in more CPU usage.
+#[inline]
+pub fn sleep(wait: Duration) {
+    let wait_until = Instant::now() + wait;
+
+    loop {
+        let now = Instant::now();
+        if now >= wait_until {
+            break;
+        }
+        let remaining_time = wait_until - now;
+
+        if remaining_time >= Duration::from_millis(10) {
+            let start_time = Instant::now();
+            std::thread::park_timeout(Duration::from_millis(1) - start_time.elapsed());
+        } else {
+            std::thread::yield_now();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Timer, TimerHub};
@@ -219,7 +240,10 @@ mod tests {
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
     };
-    use std::{sync::atomic::Ordering, time::Duration};
+    use std::{
+        sync::atomic::Ordering,
+        time::{Duration, Instant},
+    };
 
     #[extends(Object)]
     #[derive(Default)]
@@ -267,6 +291,23 @@ mod tests {
                 break;
             }
             timer_hub.check_timers();
+        }
+    }
+
+    #[test]
+    fn test_sleep() {
+        for _ in 0..10 {
+            let mut now = Instant::now();
+            std::thread::park_timeout(Duration::from_nanos(1));
+            println!(
+                "park_timeout: {}ms",
+                now.elapsed().as_micros() as f32 / 1000.
+            );
+            now = Instant::now();
+
+            std::thread::sleep(Duration::from_nanos(1));
+            println!("sleep: {}ms", now.elapsed().as_micros() as f32 / 1000.);
+            println!("---");
         }
     }
 }

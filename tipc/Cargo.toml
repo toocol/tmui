@@ -9,3 +9,18 @@ edition = "2021"
 tlib = { path = "../tlib/" }
 
 log = "0.4"
+shared_memory = "0.12.4"
+raw_sync = "0.1.5"
+
+[dev-dependencies]
+ctrlc = "3.2.5"
+libc = "0.2.144"
+
+[[example]]
+name = "ipc_test"
+dependencies = [
+    "ctrlc", "libc"
+]
+
+[[example]]
+name = "shm_test"

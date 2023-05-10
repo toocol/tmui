@@ -2,12 +2,13 @@ use core::slice;
 use std::ffi::c_void;
 
 use crate::{
-    ipc_channel::{self, IpcReceiver, IpcSender, IpcError},
-    native::IpcAdapter, ipc_event::IpcEvent,
+    ipc_channel::{self, IpcError, IpcReceiver, IpcSender},
+    ipc_event::IpcEvent,
+    native::IpcAdapter,
 };
 
 pub struct IpcSlave {
-    _id: i32,
+    id: i32,
     width: usize,
     height: usize,
     primary_buffer_raw_pointer: *mut u8,
@@ -28,7 +29,7 @@ impl IpcSlave {
         let (sender, receiver) = ipc_channel::channel(id, ipc_channel::ChannelType::Slave);
 
         Self {
-            _id: id,
+            id,
             width: width as usize,
             height: height as usize,
             primary_buffer_raw_pointer,
@@ -36,6 +37,11 @@ impl IpcSlave {
             sender,
             receiver,
         }
+    }
+
+    #[inline]
+    pub fn id(&self) -> i32 {
+        self.id
     }
 
     #[inline]
@@ -74,8 +80,8 @@ impl IpcSlave {
     }
 
     #[inline]
-    pub fn send_with_response(&self, evt: IpcEvent) -> Result<String, IpcError> {
-        self.sender.send_with_response(evt)
+    pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, IpcError> {
+        self.sender.send_shared_message(evt)
     }
 
     #[inline]
@@ -86,5 +92,20 @@ impl IpcSlave {
     #[inline]
     pub fn try_recv(&self) -> IpcEvent {
         self.receiver.try_recv()
+    }
+
+    #[inline]
+    pub fn try_recv_shared_message(&self) -> Option<String> {
+        self.receiver.try_recv_shared_message()
+    }
+
+    #[inline]
+    pub fn respose_shared_msg(id: i32, resp: Option<&str>) {
+        IpcAdapter::resp_shared_msg_slave(id, if resp.is_some() { resp.unwrap() } else { "" })
+    }
+
+    #[inline]
+    pub fn terminate_at(id: i32) -> bool {
+        IpcAdapter::terminate_at(id)
     }
 }

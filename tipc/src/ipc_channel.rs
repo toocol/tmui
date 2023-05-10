@@ -31,15 +31,21 @@ impl IpcSender {
         }
     }
 
-    /// This method only support the [`IpcEvent::SharedMessage`].
-    /// This message will blocked the thread, wait until another side was consumed and response this shared message
+    /// This method only support the [`IpcEvent::SharedMessage`]. <br>
+    /// `NOTICE!!!` This message will blocked the thread, wait until another side was consumed and response this shared message
     #[inline]
-    pub fn send_with_response(&self, event: IpcEvent) -> Result<String, IpcError> {
+    pub fn send_shared_message(&self, event: IpcEvent) -> Result<String, IpcError> {
         match event {
             IpcEvent::SharedMessage(msg, shared_string_type) => match self.ty {
-                ChannelType::Slave => Ok(IpcAdapter::send_msg(self.id, &msg, shared_string_type)),
-                _ => Err(IpcError::new(
-                    "This method only support from Slave to Master for now",
+                ChannelType::Master => Ok(IpcAdapter::send_msg_master(
+                    self.id,
+                    &msg,
+                    shared_string_type,
+                )),
+                ChannelType::Slave => Ok(IpcAdapter::send_msg_slave(
+                    self.id,
+                    &msg,
+                    shared_string_type,
                 )),
             },
             _ => Err(IpcError::new(
@@ -75,6 +81,26 @@ impl IpcReceiver {
         match self.ty {
             ChannelType::Master => IpcAdapter::try_recv_from_slave(self.id).into(),
             ChannelType::Slave => IpcAdapter::try_recv_from_master(self.id).into(),
+        }
+    }
+
+    #[inline]
+    pub fn try_recv_shared_message(&self) -> Option<String> {
+        match self.ty {
+            ChannelType::Master => {
+                if IpcAdapter::master_has_shared_msg(self.id) {
+                    Some(IpcAdapter::get_shared_msg_master(self.id))
+                } else {
+                    None
+                }
+            }
+            ChannelType::Slave => {
+                if IpcAdapter::slave_has_shared_msg(self.id) {
+                    Some(IpcAdapter::get_shared_msg_slave(self.id))
+                } else {
+                    None
+                }
+            }
         }
     }
 }

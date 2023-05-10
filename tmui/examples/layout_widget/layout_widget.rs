@@ -1,23 +1,39 @@
 #![allow(dead_code)]
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use tlib::{object::ObjectSubclass, timer::Timer, connect};
+use log::debug;
+use tlib::{connect, object::ObjectSubclass, timer::Timer, disconnect};
 use tmui::{
     graphics::figure::{FontTypeface, FontWidth},
     label::Label,
     prelude::*,
 };
-use log::debug;
 
 const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 
 #[extends(Widget, Layout(Stack))]
-#[derive(Default, Childrenable)]
+#[derive(Childrenable)]
 pub struct LayoutWidget {
     #[children]
     label: Label,
     timer: Timer,
     idx: usize,
+    stop_instant: Instant,
+    instant: Instant,
+}
+
+impl Default for LayoutWidget {
+    fn default() -> Self {
+        Self {
+            label: Default::default(),
+            timer: Default::default(),
+            idx: Default::default(),
+            stop_instant: Instant::now(),
+            instant: Instant::now(),
+            container: Default::default(),
+            children: Default::default(),
+        }
+    }
 }
 
 impl ObjectSubclass for LayoutWidget {
@@ -57,7 +73,7 @@ impl ObjectImpl for LayoutWidget {
         connect!(self.label, text_changed(), self, text_changed(String:0, String:1));
         connect!(self.timer, timeout(), self, change_text());
         self.label.set_text("Hello World");
-        self.timer.start(Duration::from_secs(1));
+        self.timer.start(Duration::from_millis(10));
     }
 }
 
@@ -76,8 +92,14 @@ impl LayoutWidget {
         if self.idx >= 4 {
             self.idx = 0;
         }
-        debug!("Timeout change text.");
+        debug!("Timeout change text. duration = {}ms", self.instant.elapsed().as_micros() as f32 / 1000.);
+        self.instant = Instant::now();
         self.label.set_text(TEXT[self.idx]);
         self.idx += 1;
+
+        if self.stop_instant.elapsed().as_secs() >= 15 {
+            self.timer.stop();
+            disconnect!(self.timer, timeout(), self, null);
+        }
     }
 }

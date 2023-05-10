@@ -1,4 +1,8 @@
-use crate::{native::IpcAdapter, ipc_channel::{IpcSender, IpcReceiver, self}, ipc_event::IpcEvent};
+use crate::{
+    ipc_channel::{self, IpcError, IpcReceiver, IpcSender},
+    ipc_event::IpcEvent,
+    native::IpcAdapter,
+};
 use core::slice;
 use std::ffi::c_void;
 
@@ -29,6 +33,11 @@ impl IpcMaster {
             sender,
             receiver,
         }
+    }
+
+    #[inline]
+    pub fn id(&self) -> i32 {
+        self.id
     }
 
     #[inline]
@@ -67,6 +76,11 @@ impl IpcMaster {
     }
 
     #[inline]
+    pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, IpcError> {
+        self.sender.send_shared_message(evt)
+    }
+
+    #[inline]
     pub fn recv(&self) -> IpcEvent {
         self.receiver.recv()
     }
@@ -77,8 +91,18 @@ impl IpcMaster {
     }
 
     #[inline]
+    pub fn try_recv_shared_message(&self) -> Option<String> {
+        self.receiver.try_recv_shared_message()
+    }
+
+    #[inline]
     fn terminate(&self) {
         IpcAdapter::terminate_by_master(self.id);
+    }
+
+    #[inline]
+    pub fn respose_shared_msg(id: i32, resp: Option<&str>) {
+        IpcAdapter::resp_shared_msg_master(id, if resp.is_some() { resp.unwrap() } else { "" })
     }
 }
 

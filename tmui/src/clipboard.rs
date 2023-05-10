@@ -1,7 +1,6 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
 use std::{
-    borrow::Borrow,
     sync::Mutex,
 };
 
@@ -27,7 +26,7 @@ impl Clipboard {
 
     pub fn text(&mut self, level: ClipboardLevel) -> Option<String> {
         match level {
-            ClipboardLevel::Application => (*self.text.lock().unwrap().borrow()).clone(),
+            ClipboardLevel::Application => (*self.text.lock().unwrap()).clone(),
             ClipboardLevel::Os => self
                 .os_clipboard_ctx
                 .get_contents()

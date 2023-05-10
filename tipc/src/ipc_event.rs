@@ -28,7 +28,7 @@ pub enum IpcEvent {
 }
 
 #[repr(C, i32)]
-pub enum CIpcEvent {
+pub(crate) enum CIpcEvent {
     None = 0,
     /// (characters, key_code, modifier, timestamp)
     KeyPressedEvent(*const c_char, i32, i32, i64) = 1,
@@ -61,11 +61,11 @@ impl Into<CIpcEvent> for IpcEvent {
             Self::None => CIpcEvent::None,
             Self::KeyPressedEvent(a, b, c, d) => {
                 let c_str = CString::new(a).unwrap();
-                CIpcEvent::KeyPressedEvent(c_str.as_ptr(), b, c, d)
+                CIpcEvent::KeyPressedEvent(c_str.into_raw(), b, c, d)
             }
             Self::KeyReleasedEvent(a, b, c, d) => {
                 let c_str = CString::new(a).unwrap();
-                CIpcEvent::KeyReleasedEvent(c_str.as_ptr(), b, c, d)
+                CIpcEvent::KeyReleasedEvent(c_str.into_raw(), b, c, d)
             }
             Self::MousePressedEvent(a, b, c, d, e, f) => {
                 CIpcEvent::MousePressedEvent(a, b, c, d, e, f)
@@ -78,11 +78,11 @@ impl Into<CIpcEvent> for IpcEvent {
             Self::RequestFocusEvent(a, b) => CIpcEvent::RequestFocusEvent(a, b),
             Self::NativeEvent(a, b) => {
                 let c_str = CString::new(a).unwrap();
-                CIpcEvent::NativeEvent(c_str.as_ptr(), b)
+                CIpcEvent::NativeEvent(c_str.into_raw(), b)
             }
             Self::SharedMessage(a, b) => {
                 let c_str = CString::new(a).unwrap();
-                CIpcEvent::SharedMessage(c_str.as_ptr(), b)
+                CIpcEvent::SharedMessage(c_str.into_raw(), b)
             }
         }
     }
