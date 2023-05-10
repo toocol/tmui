@@ -1,7 +1,7 @@
 use crate::ipc_event::{CIpcEvent, IpcEvent};
 use std::{
     ffi::{c_char, c_int, c_longlong, CString},
-    os::raw,
+    os::raw, time::Duration,
 };
 
 pub(crate) struct IpcAdapter;

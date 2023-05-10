@@ -14,6 +14,7 @@ use crate::{
     },
 };
 use lazy_static::lazy_static;
+use log::debug;
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -23,16 +24,14 @@ use std::{
         Arc,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
     prelude::tokio_runtime,
-    timer::TimerHub,
-    utils::TimeStamp,
+    timer::{self, TimerHub},
 };
-use log::debug;
 
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -186,22 +185,49 @@ impl Application {
         window.window_layout_change();
         window.activate();
 
-        let mut last_frame = 0u128;
-        let mut update;
+        let mut last_frame = Instant::now();
+        let mut update = true;
+        let mut frame_cnt = 0;
+        let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
         loop {
-            update = board.invalidate_visual();
+            let elapsed = last_frame.elapsed();
 
-            let now = TimeStamp::timestamp_micros();
-            if now - last_frame >= FRAME_INTERVAL && update {
+            let now = Instant::now();
+            update = if elapsed.as_micros() >= FRAME_INTERVAL {
+                let frame_time = elapsed.as_micros() as f32 / 1000.;
+                frame_cnt += 1;
+                if frame_time < 17. {
+                    time_17 += 1;
+                } else if frame_time >= 17. && frame_time < 20. {
+                    time_17_20 += 1;
+                } else if frame_time >= 20. && frame_time < 25. {
+                    time_20_25 += 1;
+                } else {
+                    time_25 += 1;
+                }
+                debug!(
+                    "frame time distribution rate: [<17ms: {}, 17-20ms: {}, 20-25ms: {}, >=25ms: {}], frame time: {}ms",
+                    time_17 as f32 / frame_cnt as f32, time_17_20 as f32 / frame_cnt as f32, time_20_25 as f32 / frame_cnt as f32, time_25 as f32 / frame_cnt as f32, frame_time
+                );
+                let update;
                 last_frame = now;
-                debug!("<Generate> VSync time track: {}", now);
-                window.send_message(Message::VSync);
-            }
+                update = board.invalidate_visual();
+                if update {
+                    window.send_message(Message::VSync);
+                }
+                update
+            } else {
+                update
+            };
 
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
-            thread::sleep(Duration::from_nanos(1));
+            if update {
+                timer::sleep(Duration::from_millis(16));
+            } else {
+                thread::sleep(Duration::from_millis(16));
+            }
         }
     }
 }
