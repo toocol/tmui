@@ -98,7 +98,7 @@ impl PlatformContext for PlatformWin32 {
         let event_loop = EventLoopBuilder::<Message>::with_user_event().build();
 
         let window = WindowBuilder::new()
-            .with_title("Winit")
+            .with_title(&self.title)
             .with_inner_size(Size::Physical(PhysicalSize::new(self.width, self.height)))
             .build(&event_loop)
             .unwrap();

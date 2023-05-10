@@ -211,6 +211,7 @@ impl ObjectSubclass for Timer {
 impl ObjectImpl for Timer {}
 
 /// More accurate sleep, resulting in more CPU usage.
+#[inline]
 pub fn sleep(wait: Duration) {
     let wait_until = Instant::now() + wait;
 
@@ -222,14 +223,8 @@ pub fn sleep(wait: Duration) {
         let remaining_time = wait_until - now;
 
         if remaining_time >= Duration::from_millis(10) {
-            let rec = Instant::now();
             let start_time = Instant::now();
-            let expected_duration = Duration::from_millis(1);
-            std::thread::park_timeout(expected_duration - start_time.elapsed());
-            println!(
-                "park_timeout: {}ms",
-                rec.elapsed().as_micros() as f32 / 1000.
-            );
+            std::thread::park_timeout(Duration::from_millis(1) - start_time.elapsed());
         } else {
             std::thread::yield_now();
         }

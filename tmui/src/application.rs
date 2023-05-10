@@ -7,14 +7,13 @@ use crate::platform::PlatformWin32;
 use crate::{
     application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
-    graphics::board::Board,
+    graphics::{board::Board, cpu_balance::CpuBalance},
     platform::{
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
     },
 };
 use lazy_static::lazy_static;
-use log::debug;
 use std::{
     cell::RefCell,
     ptr::null_mut,
@@ -24,13 +23,13 @@ use std::{
         Arc,
     },
     thread,
-    time::{Duration, Instant},
+    time::Instant,
 };
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
     prelude::tokio_runtime,
-    timer::{self, TimerHub},
+    timer::TimerHub,
 };
 
 lazy_static! {
@@ -185,35 +184,33 @@ impl Application {
         window.window_layout_change();
         window.activate();
 
+        let mut cpu_balance = CpuBalance::new();
         let mut last_frame = Instant::now();
         let mut update = true;
         let mut frame_cnt = 0;
         let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
         loop {
+            cpu_balance.loop_start();
             let elapsed = last_frame.elapsed();
 
-            let now = Instant::now();
             update = if elapsed.as_micros() >= FRAME_INTERVAL {
+                last_frame = Instant::now();
                 let frame_time = elapsed.as_micros() as f32 / 1000.;
                 frame_cnt += 1;
-                if frame_time < 17. {
-                    time_17 += 1;
-                } else if frame_time >= 17. && frame_time < 20. {
-                    time_17_20 += 1;
-                } else if frame_time >= 20. && frame_time < 25. {
-                    time_20_25 += 1;
-                } else {
-                    time_25 += 1;
+                match frame_time as i32 {
+                    0..=16 => time_17 += 1,
+                    17..=19 => time_17_20 += 1,
+                    20..=24 => time_20_25 += 1,
+                    _ => time_25 += 1,
                 }
-                debug!(
-                    "frame time distribution rate: [<17ms: {}, 17-20ms: {}, 20-25ms: {}, >=25ms: {}], frame time: {}ms",
-                    time_17 as f32 / frame_cnt as f32, time_17_20 as f32 / frame_cnt as f32, time_20_25 as f32 / frame_cnt as f32, time_25 as f32 / frame_cnt as f32, frame_time
+                println!(
+                    "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
+                    time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
                 );
-                let update;
-                last_frame = now;
-                update = board.invalidate_visual();
+                let update = board.invalidate_visual();
                 if update {
                     window.send_message(Message::VSync);
+                    cpu_balance.add_payload();
                 }
                 update
             } else {
@@ -223,11 +220,8 @@ impl Application {
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
-            if update {
-                timer::sleep(Duration::from_millis(16));
-            } else {
-                thread::sleep(Duration::from_millis(16));
-            }
+            cpu_balance.payload_check();
+            cpu_balance.sleep(update);
         }
     }
 }
@@ -289,6 +283,17 @@ impl ApplicationBuilder {
 
     pub fn height(mut self, height: u32) -> Self {
         self.height = Some(height);
+        self
+    }
+
+    /// Set the cpu payload threshold (`payloads/per sec`).<br>
+    /// When the program payload exceeds the threshold,
+    /// the program will increase CPU usage to generate frame data more accurately in time. <br>
+    ///
+    /// `payload`: Including component rendering, user input, and ipc events, all count as a payload. <br>
+    /// The default threshold was `40`.
+    pub fn cpu_payload_threshold(self, threshold: usize) -> Self {
+        CpuBalance::set_payload_threshold(threshold);
         self
     }
 }
