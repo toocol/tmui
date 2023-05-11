@@ -1,4 +1,5 @@
-use shared_memory::{Shmem, ShmemConf};
+use shared_memory::{Shmem, ShmemConf, ShmemError};
+use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::{
     error::Error,
@@ -56,57 +57,40 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> _MemQueue<QUEUE_SIZE, T> {
 
 pub struct MemQueue<const QUEUE_SIZE: usize, T: 'static + Copy> {
     shmem: Shmem,
-    queue: &'static mut _MemQueue<QUEUE_SIZE, T>,
+    _type_holder: PhantomData<T>,
 }
 
 impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
-    pub fn create() -> Self {
+    pub fn create() -> Result<Self, ShmemError> {
         let shmem = ShmemConf::new()
             .size(size_of::<_MemQueue<QUEUE_SIZE, T>>())
-            .create()
-            .expect("Create `MemQueue` failed at: create shared memory error.");
+            .create()?;
 
-        let ptr = shmem.as_ptr() as *mut _MemQueue<QUEUE_SIZE, T>;
-        Self {
+        Ok(Self {
             shmem: shmem,
-            queue: unsafe { ptr.as_mut().unwrap() },
-        }
+            _type_holder: PhantomData::default(),
+        })
     }
 
-    pub fn create_with_os_id(os_id: &str) -> Self {
+    pub fn create_with_os_id(os_id: &str) -> Result<Self, ShmemError> {
         let shmem = ShmemConf::new()
             .size(size_of::<_MemQueue<QUEUE_SIZE, T>>())
             .os_id(os_id)
-            .create()
-            .expect(
-                format!(
-                    "Create `MemQueue` failed at: create shared memory error, os_id = {}",
-                    os_id
-                )
-                .as_str(),
-            );
+            .create()?;
 
-        let ptr = shmem.as_ptr() as *mut _MemQueue<QUEUE_SIZE, T>;
-        Self {
+        Ok(Self {
             shmem: shmem,
-            queue: unsafe { ptr.as_mut().unwrap() },
-        }
+            _type_holder: PhantomData::default(),
+        })
     }
 
-    pub fn open(os_id: &str) -> Self {
-        let shmem = ShmemConf::new().os_id(os_id).open().expect(
-            format!(
-                "Create `MemQueue` failed at: open shared memory error, id = {}",
-                os_id
-            )
-            .as_str(),
-        );
+    pub fn open(os_id: &str) -> Result<Self, ShmemError> {
+        let shmem = ShmemConf::new().os_id(os_id).open()?;
 
-        let ptr = shmem.as_ptr() as *mut _MemQueue<QUEUE_SIZE, T>;
-        Self {
+        Ok(Self {
             shmem: shmem,
-            queue: unsafe { ptr.as_mut().unwrap() },
-        }
+            _type_holder: PhantomData::default(),
+        })
     }
 
     #[inline]
@@ -116,19 +100,28 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
 
     #[inline]
     pub fn has_event(&self) -> bool {
-        self.queue.has_event()
+        self.queue_mut().has_event()
     }
 
     #[inline]
     pub fn try_read(&self) -> Option<T> {
-        self.queue.try_read()
+        self.queue_mut().try_read()
     }
 
     /// If the queue was full, the event will be aborted.
     #[inline]
-    pub fn try_write(&mut self, evt: T) -> Result<(), MemQueueError> {
-        self.queue.try_write(evt)?;
+    pub fn try_write(&self, evt: T) -> Result<(), MemQueueError> {
+        self.queue_mut().try_write(evt)?;
         Ok(())
+    }
+
+    #[inline]
+    fn queue_mut(&self) -> &'static mut _MemQueue<QUEUE_SIZE, T> {
+        unsafe {
+            (self.shmem.as_ptr() as *mut _MemQueue<QUEUE_SIZE, T>)
+                .as_mut()
+                .unwrap()
+        }
     }
 }
 
@@ -162,7 +155,9 @@ impl MemQueueBuilder {
         self
     }
 
-    pub fn build<const QUEUE_SIZE: usize, T: 'static + Copy>(self) -> MemQueue<QUEUE_SIZE, T> {
+    pub fn build<const QUEUE_SIZE: usize, T: 'static + Copy>(
+        self,
+    ) -> Result<MemQueue<QUEUE_SIZE, T>, ShmemError> {
         match self.build_type {
             BuildType::Create => {
                 if let Some(ref os_id) = self.os_id {

@@ -11,6 +11,7 @@ tlib = { path = "../tlib/" }
 log = "0.4"
 shared_memory = "0.12.4"
 raw_sync = "0.1.5"
+rand = "0.8.5"
 
 [dev-dependencies]
 ctrlc = "3.2.5"

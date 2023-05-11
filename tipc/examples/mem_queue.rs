@@ -6,11 +6,14 @@ use tipc::mem::mem_queue::{BuildType, MemQueue, MemQueueBuilder};
 use tlib::utils::TimeStamp;
 
 const SIZE: usize = 10000;
+const TEXT_SIZE: usize = 4096;
+
 const OS_ID: &'static str = "/mem_queue_04";
+const TEXT: &'static str = "Text from slave.";
 
 #[derive(Debug, Clone, Copy)]
-enum TestEvent {
-    Foo(i32, i32, u128),
+enum Event {
+    Foo(i32, [u8; TEXT_SIZE], u128),
     Bar(bool, u128),
 }
 
@@ -27,10 +30,11 @@ fn main() {
 }
 
 fn master() {
-    let queue: MemQueue<SIZE, TestEvent> = MemQueueBuilder::new()
+    let queue: MemQueue<SIZE, Event> = MemQueueBuilder::new()
         .os_id(OS_ID)
         .build_type(BuildType::Create)
-        .build();
+        .build()
+        .unwrap();
 
     let mut ins = None;
     let mut cnt = 0;
@@ -41,16 +45,19 @@ fn master() {
                 ins = Some(Instant::now());
             }
             if let Some(evt) = queue.try_read() {
-                cnt += 1;
                 match evt {
-                    TestEvent::Foo(a, b, _) => {
-                        assert_eq!(a, 1024);
-                        assert_eq!(b, 48);
+                    Event::Foo(a, b, _) => {
+                        assert_eq!(a, cnt);
+                        let text = String::from_utf8_lossy(&b)
+                            .trim_end_matches('\0')
+                            .to_string();
+                        assert_eq!(text, TEXT);
                     }
-                    TestEvent::Bar(a, _) => {
+                    Event::Bar(a, _) => {
                         assert!(a);
                     }
                 }
+                cnt += 1;
             }
         }
         if ins.is_some() {
@@ -64,10 +71,11 @@ fn master() {
 }
 
 fn slave() {
-    let mut queue: MemQueue<SIZE, TestEvent> = MemQueueBuilder::new()
+    let queue: MemQueue<SIZE, Event> = MemQueueBuilder::new()
         .os_id(OS_ID)
         .build_type(BuildType::Open)
-        .build();
+        .build()
+        .unwrap();
 
     let ins = Instant::now();
     let mut flag = false;
@@ -79,12 +87,14 @@ fn slave() {
             return;
         }
         if flag {
-            if let Ok(_) = queue.try_write(TestEvent::Foo(1024, 48, TimeStamp::timestamp_micros()))
-            {
+            let bytes = TEXT.as_bytes();
+            let mut data = [b'\0'; TEXT_SIZE];
+            data[0..bytes.len()].copy_from_slice(bytes);
+            if let Ok(_) = queue.try_write(Event::Foo(cnt, data, TimeStamp::timestamp_micros())) {
                 cnt += 1;
             }
         } else {
-            if let Ok(_) = queue.try_write(TestEvent::Bar(true, TimeStamp::timestamp_micros())) {
+            if let Ok(_) = queue.try_write(Event::Bar(true, TimeStamp::timestamp_micros())) {
                 cnt += 1;
             }
         }

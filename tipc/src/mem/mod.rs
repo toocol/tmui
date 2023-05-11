@@ -1,23 +1,37 @@
 use std::sync::atomic::AtomicU32;
 
+use crate::ipc_event::InnerIpcEvent;
+
+use self::mem_queue::MemQueueError;
+
 pub mod mem_queue;
 pub mod master_context;
 pub mod slave_context;
 
-pub const IPC_SHARED_MSG_SIZE: usize = 4096;
-pub const IPC_KEY_EVT_SIZE: usize = 8;
-pub const IPC_NATIVE_EVT_SIZE: usize = 1024;
+pub(crate) const IPC_QUEUE_SIZE: usize = 10000;
+
+pub(crate) const IPC_KEY_EVT_SIZE: usize = 8;
+pub(crate) const IPC_NATIVE_EVT_SIZE: usize = 1024;
+pub(crate) const IPC_SHARED_MSG_SIZE: usize = 4096;
+
+pub(crate) const IPC_MEM_PRIMARY_BUFFER_NAME: &'static str = "_mem_primary_buffer_";
+pub(crate) const IPC_MEM_SECONDARY_BUFFER_NAME: &'static str = "_mem_primary_buffer_";
+pub(crate) const IPC_MEM_SHARED_INFO_NAME: &'static str = "_mem_shared_info_";
+pub(crate) const IPC_MEM_MASTER_QUEUE: &'static str = "_mem_master_queue_";
+pub(crate) const IPC_MEM_SLAVE_QUEUE: &'static str = "_mem_slave_queue_";
 
 pub(crate) trait MemContext {
-    fn get_primary_buffer(&self) -> *mut u8;
+    fn primary_buffer(&self) -> *mut u8;
 
-    fn get_secodary_buffer(&self) -> *mut u8;
+    fn secondary_buffer(&self) -> *mut u8;
 
-    fn send_shared_message(&mut self, message: &str, message_type: i32) -> String;
+    fn width(&self) -> u32;
 
-    fn try_recv_shared_message(&self) -> (String, i32);
+    fn height(&self) -> u32;
 
-    fn response_shared_message(&mut self);
+    fn try_send(&self, evt: InnerIpcEvent) -> Result<(), MemQueueError>;
+
+    fn try_recv(&self) -> Vec<InnerIpcEvent>;
 }
 
 #[repr(C)]
@@ -26,11 +40,11 @@ pub(crate) enum SharedMsgSide {
     Slave,
 }
 
-pub(crate) struct SharedMem {
-    width: AtomicU32,
-    height: AtomicU32,
+pub(crate) struct SharedInfo {
+    pub(crate) width: AtomicU32,
+    pub(crate) height: AtomicU32,
 
-    msg_side: SharedMsgSide,
-    shared_msg: [u8; IPC_SHARED_MSG_SIZE],
-    shared_res: [u8; IPC_SHARED_MSG_SIZE],
+    pub(crate) msg_side: SharedMsgSide,
+    pub(crate) shared_msg: [u8; IPC_SHARED_MSG_SIZE],
+    pub(crate) shared_res: [u8; IPC_SHARED_MSG_SIZE],
 }

@@ -2035,6 +2035,7 @@ dependencies = [
  "ctrlc",
  "libc",
  "log",
+ "rand",
  "raw_sync",
  "shared_memory",
  "tlib",

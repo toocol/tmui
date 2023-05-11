@@ -25,22 +25,8 @@ fn ipc_master() {
     let mut ins = None;
 
     loop {
-        while master.has_event() {
-            if ins.is_none() {
-                ins = Some(Instant::now());
-            }
-            match master.try_recv() {
-                IpcEvent::RequestFocusEvent(_, _) => {
-                    cnt += 1;
-                }
-                _ => {}
-            }
-        }
-        if ins.is_some() {
-            if ins.as_ref().unwrap().elapsed() >= Duration::from_secs(1) {
-                println!("IpcMaster receive {} events/per second.", cnt);
-                return;
-            }
+        if ins.is_none() {
+            ins = Some(Instant::now());
         }
         tlib::timer::sleep(Duration::from_micros(10));
     }
@@ -48,12 +34,6 @@ fn ipc_master() {
 
 fn ipc_slave() {
     let slave = IpcSlave::new(NAME);
-    let id = slave.id();
-    ctrlc::set_handler(move || {
-        print!("Prepare terminate shared mem, id = {}", id);
-        IpcSlave::terminate_at(id);
-    })
-    .unwrap();
 
     let mut cnt = 0u64;
     let ins = Instant::now();
@@ -64,9 +44,5 @@ fn ipc_slave() {
             return;
         }
         cnt += 1;
-        slave.send(IpcEvent::RequestFocusEvent(
-            true,
-            TimeStamp::timestamp() as i64,
-        ));
     }
 }
