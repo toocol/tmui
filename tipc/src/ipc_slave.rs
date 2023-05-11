@@ -26,7 +26,7 @@ impl IpcSlave {
         let primary_buffer_raw_pointer = IpcAdapter::get_primary_buffer(id);
         let secondary_buffer_raw_pointer = IpcAdapter::get_secondary_buffer(id);
 
-        let (sender, receiver) = ipc_channel::channel(id, ipc_channel::ChannelType::Slave);
+        let (sender, receiver) = ipc_channel::channel(id, ipc_channel::IpcType::Slave);
 
         Self {
             id,

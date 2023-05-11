@@ -1,7 +1,8 @@
 use crate::ipc_event::{CIpcEvent, IpcEvent};
 use std::{
     ffi::{c_char, c_int, c_longlong, CString},
-    os::raw, time::Duration,
+    os::raw,
+    time::Duration,
 };
 
 pub(crate) struct IpcAdapter;
@@ -32,6 +33,11 @@ impl IpcAdapter {
     #[inline]
     pub fn get_secondary_buffer_master(id: i32) -> *mut u8 {
         unsafe { return get_secondary_buffer_master(id) }
+    }
+
+    #[inline]
+    pub fn master_has_event(id: i32) -> bool {
+        unsafe { return master_has_event(id) }
     }
 
     /// Master send the event.
@@ -326,6 +332,7 @@ extern "C" {
     fn terminate_by_master(id: c_int) -> c_int;
     fn get_primary_buffer_master(id: c_int) -> *mut u8;
     fn get_secondary_buffer_master(id: c_int) -> *mut u8;
+    fn master_has_event(id: c_int) -> bool;
     fn send_event_master(id: c_int, evt: CIpcEvent);
     fn recv_from_slave(id: c_int) -> CIpcEvent;
     fn try_recv_from_slave(id: c_int) -> CIpcEvent;

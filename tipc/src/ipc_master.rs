@@ -22,7 +22,7 @@ impl IpcMaster {
         let primary_buffer_ptr = IpcAdapter::get_primary_buffer_master(id);
         let secondary_buffer_ptr = IpcAdapter::get_secondary_buffer_master(id);
 
-        let (sender, receiver) = ipc_channel::channel(id, ipc_channel::ChannelType::Master);
+        let (sender, receiver) = ipc_channel::channel(id, ipc_channel::IpcType::Master);
 
         Self {
             id,
@@ -78,6 +78,11 @@ impl IpcMaster {
     #[inline]
     pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, IpcError> {
         self.sender.send_shared_message(evt)
+    }
+
+    #[inline]
+    pub fn has_event(&self) -> bool {
+        self.receiver.has_event()
     }
 
     #[inline]

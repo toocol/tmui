@@ -17,10 +17,10 @@ ctrlc = "3.2.5"
 libc = "0.2.144"
 
 [[example]]
-name = "ipc_test"
+name = "ipc_basic"
 dependencies = [
     "ctrlc", "libc"
 ]
 
 [[example]]
-name = "shm_test"
+name = "mem_queue"

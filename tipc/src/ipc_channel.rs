@@ -3,18 +3,18 @@ use log::warn;
 use std::{error::Error, fmt::Display};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub(crate) enum ChannelType {
+pub(crate) enum IpcType {
     Master,
     Slave,
 }
 
 pub(crate) struct IpcSender {
     id: i32,
-    ty: ChannelType,
+    ty: IpcType,
 }
 impl IpcSender {
     #[inline]
-    pub fn new(id: i32, ty: ChannelType) -> Self {
+    pub fn new(id: i32, ty: IpcType) -> Self {
         Self { id, ty }
     }
 
@@ -26,8 +26,8 @@ impl IpcSender {
             return;
         }
         match self.ty {
-            ChannelType::Master => IpcAdapter::send_event_master(self.id, event.into()),
-            ChannelType::Slave => IpcAdapter::send_event_slave(self.id, event.into()),
+            IpcType::Master => IpcAdapter::send_event_master(self.id, event.into()),
+            IpcType::Slave => IpcAdapter::send_event_slave(self.id, event.into()),
         }
     }
 
@@ -37,12 +37,12 @@ impl IpcSender {
     pub fn send_shared_message(&self, event: IpcEvent) -> Result<String, IpcError> {
         match event {
             IpcEvent::SharedMessage(msg, shared_string_type) => match self.ty {
-                ChannelType::Master => Ok(IpcAdapter::send_msg_master(
+                IpcType::Master => Ok(IpcAdapter::send_msg_master(
                     self.id,
                     &msg,
                     shared_string_type,
                 )),
-                ChannelType::Slave => Ok(IpcAdapter::send_msg_slave(
+                IpcType::Slave => Ok(IpcAdapter::send_msg_slave(
                     self.id,
                     &msg,
                     shared_string_type,
@@ -57,20 +57,27 @@ impl IpcSender {
 
 pub(crate) struct IpcReceiver {
     id: i32,
-    ty: ChannelType,
+    ty: IpcType,
 }
 impl IpcReceiver {
     #[inline]
-    pub fn new(id: i32, ty: ChannelType) -> Self {
+    pub fn new(id: i32, ty: IpcType) -> Self {
         Self { id, ty }
+    }
+
+    pub fn has_event(&self) -> bool {
+        match self.ty {
+            IpcType::Master => IpcAdapter::master_has_event(self.id),
+            _ => false
+        }
     }
 
     /// Blocked receive the IpcEvent.
     #[inline]
     pub fn recv(&self) -> IpcEvent {
         match self.ty {
-            ChannelType::Master => IpcAdapter::recv_from_slave(self.id).into(),
-            ChannelType::Slave => IpcAdapter::recv_from_master(self.id).into(),
+            IpcType::Master => IpcAdapter::recv_from_slave(self.id).into(),
+            IpcType::Slave => IpcAdapter::recv_from_master(self.id).into(),
         }
     }
 
@@ -79,22 +86,22 @@ impl IpcReceiver {
     #[inline]
     pub fn try_recv(&self) -> IpcEvent {
         match self.ty {
-            ChannelType::Master => IpcAdapter::try_recv_from_slave(self.id).into(),
-            ChannelType::Slave => IpcAdapter::try_recv_from_master(self.id).into(),
+            IpcType::Master => IpcAdapter::try_recv_from_slave(self.id).into(),
+            IpcType::Slave => IpcAdapter::try_recv_from_master(self.id).into(),
         }
     }
 
     #[inline]
     pub fn try_recv_shared_message(&self) -> Option<String> {
         match self.ty {
-            ChannelType::Master => {
+            IpcType::Master => {
                 if IpcAdapter::master_has_shared_msg(self.id) {
                     Some(IpcAdapter::get_shared_msg_master(self.id))
                 } else {
                     None
                 }
             }
-            ChannelType::Slave => {
+            IpcType::Slave => {
                 if IpcAdapter::slave_has_shared_msg(self.id) {
                     Some(IpcAdapter::get_shared_msg_slave(self.id))
                 } else {
@@ -106,7 +113,7 @@ impl IpcReceiver {
 }
 
 #[inline]
-pub(crate) fn channel(id: i32, ty: ChannelType) -> (IpcSender, IpcReceiver) {
+pub(crate) fn channel(id: i32, ty: IpcType) -> (IpcSender, IpcReceiver) {
     (IpcSender::new(id, ty), IpcReceiver::new(id, ty))
 }
 

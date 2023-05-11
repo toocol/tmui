@@ -6,7 +6,8 @@ const PAYLOAD_INTERVAL: usize = 1;
 
 const FRAME_DURATION: Duration = Duration::from_millis(16);
 const PAYLOAD_RESET_DURATION: Duration = Duration::from_secs(PAYLOAD_INTERVAL as u64);
-const MICRO_10_DURATION: Duration = Duration::from_micros(10);
+const MICROS_10_DURATION: Duration = Duration::from_micros(10);
+const MILLIS_1_DURATION: Duration = Duration::from_millis(1);
 
 /// Execute the cpu sleep strategy depends on program status.
 pub(crate) struct CpuBalance {
@@ -32,8 +33,8 @@ impl CpuBalance {
     #[inline]
     /// SAFETY: This function can only invoke in [`ApplicationBuilder::cpu_payload_threshold()`](tmui::application::ApplicationBuilder::cpu_payload_threshold())
     /// at the step of application generate.
-    pub(crate) fn set_payload_threshold(threshhold: usize) {
-        *Self::payload_threshold() = threshhold;
+    pub(crate) fn set_payload_threshold(threshold: usize) {
+        *Self::payload_threshold() = threshold;
     }
 
     #[inline]
@@ -82,12 +83,12 @@ impl CpuBalance {
         }
 
         if self.high_load {
-            tlib::timer::sleep(MICRO_10_DURATION);
+            tlib::timer::sleep(MICROS_10_DURATION);
         } else if update {
             tlib::timer::sleep(FRAME_DURATION - cost);
         } else {
             let start_time = Instant::now();
-            std::thread::sleep(Duration::from_millis(1) - start_time.elapsed());
+            std::thread::sleep(MILLIS_1_DURATION - start_time.elapsed());
         }
     }
 }
