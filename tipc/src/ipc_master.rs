@@ -1,43 +1,32 @@
 use crate::{
-    ipc_channel::{self, IpcError, IpcReceiver, IpcSender},
     ipc_event::IpcEvent,
-    native::IpcAdapter,
+    mem::{
+        master_context::{self, MasterContext},
+        MemContext,
+    },
 };
 use core::slice;
-use std::ffi::c_void;
+use std::{error::Error, ffi::c_void};
 
 pub struct IpcMaster {
-    id: i32,
     width: usize,
     height: usize,
     primary_buffer_raw_pointer: *mut u8,
     secondary_buffer_raw_pointer: *mut u8,
-    sender: IpcSender,
-    receiver: IpcReceiver,
+    master_context: MasterContext,
 }
 
 impl IpcMaster {
     pub fn new(name: &str, width: u32, height: u32) -> Self {
-        let id = IpcAdapter::create_master_context(name, width as i32, height as i32);
-        let primary_buffer_ptr = IpcAdapter::get_primary_buffer_master(id);
-        let secondary_buffer_ptr = IpcAdapter::get_secondary_buffer_master(id);
-
-        let (sender, receiver) = ipc_channel::channel(id, ipc_channel::ChannelType::Master);
+        let master_context = MasterContext::create(name, width, height);
 
         Self {
-            id,
             width: width as usize,
             height: height as usize,
-            primary_buffer_raw_pointer: primary_buffer_ptr,
-            secondary_buffer_raw_pointer: secondary_buffer_ptr,
-            sender,
-            receiver,
+            primary_buffer_raw_pointer: master_context.primary_buffer(),
+            secondary_buffer_raw_pointer: master_context.secondary_buffer(),
+            master_context: master_context,
         }
-    }
-
-    #[inline]
-    pub fn id(&self) -> i32 {
-        self.id
     }
 
     #[inline]
@@ -71,38 +60,37 @@ impl IpcMaster {
     }
 
     #[inline]
-    pub fn send(&self, evt: IpcEvent) {
-        self.sender.send(evt)
+    pub fn try_send(&self, evt: IpcEvent) {
+        self.master_context.try_send(evt.into()).unwrap()
     }
 
     #[inline]
-    pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, IpcError> {
-        self.sender.send_shared_message(evt)
+    pub fn try_recv(&self) -> Vec<IpcEvent> {
+        self.master_context
+            .try_recv()
+            .into_iter()
+            .map(|e| e.into())
+            .collect()
     }
 
     #[inline]
-    pub fn recv(&self) -> IpcEvent {
-        self.receiver.recv()
-    }
-
-    #[inline]
-    pub fn try_recv(&self) -> IpcEvent {
-        self.receiver.try_recv()
+    pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, Box<dyn Error>> {
+        todo!()
     }
 
     #[inline]
     pub fn try_recv_shared_message(&self) -> Option<String> {
-        self.receiver.try_recv_shared_message()
+        todo!()
     }
 
     #[inline]
     fn terminate(&self) {
-        IpcAdapter::terminate_by_master(self.id);
+        todo!()
     }
 
     #[inline]
     pub fn respose_shared_msg(id: i32, resp: Option<&str>) {
-        IpcAdapter::resp_shared_msg_master(id, if resp.is_some() { resp.unwrap() } else { "" })
+        todo!()
     }
 }
 
