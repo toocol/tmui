@@ -3,12 +3,16 @@ pub(crate) mod window_context;
 pub(crate) mod message;
 pub(crate) mod platform_ipc;
 pub(crate) mod platform_win32;
+pub(crate) mod platform_macos;
 
 use std::sync::mpsc::Sender;
 
 pub use message::*;
 pub(crate) use platform_ipc::*;
+#[cfg(target_os = "windows")]
 pub(crate) use platform_win32::*;
+#[cfg(target_os = "macos")]
+pub(crate) use platform_macos::*;
 use crate::graphics::bitmap::Bitmap;
 
 use self::window_context::WindowContext;
