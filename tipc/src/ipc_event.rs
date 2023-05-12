@@ -1,6 +1,6 @@
-use crate::mem::{IPC_KEY_EVT_SIZE, IPC_NATIVE_EVT_SIZE, IPC_SHARED_MSG_SIZE};
+use crate::mem::{IPC_KEY_EVT_SIZE, IPC_TEXT_EVT_SIZE};
 
-pub enum IpcEvent {
+pub enum IpcEvent<T: 'static + Copy> {
     None,
     /// (characters, key_code, modifier, timestamp)
     KeyPressedEvent(String, i32, i32, u64),
@@ -20,16 +20,15 @@ pub enum IpcEvent {
     MouseWheelEvent(f64, f64, f64, i32, u64),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, u64),
+    /// (text, timestamp)
+    TextEvent(String, u64),
     /// (customize_content, timestamp)
-    NativeEvent(String, u64),
-    /// `NOTICE!!` This message will blocked the thread, until another side was consumed and response this shared message.
-    /// (message, shared_string_type)
-    SharedMessage(String, i32),
+    UserEvent(T, u64),
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum InnerIpcEvent {
+pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     None,
     /// (characters, key_code, modifier, timestamp)
     KeyPressedEvent([u8; IPC_KEY_EVT_SIZE], i32, i32, u64),
@@ -49,15 +48,14 @@ pub(crate) enum InnerIpcEvent {
     MouseWheelEvent(f64, f64, f64, i32, u64),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, u64),
+    /// (text, timestamp)
+    TextEvent([u8; IPC_TEXT_EVT_SIZE], u64),
     /// (customize_content, timestamp)
-    NativeEvent([u8; IPC_NATIVE_EVT_SIZE], u64),
-    /// `NOTICE!!` This message will blocked the thread, until another side was consumed and response this shared message.
-    /// (message, shared_string_type)
-    SharedMessage([u8; IPC_SHARED_MSG_SIZE], i32),
+    UserEvent(T, u64),
 }
 
-impl Into<InnerIpcEvent> for IpcEvent {
-    fn into(self) -> InnerIpcEvent {
+impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
+    fn into(self) -> InnerIpcEvent<T> {
         match self {
             Self::None => InnerIpcEvent::None,
             Self::KeyPressedEvent(a, b, c, d) => {
@@ -97,48 +95,38 @@ impl Into<InnerIpcEvent> for IpcEvent {
             Self::MouseMoveEvent(a, b, c, d) => InnerIpcEvent::MouseMoveEvent(a, b, c, d),
             Self::MouseWheelEvent(a, b, c, d, e) => InnerIpcEvent::MouseWheelEvent(a, b, c, d, e),
             Self::RequestFocusEvent(a, b) => InnerIpcEvent::RequestFocusEvent(a, b),
-            Self::NativeEvent(a, b) => {
+            Self::TextEvent(a, b) => {
                 let bytes = a.as_bytes();
-                if bytes.len() > IPC_NATIVE_EVT_SIZE {
+                if bytes.len() > IPC_TEXT_EVT_SIZE {
                     panic!(
                         "The input string of NativeEvent exceed limit, max: {}, get: {}",
-                        IPC_NATIVE_EVT_SIZE,
+                        IPC_TEXT_EVT_SIZE,
                         bytes.len()
                     )
                 }
-                let mut data = [0u8; IPC_NATIVE_EVT_SIZE];
+                let mut data = [0u8; IPC_TEXT_EVT_SIZE];
                 data[0..bytes.len()].copy_from_slice(bytes);
-                InnerIpcEvent::NativeEvent(data, b)
+                InnerIpcEvent::TextEvent(data, b)
             }
-            Self::SharedMessage(a, b) => {
-                let bytes = a.as_bytes();
-                if bytes.len() > IPC_SHARED_MSG_SIZE {
-                    panic!(
-                        "The input string of NativeEvent exceed limit, max: {}, get: {}",
-                        IPC_SHARED_MSG_SIZE,
-                        bytes.len()
-                    )
-                }
-                let mut data = [0u8; IPC_SHARED_MSG_SIZE];
-                data[0..bytes.len()].copy_from_slice(bytes);
-                InnerIpcEvent::SharedMessage(data, b)
-            }
+            Self::UserEvent(a, b) => InnerIpcEvent::UserEvent(a, b),
         }
     }
 }
 
-impl Into<IpcEvent> for InnerIpcEvent {
-    fn into(self) -> IpcEvent {
+impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
+    fn into(self) -> IpcEvent<T> {
         match self {
             Self::None => IpcEvent::None,
             Self::KeyPressedEvent(a, b, c, d) => {
-                let str = String::from_utf8_lossy(&a)
+                let str = String::from_utf8(a.to_vec())
+                    .unwrap()
                     .trim_end_matches('\0')
                     .to_string();
                 IpcEvent::KeyPressedEvent(str, b, c, d)
             }
             Self::KeyReleasedEvent(a, b, c, d) => {
-                let str = String::from_utf8_lossy(&a)
+                let str = String::from_utf8(a.to_vec())
+                    .unwrap()
                     .trim_end_matches('\0')
                     .to_string();
                 IpcEvent::KeyReleasedEvent(str, b, c, d)
@@ -152,18 +140,13 @@ impl Into<IpcEvent> for InnerIpcEvent {
             Self::MouseMoveEvent(a, b, c, d) => IpcEvent::MouseMoveEvent(a, b, c, d),
             Self::MouseWheelEvent(a, b, c, d, e) => IpcEvent::MouseWheelEvent(a, b, c, d, e),
             Self::RequestFocusEvent(a, b) => IpcEvent::RequestFocusEvent(a, b),
-            Self::NativeEvent(a, b) => {
+            Self::TextEvent(a, b) => {
                 let str = String::from_utf8_lossy(&a)
                     .trim_end_matches('\0')
                     .to_string();
-                IpcEvent::NativeEvent(str, b)
+                IpcEvent::TextEvent(str, b)
             }
-            Self::SharedMessage(a, b) => {
-                let str = String::from_utf8_lossy(&a)
-                    .trim_end_matches('\0')
-                    .to_string();
-                IpcEvent::SharedMessage(str, b)
-            }
+            Self::UserEvent(a, b) => IpcEvent::UserEvent(a, b),
         }
     }
 }

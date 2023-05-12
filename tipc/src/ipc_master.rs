@@ -1,22 +1,19 @@
 use crate::{
     ipc_event::IpcEvent,
-    mem::{
-        master_context::{self, MasterContext},
-        MemContext,
-    },
+    mem::{master_context::MasterContext, mem_queue::MemQueueError, MemContext},
 };
 use core::slice;
 use std::{error::Error, ffi::c_void};
 
-pub struct IpcMaster {
+pub struct IpcMaster<T: 'static + Copy, M: 'static + Copy> {
     width: usize,
     height: usize,
     primary_buffer_raw_pointer: *mut u8,
     secondary_buffer_raw_pointer: *mut u8,
-    master_context: MasterContext,
+    master_context: MasterContext<T, M>,
 }
 
-impl IpcMaster {
+impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
     pub fn new(name: &str, width: u32, height: u32) -> Self {
         let master_context = MasterContext::create(name, width, height);
 
@@ -60,12 +57,12 @@ impl IpcMaster {
     }
 
     #[inline]
-    pub fn try_send(&self, evt: IpcEvent) {
-        self.master_context.try_send(evt.into()).unwrap()
+    pub fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError> {
+        self.master_context.try_send(evt.into())
     }
 
     #[inline]
-    pub fn try_recv(&self) -> Vec<IpcEvent> {
+    pub fn try_recv(&self) -> Vec<IpcEvent<T>> {
         self.master_context
             .try_recv()
             .into_iter()
@@ -74,27 +71,25 @@ impl IpcMaster {
     }
 
     #[inline]
-    pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, Box<dyn Error>> {
-        todo!()
+    pub fn send_request(&self, rqst: M) -> Result<Option<M>, Box<dyn Error>> {
+        self.master_context.send_request(rqst)
     }
 
     #[inline]
-    pub fn try_recv_shared_message(&self) -> Option<String> {
-        todo!()
+    pub fn try_recv_request(&self) -> Option<M> {
+        self.master_context.try_recv_request()
     }
 
     #[inline]
-    fn terminate(&self) {
-        todo!()
+    pub fn respose_request(&self, resp: Option<M>) {
+        self.master_context.response_request(resp)
     }
 
     #[inline]
-    pub fn respose_shared_msg(id: i32, resp: Option<&str>) {
-        todo!()
-    }
+    fn terminate(&self) {}
 }
 
-impl Drop for IpcMaster {
+impl<T: 'static + Copy, M: 'static + Copy> Drop for IpcMaster<T, M> {
     fn drop(&mut self) {
         self.terminate()
     }

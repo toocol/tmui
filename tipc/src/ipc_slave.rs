@@ -1,19 +1,19 @@
-use core::slice;
-use std::{ffi::c_void, error::Error};
-
 use crate::{
-    ipc_event::IpcEvent, mem::{slave_context::SlaveContext, MemContext},
+    ipc_event::IpcEvent,
+    mem::{mem_queue::MemQueueError, slave_context::SlaveContext, MemContext},
 };
+use core::slice;
+use std::{error::Error, ffi::c_void};
 
-pub struct IpcSlave {
+pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
     width: usize,
     height: usize,
     primary_buffer_raw_pointer: *mut u8,
     secondary_buffer_raw_pointer: *mut u8,
-    slave_context: SlaveContext,
+    slave_context: SlaveContext<T, M>,
 }
 
-impl IpcSlave {
+impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
     /// The name should be same with the [`IpcMaster`]
     pub fn new(name: &str) -> Self {
         let slave_context = SlaveContext::open(name);
@@ -60,12 +60,12 @@ impl IpcSlave {
     }
 
     #[inline]
-    pub fn try_send(&self, evt: IpcEvent) {
-        self.slave_context.try_send(evt.into()).unwrap()
+    pub fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError> {
+        self.slave_context.try_send(evt.into())
     }
 
     #[inline]
-    pub fn try_recv(&self) -> Vec<IpcEvent> {
+    pub fn try_recv(&self) -> Vec<IpcEvent<T>> {
         self.slave_context
             .try_recv()
             .into_iter()
@@ -74,22 +74,22 @@ impl IpcSlave {
     }
 
     #[inline]
-    pub fn send_shared_message(&self, evt: IpcEvent) -> Result<String, Box<dyn Error>> {
-        todo!()
+    pub fn send_request(&self, rqst: M) -> Result<Option<M>, Box<dyn Error>> {
+        self.slave_context.send_request(rqst)
     }
 
     #[inline]
-    pub fn try_recv_shared_message(&self) -> Option<String> {
-        todo!()
+    pub fn try_recv_request(&self) -> Option<M> {
+        self.slave_context.try_recv_request()
     }
 
     #[inline]
-    pub fn respose_shared_msg(id: i32, resp: Option<&str>) {
-        todo!()
+    pub fn respose_request(&self, resp: Option<M>) {
+        self.slave_context.response_request(resp)
     }
 
     #[inline]
-    pub fn terminate_at(id: i32) -> bool {
+    pub fn terminate_at(&self) -> bool {
         todo!()
     }
 }
