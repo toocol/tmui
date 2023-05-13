@@ -15,7 +15,7 @@ impl WindowProcess {
 
     pub fn event_handle(
         &self,
-        platform_context: &'static dyn PlatformContext,
+        platform_context: &'static mut dyn PlatformContext,
         window: Window,
         event_loop: EventLoop<Message>,
     ) {

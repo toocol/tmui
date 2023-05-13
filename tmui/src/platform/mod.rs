@@ -66,5 +66,5 @@ pub(crate) trait PlatformContext: 'static {
     fn platform_main(&self, window_context: WindowContext);
 
     /// Redraw the window.
-    fn redraw(&self);
+    fn redraw(&mut self);
 }

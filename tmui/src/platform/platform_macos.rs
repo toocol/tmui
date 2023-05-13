@@ -1,30 +1,57 @@
 #![cfg(target_os = "macos")]
-use std::{ffi::c_void, sync::{mpsc::Sender, atomic::Ordering}};
+use super::{
+    window_context::{OutputSender, WindowContext},
+    window_process, Message, PlatformContext,
+};
+use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
+use cocoa::{
+    appkit::{
+        NSApp, NSApplication, NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular,
+        NSImage, NSImageView, NSView, NSWindow,
+    },
+    base::{id, nil, NO},
+    foundation::NSSize,
+};
+use core_graphics::{
+    base::{kCGImageAlphaLast, kCGRenderingIntentDefault},
+    color_space::{kCGColorSpaceSRGB, CGColorSpace},
+    data_provider::CGDataProvider,
+    image::CGImage,
+};
+use objc::*;
+use std::{
+    ffi::c_void,
+    sync::{atomic::Ordering, mpsc::Sender, Arc},
+};
+use tipc::{ipc_master::IpcMaster, WithIpcMaster};
 use winit::{
     dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
+    platform::macos::WindowExtMacOS,
     window::WindowBuilder,
 };
-use super::{
-    window_context::{OutputSender, WindowContext},
-    Message, PlatformContext, window_process,
-};
-use crate::{graphics::bitmap::Bitmap, application::PLATFORM_CONTEXT};
 
-pub(crate) struct PlatformMacos {
+pub(crate) struct PlatformMacos<T: 'static + Copy, M: 'static + Copy> {
     title: String,
     width: u32,
     height: u32,
 
     front_bitmap: Bitmap,
     back_bitmap: Bitmap,
-    // The memory area of pixels managed by `PlatformWin32`.
+    // The memory area of pixels managed by `PlatformMacos`.
     _front_buffer: Vec<u8>,
     _back_buffer: Vec<u8>,
     input_sender: Option<Sender<Message>>,
+
+    ns_window: Option<id>,
+    ns_image_view: Option<id>,
+    color_space: CGColorSpace,
+
+    // Ipc shared memory context.
+    master: Option<IpcMaster<T, M>>,
 }
 
-impl PlatformMacos {
+impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         let mut front_buffer = vec![0u8; (width * height * 4) as usize];
         let front_bitmap = Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, width, height);
@@ -40,7 +67,11 @@ impl PlatformMacos {
             back_bitmap,
             _front_buffer: front_buffer,
             _back_buffer: back_buffer,
+            ns_window: None,
+            ns_image_view: None,
+            color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
             input_sender: None,
+            master: None,
         }
     }
 
@@ -50,7 +81,7 @@ impl PlatformMacos {
     }
 }
 
-impl PlatformContext for PlatformMacos {
+impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, M> {
     fn title(&self) -> &str {
         &self.title
     }
@@ -88,11 +119,19 @@ impl PlatformContext for PlatformMacos {
     fn create_window(&mut self) -> super::window_context::WindowContext {
         let event_loop = EventLoopBuilder::<Message>::with_user_event().build();
 
+        unsafe {
+            let ns_app = NSApp();
+            ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+        }
+
         let window = WindowBuilder::new()
             .with_title(&self.title)
             .with_inner_size(Size::Physical(PhysicalSize::new(self.width, self.height)))
             .build(&event_loop)
             .unwrap();
+
+        let ns_window = window.ns_window() as id;
+        self.ns_window = Some(ns_window);
 
         let event_loop_proxy = event_loop.create_proxy();
 
@@ -107,12 +146,12 @@ impl PlatformContext for PlatformMacos {
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
-                .as_ref()
+                .as_mut()
                 .expect("`PLATFORM_WIN32` is None.");
 
             if let WindowContext::Default(window, event_loop, _) = window_context {
                 window_process::WindowProcess::new().event_handle(
-                    platform.as_ref(),
+                    platform.as_mut(),
                     window,
                     event_loop,
                 )
@@ -122,5 +161,47 @@ impl PlatformContext for PlatformMacos {
         }
     }
 
-    fn redraw(&self) {}
+    fn redraw(&mut self) {
+        unsafe {
+            let ns_window = self.ns_window.unwrap();
+
+            let content_view = ns_window.contentView();
+            let rect = content_view.bounds();
+
+            // Create the CGImage from memory pixels buffer.
+            let buffer = Arc::new(&self._front_buffer);
+            let data_provider = CGDataProvider::from_buffer(buffer);
+            let cg_image = CGImage::new(
+                self.width as usize,
+                self.height as usize,
+                8,
+                32,
+                self.width as usize * 4,
+                &self.color_space,
+                kCGImageAlphaLast,
+                &data_provider,
+                NO,
+                kCGRenderingIntentDefault,
+            );
+
+            // Create NSImage by CGImage
+            let image_size = NSSize::new(rect.size.width, rect.size.height);
+            let ns_image = NSImage::alloc(nil).initWithSize_(image_size);
+            let ns_image: id = msg_send![ns_image, initWithCGImage:cg_image size:image_size];
+
+            // Set NSImage to NSImageView
+            if self.ns_image_view.is_none() {
+                let ns_image_view = NSImageView::initWithFrame_(NSImageView::alloc(nil), rect);
+                content_view.addSubview_(ns_image_view);
+                self.ns_image_view = Some(ns_image_view);
+            }
+            self.ns_image_view.as_mut().unwrap().setImage_(ns_image);
+        }
+    }
+}
+
+impl<T: 'static + Copy, M: 'static + Copy> WithIpcMaster<T, M> for PlatformMacos<T, M> {
+    fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
+        self.master = Some(master)
+    }
 }

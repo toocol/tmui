@@ -78,7 +78,7 @@ impl PlatformContext for PlatformIpc {
         todo!()
     }
 
-    fn redraw(&self) {
+    fn redraw(&mut self) {
         todo!()
     }
 }

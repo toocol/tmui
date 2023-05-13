@@ -122,12 +122,12 @@ impl<T:'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
-                .as_ref()
+                .as_mut()
                 .expect("`PLATFORM_WIN32` is None.");
 
             if let WindowContext::Default(window, event_loop, _) = window_context {
                 window_process::WindowProcess::new().event_handle(
-                    platform.as_ref(),
+                    platform.as_mut(),
                     window,
                     event_loop,
                 )
@@ -137,7 +137,7 @@ impl<T:'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M
         }
     }
 
-    fn redraw(&self) {
+    fn redraw(&mut self) {
         unsafe {
             let hwnd = self.hwnd.unwrap();
 

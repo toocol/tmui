@@ -2064,11 +2064,16 @@ name = "tmui"
 version = "0.1.0"
 dependencies = [
  "clipboard",
+ "cocoa",
+ "core-foundation",
+ "core-graphics",
  "glutin",
  "hex_color",
  "lazy_static",
  "log",
  "log4rs",
+ "objc",
+ "objc2",
  "once_cell",
  "raw-window-handle",
  "skia-safe",

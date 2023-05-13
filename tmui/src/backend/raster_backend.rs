@@ -13,10 +13,15 @@ pub struct RasterBackend {
 
 impl RasterBackend {
     pub fn new(front: Bitmap, back: Bitmap) -> Box<Self> {
+        #[cfg(target_os = "windows")]
+        let color_type = ColorType::BGRA8888;
+        #[cfg(target_os = "macos")]
+        let color_type = ColorType::RGBA8888;
+
         Box::new(Self {
             image_info: ImageInfo::new(
                 (front.width() as i32, front.height() as i32),
-                ColorType::BGRA8888,
+                color_type,
                 AlphaType::Premul,
                 ColorSpace::new_srgb(),
             ),
