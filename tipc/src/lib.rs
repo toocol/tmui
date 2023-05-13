@@ -76,3 +76,31 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcBuilder<T, M> {
         )
     }
 }
+
+pub trait WithIpcMaster<T: 'static + Copy, M: 'static + Copy> {
+    fn create_ipc_master(name: &'static str, width: u32, height: u32) -> IpcMaster<T, M> {
+        IpcBuilder::<T, M>::with_customize()
+            .name(name)
+            .width(width)
+            .height(height)
+            .master()
+    }
+
+    fn with_ipc_master(&mut self, name: &'static str, width: u32, height: u32) {
+        self.proc_ipc_master(Self::create_ipc_master(name, width, height))
+    }
+
+    fn proc_ipc_master(&mut self, master: IpcMaster<T, M>);
+}
+
+pub trait WithIpcSlave<T: 'static + Copy, M: 'static + Copy> {
+    fn create_ipc_slave(name: &'static str) -> IpcSlave<T, M> {
+        IpcBuilder::<T, M>::with_customize().name(name).slave()
+    }
+
+    fn with_ipc_slave(&mut self, name: &'static str) {
+        self.proc_ipc_slave(Self::create_ipc_slave(name))
+    }
+
+    fn proc_ipc_slave(&mut self, master: IpcSlave<T, M>);
+}

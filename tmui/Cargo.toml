@@ -20,6 +20,7 @@ clipboard = "0.5.0"
 winit = "0.28.3"
 raw_window_handle = { package = "raw-window-handle", version = "0.5" }
 
+[target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.43.0", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",

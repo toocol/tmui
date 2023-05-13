@@ -16,6 +16,7 @@ use crate::{
 use lazy_static::lazy_static;
 use std::{
     cell::RefCell,
+    marker::PhantomData,
     ptr::null_mut,
     sync::{
         atomic::{AtomicPtr, Ordering},
@@ -25,6 +26,7 @@ use std::{
     thread,
     time::Instant,
 };
+use tipc::WithIpcMaster;
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
@@ -54,12 +56,23 @@ pub struct Application {
     platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
 
     on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
+
+    shared_mem_name: Option<&'static str>,
 }
 
 impl Application {
-    /// Get the builder [`ApplicationBuilder`] of `Application`.
-    pub fn builder() -> ApplicationBuilder {
-        ApplicationBuilder::default()
+    /// Get the default builder [`ApplicationBuilder`] of `Application`.
+    pub fn builder() -> ApplicationBuilder<(), ()> {
+        ApplicationBuilder::<(), ()>::new(None)
+    }
+
+    /// Get the shared memory application builder [`ApplicationBuilder`], enable ipc function for application. <br>
+    /// T: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
+    /// M: Generic type for blocked request with response in ipc communication.
+    pub fn shared_builder<T: 'static + Copy, M: 'static + Copy>(
+        shared_mem_name: &'static str,
+    ) -> ApplicationBuilder<T, M> {
+        ApplicationBuilder::<T, M>::new(Some(shared_mem_name))
     }
 
     /// Determine whether the current thread is the UI main thread.
@@ -104,27 +117,26 @@ impl Application {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
     }
 
-    fn startup_initialize(&mut self) {
+    fn startup_initialize<T: 'static + Copy, M: 'static + Copy>(&mut self) {
         let width = self.width;
         let height = self.height;
         let title = &self.title;
         // Create the [`PlatformContext`] based on the platform type specified by the user.
-        let platform_context;
-        match self.platform_type {
-            PlatformType::Ipc => platform_context = PlatformIpc::new(&title, width, height).wrap(),
+        let platform_context = match self.platform_type {
+            PlatformType::Ipc => PlatformIpc::new(&title, width, height).wrap(),
             #[cfg(target_os = "windows")]
             PlatformType::Win32 => {
-                platform_context = PlatformWin32::new(&title, width, height).wrap()
+                let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
+                if let Some(shared_mem_name) = self.shared_mem_name {
+                    platform_context.with_ipc_master(shared_mem_name, self.width, self.height);
+                }
+                platform_context.wrap()
             }
             #[cfg(target_os = "linux")]
-            PlatformType::Linux => {
-                platform_context = PlatformLinux::new(&title, width, height).wrap()
-            }
+            PlatformType::Linux => PlatformLinux::new(&title, width, height).wrap(),
             #[cfg(target_os = "macos")]
-            PlatformType::Macos => {
-                platform_context = PlatformMacos::new(&title, width, height).wrap()
-            }
-        }
+            PlatformType::Macos => PlatformMacos::new(&title, width, height).wrap(),
+        };
         self.platform_context = RefCell::new(Some(platform_context));
         PLATFORM_CONTEXT.store(
             self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>,
@@ -227,16 +239,31 @@ impl Application {
 }
 
 /// The builder to create the [`Application`]
-#[derive(Default)]
-pub struct ApplicationBuilder {
+pub struct ApplicationBuilder<T: 'static + Copy, M: 'static + Copy> {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,
     title: Option<String>,
     width: Option<u32>,
     height: Option<u32>,
+    shared_mem_name: Option<&'static str>,
+    _user_event: PhantomData<T>,
+    _request: PhantomData<M>,
 }
 
-impl ApplicationBuilder {
+impl<T: 'static + Copy, M: 'static + Copy> ApplicationBuilder<T, M> {
+    pub fn new(shared_mem_name: Option<&'static str>) -> Self {
+        Self {
+            platform: None,
+            backend: None,
+            title: None,
+            width: None,
+            height: None,
+            shared_mem_name,
+            _user_event: PhantomData::default(),
+            _request: PhantomData::default(),
+        }
+    }
+
     /// Build the [`Application`]
     pub fn build(self) -> Application {
         let mut app = Application::default();
@@ -250,6 +277,9 @@ impl ApplicationBuilder {
         if let Some(height) = self.height {
             app.height = height
         }
+        if let Some(shared_mem_name) = self.shared_mem_name {
+            app.shared_mem_name = Some(shared_mem_name)
+        }
 
         if let Some(platform) = self.platform {
             app.platform_type = platform
@@ -257,7 +287,7 @@ impl ApplicationBuilder {
         if let Some(backend) = self.backend {
             app.backend_type = backend
         }
-        app.startup_initialize();
+        app.startup_initialize::<T, M>();
         app
     }
 

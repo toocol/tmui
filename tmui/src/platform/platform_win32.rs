@@ -8,13 +8,15 @@ use std::{
     os::raw::c_void,
     sync::{atomic::Ordering, mpsc::Sender},
 };
+use tipc::WithIpcMaster;
+use tipc::ipc_master::IpcMaster;
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 use winit::dpi::{PhysicalSize, Size};
 use winit::event_loop::EventLoopBuilder;
 use winit::platform::windows::WindowExtWindows;
 use winit::window::WindowBuilder;
 
-pub(crate) struct PlatformWin32 {
+pub(crate) struct PlatformWin32<T: 'static + Copy, M: 'static + Copy> {
     title: String,
     width: u32,
     height: u32,
@@ -29,9 +31,12 @@ pub(crate) struct PlatformWin32 {
     // _hins: HINSTANCE,
     hwnd: Option<HWND>,
     input_sender: Option<Sender<Message>>,
+
+    /// Shared memory ipc
+    master: Option<IpcMaster<T, M>>,
 }
 
-impl PlatformWin32 {
+impl<T: 'static + Copy, M: 'static + Copy> PlatformWin32<T, M> {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         let mut front_buffer = vec![0u8; (width * height * 4) as usize];
         let front_bitmap = Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, width, height);
@@ -49,6 +54,7 @@ impl PlatformWin32 {
             _back_buffer: back_buffer,
             hwnd: None,
             input_sender: None,
+            master: None,
         }
     }
 
@@ -58,7 +64,7 @@ impl PlatformWin32 {
     }
 }
 
-impl PlatformContext for PlatformWin32 {
+impl<T:'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M> {
     fn title(&self) -> &str {
         &self.title
     }
@@ -168,5 +174,11 @@ impl PlatformContext for PlatformWin32 {
 
             EndPaint(self.hwnd, &ps);
         }
+    }
+}
+
+impl<T: 'static + Copy, M: 'static + Copy> WithIpcMaster<T, M> for PlatformWin32<T, M> {
+    fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
+        self.master = Some(master)
     }
 }
