@@ -130,8 +130,7 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
             .build(&event_loop)
             .unwrap();
 
-        let ns_window = window.ns_window() as id;
-        self.ns_window = Some(ns_window);
+        self.ns_window = Some(window.ns_window() as id);
 
         let event_loop_proxy = event_loop.create_proxy();
 
@@ -186,7 +185,7 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
 
             // Create NSImage by CGImage
             let image_size = NSSize::new(rect.size.width, rect.size.height);
-            let ns_image = NSImage::alloc(nil).initWithSize_(image_size);
+            let ns_image = NSImage::alloc(nil);
             let ns_image: id = msg_send![ns_image, initWithCGImage:cg_image size:image_size];
 
             // Set NSImage to NSImageView
