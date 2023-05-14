@@ -10,7 +10,7 @@ use cocoa::{
         NSImage, NSImageView, NSView, NSWindow,
     },
     base::{id, nil, NO},
-    foundation::NSSize,
+    foundation::{NSAutoreleasePool, NSSize},
 };
 use core_graphics::{
     base::{kCGImageAlphaLast, kCGRenderingIntentDefault},
@@ -21,7 +21,7 @@ use core_graphics::{
 use objc::*;
 use std::{
     ffi::c_void,
-    sync::{atomic::Ordering, mpsc::Sender, Arc},
+    sync::{atomic::Ordering, mpsc::Sender},
 };
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
 use winit::{
@@ -162,14 +162,14 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
 
     fn redraw(&mut self) {
         unsafe {
+            // Create NSImage by CGImage
             let ns_window = self.ns_window.unwrap();
 
             let content_view = ns_window.contentView();
             let rect = content_view.bounds();
 
             // Create the CGImage from memory pixels buffer.
-            let buffer = Arc::new(&self._front_buffer);
-            let data_provider = CGDataProvider::from_buffer(buffer);
+            let data_provider = CGDataProvider::from_slice(&self._front_buffer);
             let cg_image = CGImage::new(
                 self.width as usize,
                 self.height as usize,
@@ -182,19 +182,22 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
                 NO,
                 kCGRenderingIntentDefault,
             );
+            let cg_img_ref = cg_image.as_ref();
 
-            // Create NSImage by CGImage
             let image_size = NSSize::new(rect.size.width, rect.size.height);
             let ns_image = NSImage::alloc(nil);
-            let ns_image: id = msg_send![ns_image, initWithCGImage:cg_image size:image_size];
+            let ns_image: id = msg_send![ns_image, initWithCGImage:cg_img_ref size:image_size];
 
             // Set NSImage to NSImageView
             if self.ns_image_view.is_none() {
-                let ns_image_view = NSImageView::initWithFrame_(NSImageView::alloc(nil), rect);
+                let ns_image_view =
+                    NSImageView::initWithFrame_(NSImageView::alloc(nil), rect).autorelease();
                 content_view.addSubview_(ns_image_view);
                 self.ns_image_view = Some(ns_image_view);
             }
             self.ns_image_view.as_mut().unwrap().setImage_(ns_image);
+
+            let _: id = msg_send![ns_image, release];
         }
     }
 }
