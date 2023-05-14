@@ -131,7 +131,20 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     }
 
     #[inline]
-    fn try_recv(&self) -> Vec<IpcEvent<T>> {
+    fn has_event(&self) -> bool {
+        self.slave_queue.has_event()
+    }
+
+    #[inline]
+    fn try_recv(&self) -> Option<IpcEvent<T>> {
+        match self.slave_queue.try_read() {
+            Some(ipc_evt) => Some(ipc_evt.into()),
+            None => None
+        }
+    }
+
+    #[inline]
+    fn try_recv_vec(&self) -> Vec<IpcEvent<T>> {
         let mut vec = vec![];
         while self.slave_queue.has_event() {
             if let Some(evt) = self.slave_queue.try_read() {

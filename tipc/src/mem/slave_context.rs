@@ -79,7 +79,7 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
     }
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, M> {
+impl<T: 'static + Copy, M: Copy + 'static> MemContext<T, M> for SlaveContext<T, M> {
     #[inline]
     fn primary_buffer(&self) -> *mut u8 {
         self.primary_buffer.as_ptr()
@@ -106,7 +106,20 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
     }
 
     #[inline]
-    fn try_recv(&self) -> Vec<IpcEvent<T>> {
+    fn has_event(&self) -> bool {
+        self.master_queue.has_event()
+    }
+
+    #[inline]
+    fn try_recv(&self) -> Option<IpcEvent<T>> {
+        match self.master_queue.try_read() {
+            Some(ipc_evt) => Some(ipc_evt.into()),
+            None => None
+        }
+    }
+
+    #[inline]
+    fn try_recv_vec(&self) -> Vec<IpcEvent<T>> {
         let mut vec = vec![];
         while self.master_queue.has_event() {
             if let Some(evt) = self.master_queue.try_read() {

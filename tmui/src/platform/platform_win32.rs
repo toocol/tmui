@@ -61,7 +61,22 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformWin32<T, M> {
 impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M> {
     fn initialize(&mut self) {
         match self.master {
-            Some(ref _master) => {}
+            Some(ref master) => {
+                let front_bitmap = Bitmap::new(
+                    master.primary_buffer_raw_pointer(),
+                    self.width,
+                    self.height,
+                );
+
+                let back_bitmap = Bitmap::new(
+                    master.secondary_buffer_raw_pointer(),
+                    self.width,
+                    self.height,
+                );
+
+                self.front_bitmap = Some(front_bitmap);
+                self.back_bitmap = Some(back_bitmap);
+            }
             None => {
                 let mut front_buffer = vec![0u8; (self.width * self.height * 4) as usize];
                 let front_bitmap =

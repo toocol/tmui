@@ -1,6 +1,10 @@
 use self::mem_queue::MemQueueError;
 use crate::ipc_event::IpcEvent;
-use std::{sync::atomic::{AtomicU32, AtomicBool}, error::Error, fmt::Display};
+use std::{
+    error::Error,
+    fmt::Display,
+    sync::atomic::{AtomicBool, AtomicU32},
+};
 
 pub mod master_context;
 pub mod mem_queue;
@@ -29,7 +33,11 @@ pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
 
     fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError>;
 
-    fn try_recv(&self) -> Vec<IpcEvent<T>>;
+    fn has_event(&self) -> bool;
+
+    fn try_recv(&self) -> Option<IpcEvent<T>>;
+
+    fn try_recv_vec(&self) -> Vec<IpcEvent<T>>;
 
     fn send_request(&self, request: M) -> Result<Option<M>, Box<dyn Error>>;
 

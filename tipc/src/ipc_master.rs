@@ -62,9 +62,19 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
     }
 
     #[inline]
-    pub fn try_recv(&self) -> Vec<IpcEvent<T>> {
+    pub fn has_event(&self) -> bool {
+        self.master_context.has_event()
+    }
+
+    #[inline]
+    pub fn try_recv(&self) -> Option<IpcEvent<T>> {
+        self.master_context.try_recv()
+    }
+
+    #[inline]
+    pub fn try_recv_vec(&self) -> Vec<IpcEvent<T>> {
         self.master_context
-            .try_recv()
+            .try_recv_vec()
             .into_iter()
             .map(|e| e.into())
             .collect()

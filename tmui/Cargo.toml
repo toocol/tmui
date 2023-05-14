@@ -46,3 +46,6 @@ name = "window"
 
 [[example]]
 name = "layout_widget"
+
+[[example]]
+name = "shared_window"
