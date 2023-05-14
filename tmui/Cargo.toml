@@ -47,4 +47,7 @@ name = "window"
 name = "layout_widget"
 
 [[example]]
-name = "shared_window"
+name = "shared_window_master"
+
+[[example]]
+name = "shared_window_slave"

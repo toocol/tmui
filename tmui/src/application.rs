@@ -132,6 +132,7 @@ impl Application {
                     "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
                 );
                 platform_context.with_ipc_slave(shared_mem_name);
+                platform_context.initialize();
                 platform_context.wrap()
             }
             #[cfg(target_os = "windows")]
