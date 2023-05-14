@@ -35,6 +35,9 @@ impl PlatformIpc {
 }
 
 impl PlatformContext for PlatformIpc {
+    fn initialize(&mut self) {
+}
+
     fn title(&self) -> &str {
         &self.title
     }

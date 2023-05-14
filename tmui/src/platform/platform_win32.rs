@@ -8,8 +8,8 @@ use std::{
     os::raw::c_void,
     sync::{atomic::Ordering, mpsc::Sender},
 };
-use tipc::WithIpcMaster;
 use tipc::ipc_master::IpcMaster;
+use tipc::WithIpcMaster;
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 use winit::dpi::{PhysicalSize, Size};
 use winit::event_loop::EventLoopBuilder;
@@ -21,11 +21,11 @@ pub(crate) struct PlatformWin32<T: 'static + Copy, M: 'static + Copy> {
     width: u32,
     height: u32,
 
-    front_bitmap: Bitmap,
-    back_bitmap: Bitmap,
+    front_bitmap: Option<Bitmap>,
+    back_bitmap: Option<Bitmap>,
     // The memory area of pixels managed by `PlatformWin32`.
-    _front_buffer: Vec<u8>,
-    _back_buffer: Vec<u8>,
+    _front_buffer: Option<Vec<u8>>,
+    _back_buffer: Option<Vec<u8>>,
 
     /// The fileds associated with win32
     // _hins: HINSTANCE,
@@ -38,20 +38,14 @@ pub(crate) struct PlatformWin32<T: 'static + Copy, M: 'static + Copy> {
 
 impl<T: 'static + Copy, M: 'static + Copy> PlatformWin32<T, M> {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
-        let mut front_buffer = vec![0u8; (width * height * 4) as usize];
-        let front_bitmap = Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, width, height);
-
-        let mut back_buffer = vec![0u8; (width * height * 4) as usize];
-        let back_bitmap = Bitmap::new(back_buffer.as_mut_ptr() as *mut c_void, width, height);
-
         Self {
             title: title.to_string(),
             width,
             height,
-            front_bitmap,
-            back_bitmap,
-            _front_buffer: front_buffer,
-            _back_buffer: back_buffer,
+            front_bitmap: None,
+            back_bitmap: None,
+            _front_buffer: None,
+            _back_buffer: None,
             hwnd: None,
             input_sender: None,
             master: None,
@@ -64,7 +58,27 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformWin32<T, M> {
     }
 }
 
-impl<T:'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M> {
+impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M> {
+    fn initialize(&mut self) {
+        match self.master {
+            Some(ref _master) => {}
+            None => {
+                let mut front_buffer = vec![0u8; (self.width * self.height * 4) as usize];
+                let front_bitmap =
+                    Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
+
+                let mut back_buffer = vec![0u8; (self.width * self.height * 4) as usize];
+                let back_bitmap =
+                    Bitmap::new(back_buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
+
+                self._front_buffer = Some(front_buffer);
+                self._back_buffer = Some(back_buffer);
+                self.front_bitmap = Some(front_bitmap);
+                self.back_bitmap = Some(back_bitmap);
+            }
+        }
+    }
+
     fn title(&self) -> &str {
         &self.title
     }
@@ -84,11 +98,11 @@ impl<T:'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M
     }
 
     fn front_bitmap(&self) -> Bitmap {
-        self.front_bitmap
+        self.front_bitmap.unwrap()
     }
 
     fn back_bitmap(&self) -> Bitmap {
-        self.back_bitmap
+        self.back_bitmap.unwrap()
     }
 
     fn set_input_sender(&mut self, input_sender: Sender<super::Message>) {

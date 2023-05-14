@@ -35,6 +35,9 @@ pub enum PlatformType {
 /// PlatformContext holding the bitmap of specific memory area to renderering image.
 /// The raw pointer and memory was created by specific platfom, such as win32([`PlatformWin32`]), ipc channel([`PlatformIpc`])
 pub(crate) trait PlatformContext: 'static {
+    /// Initialize the PlatformContext.
+    fn initialize(&mut self);
+
     /// Get the title of platfom.
     fn title(&self) -> &str;
 
