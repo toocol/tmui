@@ -3,12 +3,16 @@ pub(crate) mod window_context;
 pub(crate) mod message;
 pub(crate) mod platform_ipc;
 pub(crate) mod platform_win32;
+pub(crate) mod platform_macos;
 
 use std::sync::mpsc::Sender;
 
 pub use message::*;
 pub(crate) use platform_ipc::*;
+#[cfg(target_os = "windows")]
 pub(crate) use platform_win32::*;
+#[cfg(target_os = "macos")]
+pub(crate) use platform_macos::*;
 use crate::graphics::bitmap::Bitmap;
 
 use self::window_context::WindowContext;
@@ -31,6 +35,9 @@ pub enum PlatformType {
 /// PlatformContext holding the bitmap of specific memory area to renderering image.
 /// The raw pointer and memory was created by specific platfom, such as win32([`PlatformWin32`]), ipc channel([`PlatformIpc`])
 pub(crate) trait PlatformContext: 'static {
+    /// Initialize the PlatformContext.
+    fn initialize(&mut self);
+
     /// Get the title of platfom.
     fn title(&self) -> &str;
 
@@ -62,5 +69,5 @@ pub(crate) trait PlatformContext: 'static {
     fn platform_main(&self, window_context: WindowContext);
 
     /// Redraw the window.
-    fn redraw(&self);
+    fn redraw(&mut self);
 }

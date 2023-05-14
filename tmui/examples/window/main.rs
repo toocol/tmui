@@ -15,7 +15,7 @@ fn main() {
     let app = Application::builder()
         .width(1280)
         .height(800)
-        .title("win32 widnow")
+        .title("widnow")
         .build();
 
     app.connect_activate(build_ui);
