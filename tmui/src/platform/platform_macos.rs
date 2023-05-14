@@ -36,11 +36,11 @@ pub(crate) struct PlatformMacos<T: 'static + Copy, M: 'static + Copy> {
     width: u32,
     height: u32,
 
-    front_bitmap: Bitmap,
-    back_bitmap: Bitmap,
+    front_bitmap: Option<Bitmap>,
+    back_bitmap: Option<Bitmap>,
     // The memory area of pixels managed by `PlatformMacos`.
-    _front_buffer: Vec<u8>,
-    _back_buffer: Vec<u8>,
+    _front_buffer: Option<Vec<u8>>,
+    _back_buffer: Option<Vec<u8>>,
     input_sender: Option<Sender<Message>>,
 
     ns_window: Option<id>,
@@ -53,20 +53,14 @@ pub(crate) struct PlatformMacos<T: 'static + Copy, M: 'static + Copy> {
 
 impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
     pub fn new(title: &str, width: u32, height: u32) -> Self {
-        let mut front_buffer = vec![0u8; (width * height * 4) as usize];
-        let front_bitmap = Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, width, height);
-
-        let mut back_buffer = vec![0u8; (width * height * 4) as usize];
-        let back_bitmap = Bitmap::new(back_buffer.as_mut_ptr() as *mut c_void, width, height);
-
         Self {
             title: title.to_string(),
             width,
             height,
-            front_bitmap,
-            back_bitmap,
-            _front_buffer: front_buffer,
-            _back_buffer: back_buffer,
+            front_bitmap: None,
+            back_bitmap: None,
+            _front_buffer: None,
+            _back_buffer: None,
             ns_window: None,
             ns_image_view: None,
             color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
@@ -82,6 +76,47 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, M> {
+    fn initialize(&mut self) {
+        match self.master {
+            Some(ref master) => {
+                let front_bitmap = Bitmap::new(
+                    master.primary_buffer_raw_pointer(),
+                    self.width,
+                    self.height,
+                );
+
+                let back_bitmap = Bitmap::new(
+                    master.secondary_buffer_raw_pointer(),
+                    self.width,
+                    self.height,
+                );
+
+                self.front_bitmap = Some(front_bitmap);
+                self.back_bitmap = Some(back_bitmap);
+            }
+            None => {
+                let mut front_buffer = vec![0u8; (self.width * self.height * 4) as usize];
+                let front_bitmap = Bitmap::new(
+                    front_buffer.as_mut_ptr() as *mut c_void,
+                    self.width,
+                    self.height,
+                );
+
+                let mut back_buffer = vec![0u8; (self.width * self.height * 4) as usize];
+                let back_bitmap = Bitmap::new(
+                    back_buffer.as_mut_ptr() as *mut c_void,
+                    self.width,
+                    self.height,
+                );
+
+                self._front_buffer = Some(front_buffer);
+                self._back_buffer = Some(back_buffer);
+                self.front_bitmap = Some(front_bitmap);
+                self.back_bitmap = Some(back_bitmap);
+            }
+        }
+    }
+
     fn title(&self) -> &str {
         &self.title
     }
@@ -101,11 +136,11 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
     }
 
     fn front_bitmap(&self) -> Bitmap {
-        self.front_bitmap
+        self.front_bitmap.unwrap()
     }
 
     fn back_bitmap(&self) -> Bitmap {
-        self.back_bitmap
+        self.back_bitmap.unwrap()
     }
 
     fn set_input_sender(&mut self, input_sender: std::sync::mpsc::Sender<super::Message>) {
@@ -169,7 +204,7 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
             let rect = content_view.bounds();
 
             // Create the CGImage from memory pixels buffer.
-            let data_provider = CGDataProvider::from_slice(&self._front_buffer);
+            let data_provider = CGDataProvider::from_slice(self.front_bitmap().get_pixels());
             let cg_image = CGImage::new(
                 self.width as usize,
                 self.height as usize,

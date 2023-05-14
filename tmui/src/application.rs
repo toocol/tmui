@@ -139,6 +139,7 @@ impl Application {
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, width, height)
                 }
+                platform_context.initialize();
                 platform_context.wrap()
             }
             #[cfg(target_os = "macos")]
@@ -147,6 +148,7 @@ impl Application {
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, width, height)
                 }
+                platform_context.initialize();
                 platform_context.wrap()
             }
         };
