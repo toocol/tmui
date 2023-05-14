@@ -23,7 +23,7 @@ use std::{
     ffi::c_void,
     sync::{atomic::Ordering, mpsc::Sender},
 };
-use tipc::{ipc_master::IpcMaster, WithIpcMaster};
+use tipc::{ipc_master::IpcMaster, WithIpcMaster, IpcNode};
 use winit::{
     dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
@@ -49,9 +49,11 @@ pub(crate) struct PlatformMacos<T: 'static + Copy, M: 'static + Copy> {
 
     // Ipc shared memory context.
     master: Option<IpcMaster<T, M>>,
+    user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
+    #[inline]
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         Self {
             title: title.to_string(),
@@ -66,12 +68,21 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
             color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
             input_sender: None,
             master: None,
+            user_ipc_event_sender: None,
         }
     }
 
     // Wrap trait `PlatfomContext` with [`Box`].
+    #[inline]
     pub fn wrap(self) -> Box<dyn PlatformContext> {
         Box::new(self)
+    }
+
+    #[inline]
+    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+        let (sender, receiver) = channel();
+        self.user_ipc_event_sender = Some(sender);
+        receiver
     }
 }
 

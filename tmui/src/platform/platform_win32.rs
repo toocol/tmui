@@ -1,20 +1,26 @@
 #![cfg(target_os = "windows")]
-use super::window_context::{OutputSender, WindowContext};
-use super::Message;
-use super::{window_process, PlatformContext};
+use super::{
+    window_context::{OutputSender, WindowContext},
+    window_process, Message, PlatformContext,
+};
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
 use std::{
     mem::size_of,
     os::raw::c_void,
-    sync::{atomic::Ordering, mpsc::Sender},
+    sync::{
+        atomic::Ordering,
+        mpsc::{channel, Receiver, Sender},
+        Arc,
+    },
 };
-use tipc::ipc_master::IpcMaster;
-use tipc::WithIpcMaster;
+use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
-use winit::dpi::{PhysicalSize, Size};
-use winit::event_loop::EventLoopBuilder;
-use winit::platform::windows::WindowExtWindows;
-use winit::window::WindowBuilder;
+use winit::{
+    dpi::{PhysicalSize, Size},
+    event_loop::EventLoopBuilder,
+    platform::windows::WindowExtWindows,
+    window::WindowBuilder,
+};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy, M: 'static + Copy> {
     title: String,
@@ -33,10 +39,12 @@ pub(crate) struct PlatformWin32<T: 'static + Copy, M: 'static + Copy> {
     input_sender: Option<Sender<Message>>,
 
     /// Shared memory ipc
-    master: Option<IpcMaster<T, M>>,
+    master: Option<Arc<IpcMaster<T, M>>>,
+    user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformWin32<T, M> {
+    #[inline]
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         Self {
             title: title.to_string(),
@@ -49,24 +57,30 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformWin32<T, M> {
             hwnd: None,
             input_sender: None,
             master: None,
+            user_ipc_event_sender: None,
         }
     }
 
     // Wrap trait `PlatfomContext` with [`Box`].
+    #[inline]
     pub fn wrap(self) -> Box<dyn PlatformContext> {
         Box::new(self)
     }
+
+    #[inline]
+    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+        let (sender, receiver) = channel();
+        self.user_ipc_event_sender = Some(sender);
+        receiver
+    }
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext for PlatformWin32<T, M> {
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
-                let front_bitmap = Bitmap::new(
-                    master.primary_buffer_raw_pointer(),
-                    self.width,
-                    self.height,
-                );
+                let front_bitmap =
+                    Bitmap::new(master.primary_buffer_raw_pointer(), self.width, self.height);
 
                 let back_bitmap = Bitmap::new(
                     master.secondary_buffer_raw_pointer(),
@@ -79,12 +93,18 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, 
             }
             None => {
                 let mut front_buffer = vec![0u8; (self.width * self.height * 4) as usize];
-                let front_bitmap =
-                    Bitmap::new(front_buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
+                let front_bitmap = Bitmap::new(
+                    front_buffer.as_mut_ptr() as *mut c_void,
+                    self.width,
+                    self.height,
+                );
 
                 let mut back_buffer = vec![0u8; (self.width * self.height * 4) as usize];
-                let back_bitmap =
-                    Bitmap::new(back_buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
+                let back_bitmap = Bitmap::new(
+                    back_buffer.as_mut_ptr() as *mut c_void,
+                    self.width,
+                    self.height,
+                );
 
                 self._front_buffer = Some(front_buffer);
                 self._back_buffer = Some(back_buffer);
@@ -155,10 +175,11 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, 
                 .expect("`PLATFORM_WIN32` is None.");
 
             if let WindowContext::Default(window, event_loop, _) = window_context {
-                window_process::WindowProcess::new().event_handle(
+                window_process::WindowProcess::new().event_handle::<T, M>(
                     platform.as_mut(),
                     window,
                     event_loop,
+                    self.master.clone()
                 )
             } else {
                 panic!("Invalid window context.")
@@ -206,8 +227,8 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformWin32<T, 
     }
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> WithIpcMaster<T, M> for PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M> for PlatformWin32<T, M> {
     fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
-        self.master = Some(master)
+        self.master = Some(Arc::new(master))
     }
 }

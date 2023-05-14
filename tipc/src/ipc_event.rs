@@ -1,7 +1,14 @@
+use std::time::Instant;
+
+use tlib::prelude::SystemCursorShape;
+
 use crate::mem::{IPC_KEY_EVT_SIZE, IPC_TEXT_EVT_SIZE};
 
 pub enum IpcEvent<T: 'static + Copy> {
     None,
+    Exit,
+    /// The vsync event.
+    VSync(Instant),
     /// (characters, key_code, modifier, timestamp)
     KeyPressedEvent(String, i32, i32, u64),
     /// (characters, key_code, modifier, timestamp)
@@ -20,6 +27,8 @@ pub enum IpcEvent<T: 'static + Copy> {
     MouseWheelEvent(f64, f64, f64, i32, u64),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, u64),
+    /// (system_cursor_shape)
+    SetCursorShape(SystemCursorShape),
     /// (text, timestamp)
     TextEvent(String, u64),
     /// (customize_content, timestamp)
@@ -30,6 +39,9 @@ pub enum IpcEvent<T: 'static + Copy> {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     None,
+    Exit,
+    /// (instant_of_vsync)
+    VSync(Instant),
     /// (characters, key_code, modifier, timestamp)
     KeyPressedEvent([u8; IPC_KEY_EVT_SIZE], i32, i32, u64),
     /// (characters, key_code, modifier, timestamp)
@@ -48,6 +60,8 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     MouseWheelEvent(f64, f64, f64, i32, u64),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, u64),
+    /// (system_cursor_shape)
+    SetCursorShape(SystemCursorShape),
     /// (text, timestamp)
     TextEvent([u8; IPC_TEXT_EVT_SIZE], u64),
     /// (customize_content, timestamp)
@@ -58,6 +72,8 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
     fn into(self) -> InnerIpcEvent<T> {
         match self {
             Self::None => InnerIpcEvent::None,
+            Self::Exit => InnerIpcEvent::Exit,
+            Self::VSync(a) => InnerIpcEvent::VSync(a),
             Self::KeyPressedEvent(a, b, c, d) => {
                 let bytes = a.as_bytes();
                 if bytes.len() > IPC_KEY_EVT_SIZE {
@@ -95,6 +111,7 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
             Self::MouseMoveEvent(a, b, c, d) => InnerIpcEvent::MouseMoveEvent(a, b, c, d),
             Self::MouseWheelEvent(a, b, c, d, e) => InnerIpcEvent::MouseWheelEvent(a, b, c, d, e),
             Self::RequestFocusEvent(a, b) => InnerIpcEvent::RequestFocusEvent(a, b),
+            Self::SetCursorShape(a) => InnerIpcEvent::SetCursorShape(a),
             Self::TextEvent(a, b) => {
                 let bytes = a.as_bytes();
                 if bytes.len() > IPC_TEXT_EVT_SIZE {
@@ -117,6 +134,8 @@ impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
     fn into(self) -> IpcEvent<T> {
         match self {
             Self::None => IpcEvent::None,
+            Self::Exit => IpcEvent::Exit,
+            Self::VSync(a) => IpcEvent::VSync(a),
             Self::KeyPressedEvent(a, b, c, d) => {
                 let str = String::from_utf8(a.to_vec())
                     .unwrap()
@@ -140,6 +159,7 @@ impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
             Self::MouseMoveEvent(a, b, c, d) => IpcEvent::MouseMoveEvent(a, b, c, d),
             Self::MouseWheelEvent(a, b, c, d, e) => IpcEvent::MouseWheelEvent(a, b, c, d, e),
             Self::RequestFocusEvent(a, b) => IpcEvent::RequestFocusEvent(a, b),
+            Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
             Self::TextEvent(a, b) => {
                 let str = String::from_utf8_lossy(&a)
                     .trim_end_matches('\0')

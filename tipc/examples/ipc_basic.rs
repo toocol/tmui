@@ -2,10 +2,10 @@ use std::{
     env,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, IpcBuilder};
+use tipc::{ipc_event::IpcEvent, IpcBuilder, IpcNode};
 use tlib::utils::TimeStamp;
 
-const NAME: &'static str = "_ipc_test_01";
+const NAME: &'static str = "_ipc_test_02";
 const TEXT_SIZE: usize = 1024;
 const REQUEST_TEXT: &'static str = "Request from master.";
 const RESPONSE_TEXT: &'static str = "Reponse from master.";
@@ -43,15 +43,17 @@ fn ipc_master() {
     let mut ins = None;
 
     loop {
-        for evt in master.try_recv().into_iter() {
+        while master.has_event() {
             if ins.is_none() {
                 ins = Some(Instant::now());
             }
+            let evt = master.try_recv().unwrap();
             if let IpcEvent::UserEvent(UserEvent::Test(a), ..) = evt {
                 assert_eq!(a, cnt);
             }
             cnt += 1;
         }
+
         if ins.is_some() {
             if ins.as_ref().unwrap().elapsed() >= Duration::from_secs(1) {
                 println!("IpcMaster receive {} events/per second.", cnt);

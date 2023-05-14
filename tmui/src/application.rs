@@ -14,6 +14,7 @@ use crate::{
     },
 };
 use lazy_static::lazy_static;
+use log::debug;
 use std::{
     cell::RefCell,
     marker::PhantomData,
@@ -26,7 +27,7 @@ use std::{
     thread,
     time::Instant,
 };
-use tipc::WithIpcMaster;
+use tipc::{WithIpcMaster, WithIpcSlave};
 use tlib::{
     actions::{ActionHub, ACTIVATE},
     object::ObjectImpl,
@@ -69,7 +70,7 @@ impl Application {
     /// Get the shared memory application builder [`ApplicationBuilder`], enable ipc function for application. <br>
     /// T: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
     /// M: Generic type for blocked request with response in ipc communication.
-    pub fn shared_builder<T: 'static + Copy, M: 'static + Copy>(
+    pub fn shared_builder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
         shared_mem_name: &'static str,
     ) -> ApplicationBuilder<T, M> {
         ApplicationBuilder::<T, M>::new(Some(shared_mem_name))
@@ -117,13 +118,22 @@ impl Application {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
     }
 
-    fn startup_initialize<T: 'static + Copy, M: 'static + Copy>(&mut self) {
+    fn startup_initialize<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
+        &mut self,
+    ) {
         let width = self.width;
         let height = self.height;
         let title = &self.title;
         // Create the [`PlatformContext`] based on the platform type specified by the user.
         let platform_context = match self.platform_type {
-            PlatformType::Ipc => PlatformIpc::new(&title, width, height).wrap(),
+            PlatformType::Ipc => {
+                let mut platform_context = PlatformIpc::<T, M>::new(&title, width, height);
+                let shared_mem_name = self.shared_mem_name.expect(
+                    "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
+                );
+                platform_context.with_ipc_slave(shared_mem_name);
+                platform_context.wrap()
+            }
             #[cfg(target_os = "windows")]
             PlatformType::Win32 => {
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
@@ -230,13 +240,13 @@ impl Application {
                     20..=24 => time_20_25 += 1,
                     _ => time_25 += 1,
                 }
-                println!(
+                debug!(
                     "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
                     time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
                 );
                 let update = board.invalidate_visual();
                 if update {
-                    window.send_message(Message::VSync);
+                    window.send_message(Message::VSync(Instant::now()));
                     cpu_balance.add_payload();
                 }
                 update
@@ -254,7 +264,7 @@ impl Application {
 }
 
 /// The builder to create the [`Application`]
-pub struct ApplicationBuilder<T: 'static + Copy, M: 'static + Copy> {
+pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,
     title: Option<String>,
@@ -265,7 +275,7 @@ pub struct ApplicationBuilder<T: 'static + Copy, M: 'static + Copy> {
     _request: PhantomData<M>,
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> ApplicationBuilder<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> ApplicationBuilder<T, M> {
     pub fn new(shared_mem_name: Option<&'static str>) -> Self {
         Self {
             platform: None,

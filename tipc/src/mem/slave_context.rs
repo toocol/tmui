@@ -79,7 +79,7 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
     }
 }
 
-impl<T: 'static + Copy, M: Copy + 'static> MemContext<T, M> for SlaveContext<T, M> {
+impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, M> {
     #[inline]
     fn primary_buffer(&self) -> *mut u8 {
         self.primary_buffer.as_ptr()

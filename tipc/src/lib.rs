@@ -1,6 +1,8 @@
+use ipc_event::IpcEvent;
 use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
-use std::marker::PhantomData;
+use mem::mem_queue::MemQueueError;
+use std::{marker::PhantomData, error::Error, ffi::c_void};
 
 pub mod ipc_event;
 pub mod ipc_master;
@@ -102,5 +104,31 @@ pub trait WithIpcSlave<T: 'static + Copy, M: 'static + Copy> {
         self.proc_ipc_slave(Self::create_ipc_slave(name))
     }
 
-    fn proc_ipc_slave(&mut self, master: IpcSlave<T, M>);
+    fn proc_ipc_slave(&mut self, slave: IpcSlave<T, M>);
+}
+
+pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
+    fn primary_buffer(&self) -> &'static mut [u8];
+
+    fn secondary_buffer(&self) -> &'static mut [u8];
+
+    fn primary_buffer_raw_pointer(&self) -> *mut c_void;
+
+    fn secondary_buffer_raw_pointer(&self) -> *mut c_void;
+
+    fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError>;
+
+    fn has_event(&self) -> bool;
+
+    fn try_recv(&self) -> Option<IpcEvent<T>>;
+
+    fn try_recv_vec(&self) -> Vec<IpcEvent<T>>;
+
+    fn send_request(&self, rqst: M) -> Result<Option<M>, Box<dyn Error>>;
+
+    fn try_recv_request(&self) -> Option<M>;
+
+    fn respose_request(&self, resp: Option<M>);
+
+    fn terminate(&self);
 }
