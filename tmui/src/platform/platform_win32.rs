@@ -22,7 +22,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-pub(crate) struct PlatformWin32<T: 'static + Copy, M: 'static + Copy> {
+pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
     width: u32,
     height: u32,

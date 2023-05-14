@@ -21,7 +21,7 @@ use core_graphics::{
 use objc::*;
 use std::{
     ffi::c_void,
-    sync::{atomic::Ordering, mpsc::Sender},
+    sync::{atomic::Ordering, mpsc::{Sender, Receiver, channel}, Arc},
 };
 use tipc::{ipc_master::IpcMaster, WithIpcMaster, IpcNode};
 use winit::{
@@ -31,7 +31,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-pub(crate) struct PlatformMacos<T: 'static + Copy, M: 'static + Copy> {
+pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
     width: u32,
     height: u32,
@@ -48,11 +48,11 @@ pub(crate) struct PlatformMacos<T: 'static + Copy, M: 'static + Copy> {
     color_space: CGColorSpace,
 
     // Ipc shared memory context.
-    master: Option<IpcMaster<T, M>>,
+    master: Option<Arc<IpcMaster<T, M>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformMacos<T, M> {
     #[inline]
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         Self {
@@ -86,7 +86,7 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformMacos<T, M> {
     }
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext for PlatformMacos<T, M> {
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
@@ -199,6 +199,7 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
                     platform.as_mut(),
                     window,
                     event_loop,
+                    self.master.clone()
                 )
             } else {
                 panic!("Invalid window context.")
@@ -248,8 +249,8 @@ impl<T: 'static + Copy, M: 'static + Copy> PlatformContext for PlatformMacos<T, 
     }
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> WithIpcMaster<T, M> for PlatformMacos<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M> for PlatformMacos<T, M> {
     fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
-        self.master = Some(master)
+        self.master = Some(Arc::new(master))
     }
 }
