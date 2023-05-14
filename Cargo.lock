@@ -2073,7 +2073,6 @@ dependencies = [
  "log",
  "log4rs",
  "objc",
- "objc2",
  "once_cell",
  "raw-window-handle",
  "skia-safe",
