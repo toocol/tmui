@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 use super::{
+    shared_channel::{self, SharedChannel},
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
 };
@@ -21,7 +22,7 @@ use core_graphics::{
 use objc::*;
 use std::{
     ffi::c_void,
-    sync::{atomic::Ordering, mpsc::{Sender, Receiver, channel}, Arc},
+    sync::{atomic::Ordering, mpsc::{Sender, channel}, Arc},
 };
 use tipc::{ipc_master::IpcMaster, WithIpcMaster, IpcNode};
 use winit::{
@@ -79,10 +80,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
     }
 
     #[inline]
-    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
         let (sender, receiver) = channel();
         self.user_ipc_event_sender = Some(sender);
-        receiver
+        shared_channel::master_channel(self.master.as_ref().unwrap().clone(), receiver)
     }
 }
 

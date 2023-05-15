@@ -9,6 +9,7 @@ use crate::{
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::{board::Board, cpu_balance::CpuBalance},
     platform::{
+        shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
     },
@@ -20,7 +21,7 @@ use std::{
     marker::PhantomData,
     ptr::null_mut,
     sync::{
-        atomic::{AtomicPtr, Ordering},
+        atomic::{AtomicBool, AtomicPtr, Ordering},
         mpsc::{channel, Receiver},
         Arc,
     },
@@ -38,15 +39,21 @@ use tlib::{
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
-    pub(crate) static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> =
-        AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
 
 pub const FRAME_INTERVAL: u128 = 16000;
+static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 
-#[derive(Default)]
-pub struct Application {
+/// ### The main application of tmui. <br>
+///
+/// For common single process gui application, use [`Application::builder`] <br>
+/// Multile process gui application, use [`Application::shared_builder`] instead to define ipc shared memory UserEvent and Request type. <br>
+///
+/// ### These generic types were used for ipc shared memory application. <br>
+/// `T`: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
+/// `M`: Generic type for blocked request with response in ipc communication.
+pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     width: u32,
     height: u32,
     title: String,
@@ -59,20 +66,22 @@ pub struct Application {
     on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
 
     shared_mem_name: Option<&'static str>,
+    shared_channel: RefCell<Option<SharedChannel<T, M>>>,
 }
 
-impl Application {
+impl Application<(), ()> {
     /// Get the default builder [`ApplicationBuilder`] of `Application`.
     pub fn builder() -> ApplicationBuilder<(), ()> {
         ApplicationBuilder::<(), ()>::new(None)
     }
+}
 
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Application<T, M> {
     /// Get the shared memory application builder [`ApplicationBuilder`], enable ipc function for application. <br>
     /// T: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
     /// M: Generic type for blocked request with response in ipc communication.
-    pub fn shared_builder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
-        shared_mem_name: &'static str,
-    ) -> ApplicationBuilder<T, M> {
+    #[inline]
+    pub fn shared_builder(shared_mem_name: &'static str) -> ApplicationBuilder<T, M> {
         ApplicationBuilder::<T, M>::new(Some(shared_mem_name))
     }
 
@@ -101,12 +110,24 @@ impl Application {
             WindowContext::Default(.., ref mut output) => output.take().unwrap(),
         };
 
-        thread::Builder::new()
+        let shared_channel = self.shared_channel.borrow_mut().take();
+
+        let join = thread::Builder::new()
             .name("tmui-main".to_string())
-            .spawn(move || Self::ui_main(backend_type, output_sender, input_receiver, on_activate))
+            .spawn(move || {
+                Self::ui_main(
+                    backend_type,
+                    output_sender,
+                    input_receiver,
+                    on_activate,
+                    shared_channel,
+                )
+            })
             .unwrap();
 
         platform_context.platform_main(window_context);
+        APP_STOPPED.store(true, Ordering::SeqCst);
+        join.join().unwrap();
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>
@@ -118,12 +139,11 @@ impl Application {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
     }
 
-    fn startup_initialize<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
-        &mut self,
-    ) {
+    fn startup_initialize(&mut self) {
         let width = self.width;
         let height = self.height;
         let title = &self.title;
+        let mut shared_channel = None;
         // Create the [`PlatformContext`] based on the platform type specified by the user.
         let platform_context = match self.platform_type {
             PlatformType::Ipc => {
@@ -133,6 +153,7 @@ impl Application {
                 );
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
+                shared_channel = Some(platform_context.shared_channel());
                 platform_context.wrap()
             }
             #[cfg(target_os = "windows")]
@@ -140,6 +161,7 @@ impl Application {
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, self.width, self.height);
+                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -148,7 +170,8 @@ impl Application {
             PlatformType::Linux => {
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height)
+                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -157,17 +180,18 @@ impl Application {
             PlatformType::Macos => {
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height)
+                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
             }
         };
         self.platform_context = RefCell::new(Some(platform_context));
-        PLATFORM_CONTEXT.store(
-            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>,
-            Ordering::SeqCst,
-        );
+        self.shared_channel = RefCell::new(shared_channel);
+        let ptr =
+            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>;
+        PLATFORM_CONTEXT.store(ptr, Ordering::SeqCst);
     }
 
     fn ui_main(
@@ -175,6 +199,7 @@ impl Application {
         output_sender: OutputSender,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+        _shared_channel: Option<SharedChannel<T, M>>,
     ) {
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
@@ -208,7 +233,6 @@ impl Application {
         store_board(&mut board);
 
         let mut window = ApplicationWindow::new(backend.width() as i32, backend.height() as i32);
-        APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);
@@ -228,6 +252,9 @@ impl Application {
         let mut frame_cnt = 0;
         let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
         loop {
+            if APP_STOPPED.load(Ordering::Relaxed) {
+                break;
+            }
             cpu_balance.loop_start();
             let elapsed = last_frame.elapsed();
 
@@ -264,7 +291,7 @@ impl Application {
     }
 }
 
-/// The builder to create the [`Application`]
+/// The builder to create the [`Application`] <br>
 pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,
@@ -277,7 +304,8 @@ pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> ApplicationBuilder<T, M> {
-    pub fn new(shared_mem_name: Option<&'static str>) -> Self {
+    // Private constructor.
+    fn new(shared_mem_name: Option<&'static str>) -> Self {
         Self {
             platform: None,
             backend: None,
@@ -291,8 +319,22 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Build the [`Application`]
-    pub fn build(self) -> Application {
-        let mut app = Application::default();
+    pub fn build(self) -> Application<T, M> {
+        let mut app = Application {
+            width: Default::default(),
+            height: Default::default(),
+            title: Default::default(),
+
+            platform_type: Default::default(),
+            backend_type: Default::default(),
+
+            platform_context: Default::default(),
+
+            on_activate: Default::default(),
+
+            shared_mem_name: Default::default(),
+            shared_channel: Default::default(),
+        };
 
         if let Some(ref title) = self.title {
             app.title = title.to_string()
@@ -313,7 +355,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         if let Some(backend) = self.backend {
             app.backend_type = backend
         }
-        app.startup_initialize::<T, M>();
+        app.startup_initialize();
         app
     }
 

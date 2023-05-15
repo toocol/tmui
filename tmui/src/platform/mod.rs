@@ -1,3 +1,4 @@
+pub(crate) mod shared_channel;
 pub(crate) mod window_process;
 pub(crate) mod window_context;
 pub(crate) mod message;

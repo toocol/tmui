@@ -711,7 +711,7 @@ impl Into<CursorIcon> for SystemCursorShape {
     fn into(self) -> CursorIcon {
         match self {
             Self::ArrowCursor => CursorIcon::Default,
-            Self::UpArrowCursor => CursorIcon::Arrow,
+            Self::UpArrowCursor => CursorIcon::ContextMenu,
             Self::CrossCursor => CursorIcon::Crosshair,
             Self::WaitCursor => CursorIcon::Wait,
             Self::TextCursor => CursorIcon::Text,
@@ -724,7 +724,7 @@ impl Into<CursorIcon> for SystemCursorShape {
             Self::BlankCursor => panic!("Should use `Window::set_cursor_visible()` instead."),
             Self::SplitVCursor => CursorIcon::RowResize,
             Self::SplitHCursor => CursorIcon::ColResize,
-            Self::PointingHandCursor => CursorIcon::Hand,
+            Self::PointingHandCursor => CursorIcon::Pointer,
             Self::ForbiddenCursor => CursorIcon::NotAllowed,
             Self::WhatsThisCursor => CursorIcon::Help,
             Self::BusyCursor => CursorIcon::Progress,

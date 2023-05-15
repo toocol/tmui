@@ -1,11 +1,13 @@
 use super::{
+    shared_channel::{self, SharedChannel},
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
 };
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
 use std::sync::{
     atomic::Ordering,
-    mpsc::{channel, Sender, Receiver}, Arc,
+    mpsc::{channel, Sender},
+    Arc,
 };
 use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
 
@@ -46,14 +48,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
     }
 
     #[inline]
-    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
         let (sender, receiver) = channel();
         self.user_ipc_event_sender = Some(sender);
-        receiver
+        shared_channel::slave_channel(self.slave.as_ref().unwrap().clone(), receiver)
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext for PlatformIpc<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
+    for PlatformIpc<T, M>
+{
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
         let front_bitmap = Bitmap::new(slave.primary_buffer_raw_pointer(), self.width, self.height);
@@ -129,7 +133,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn redraw(&mut self) {}
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M> for PlatformIpc<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>
+    for PlatformIpc<T, M>
+{
     fn proc_ipc_slave(&mut self, slave: tipc::ipc_slave::IpcSlave<T, M>) {
         self.slave = Some(Arc::new(slave))
     }

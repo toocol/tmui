@@ -1,7 +1,9 @@
 mod layout_widget;
 
 use layout_widget::LayoutWidget;
-use tmui::{application::Application, application_window::ApplicationWindow, widget::WidgetImplExt};
+use tmui::{
+    application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
+};
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();

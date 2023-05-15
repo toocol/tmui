@@ -3,12 +3,12 @@ use tmui::{application::Application, application_window::ApplicationWindow, plat
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "SharedWindow04";
+pub const IPC_NAME: &'static str = "SharedWindow";
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
 
-    let app = Application::shared_builder::<(), ()>(IPC_NAME)
+    let app = Application::<(), ()>::shared_builder(IPC_NAME)
         .width(1280)
         .height(800)
         .title("Shared Window")

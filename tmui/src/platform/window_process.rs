@@ -1,18 +1,13 @@
+use super::{Message, PlatformContext};
+use log::debug;
 use std::{
     sync::{mpsc::Receiver, Arc},
     thread,
     time::Duration,
 };
-use super::{Message, PlatformContext};
-use log::debug;
-use tipc::{
-    ipc_event::IpcEvent,
-    ipc_master::IpcMaster,
-    ipc_slave::IpcSlave,
-    IpcNode,
-};
+use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
 use tlib::prelude::SystemCursorShape;
-use winit::{
+use crate::winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::Window,
@@ -44,9 +39,19 @@ impl WindowProcess {
                 for evt in master.try_recv_vec() {
                     match evt {
                         IpcEvent::VSync(ins) => {
-                            println!("Ipc vsync track: {}ms", ins.elapsed().as_micros() as f64 / 1000.);
+                            println!(
+                                "Ipc vsync track: {}ms",
+                                ins.elapsed().as_micros() as f64 / 1000.
+                            );
                             window.request_redraw();
                         }
+                        IpcEvent::SetCursorShape(cursor) => match cursor {
+                            SystemCursorShape::BlankCursor => window.set_cursor_visible(false),
+                            _ => {
+                                window.set_cursor_visible(true);
+                                window.set_cursor_icon(cursor.into())
+                            }
+                        },
                         _ => {}
                     }
                 }
@@ -58,6 +63,9 @@ impl WindowProcess {
                     ..
                 } => {
                     println!("The close button was pressed; stopping");
+                    if let Some(master) = ipc_master.clone() {
+                        master.try_send(IpcEvent::Exit).unwrap();
+                    }
                     control_flow.set_exit();
                 }
                 Event::UserEvent(Message::VSync(ins)) => {

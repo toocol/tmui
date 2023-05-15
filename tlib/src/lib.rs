@@ -19,6 +19,9 @@ pub use types::Type;
 pub mod tokio {
     pub use tokio::*;
 }
+pub mod winit {
+    pub use winit::*;
+}
 
 #[cfg(test)]
 mod tests {

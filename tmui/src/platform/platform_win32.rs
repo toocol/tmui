@@ -1,7 +1,14 @@
 #![cfg(target_os = "windows")]
 use super::{
+    shared_channel::{self, SharedChannel},
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
+};
+use crate::winit::{
+    dpi::{PhysicalSize, Size},
+    event_loop::EventLoopBuilder,
+    platform::windows::WindowExtWindows,
+    window::WindowBuilder,
 };
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
 use std::{
@@ -9,18 +16,12 @@ use std::{
     os::raw::c_void,
     sync::{
         atomic::Ordering,
-        mpsc::{channel, Receiver, Sender},
+        mpsc::{channel, Sender},
         Arc,
     },
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
-use winit::{
-    dpi::{PhysicalSize, Size},
-    event_loop::EventLoopBuilder,
-    platform::windows::WindowExtWindows,
-    window::WindowBuilder,
-};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -68,14 +69,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
     }
 
     #[inline]
-    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
         let (sender, receiver) = channel();
         self.user_ipc_event_sender = Some(sender);
-        receiver
+        shared_channel::master_channel(self.master.as_ref().unwrap().clone(), receiver)
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext for PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
+    for PlatformWin32<T, M>
+{
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
@@ -179,7 +182,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     platform.as_mut(),
                     window,
                     event_loop,
-                    self.master.clone()
+                    self.master.clone(),
                 )
             } else {
                 panic!("Invalid window context.")
@@ -227,7 +230,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M> for PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M>
+    for PlatformWin32<T, M>
+{
     fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
         self.master = Some(Arc::new(master))
     }
