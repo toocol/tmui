@@ -17,6 +17,7 @@ use crate::{
 use lazy_static::lazy_static;
 use log::debug;
 use std::{
+    any::Any,
     cell::RefCell,
     marker::PhantomData,
     ptr::null_mut,
@@ -25,7 +26,8 @@ use std::{
         mpsc::{channel, Receiver},
         Arc,
     },
-    time::Instant, thread,
+    thread,
+    time::Instant,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
 use tlib::{
@@ -39,9 +41,15 @@ lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
 }
-thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
+thread_local! {
+    static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
+    static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
+}
 
 pub const FRAME_INTERVAL: u128 = 16000;
+
+const INVALID_GENERIC_PARAM_ERROR: &'static str =
+    "Invalid generic parameters, please use generic parameter defined on Application.";
 static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 
 /// ### The main application of tmui. <br>
@@ -203,7 +211,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         output_sender: OutputSender,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-        _shared_channel: Option<SharedChannel<T, M>>,
+        shared_channel: Option<SharedChannel<T, M>>,
     ) {
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
@@ -250,6 +258,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         window.window_layout_change();
         window.activate();
 
+        if let Some(shared_channel) = shared_channel {
+            SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
+        }
+
         let mut cpu_balance = CpuBalance::new();
         let mut last_frame = Instant::now();
         let mut update = true;
@@ -292,6 +304,34 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             cpu_balance.payload_check();
             cpu_balance.sleep(update);
         }
+    }
+
+    #[inline]
+    pub fn send_user_event(evt: T) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.send_user_event(evt)
+            }
+        });
+    }
+
+    #[inline]
+    pub fn send_request(rqst: M) -> Option<M> {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.send_request(rqst)
+            } else {
+                None
+            }
+        })
     }
 }
 

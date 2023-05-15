@@ -15,7 +15,6 @@ pub(crate) use platform_ipc::*;
 pub(crate) use platform_macos::*;
 #[cfg(target_os = "windows")]
 pub(crate) use platform_win32::*;
-use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave};
 
 use self::window_context::WindowContext;
 
@@ -82,26 +81,4 @@ pub(crate) trait PlatformContext: 'static {
     ///
     /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
     fn signal(&self);
-}
-
-pub(crate) struct WindowIpcContext<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>
-{
-    master: Option<IpcMaster<T, M>>,
-    slave: Option<IpcSlave<T, M>>,
-}
-
-pub(crate) trait WindowIpcContextCreator<
-    T: 'static + Copy + Sync + Send,
-    M: 'static + Copy + Sync + Send,
->
-{
-    fn open_window_ipc_context(&self) -> WindowIpcContext<T, M>;
-}
-
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WindowIpcContextCreator<T, M>
-    for dyn PlatformContext
-{
-    fn open_window_ipc_context(&self) -> WindowIpcContext<T, M> {
-        todo!()
-    }
 }

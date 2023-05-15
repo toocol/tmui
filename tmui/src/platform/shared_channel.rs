@@ -59,7 +59,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedSen
     }
 
     #[inline]
-    fn send_user_event(&self, user_evt: T) {
+    pub(crate) fn send_user_event(&self, user_evt: T) {
         match self.ty {
             SharedType::Master => self
                 .master
@@ -77,7 +77,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedSen
     }
 
     #[inline]
-    fn send_request(&self, request: M) -> Option<M> {
+    pub(crate) fn send_request(&self, request: M) -> Option<M> {
         match self.ty {
             SharedType::Master => self.master.as_ref().unwrap().send_request(request).unwrap(),
             SharedType::Slave => self.slave.as_ref().unwrap().send_request(request).unwrap(),
@@ -85,7 +85,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedSen
     }
 
     #[inline]
-    fn response_request(&self, resp: Option<M>) {
+    pub(crate) fn resp_request(&self, resp: Option<M>) {
         match self.ty {
             SharedType::Master => self.master.as_ref().unwrap().respose_request(resp),
             SharedType::Slave => self.slave.as_ref().unwrap().respose_request(resp),
@@ -121,7 +121,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedRec
     }
 
     #[inline]
-    fn receive_user_event_vec(&self) -> Vec<T> {
+    pub(crate) fn receive_user_event_vec(&self) -> Vec<T> {
         let mut vec = vec![];
         while let Ok(mut evts) = self.user_event_receiver.try_recv() {
             vec.append(&mut evts);
@@ -130,7 +130,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedRec
     }
 
     #[inline]
-    fn receive_request(&self) -> Option<M> {
+    pub(crate) fn receive_request(&self) -> Option<M> {
         match self.ty {
             SharedType::Master => self.master.as_ref().unwrap().try_recv_request(),
             SharedType::Slave => self.slave.as_ref().unwrap().try_recv_request(),
