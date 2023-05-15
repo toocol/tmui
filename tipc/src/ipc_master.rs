@@ -106,4 +106,14 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
 
     #[inline]
     fn terminate(&self) {}
+
+    #[inline]
+    fn wait(&self) {
+        self.master_context.wait()
+    }
+
+    #[inline]
+    fn signal(&self) {
+        self.master_context.signal()
+    }
 }

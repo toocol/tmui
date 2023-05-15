@@ -16,11 +16,8 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use log::debug;
-use once_cell::sync::Lazy;
 use std::{
-    any::Any,
     cell::RefCell,
-    collections::HashMap,
     marker::PhantomData,
     ptr::null_mut,
     sync::{
@@ -28,8 +25,7 @@ use std::{
         mpsc::{channel, Receiver},
         Arc,
     },
-    thread::{self, ThreadId},
-    time::Instant,
+    time::Instant, thread,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
 use tlib::{
@@ -42,11 +38,8 @@ use tlib::{
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
-    pub(crate) static ref SHARED_CHANNELS: AtomicPtr<Box<dyn Any>> = AtomicPtr::new(null_mut());
 }
 thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
-
-type SharedChannelMap<T, M> = HashMap<ThreadId, SharedChannel<T, M>>;
 
 pub const FRAME_INTERVAL: u128 = 16000;
 static APP_STOPPED: AtomicBool = AtomicBool::new(false);
@@ -79,18 +72,6 @@ impl Application<(), ()> {
     /// Get the default builder [`ApplicationBuilder`] of `Application`.
     pub fn builder() -> ApplicationBuilder<(), ()> {
         ApplicationBuilder::<(), ()>::new(None)
-    }
-}
-
-fn shared_channels<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
-) -> &'static mut SharedChannelMap<T, M> {
-    unsafe {
-        SHARED_CHANNELS
-            .load(Ordering::SeqCst)
-            .as_mut()
-            .unwrap()
-            .downcast_mut::<SharedChannelMap<T, M>>()
-            .unwrap()
     }
 }
 
@@ -129,11 +110,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         };
 
         let shared_channel = self.shared_channel.borrow_mut().take();
-        let mut shared_channels: Box<SharedChannelMap<T, M>> = Box::new(HashMap::new());
-        SHARED_CHANNELS.store(
-            &mut shared_channels as *mut Box<SharedChannelMap<T, M>> as *mut Box<dyn Any>,
-            Ordering::SeqCst,
-        );
 
         let join = thread::Builder::new()
             .name("tmui-main".to_string())
@@ -151,6 +127,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         platform_context.platform_main(window_context);
         APP_STOPPED.store(true, Ordering::SeqCst);
         join.join().unwrap();
+
+        PLATFORM_CONTEXT.store(null_mut(), Ordering::SeqCst);
+        if self.platform_type == PlatformType::Ipc {
+            platform_context.signal();
+        }
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>
@@ -222,7 +203,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         output_sender: OutputSender,
         _input_receiver: Receiver<Message>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-        shared_channel: Option<SharedChannel<T, M>>,
+        _shared_channel: Option<SharedChannel<T, M>>,
     ) {
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
@@ -268,11 +249,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         window.initialize();
         window.window_layout_change();
         window.activate();
-
-        if let Some(shared_channel) = shared_channel {
-            let shared_channel_map = shared_channels::<T, M>();
-            shared_channel_map.insert(thread::current().id(), shared_channel);
-        }
 
         let mut cpu_balance = CpuBalance::new();
         let mut last_frame = Instant::now();
@@ -347,8 +323,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Build the [`Application`]
-    pub fn build(self) -> Box<Application<T, M>> {
-        let mut app = Box::new(Application {
+    pub fn build(self) -> Application<T, M> {
+        let mut app = Application {
             width: Default::default(),
             height: Default::default(),
             title: Default::default(),
@@ -358,7 +334,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             on_activate: Default::default(),
             shared_mem_name: Default::default(),
             shared_channel: Default::default(),
-        });
+        };
 
         if let Some(ref title) = self.title {
             app.title = title.to_string()

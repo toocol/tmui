@@ -65,6 +65,7 @@ impl WindowProcess {
                     println!("The close button was pressed; stopping");
                     if let Some(master) = ipc_master.clone() {
                         master.try_send(IpcEvent::Exit).unwrap();
+                        platform_context.wait();
                     }
                     control_flow.set_exit();
                 }

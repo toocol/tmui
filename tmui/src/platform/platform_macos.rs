@@ -129,36 +129,44 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
     fn title(&self) -> &str {
         &self.title
     }
 
+    #[inline]
     fn width(&self) -> u32 {
         self.width
     }
 
+    #[inline]
     fn height(&self) -> u32 {
         self.height
     }
 
+    #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
         todo!()
     }
 
+    #[inline]
     fn front_bitmap(&self) -> Bitmap {
         self.front_bitmap.unwrap()
     }
 
+    #[inline]
     fn back_bitmap(&self) -> Bitmap {
         self.back_bitmap.unwrap()
     }
 
+    #[inline]
     fn set_input_sender(&mut self, input_sender: std::sync::mpsc::Sender<super::Message>) {
         self.input_sender = Some(input_sender)
     }
 
+    #[inline]
     fn input_sender(&self) -> &std::sync::mpsc::Sender<super::Message> {
         self.input_sender.as_ref().unwrap()
     }
@@ -246,6 +254,20 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             self.ns_image_view.as_mut().unwrap().setImage_(ns_image);
 
             let _: id = msg_send![ns_image, release];
+        }
+    }
+
+    #[inline]
+    fn wait(&self) {
+        if let Some(ref master) = self.master {
+            master.wait()
+        }
+    }
+
+    #[inline]
+    fn signal(&self) {
+        if let Some(ref master) = self.master {
+            master.signal()
         }
     }
 }

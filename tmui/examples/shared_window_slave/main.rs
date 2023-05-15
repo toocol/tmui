@@ -3,7 +3,7 @@ use tmui::{application::Application, application_window::ApplicationWindow, plat
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "SharedWindow";
+pub const IPC_NAME: &'static str = "shared_mem";
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();

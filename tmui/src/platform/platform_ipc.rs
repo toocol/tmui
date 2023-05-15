@@ -72,40 +72,49 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.back_bitmap = Some(back_bitmap);
     }
 
+    #[inline]
     fn title(&self) -> &str {
         &self.title
     }
 
+    #[inline]
     fn width(&self) -> u32 {
         self.width
     }
 
+    #[inline]
     fn height(&self) -> u32 {
         self.height
     }
 
+    #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
         todo!()
     }
 
+    #[inline]
     fn front_bitmap(&self) -> Bitmap {
         self.front_bitmap.unwrap()
     }
 
+    #[inline]
     fn back_bitmap(&self) -> Bitmap {
         self.back_bitmap.unwrap()
     }
 
+    #[inline]
     fn set_input_sender(&mut self, input_sender: Sender<Message>) {
         self.input_sender = Some(input_sender);
     }
 
+    #[inline]
     fn input_sender(&self) -> &Sender<Message> {
         self.input_sender.as_ref().unwrap()
     }
 
+    #[inline]
     fn create_window(&mut self) -> WindowContext {
         let (output_sender, output_receiver) = channel::<Message>();
         WindowContext::Ipc(output_receiver, Some(OutputSender::Sender(output_sender)))
@@ -131,6 +140,20 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     fn redraw(&mut self) {}
+
+    #[inline]
+    fn wait(&self) {
+        if let Some(ref slave) = self.slave {
+            slave.wait()
+        }
+    }
+
+    #[inline]
+    fn signal(&self) {
+        if let Some(ref slave) = self.slave {
+            slave.signal()
+        }
+    }
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>

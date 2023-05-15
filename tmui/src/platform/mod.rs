@@ -1,20 +1,21 @@
-pub(crate) mod shared_channel;
-pub(crate) mod window_process;
-pub(crate) mod window_context;
 pub(crate) mod message;
 pub(crate) mod platform_ipc;
-pub(crate) mod platform_win32;
 pub(crate) mod platform_macos;
+pub(crate) mod platform_win32;
+pub(crate) mod shared_channel;
+pub(crate) mod window_context;
+pub(crate) mod window_process;
 
 use std::sync::mpsc::Sender;
 
+use crate::graphics::bitmap::Bitmap;
 pub use message::*;
 pub(crate) use platform_ipc::*;
-#[cfg(target_os = "windows")]
-pub(crate) use platform_win32::*;
 #[cfg(target_os = "macos")]
 pub(crate) use platform_macos::*;
-use crate::graphics::bitmap::Bitmap;
+#[cfg(target_os = "windows")]
+pub(crate) use platform_win32::*;
+use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave};
 
 use self::window_context::WindowContext;
 
@@ -71,4 +72,36 @@ pub(crate) trait PlatformContext: 'static {
 
     /// Redraw the window.
     fn redraw(&mut self);
+
+    /// Only avalid on shared_memory was opened.
+    ///
+    /// wait until another process was invoke [`PlatformContext::signal`]
+    fn wait(&self);
+
+    /// Only avalid on shared_memory was opened.
+    ///
+    /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
+    fn signal(&self);
+}
+
+pub(crate) struct WindowIpcContext<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>
+{
+    master: Option<IpcMaster<T, M>>,
+    slave: Option<IpcSlave<T, M>>,
+}
+
+pub(crate) trait WindowIpcContextCreator<
+    T: 'static + Copy + Sync + Send,
+    M: 'static + Copy + Sync + Send,
+>
+{
+    fn open_window_ipc_context(&self) -> WindowIpcContext<T, M>;
+}
+
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WindowIpcContextCreator<T, M>
+    for dyn PlatformContext
+{
+    fn open_window_ipc_context(&self) -> WindowIpcContext<T, M> {
+        todo!()
+    }
 }

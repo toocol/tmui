@@ -105,4 +105,14 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M>
 
     #[inline]
     fn terminate(&self) {}
+
+    #[inline]
+    fn wait(&self) {
+        self.slave_context.wait()
+    }
+
+    #[inline]
+    fn signal(&self) {
+        self.slave_context.signal()
+    }
 }
