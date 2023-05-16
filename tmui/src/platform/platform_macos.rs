@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 use super::{
+    shared_channel::{self, SharedChannel},
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
 };
@@ -21,7 +22,7 @@ use core_graphics::{
 use objc::*;
 use std::{
     ffi::c_void,
-    sync::{atomic::Ordering, mpsc::{Sender, Receiver, channel}, Arc},
+    sync::{atomic::Ordering, mpsc::{Sender, channel}, Arc},
 };
 use tipc::{ipc_master::IpcMaster, WithIpcMaster, IpcNode};
 use winit::{
@@ -79,10 +80,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
     }
 
     #[inline]
-    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
         let (sender, receiver) = channel();
         self.user_ipc_event_sender = Some(sender);
-        receiver
+        shared_channel::master_channel(self.master.as_ref().unwrap().clone(), receiver)
     }
 }
 
@@ -128,36 +129,44 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
     fn title(&self) -> &str {
         &self.title
     }
 
+    #[inline]
     fn width(&self) -> u32 {
         self.width
     }
 
+    #[inline]
     fn height(&self) -> u32 {
         self.height
     }
 
+    #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
         todo!()
     }
 
+    #[inline]
     fn front_bitmap(&self) -> Bitmap {
         self.front_bitmap.unwrap()
     }
 
+    #[inline]
     fn back_bitmap(&self) -> Bitmap {
         self.back_bitmap.unwrap()
     }
 
+    #[inline]
     fn set_input_sender(&mut self, input_sender: std::sync::mpsc::Sender<super::Message>) {
         self.input_sender = Some(input_sender)
     }
 
+    #[inline]
     fn input_sender(&self) -> &std::sync::mpsc::Sender<super::Message> {
         self.input_sender.as_ref().unwrap()
     }
@@ -187,7 +196,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         )
     }
 
-    fn platform_main(&self, window_context: super::window_context::WindowContext) {
+    fn platform_main(&mut self, window_context: super::window_context::WindowContext) {
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
@@ -245,6 +254,20 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             self.ns_image_view.as_mut().unwrap().setImage_(ns_image);
 
             let _: id = msg_send![ns_image, release];
+        }
+    }
+
+    #[inline]
+    fn wait(&self) {
+        if let Some(ref master) = self.master {
+            master.wait()
+        }
+    }
+
+    #[inline]
+    fn signal(&self) {
+        if let Some(ref master) = self.master {
+            master.signal()
         }
     }
 }

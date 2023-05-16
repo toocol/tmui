@@ -1,7 +1,14 @@
 #![cfg(target_os = "windows")]
 use super::{
+    shared_channel::{self, SharedChannel},
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
+};
+use crate::winit::{
+    dpi::{PhysicalSize, Size},
+    event_loop::EventLoopBuilder,
+    platform::windows::WindowExtWindows,
+    window::WindowBuilder,
 };
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
 use std::{
@@ -9,18 +16,12 @@ use std::{
     os::raw::c_void,
     sync::{
         atomic::Ordering,
-        mpsc::{channel, Receiver, Sender},
+        mpsc::{channel, Sender},
         Arc,
     },
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
-use winit::{
-    dpi::{PhysicalSize, Size},
-    event_loop::EventLoopBuilder,
-    platform::windows::WindowExtWindows,
-    window::WindowBuilder,
-};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -68,14 +69,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
     }
 
     #[inline]
-    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
         let (sender, receiver) = channel();
         self.user_ipc_event_sender = Some(sender);
-        receiver
+        shared_channel::master_channel(self.master.as_ref().unwrap().clone(), receiver)
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext for PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
+    for PlatformWin32<T, M>
+{
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
@@ -114,36 +117,44 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
     fn title(&self) -> &str {
         &self.title
     }
 
+    #[inline]
     fn width(&self) -> u32 {
         self.width
     }
 
+    #[inline]
     fn height(&self) -> u32 {
         self.height
     }
 
+    #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
         todo!()
     }
 
+    #[inline]
     fn front_bitmap(&self) -> Bitmap {
         self.front_bitmap.unwrap()
     }
 
+    #[inline]
     fn back_bitmap(&self) -> Bitmap {
         self.back_bitmap.unwrap()
     }
 
+    #[inline]
     fn set_input_sender(&mut self, input_sender: Sender<super::Message>) {
         self.input_sender = Some(input_sender)
     }
 
+    #[inline]
     fn input_sender(&self) -> &Sender<Message> {
         self.input_sender.as_ref().unwrap()
     }
@@ -167,7 +178,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         )
     }
 
-    fn platform_main(&self, window_context: WindowContext) {
+    fn platform_main(&mut self, window_context: WindowContext) {
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
@@ -179,7 +190,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     platform.as_mut(),
                     window,
                     event_loop,
-                    self.master.clone()
+                    self.master.clone(),
+                    self.user_ipc_event_sender.take()
                 )
             } else {
                 panic!("Invalid window context.")
@@ -225,9 +237,25 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             EndPaint(self.hwnd, &ps);
         }
     }
+
+    #[inline]
+    fn wait(&self) {
+        if let Some(ref master) = self.master {
+            master.wait()
+        }
+    }
+
+    #[inline]
+    fn signal(&self) {
+        if let Some(ref master) = self.master {
+            master.signal()
+        }
+    }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M> for PlatformWin32<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M>
+    for PlatformWin32<T, M>
+{
     fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
         self.master = Some(Arc::new(master))
     }

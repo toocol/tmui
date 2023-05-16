@@ -3,7 +3,7 @@ use skia_paint::SkiaPaint;
 use tlib::Object;
 use tmui::{
     application::Application,
-    application_window::ApplicationWindow, widget::{WidgetImplExt},
+    application_window::ApplicationWindow, widget::WidgetImplExt,
 };
 
 fn main() {

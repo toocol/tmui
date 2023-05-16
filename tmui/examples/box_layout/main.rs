@@ -1,8 +1,12 @@
 pub mod hbox_layout;
 pub mod vbox_layout;
 
+use tmui::{
+    application::Application,
+    application_window::ApplicationWindow,
+    prelude::*,
+};
 use vbox_layout::VBoxLayout;
-use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();

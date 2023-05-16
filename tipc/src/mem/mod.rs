@@ -44,6 +44,10 @@ pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
     fn try_recv_request(&self) -> Option<M>;
 
     fn response_request(&self, response: Option<M>);
+
+    fn wait(&self);
+
+    fn signal(&self);
 }
 
 #[repr(C)]

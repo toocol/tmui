@@ -1,11 +1,13 @@
 use super::{
+    shared_channel::{self, SharedChannel},
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
 };
 use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
 use std::sync::{
     atomic::Ordering,
-    mpsc::{channel, Sender, Receiver}, Arc,
+    mpsc::{channel, Sender},
+    Arc,
 };
 use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
 
@@ -46,14 +48,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
     }
 
     #[inline]
-    pub fn gen_user_ipc_event_channel(&mut self) -> Receiver<Vec<T>> {
+    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
         let (sender, receiver) = channel();
         self.user_ipc_event_sender = Some(sender);
-        receiver
+        shared_channel::slave_channel(self.slave.as_ref().unwrap().clone(), receiver)
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext for PlatformIpc<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
+    for PlatformIpc<T, M>
+{
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
         let front_bitmap = Bitmap::new(slave.primary_buffer_raw_pointer(), self.width, self.height);
@@ -68,46 +72,55 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.back_bitmap = Some(back_bitmap);
     }
 
+    #[inline]
     fn title(&self) -> &str {
         &self.title
     }
 
+    #[inline]
     fn width(&self) -> u32 {
         self.width
     }
 
+    #[inline]
     fn height(&self) -> u32 {
         self.height
     }
 
+    #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
         todo!()
     }
 
+    #[inline]
     fn front_bitmap(&self) -> Bitmap {
         self.front_bitmap.unwrap()
     }
 
+    #[inline]
     fn back_bitmap(&self) -> Bitmap {
         self.back_bitmap.unwrap()
     }
 
+    #[inline]
     fn set_input_sender(&mut self, input_sender: Sender<Message>) {
         self.input_sender = Some(input_sender);
     }
 
+    #[inline]
     fn input_sender(&self) -> &Sender<Message> {
         self.input_sender.as_ref().unwrap()
     }
 
+    #[inline]
     fn create_window(&mut self) -> WindowContext {
         let (output_sender, output_receiver) = channel::<Message>();
         WindowContext::Ipc(output_receiver, Some(OutputSender::Sender(output_sender)))
     }
 
-    fn platform_main(&self, window_context: WindowContext) {
+    fn platform_main(&mut self, window_context: WindowContext) {
         let platform = unsafe {
             PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
@@ -120,6 +133,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 platform.as_mut(),
                 output_receiver,
                 self.slave.as_ref().unwrap().clone(),
+                self.user_ipc_event_sender.take()
             )
         } else {
             panic!("Invalid window context.")
@@ -127,9 +141,25 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     fn redraw(&mut self) {}
+
+    #[inline]
+    fn wait(&self) {
+        if let Some(ref slave) = self.slave {
+            slave.wait()
+        }
+    }
+
+    #[inline]
+    fn signal(&self) {
+        if let Some(ref slave) = self.slave {
+            slave.signal()
+        }
+    }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M> for PlatformIpc<T, M> {
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>
+    for PlatformIpc<T, M>
+{
     fn proc_ipc_slave(&mut self, slave: tipc::ipc_slave::IpcSlave<T, M>) {
         self.slave = Some(Arc::new(slave))
     }

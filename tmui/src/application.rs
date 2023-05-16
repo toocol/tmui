@@ -9,6 +9,7 @@ use crate::{
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::{board::Board, cpu_balance::CpuBalance},
     platform::{
+        shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
     },
@@ -16,11 +17,12 @@ use crate::{
 use lazy_static::lazy_static;
 use log::debug;
 use std::{
+    any::Any,
     cell::RefCell,
     marker::PhantomData,
     ptr::null_mut,
     sync::{
-        atomic::{AtomicPtr, Ordering},
+        atomic::{AtomicBool, AtomicPtr, Ordering},
         mpsc::{channel, Receiver},
         Arc,
     },
@@ -38,15 +40,27 @@ use tlib::{
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
         AtomicPtr::new(null_mut());
-    pub(crate) static ref APPLICATION_WINDOW: AtomicPtr<ApplicationWindow> =
-        AtomicPtr::new(null_mut());
 }
-thread_local! { static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false) }
+thread_local! {
+    static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
+    static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
+}
 
 pub const FRAME_INTERVAL: u128 = 16000;
 
-#[derive(Default)]
-pub struct Application {
+const INVALID_GENERIC_PARAM_ERROR: &'static str =
+    "Invalid generic parameters, please use generic parameter defined on Application.";
+static APP_STOPPED: AtomicBool = AtomicBool::new(false);
+
+/// ### The main application of tmui. <br>
+///
+/// For common single process gui application, use [`Application::builder`] <br>
+/// Multile process gui application, use [`Application::shared_builder`] instead to define ipc shared memory UserEvent and Request type. <br>
+///
+/// ### These generic types were used for ipc shared memory application. <br>
+/// `T`: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
+/// `M`: Generic type for blocked request with response in ipc communication.
+pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     width: u32,
     height: u32,
     title: String,
@@ -57,22 +71,27 @@ pub struct Application {
     platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
 
     on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
+    on_user_event_receive: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>>,
+    on_request_receive:
+        RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>>,
 
     shared_mem_name: Option<&'static str>,
+    shared_channel: RefCell<Option<SharedChannel<T, M>>>,
 }
 
-impl Application {
+impl Application<(), ()> {
     /// Get the default builder [`ApplicationBuilder`] of `Application`.
     pub fn builder() -> ApplicationBuilder<(), ()> {
         ApplicationBuilder::<(), ()>::new(None)
     }
+}
 
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Application<T, M> {
     /// Get the shared memory application builder [`ApplicationBuilder`], enable ipc function for application. <br>
     /// T: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
     /// M: Generic type for blocked request with response in ipc communication.
-    pub fn shared_builder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
-        shared_mem_name: &'static str,
-    ) -> ApplicationBuilder<T, M> {
+    #[inline]
+    pub fn shared_builder(shared_mem_name: &'static str) -> ApplicationBuilder<T, M> {
         ApplicationBuilder::<T, M>::new(Some(shared_mem_name))
     }
 
@@ -101,12 +120,43 @@ impl Application {
             WindowContext::Default(.., ref mut output) => output.take().unwrap(),
         };
 
-        thread::Builder::new()
+        let shared_channel = self.shared_channel.borrow_mut().take();
+
+        // Ipc shared user events and request process function.
+        let on_user_event_receive = if let Some(f) = self.on_user_event_receive.borrow().as_ref() {
+            Some(f.clone())
+        } else {
+            None
+        };
+        let on_request_receive = if let Some(f) = self.on_request_receive.borrow().as_ref() {
+            Some(f.clone())
+        } else {
+            None
+        };
+
+        let join = thread::Builder::new()
             .name("tmui-main".to_string())
-            .spawn(move || Self::ui_main(backend_type, output_sender, input_receiver, on_activate))
+            .spawn(move || {
+                Self::ui_main(
+                    backend_type,
+                    output_sender,
+                    input_receiver,
+                    shared_channel,
+                    on_activate,
+                    on_user_event_receive,
+                    on_request_receive,
+                )
+            })
             .unwrap();
 
         platform_context.platform_main(window_context);
+        APP_STOPPED.store(true, Ordering::SeqCst);
+        join.join().unwrap();
+
+        PLATFORM_CONTEXT.store(null_mut(), Ordering::SeqCst);
+        if self.platform_type == PlatformType::Ipc {
+            platform_context.signal();
+        }
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>
@@ -118,12 +168,27 @@ impl Application {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
     }
 
-    fn startup_initialize<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
-        &mut self,
-    ) {
+    /// The method will be invoked when ipc user events received.
+    pub fn connect_user_events_receive<F>(&self, f: F)
+    where
+        F: Fn(&mut ApplicationWindow, T) + Send + Sync + 'static,
+    {
+        *self.on_user_event_receive.borrow_mut() = Some(Arc::new(f));
+    }
+
+    /// The method will be invoked when ipc request received.
+    pub fn connect_request_receive<F>(&self, f: F)
+    where
+        F: Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync + 'static,
+    {
+        *self.on_request_receive.borrow_mut() = Some(Arc::new(f));
+    }
+
+    fn startup_initialize(&mut self) {
         let width = self.width;
         let height = self.height;
         let title = &self.title;
+        let mut shared_channel = None;
         // Create the [`PlatformContext`] based on the platform type specified by the user.
         let platform_context = match self.platform_type {
             PlatformType::Ipc => {
@@ -133,6 +198,7 @@ impl Application {
                 );
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
+                shared_channel = Some(platform_context.shared_channel());
                 platform_context.wrap()
             }
             #[cfg(target_os = "windows")]
@@ -140,6 +206,7 @@ impl Application {
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, self.width, self.height);
+                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -148,7 +215,8 @@ impl Application {
             PlatformType::Linux => {
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height)
+                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -157,25 +225,36 @@ impl Application {
             PlatformType::Macos => {
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height)
+                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
             }
         };
         self.platform_context = RefCell::new(Some(platform_context));
-        PLATFORM_CONTEXT.store(
-            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>,
-            Ordering::SeqCst,
-        );
+        self.shared_channel = RefCell::new(shared_channel);
+        let ptr =
+            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>;
+        PLATFORM_CONTEXT.store(ptr, Ordering::SeqCst);
     }
 
     fn ui_main(
         backend_type: BackendType,
         output_sender: OutputSender,
         _input_receiver: Receiver<Message>,
+        shared_channel: Option<SharedChannel<T, M>>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+        on_user_event_receive: Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
+        on_request_receive: Option<
+            Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>,
+        >,
     ) {
+        // Set up the ipc shared channel.
+        if let Some(shared_channel) = shared_channel {
+            SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
+        }
+
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
 
@@ -208,7 +287,6 @@ impl Application {
         store_board(&mut board);
 
         let mut window = ApplicationWindow::new(backend.width() as i32, backend.height() as i32);
-        APPLICATION_WINDOW.store(window.as_mut() as *mut ApplicationWindow, Ordering::SeqCst);
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);
@@ -228,6 +306,9 @@ impl Application {
         let mut frame_cnt = 0;
         let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
         loop {
+            if APP_STOPPED.load(Ordering::Relaxed) {
+                break;
+            }
             cpu_balance.loop_start();
             let elapsed = last_frame.elapsed();
 
@@ -258,13 +339,117 @@ impl Application {
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
+
+            if let Some(ref on_user_event_receive) = on_user_event_receive {
+                Self::process_user_events(&mut window, &mut cpu_balance, on_user_event_receive);
+            }
+            if let Some(ref on_rqst_receive) = on_request_receive {
+                Self::process_request(&mut window, &mut cpu_balance, on_rqst_receive);
+            } else {
+                Self::process_request_ignored()
+            }
+
             cpu_balance.payload_check();
             cpu_balance.sleep(update);
         }
     }
+
+    #[inline]
+    pub fn send_user_event(evt: T) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.send_user_event(evt)
+            }
+        });
+    }
+
+    #[inline]
+    pub fn send_request(rqst: M) -> Option<M> {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.send_request(rqst)
+            } else {
+                None
+            }
+        })
+    }
+
+    #[inline]
+    pub fn resp_request(resp: Option<M>) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.resp_request(resp)
+            }
+        })
+    }
+
+    #[inline]
+    fn process_user_events(
+        window: &mut ApplicationWindow,
+        cpu_balance: &mut CpuBalance,
+        on_user_event_receive: &Arc<dyn Fn(&mut ApplicationWindow, T) + Sync + Send>,
+    ) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let receiver = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .1;
+                for evt in receiver.receive_user_event_vec() {
+                    cpu_balance.add_payload();
+                    on_user_event_receive(window, evt);
+                }
+            }
+        });
+    }
+
+    #[inline]
+    fn process_request(
+        window: &mut ApplicationWindow,
+        cpu_balance: &mut CpuBalance,
+        on_request_receive: &Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Sync + Send>,
+    ) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let (sender, receiver) = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR);
+                if let Some(rqst) = receiver.receive_request() {
+                    cpu_balance.add_payload();
+                    sender.resp_request(on_request_receive(window, rqst));
+                }
+            }
+        });
+    }
+
+    #[inline]
+    fn process_request_ignored() {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let (sender, receiver) = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR);
+                if let Some(_) = receiver.receive_request() {
+                    sender.resp_request(None);
+                }
+            }
+        });
+    }
 }
 
-/// The builder to create the [`Application`]
+/// The builder to create the [`Application`] <br>
 pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,
@@ -277,7 +462,8 @@ pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> ApplicationBuilder<T, M> {
-    pub fn new(shared_mem_name: Option<&'static str>) -> Self {
+    // Private constructor.
+    fn new(shared_mem_name: Option<&'static str>) -> Self {
         Self {
             platform: None,
             backend: None,
@@ -291,8 +477,20 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Build the [`Application`]
-    pub fn build(self) -> Application {
-        let mut app = Application::default();
+    pub fn build(self) -> Application<T, M> {
+        let mut app = Application {
+            width: Default::default(),
+            height: Default::default(),
+            title: Default::default(),
+            platform_type: Default::default(),
+            backend_type: Default::default(),
+            platform_context: Default::default(),
+            on_activate: Default::default(),
+            shared_mem_name: Default::default(),
+            shared_channel: Default::default(),
+            on_user_event_receive: Default::default(),
+            on_request_receive: Default::default(),
+        };
 
         if let Some(ref title) = self.title {
             app.title = title.to_string()
@@ -313,7 +511,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         if let Some(backend) = self.backend {
             app.backend_type = backend
         }
-        app.startup_initialize::<T, M>();
+        app.startup_initialize();
         app
     }
 

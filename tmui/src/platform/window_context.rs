@@ -1,6 +1,6 @@
 use super::Message;
 use std::sync::mpsc::{Receiver, Sender};
-use winit::{
+use crate::winit::{
     event_loop::{EventLoop, EventLoopProxy},
     window::Window,
 };

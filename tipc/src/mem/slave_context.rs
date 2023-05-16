@@ -5,6 +5,7 @@ use super::{
     IPC_MEM_SIGNAL_EVT, IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
 };
 use crate::ipc_event::{InnerIpcEvent, IpcEvent};
+use parking_lot::Mutex;
 use raw_sync::{
     events::{Event, EventInit, EventState},
     Timeout,
@@ -16,10 +17,11 @@ pub(crate) struct SlaveContext<T: 'static + Copy, M: 'static + Copy> {
     primary_buffer: Shmem,
     secondary_buffer: Shmem,
     shared_info: Shmem,
-    event_signal_mem: Shmem,
+    wait_signal_mem: Shmem,
     master_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     slave_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     _request_type: PhantomData<M>,
+    mutex: Mutex<()>,
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
@@ -63,10 +65,11 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
             primary_buffer,
             secondary_buffer,
             shared_info,
-            event_signal_mem,
+            wait_signal_mem: event_signal_mem,
             master_queue,
             slave_queue,
             _request_type: Default::default(),
+            mutex: Mutex::new(()),
         }
     }
 
@@ -131,11 +134,12 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
 
     #[inline]
     fn send_request(&self, request: M) -> Result<Option<M>, Box<dyn Error>> {
+        let _guard = self.mutex.lock();
         let info = self.shared_info();
         if info.occupied.load(Ordering::Acquire) {
             return Err(Box::new(IpcError::new("`send_request()` failed")));
         }
-        let (evt, _) = unsafe { Event::new(self.event_signal_mem.as_ptr(), true)? };
+        let (evt, _) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true)? };
 
         // Set the request.
         info.occupied.store(true, Ordering::Release);
@@ -164,16 +168,29 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
 
     #[inline]
     fn response_request(&self, response: Option<M>) {
+        let _guard = self.mutex.lock();
         let info = self.shared_info();
         if info.request_side != RequestSide::Master {
             return;
         }
 
         let info = self.shared_info();
-        let (evt, _) = unsafe { Event::from_existing(self.event_signal_mem.as_ptr()).unwrap() };
+        let (evt, _) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()).unwrap() };
 
         info.response = response;
         info.request_side = RequestSide::None;
+        evt.set(EventState::Signaled).unwrap();
+    }
+
+    #[inline]
+    fn wait(&self) {
+        let (evt, _) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true).unwrap() };
+        evt.wait(Timeout::Infinite).unwrap();
+    }
+
+    #[inline]
+    fn signal(&self) {
+        let (evt, _) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()).unwrap() };
         evt.set(EventState::Signaled).unwrap();
     }
 }

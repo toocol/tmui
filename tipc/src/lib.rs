@@ -131,4 +131,8 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn respose_request(&self, resp: Option<M>);
 
     fn terminate(&self);
+
+    fn wait(&self);
+    
+    fn signal(&self);
 }

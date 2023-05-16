@@ -1,19 +1,20 @@
-pub(crate) mod window_process;
-pub(crate) mod window_context;
 pub(crate) mod message;
 pub(crate) mod platform_ipc;
-pub(crate) mod platform_win32;
 pub(crate) mod platform_macos;
+pub(crate) mod platform_win32;
+pub(crate) mod shared_channel;
+pub(crate) mod window_context;
+pub(crate) mod window_process;
 
 use std::sync::mpsc::Sender;
 
+use crate::graphics::bitmap::Bitmap;
 pub use message::*;
 pub(crate) use platform_ipc::*;
-#[cfg(target_os = "windows")]
-pub(crate) use platform_win32::*;
 #[cfg(target_os = "macos")]
 pub(crate) use platform_macos::*;
-use crate::graphics::bitmap::Bitmap;
+#[cfg(target_os = "windows")]
+pub(crate) use platform_win32::*;
 
 use self::window_context::WindowContext;
 
@@ -66,8 +67,18 @@ pub(crate) trait PlatformContext: 'static {
     fn create_window(&mut self) -> WindowContext;
 
     /// The platform main function.
-    fn platform_main(&self, window_context: WindowContext);
+    fn platform_main(&mut self, window_context: WindowContext);
 
     /// Redraw the window.
     fn redraw(&mut self);
+
+    /// Only avalid on shared_memory was opened.
+    ///
+    /// wait until another process was invoke [`PlatformContext::signal`]
+    fn wait(&self);
+
+    /// Only avalid on shared_memory was opened.
+    ///
+    /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
+    fn signal(&self);
 }
