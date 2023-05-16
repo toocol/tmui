@@ -1929,6 +1929,7 @@ dependencies = [
  "ctrlc",
  "libc",
  "log",
+ "parking_lot",
  "rand",
  "raw_sync",
  "shared_memory",

@@ -120,7 +120,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         WindowContext::Ipc(output_receiver, Some(OutputSender::Sender(output_sender)))
     }
 
-    fn platform_main(&self, window_context: WindowContext) {
+    fn platform_main(&mut self, window_context: WindowContext) {
         let platform = unsafe {
             PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
@@ -133,6 +133,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 platform.as_mut(),
                 output_receiver,
                 self.slave.as_ref().unwrap().clone(),
+                self.user_ipc_event_sender.take()
             )
         } else {
             panic!("Invalid window context.")

@@ -9,6 +9,7 @@ edition = "2021"
 tlib = { path = "../tlib/" }
 
 log = "0.4"
+parking_lot = "0.12.1"
 shared_memory = "0.12.4"
 raw_sync = "0.1.5"
 rand = "0.8.5"

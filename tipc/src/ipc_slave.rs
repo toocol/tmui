@@ -12,7 +12,7 @@ pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
     slave_context: SlaveContext<T, M>,
 }
 
-/// SAFETY: Two different shared memory queues are used for sending and receiving ipc context.
+/// SAFETY: MemQueue and memory context use `Mutex` to ensure thread safety.
 unsafe impl<T: 'static + Copy, M: 'static + Copy> Send for IpcSlave<T, M> {}
 unsafe impl<T: 'static + Copy, M: 'static + Copy> Sync for IpcSlave<T, M> {}
 

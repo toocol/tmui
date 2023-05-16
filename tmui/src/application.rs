@@ -71,6 +71,9 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
     platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
 
     on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
+    on_user_event_receive: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>>,
+    on_request_receive:
+        RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>>,
 
     shared_mem_name: Option<&'static str>,
     shared_channel: RefCell<Option<SharedChannel<T, M>>>,
@@ -119,6 +122,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         let shared_channel = self.shared_channel.borrow_mut().take();
 
+        // Ipc shared user events and request process function.
+        let on_user_event_receive = if let Some(f) = self.on_user_event_receive.borrow().as_ref() {
+            Some(f.clone())
+        } else {
+            None
+        };
+        let on_request_receive = if let Some(f) = self.on_request_receive.borrow().as_ref() {
+            Some(f.clone())
+        } else {
+            None
+        };
+
         let join = thread::Builder::new()
             .name("tmui-main".to_string())
             .spawn(move || {
@@ -126,8 +141,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     backend_type,
                     output_sender,
                     input_receiver,
-                    on_activate,
                     shared_channel,
+                    on_activate,
+                    on_user_event_receive,
+                    on_request_receive,
                 )
             })
             .unwrap();
@@ -149,6 +166,22 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         F: Fn(&mut ApplicationWindow) + Send + Sync + 'static,
     {
         *self.on_activate.borrow_mut() = Some(Arc::new(f));
+    }
+
+    /// The method will be invoked when ipc user events received.
+    pub fn connect_user_events_receive<F>(&self, f: F)
+    where
+        F: Fn(&mut ApplicationWindow, T) + Send + Sync + 'static,
+    {
+        *self.on_user_event_receive.borrow_mut() = Some(Arc::new(f));
+    }
+
+    /// The method will be invoked when ipc request received.
+    pub fn connect_request_receive<F>(&self, f: F)
+    where
+        F: Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync + 'static,
+    {
+        *self.on_request_receive.borrow_mut() = Some(Arc::new(f));
     }
 
     fn startup_initialize(&mut self) {
@@ -210,9 +243,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         backend_type: BackendType,
         output_sender: OutputSender,
         _input_receiver: Receiver<Message>,
-        on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
         shared_channel: Option<SharedChannel<T, M>>,
+        on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+        on_user_event_receive: Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
+        on_request_receive: Option<
+            Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>,
+        >,
     ) {
+        // Set up the ipc shared channel.
+        if let Some(shared_channel) = shared_channel {
+            SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
+        }
+
         // Set the UI thread to the `Main` thread.
         IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
 
@@ -258,10 +300,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         window.window_layout_change();
         window.activate();
 
-        if let Some(shared_channel) = shared_channel {
-            SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
-        }
-
         let mut cpu_balance = CpuBalance::new();
         let mut last_frame = Instant::now();
         let mut update = true;
@@ -301,6 +339,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
+
+            if let Some(ref on_user_event_receive) = on_user_event_receive {
+                Self::process_user_events(&mut window, &mut cpu_balance, on_user_event_receive);
+            }
+            if let Some(ref on_rqst_receive) = on_request_receive {
+                Self::process_request(&mut window, &mut cpu_balance, on_rqst_receive);
+            } else {
+                Self::process_request_ignored()
+            }
+
             cpu_balance.payload_check();
             cpu_balance.sleep(update);
         }
@@ -332,6 +380,72 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 None
             }
         })
+    }
+
+    #[inline]
+    pub fn resp_request(resp: Option<M>) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.resp_request(resp)
+            }
+        })
+    }
+
+    #[inline]
+    fn process_user_events(
+        window: &mut ApplicationWindow,
+        cpu_balance: &mut CpuBalance,
+        on_user_event_receive: &Arc<dyn Fn(&mut ApplicationWindow, T) + Sync + Send>,
+    ) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let receiver = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .1;
+                for evt in receiver.receive_user_event_vec() {
+                    cpu_balance.add_payload();
+                    on_user_event_receive(window, evt);
+                }
+            }
+        });
+    }
+
+    #[inline]
+    fn process_request(
+        window: &mut ApplicationWindow,
+        cpu_balance: &mut CpuBalance,
+        on_request_receive: &Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Sync + Send>,
+    ) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let (sender, receiver) = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR);
+                if let Some(rqst) = receiver.receive_request() {
+                    cpu_balance.add_payload();
+                    sender.resp_request(on_request_receive(window, rqst));
+                }
+            }
+        });
+    }
+
+    #[inline]
+    fn process_request_ignored() {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let (sender, receiver) = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR);
+                if let Some(_) = receiver.receive_request() {
+                    sender.resp_request(None);
+                }
+            }
+        });
     }
 }
 
@@ -374,6 +488,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             on_activate: Default::default(),
             shared_mem_name: Default::default(),
             shared_channel: Default::default(),
+            on_user_event_receive: Default::default(),
+            on_request_receive: Default::default(),
         };
 
         if let Some(ref title) = self.title {

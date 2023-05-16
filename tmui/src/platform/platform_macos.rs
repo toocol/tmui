@@ -196,7 +196,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         )
     }
 
-    fn platform_main(&self, window_context: super::window_context::WindowContext) {
+    fn platform_main(&mut self, window_context: super::window_context::WindowContext) {
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)

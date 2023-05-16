@@ -1,3 +1,4 @@
+use parking_lot::Mutex;
 use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
@@ -58,6 +59,7 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> _MemQueue<QUEUE_SIZE, T> {
 pub struct MemQueue<const QUEUE_SIZE: usize, T: 'static + Copy> {
     shmem: Shmem,
     _type_holder: PhantomData<T>,
+    mutex: Mutex<()>,
 }
 
 impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
@@ -69,6 +71,7 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
         Ok(Self {
             shmem: shmem,
             _type_holder: PhantomData::default(),
+            mutex: Mutex::new(()),
         })
     }
 
@@ -81,6 +84,7 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
         Ok(Self {
             shmem: shmem,
             _type_holder: PhantomData::default(),
+            mutex: Mutex::new(()),
         })
     }
 
@@ -90,6 +94,7 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
         Ok(Self {
             shmem: shmem,
             _type_holder: PhantomData::default(),
+            mutex: Mutex::new(()),
         })
     }
 
@@ -105,12 +110,14 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
 
     #[inline]
     pub fn try_read(&self) -> Option<T> {
+        let _guard = self.mutex.lock();
         self.queue_mut().try_read()
     }
 
     /// If the queue was full, the event will be aborted.
     #[inline]
     pub fn try_write(&self, evt: T) -> Result<(), MemQueueError> {
+        let _guard = self.mutex.lock();
         self.queue_mut().try_write(evt)?;
         Ok(())
     }

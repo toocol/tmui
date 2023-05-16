@@ -10,6 +10,7 @@ use crate::{
         IPC_MEM_SECONDARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
     },
 };
+use parking_lot::Mutex;
 use raw_sync::{
     events::{Event, EventInit, EventState},
     Timeout,
@@ -25,6 +26,7 @@ pub(crate) struct MasterContext<T: 'static + Copy, M: 'static + Copy> {
     master_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     slave_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     _request_type: PhantomData<M>,
+    mutex: Mutex<()>,
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
@@ -92,6 +94,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
             master_queue,
             slave_queue,
             _request_type: Default::default(),
+            mutex: Mutex::new(()),
         }
     }
 
@@ -156,6 +159,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
 
     #[inline]
     fn send_request(&self, request: M) -> Result<Option<M>, Box<dyn Error>> {
+        let _guard = self.mutex.lock();
         let info = self.shared_info();
         if info.occupied.load(Ordering::Acquire) {
             return Err(Box::new(IpcError::new("`send_request()` failed")));
@@ -189,6 +193,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
 
     #[inline]
     fn response_request(&self, response: Option<M>) {
+        let _guard = self.mutex.lock();
         let info = self.shared_info();
         if info.request_side != RequestSide::Slave {
             return;

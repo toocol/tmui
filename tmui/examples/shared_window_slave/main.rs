@@ -1,14 +1,31 @@
+use std::time::Instant;
 use test_widget::TestWidget;
-use tmui::{application::Application, application_window::ApplicationWindow, platform::PlatformType, label::Label, prelude::*};
+use tmui::{
+    application::Application, application_window::ApplicationWindow, label::Label,
+    platform::PlatformType, prelude::*,
+};
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shared_mem";
+pub const IPC_NAME: &'static str = "shared_i";
+
+#[derive(Debug, Clone, Copy)]
+enum UserEvent {
+    TestEvent(i32, Instant),
+    _E,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+enum Request {
+    Request,
+    Response(i32),
+}
 
 fn main() {
     log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
 
-    let app = Application::<(), ()>::shared_builder(IPC_NAME)
+    let app = Application::<UserEvent, Request>::shared_builder(IPC_NAME)
         .width(1280)
         .height(800)
         .title("Shared Window")
