@@ -243,8 +243,8 @@ impl ActionHub {
         })
     }
 }
-pub trait ActionExt: Sized + ObjectOperation {
-    fn connect<F: Fn(&Option<Value>) + 'static>(&self, signal: Signal, target: u16, f: F) {
+pub trait ActionExt: ObjectOperation {
+    fn connect(&self, signal: Signal, target: u16, f: Box<dyn Fn(&Option<Value>)>) {
         ActionHub::instance().connect_action(signal, target, f)
     }
 
@@ -258,10 +258,6 @@ pub trait ActionExt: Sized + ObjectOperation {
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
         Action::with_no_param(signal)
-    }
-
-    fn create_action_with_param<T: ToValue + 'static>(&self, signal: Signal, param: T) -> Action {
-        Action::with_param(signal, param)
     }
 }
 
@@ -329,32 +325,32 @@ macro_rules! connect {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
         let signal = $emiter.$signal();
-        $emiter.connect(signal, id, move |_| {
+        $emiter.connect(signal, id, Box::new(move |_| {
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             target.$slot()
-        })
+        }))
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
         let signal = $emiter.$signal();
-        $emiter.connect(signal, id, move |param| {
+        $emiter.connect(signal, id, Box::new(move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             let param = val.get::<$param>();
             target.$slot(param)
-        })
+        }))
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
         let signal = $emiter.$signal();
-        $emiter.connect(signal, id, move |param| {
+        $emiter.connect(signal, id, Box::new(move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             let param = val.get::<($($param),+)>();
             target.$slot($(param.$index),+)
-        })
+        }))
     };
 }
 

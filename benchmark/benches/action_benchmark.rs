@@ -74,7 +74,7 @@ fn criterion_values(c: &mut Criterion) {
     widget.connect(
         widget.action_benchmark_tuple(),
         widget.id(),
-        |param| {
+        Box::new(|param| {
             let (p1, p2, p3, p4, p5, p6, p7) =
                 param
                     .as_ref()
@@ -87,15 +87,15 @@ fn criterion_values(c: &mut Criterion) {
             assert_eq!(p5, f64::MAX);
             assert_eq!(p6, "Bench mark param 6");
             assert_eq!(p7, f64::MIN);
-        },
+        }),
     );
     widget.connect(
         widget.action_benchmark_string(),
         widget.id(),
-        |param| {
+        Box::new(|param| {
             let param = param.as_ref().unwrap().get::<String>();
             assert_eq!(param, "action benchmark string param");
-        },
+        }),
     );
 
     let mut widgets = vec![];
