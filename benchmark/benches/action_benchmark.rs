@@ -73,7 +73,7 @@ fn criterion_values(c: &mut Criterion) {
     let widget: Widget = Object::new(&[]);
     widget.connect(
         widget.action_benchmark_tuple(),
-        widget.object_id(),
+        widget.id(),
         |param| {
             let (p1, p2, p3, p4, p5, p6, p7) =
                 param
@@ -91,7 +91,7 @@ fn criterion_values(c: &mut Criterion) {
     );
     widget.connect(
         widget.action_benchmark_string(),
-        widget.object_id(),
+        widget.id(),
         |param| {
             let param = param.as_ref().unwrap().get::<String>();
             assert_eq!(param, "action benchmark string param");
