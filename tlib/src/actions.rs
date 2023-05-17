@@ -253,7 +253,7 @@ pub trait ActionExt: Sized + ObjectOperation {
     }
 
     fn disconnect_all(&self) {
-        ActionHub::instance().disconnect_action(Some(self.object_id()), None, None)
+        ActionHub::instance().disconnect_action(Some(self.id()), None, None)
     }
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
@@ -262,10 +262,6 @@ pub trait ActionExt: Sized + ObjectOperation {
 
     fn create_action_with_param<T: ToValue + 'static>(&self, signal: Signal, param: T) -> Action {
         Action::with_param(signal, param)
-    }
-
-    fn object_id(&self) -> u16 {
-        self.id()
     }
 }
 
@@ -331,7 +327,7 @@ macro_rules! emit {
 macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident() ) => {
         let target_ptr = $target.as_mut_ptr();
-        let id = $target.object_id();
+        let id = $target.id();
         let signal = $emiter.$signal();
         $emiter.connect(signal, id, move |_| {
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
@@ -340,7 +336,7 @@ macro_rules! connect {
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let target_ptr = $target.as_mut_ptr();
-        let id = $target.object_id();
+        let id = $target.id();
         let signal = $emiter.$signal();
         $emiter.connect(signal, id, move |param| {
             let val = param.as_ref().expect("Param is None.");
@@ -351,7 +347,7 @@ macro_rules! connect {
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let target_ptr = $target.as_mut_ptr();
-        let id = $target.object_id();
+        let id = $target.id();
         let signal = $emiter.$signal();
         $emiter.connect(signal, id, move |param| {
             let val = param.as_ref().expect("Param is None.");
@@ -366,25 +362,25 @@ macro_rules! connect {
 #[macro_export]
 macro_rules! disconnect {
     ( null, null, $target:expr, null ) => {
-        $target.disconnect(None, None, Some($target.object_id()));
+        $target.disconnect(None, None, Some($target.id()));
     };
     ( $emiter:expr, null, null, null ) => {
         $emiter.disconnect_all();
     };
     ( $emiter:expr, $signal:ident(), null, null ) => {
         let signal = $emiter.$signal();
-        $emiter.disconnect(Some($emiter.object_id()), Some(signal.signal()), None);
+        $emiter.disconnect(Some($emiter.id()), Some(signal.signal()), None);
     };
     ( $emiter:expr, $signal:ident(), $target:expr, null ) => {
         let signal = $emiter.$signal();
         $emiter.disconnect(
-            Some($emiter.object_id()),
+            Some($emiter.id()),
             Some(signal.signal()),
-            Some($target.object_id()),
+            Some($target.id()),
         );
     };
     ( $emiter:expr, null, $target:expr, null ) => {
-        $emiter.disconnect(Some($emiter.object_id()), None, Some($target.object_id()));
+        $emiter.disconnect(Some($emiter.id()), None, Some($target.id()));
     };
 }
 
@@ -392,7 +388,7 @@ macro_rules! disconnect {
 #[macro_export]
 macro_rules! signal {
     ( $object:expr, $name:expr ) => {{
-        Signal::new($object.object_id(), $name.to_string())
+        Signal::new($object.id(), $name.to_string())
     }};
 }
 
