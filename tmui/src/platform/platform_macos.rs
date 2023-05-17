@@ -25,7 +25,7 @@ use std::{
     sync::{atomic::Ordering, mpsc::{Sender, channel}, Arc},
 };
 use tipc::{ipc_master::IpcMaster, WithIpcMaster, IpcNode};
-use winit::{
+use tlib::winit::{
     dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
     platform::macos::WindowExtMacOS,
@@ -208,7 +208,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     platform.as_mut(),
                     window,
                     event_loop,
-                    self.master.clone()
+                    self.master.clone(),
+                    self.user_ipc_event_sender.take()
                 )
             } else {
                 panic!("Invalid window context.")
