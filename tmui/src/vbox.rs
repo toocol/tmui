@@ -1,24 +1,16 @@
 use crate::{layout::LayoutManager, prelude::*};
+use derivative::Derivative;
 use log::debug;
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct VBox {
     content_halign: Align,
     content_valign: Align,
+    #[derivative(Default(value = "true"))]
     homogeneous: bool,
-}
-
-impl Default for VBox {
-    fn default() -> Self {
-        Self {
-            content_halign: Default::default(),
-            content_valign: Default::default(),
-            homogeneous: true,
-            container: Default::default(),
-            children: Default::default(),
-        }
-    }
 }
 
 impl ObjectSubclass for VBox {

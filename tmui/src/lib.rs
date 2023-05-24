@@ -9,6 +9,7 @@ pub mod widget;
 pub mod label;
 pub mod layout;
 pub mod container;
+pub mod event_hints;
 pub mod scroll_bar;
 pub mod util;
 pub mod system;

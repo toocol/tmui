@@ -12,7 +12,7 @@ use crate::{
         shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
-    },
+    }, event_hints::event_hints,
 };
 use lazy_static::lazy_static;
 use log::debug;
@@ -446,6 +446,27 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 }
             }
         });
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    // Events hints
+    ///////////////////////////////////////////////////////////////////////
+    #[inline]
+    pub fn double_click_interval() -> i32 {
+        event_hints().double_click_interval()
+    }
+    #[inline]
+    pub fn set_double_click_interval(interval: i32) {
+        event_hints().set_double_click_interval(interval)
+    }
+
+    #[inline]
+    pub fn wheel_scroll_lines() -> i32 {
+        event_hints().wheel_scroll_lines()
+    }
+    #[inline]
+    pub fn set_wheel_scroll_lines(scroll_lines: i32) {
+        event_hints().set_wheel_scroll_lines(scroll_lines)
     }
 }
 

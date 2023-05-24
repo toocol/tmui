@@ -1,26 +1,44 @@
+use crate::{application::Application, graphics::painter::Painter, prelude::*, widget::WidgetImpl};
+use derivative::Derivative;
 use std::mem::size_of;
 use tlib::{
     emit,
-    namespace::{Orientation, KeyboardModifier},
+    global::bound,
+    namespace::{KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     signals,
     values::{FromBytes, FromValue, ToBytes},
 };
-use crate::{prelude::*, widget::WidgetImpl, graphics::painter::Painter};
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
 
 #[extends(Widget)]
-#[derive(Default)]
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct ScrollBar {
     orientation: Orientation,
+    /// Indicates the distance of the slider from the start of the scroll bar.
     value: i32,
+    /// The minimum value of field `value`.
+    #[derivative(Default(value = "0"))]
     minimum: i32,
+    /// The maximum value of field `value`.
+    #[derivative(Default(value = "99"))]
     maximum: i32,
+    /// The distance the slider moves after a single click on the scroll arrow or pressing the move cursor key.
+    #[derivative(Default(value = "1"))]
     single_step: i32,
+    /// When pressing the up and down page keys or clicking the mouse on the scroll bar, the distance to move.
+    #[derivative(Default(value = "10"))]
     page_step: i32,
+    /// The current position of the slider, if the tracking attribute is true,
+    /// its value is equal to the value attribute value
     position: i32,
+    /// Confirm if the scroll bar slider is held down
     pressed: bool,
+    #[derivative(Default(value = "true"))]
+    tracking: bool,
+    offset_accumulated: f32,
 }
 
 impl ObjectSubclass for ScrollBar {
@@ -36,7 +54,7 @@ impl ObjectImpl for ScrollBar {
 impl WidgetImpl for ScrollBar {
     fn paint(&mut self, mut painter: Painter) {
         if self.size().height() <= 0 {
-            return
+            return;
         }
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
         painter.draw_rect(content_rect);
@@ -136,7 +154,7 @@ impl ScrollBar {
 
         self.minimum = min;
         self.maximum = max.max(min);
-        
+
         if old_min != self.minimum || old_max != self.maximum {
             self.update();
             emit!(self.range_changed(), self.minimum, self.maximum);
@@ -203,8 +221,36 @@ impl ScrollBar {
         self.minimum.max(self.maximum.min(val))
     }
 
-    fn scroll_by_delta(&mut self, orientation: Orientation, modifier: KeyboardModifier, delta: i32) {
+    fn scroll_by_delta(
+        &mut self,
+        orientation: Orientation,
+        modifier: KeyboardModifier,
+        mut delta: i32,
+    ) {
+        let mut steps_to_scroll = 0;
+        if self.orientation == Orientation::Horizontal {
+            delta = -delta;
+        }
+        let offset = delta as f32 / 120.;
+        if modifier.has(KeyboardModifier::ControlModifier)
+            || modifier.has(KeyboardModifier::ShiftModifier)
+        {
+            steps_to_scroll = bound(
+                -self.page_step,
+                offset as i32 * self.page_step,
+                self.page_step,
+            );
+            self.offset_accumulated = 0.;
+        } else {
+            let steps_to_scroll_f = offset * self.effective_single_step() as f32;
+            // check if
+        }
         todo!()
+    }
+
+    #[inline]
+    fn effective_single_step(&self) -> i32 {
+        self.single_step
     }
 }
 
@@ -246,7 +292,7 @@ impl From<u8> for SliderAction {
             5 => Self::SliderToMinimum,
             6 => Self::SliderToMaximum,
             7 => Self::SliderMove,
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
