@@ -110,6 +110,12 @@ fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
                 Instant::now(),
             )
         }
+        FocusIn => {
+            IpcEvent::RequestFocusEvent(true, Instant::now())
+        }
+        FocusOut => {
+            IpcEvent::RequestFocusEvent(false, Instant::now())
+        }
         _ => unimplemented!(),
     }
 }

@@ -22,6 +22,11 @@ pub fn to_mouse_event(evt: Event) -> Result<Box<MouseEvent>, Box<dyn Any>> {
     evt.as_any_boxed().downcast::<MouseEvent>()
 }
 
+#[inline]
+pub fn to_focus_event(evt: Event) -> Result<Box<FocusEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<FocusEvent>()
+}
+
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum EventType {
@@ -415,7 +420,7 @@ impl ToBytes for FocusEvent {
         match self.type_ {
             EventType::FocusIn => true.to_bytes(),
             EventType::FocusOut => false.to_bytes(),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -440,9 +445,52 @@ impl FromValue for FocusEvent {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`ResizeEvent`] Resize event.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct ResizeEvent {
+    type_: EventType,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_event_convert() {
+        let evt: Event = Box::new(KeyEvent::new(
+            EventType::KeyPress,
+            KeyCode::KeyA,
+            KeyCode::KeyA.to_string(),
+            KeyboardModifier::AltModifier,
+        ));
+        let key_event = to_key_event(evt).unwrap();
+        assert_eq!(key_event.type_, EventType::KeyPress);
+        assert_eq!(key_event.key_code, KeyCode::KeyA);
+        assert_eq!(key_event.text, KeyCode::KeyA.to_string());
+        assert_eq!(key_event.modifier, KeyboardModifier::AltModifier);
+
+        let evt: Event = Box::new(MouseEvent::new(
+            EventType::MouseButtonPress,
+            (234, 12),
+            MouseButton::LeftButton,
+            KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier),
+            3,
+            100,
+        ));
+        let mouse_event = to_mouse_event(evt).unwrap();
+        assert_eq!(mouse_event.type_, EventType::MouseButtonPress);
+        assert_eq!(mouse_event.position, (234, 12));
+        assert_eq!(mouse_event.mouse_button, MouseButton::LeftButton);
+        assert_eq!(mouse_event.modifier, KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier));
+        assert_eq!(mouse_event.n_press, 3);
+        assert_eq!(mouse_event.delta, 100);
+
+        let evt: Event = Box::new(FocusEvent::new(true));
+        let focus_event = to_focus_event(evt).unwrap();
+        assert_eq!(focus_event.type_, EventType::FocusIn);
+    }
 
     #[test]
     fn test_key_event_value() {
@@ -471,6 +519,13 @@ mod tests {
     }
 
     #[test]
+    fn test_focus_event_value() {
+        let focus_event = FocusEvent::new(true);
+        let val = focus_event.to_value();
+        assert_eq!(focus_event, val.get::<FocusEvent>())
+    }
+
+    #[test]
     fn test_event_value_tuple() {
         let key_event = KeyEvent::new(
             EventType::KeyPress,
@@ -486,8 +541,9 @@ mod tests {
             3,
             0,
         );
-        let tuple = (key_event, mouse_event);
+        let focus_event = FocusEvent::new(false);
+        let tuple = (key_event, mouse_event, focus_event);
         let val = tuple.to_value();
-        assert_eq!(tuple, val.get::<(KeyEvent, MouseEvent)>())
+        assert_eq!(tuple, val.get::<(KeyEvent, MouseEvent, FocusEvent)>())
     }
 }
