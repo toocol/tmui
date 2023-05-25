@@ -14,7 +14,7 @@ pub use transform::*;
 
 #[cfg(test)]
 mod tests {
-    use tlib::values::ToValue;
+    use crate::values::ToValue;
 
     use super::*;
 

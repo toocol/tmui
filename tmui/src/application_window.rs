@@ -1,9 +1,6 @@
+use crate::skia_safe::Font;
 use crate::{
-    graphics::{
-        board::Board,
-        figure::{Color, Size},
-        painter::Painter,
-    },
+    graphics::{board::Board, painter::Painter},
     layout::LayoutManager,
     platform::{window_context::OutputSender, Message},
     prelude::*,
@@ -12,7 +9,6 @@ use crate::{
 use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
-use skia_safe::Font;
 use std::{
     collections::{HashMap, VecDeque},
     ptr::{null_mut, NonNull},
@@ -22,6 +18,7 @@ use std::{
     },
     thread::{self, ThreadId},
 };
+use tlib::figure::{Color, Size};
 use tlib::{
     connect, emit,
     object::{ObjectImpl, ObjectSubclass},
@@ -139,9 +136,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn dispatch_event(&self) {
-
-    }
+    pub fn dispatch_event(&self) {}
 
     #[inline]
     pub fn send_message(&self, message: Message) {

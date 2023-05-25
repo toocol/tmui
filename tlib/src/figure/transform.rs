@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use log::warn;
 use std::ops::Mul;
-use tlib::global::{fuzzy_is_null_32, round32};
+use crate::global::{fuzzy_is_null_32, round32};
 use TransformType::*;
 use super::Point;
 
@@ -583,8 +583,8 @@ impl Mul for Transform {
 
 #[cfg(test)]
 mod tests {
+    use crate::figure::Rect;
     use super::Transform;
-    use crate::prelude::Rect;
 
     #[test]
     fn test_transform() {

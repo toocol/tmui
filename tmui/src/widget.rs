@@ -2,20 +2,16 @@ use std::ptr::NonNull;
 
 use crate::{
     application_window::ApplicationWindow,
-    graphics::{
-        drawing_context::DrawingContext,
-        element::ElementImpl,
-        figure::{Color, Size},
-        painter::Painter,
-    },
+    graphics::{drawing_context::DrawingContext, element::ElementImpl, painter::Painter},
     layout::LayoutManager,
     platform::Message,
     prelude::*,
     util::skia_font_clone,
 };
-use skia_safe::Font;
+use crate::skia_safe::Font;
 use tlib::{
     emit,
+    figure::{Color, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     signals,
@@ -811,10 +807,7 @@ impl WidgetExt for Widget {
     }
 
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
-        ApplicationWindow::send_message_with_id(
-            self.window_id(),
-            Message::SetCursorShape(cursor),
-        )
+        ApplicationWindow::send_message_with_id(self.window_id(), Message::SetCursorShape(cursor))
     }
 }
 

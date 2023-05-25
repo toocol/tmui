@@ -1,7 +1,7 @@
-use super::{drawing_context::DrawingContext, figure::Rect, board::Board};
+use super::{drawing_context::DrawingContext, board::Board};
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
-    prelude::*,
+    prelude::*, figure::Rect,
 };
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....

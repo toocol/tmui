@@ -18,7 +18,7 @@ pub mod vbox;
 pub mod hbox;
 
 pub mod skia_safe {
-    pub use skia_safe::*;
+    pub use tlib::skia_safe::*;
 }
 pub mod tokio {
     pub use tlib::tokio::*;

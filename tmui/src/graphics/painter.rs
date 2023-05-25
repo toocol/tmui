@@ -1,9 +1,9 @@
 #![allow(dead_code)]
-use super::figure::{Color, FRect, Transform};
-use crate::{widget::WidgetImpl, util::skia_font_clone};
+use crate::skia_safe::{Canvas, Font, Paint, Path, Point};
+use crate::{util::skia_font_clone, widget::WidgetImpl};
 use log::error;
-use skia_safe::{Canvas, Font, Paint, Path, Point};
 use std::cell::RefMut;
+use tlib::figure::{Color, FRect, Transform};
 
 pub struct Painter<'a> {
     canvas: RefMut<'a, Canvas>,
@@ -136,7 +136,7 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn set_style(&mut self, style: skia_safe::paint::Style) {
+    pub fn set_style(&mut self, style: crate::skia_safe::paint::Style) {
         self.paint.set_style(style);
     }
 
@@ -155,17 +155,17 @@ impl<'a> Painter<'a> {
 
     /// Set the stroke cap.
     #[inline]
-    pub fn set_stroke_cap(&mut self, cap: skia_safe::PaintCap) {
+    pub fn set_stroke_cap(&mut self, cap: crate::skia_safe::PaintCap) {
         self.paint.set_stroke_cap(cap);
     }
 
     /// Stroke and fill the specified Rect with offset.
     #[inline]
-    pub fn fill_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T, color: Color) {
+    pub fn fill_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
-        self.paint.set_style(skia_safe::PaintStyle::StrokeAndFill);
+        self.paint.set_style(crate::skia_safe::PaintStyle::StrokeAndFill);
 
-        let mut rect: skia_safe::Rect = rect.into();
+        let mut rect: crate::skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
@@ -173,9 +173,9 @@ impl<'a> Painter<'a> {
 
     /// Stroke the specified Rect with offset.
     #[inline]
-    pub fn draw_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T) {
-        self.paint.set_style(skia_safe::PaintStyle::Stroke);
-        let rect: skia_safe::Rect = rect.into();
+    pub fn draw_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T) {
+        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
+        let rect: crate::skia_safe::Rect = rect.into();
         self.canvas.draw_rect(rect, &self.paint);
     }
 
@@ -226,7 +226,7 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, a: f32, alen: f32) {
         let rect: FRect = (x, y, w, h).into();
-        let mut rect: skia_safe::Rect = rect.into();
+        let mut rect: crate::skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_arc(rect, a, alen, true, &self.paint);

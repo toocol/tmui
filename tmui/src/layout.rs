@@ -1,9 +1,10 @@
 use crate::{
     container::{Container, ContainerImpl},
-    graphics::figure::Size,
+    
     prelude::*,
     widget::WidgetImpl,
 };
+use tlib::figure::Size;
 use log::debug;
 use std::collections::VecDeque;
 

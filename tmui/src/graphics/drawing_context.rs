@@ -1,7 +1,7 @@
 #![allow(dead_code)]
-use skia_safe::{Canvas, Surface};
-use std::cell::RefMut;
 use super::board::Board;
+use crate::skia_safe::{Canvas, Surface};
+use std::cell::RefMut;
 
 /// DrawingContext contains Board reference which contains Skia surface.
 /// And has basic Point, Path, Paint of Skia renderering.
@@ -13,9 +13,7 @@ pub struct DrawingContext<'a> {
 impl<'a> DrawingContext<'a> {
     #[inline]
     pub fn new(board: &'a Board) -> Self {
-        Self {
-            board,
-        }
+        Self { board }
     }
 
     #[inline]

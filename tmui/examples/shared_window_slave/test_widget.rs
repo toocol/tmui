@@ -1,11 +1,14 @@
 use std::time::{Duration, Instant};
-
-use tlib::{object::{ObjectImpl, ObjectSubclass}, timer::Timer, connect, disconnect};
-use tmui::{prelude::*, widget::WidgetImpl, graphics::figure::Color, application::Application};
-use log::debug;
 use lazy_static::lazy_static;
+use log::debug;
+use tlib::{
+    connect, disconnect,
+    object::{ObjectImpl, ObjectSubclass},
+    timer::Timer,
+};
+use tmui::{application::Application, prelude::*, tlib::figure::Color, widget::WidgetImpl};
 
-use crate::{UserEvent, Request};
+use crate::{Request, UserEvent};
 
 lazy_static! {
     static ref COLORS: [Color; 3] = [Color::RED, Color::GREEN, Color::BLUE];
@@ -55,12 +58,18 @@ impl TestWidget {
             if let Request::Response(a) = resp {
                 assert_eq!(100, a);
             }
-            debug!("Request time: {}ms", rec.elapsed().as_micros() as f64 / 1000.);
+            debug!(
+                "Request time: {}ms",
+                rec.elapsed().as_micros() as f64 / 1000.
+            );
         }
         self.set_background(COLORS[self.idx]);
         self.update();
 
-        Application::<UserEvent, Request>::send_user_event(UserEvent::TestEvent(self.cnt, Instant::now()));
+        Application::<UserEvent, Request>::send_user_event(UserEvent::TestEvent(
+            self.cnt,
+            Instant::now(),
+        ));
         self.cnt += 1;
 
         if self.ins.as_ref().unwrap().elapsed().as_secs() >= 10 {

@@ -1,6 +1,6 @@
-use skia_safe::Path;
 use tmui::{
     prelude::*,
+    skia_safe::{self, Path},
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };

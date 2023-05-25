@@ -1,5 +1,5 @@
 use hex_color::HexColor;
-use tlib::{
+use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Value,
@@ -182,8 +182,8 @@ impl Into<skia_safe::Color> for Color {
 }
 
 impl StaticType for Color {
-    fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Color")
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("Color")
     }
 
     fn bytes_len() -> usize {
@@ -218,7 +218,7 @@ impl ToValue for Color {
         Value::new(self)
     }
 
-    fn value_type(&self) -> tlib::Type {
+    fn value_type(&self) -> crate::Type {
         Self::static_type()
     }
 }

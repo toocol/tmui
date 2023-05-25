@@ -1,11 +1,10 @@
 use crate::{
-    application::{wheel_scroll_lines, Application},
+    application::wheel_scroll_lines,
     graphics::painter::Painter,
     prelude::*,
     widget::WidgetImpl,
 };
 use derivative::Derivative;
-use skia_safe::luma_color_filter::new;
 use std::mem::size_of;
 use tlib::{
     emit,
