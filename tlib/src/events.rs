@@ -1,15 +1,25 @@
-use std::mem::size_of;
-
 use crate::{
-    implements_enum_value,
+    impl_as_any, implements_enum_value,
     namespace::{AsNumeric, KeyCode, KeyboardModifier, MouseButton},
-    prelude::{StaticType, ToValue},
+    prelude::*,
     values::{FromBytes, FromValue, ToBytes},
     Type, Value,
 };
+use std::{any::Any, fmt::Debug, mem::size_of};
 
-pub trait Event {
+pub type Event = Box<dyn EventTrait>;
+pub trait EventTrait: 'static + AsAny + Debug + Sync + Send {
     fn type_(&self) -> EventType;
+}
+
+#[inline]
+pub fn to_key_event(evt: Event) -> Result<Box<KeyEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<KeyEvent>()
+}
+
+#[inline]
+pub fn to_mouse_event(evt: Event) -> Result<Box<MouseEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<MouseEvent>()
 }
 
 #[repr(u8)]
@@ -69,6 +79,7 @@ pub struct KeyEvent {
     text: String,
     modifier: KeyboardModifier,
 }
+impl_as_any!(KeyEvent);
 impl KeyEvent {
     pub fn new(
         type_: EventType,
@@ -89,19 +100,22 @@ impl KeyEvent {
         }
     }
 
+    #[inline]
     pub fn key_code(&self) -> KeyCode {
         self.key_code
     }
 
+    #[inline]
     pub fn text(&self) -> &str {
         &self.text
     }
 
+    #[inline]
     pub fn modifier(&self) -> KeyboardModifier {
         self.modifier
     }
 }
-impl Event for KeyEvent {
+impl EventTrait for KeyEvent {
     fn type_(&self) -> EventType {
         self.type_
     }
@@ -202,14 +216,18 @@ pub struct MouseEvent {
     position: Position,
     mouse_button: MouseButton,
     modifier: KeyboardModifier,
+    n_press: i32,
+    delta: i32,
 }
-
+impl_as_any!(MouseEvent);
 impl MouseEvent {
     pub fn new(
         type_: EventType,
         position: Position,
         mouse_button: MouseButton,
         modifier: KeyboardModifier,
+        n_press: i32,
+        delta: i32,
     ) -> Self {
         let type_ = match type_ {
             EventType::MouseButtonPress => type_,
@@ -223,23 +241,38 @@ impl MouseEvent {
             position,
             mouse_button,
             modifier,
+            n_press,
+            delta,
         }
     }
 
+    #[inline]
     pub fn position(&self) -> Position {
         self.position
     }
 
+    #[inline]
     pub fn mouse_button(&self) -> MouseButton {
         self.mouse_button
     }
 
+    #[inline]
     pub fn modifier(&self) -> KeyboardModifier {
         self.modifier
     }
+
+    #[inline]
+    pub fn n_press(&self) -> i32 {
+        self.n_press
+    }
+
+    #[inline]
+    pub fn delta(&self) -> i32 {
+        self.delta
+    }
 }
 
-impl Event for MouseEvent {
+impl EventTrait for MouseEvent {
     fn type_(&self) -> EventType {
         self.type_
     }
@@ -254,7 +287,7 @@ impl StaticType for MouseEvent {
         EventType::bytes_len()
             + MouseButton::bytes_len()
             + KeyboardModifier::bytes_len()
-            + i32::bytes_len() * 2
+            + i32::bytes_len() * 4
     }
 }
 impl ToBytes for MouseEvent {
@@ -280,6 +313,10 @@ impl ToBytes for MouseEvent {
         let mut position_y = self.position.1.to_bytes();
         bytes.append(&mut position_x);
         bytes.append(&mut position_y);
+
+        bytes.append(&mut self.n_press.to_bytes());
+
+        bytes.append(&mut self.delta.to_bytes());
 
         bytes
     }
@@ -315,17 +352,89 @@ impl FromBytes for MouseEvent {
         let i32_len = i32::bytes_len();
         let x = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
         idx += i32_len;
-        let y = i32::from_bytes(&data[idx..], i32_len);
+        let y = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
+        idx += i32_len;
+
+        let n_press = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
+        idx += i32_len;
+
+        let delta = i32::from_bytes(&data[idx..], i32_len);
 
         Self {
             type_,
             position: (x, y),
             mouse_button,
             modifier,
+            n_press,
+            delta,
         }
     }
 }
 impl FromValue for MouseEvent {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`FocusEvent`] Focus in/out events.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct FocusEvent {
+    type_: EventType,
+}
+impl_as_any!(FocusEvent);
+impl FocusEvent {
+    pub fn new(focus_in: bool) -> Self {
+        Self {
+            type_: if focus_in {
+                EventType::FocusIn
+            } else {
+                EventType::FocusOut
+            },
+        }
+    }
+}
+impl EventTrait for FocusEvent {
+    fn type_(&self) -> EventType {
+        self.type_
+    }
+}
+
+impl StaticType for FocusEvent {
+    fn static_type() -> Type {
+        Type::from_name("FocusEvent")
+    }
+
+    fn bytes_len() -> usize {
+        size_of::<bool>()
+    }
+}
+impl ToBytes for FocusEvent {
+    fn to_bytes(&self) -> Vec<u8> {
+        match self.type_ {
+            EventType::FocusIn => true.to_bytes(),
+            EventType::FocusOut => false.to_bytes(),
+            _ => unreachable!()
+        }
+    }
+}
+impl ToValue for FocusEvent {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for FocusEvent {
+    fn from_bytes(data: &[u8], len: usize) -> Self {
+        let focus_in = bool::from_bytes(data, len);
+        Self::new(focus_in)
+    }
+}
+impl FromValue for FocusEvent {
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -354,6 +463,8 @@ mod tests {
             (234, 12),
             MouseButton::LeftButton,
             KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier),
+            3,
+            100,
         );
         let val = mouse_event.to_value();
         assert_eq!(mouse_event, val.get::<MouseEvent>())
@@ -372,6 +483,8 @@ mod tests {
             (234, 12),
             MouseButton::LeftButton,
             KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier),
+            3,
+            0,
         );
         let tuple = (key_event, mouse_event);
         let val = tuple.to_value();

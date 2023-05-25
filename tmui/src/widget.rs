@@ -187,6 +187,9 @@ pub trait WidgetAcquire: WidgetImpl + Default {}
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
+    /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
+    fn name(&self) -> String;
+
     /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
     fn as_element(&mut self) -> *mut dyn ElementImpl;
 
@@ -469,6 +472,10 @@ pub trait WidgetExt {
 }
 
 impl WidgetExt for Widget {
+    fn name(&self) -> String {
+        self.get_property("name").unwrap().get::<String>()
+    }
+
     fn as_element(&mut self) -> *mut dyn ElementImpl {
         self as *mut Self as *mut dyn ElementImpl
     }

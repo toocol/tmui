@@ -12,4 +12,5 @@ pub use crate::reflect::{FromType, InnerTypeRegister, Reflect, ReflectTrait, Typ
 pub use crate::timer::TimerSignal;
 pub use crate::types::{IsA, ObjectType, StaticType, Type, TypeDowncast};
 pub use crate::values::{ToValue, Value};
+pub use crate::global::AsAny;
 pub use std::any::Any;

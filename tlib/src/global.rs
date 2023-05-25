@@ -1,3 +1,4 @@
+use std::any::Any;
 use once_cell::sync::Lazy;
 
 #[inline]
@@ -58,4 +59,33 @@ pub fn is_null_32(f: f32) -> bool {
 pub fn cpu_nums() -> &'static usize {
     static CPU_NUMS: Lazy<usize> = Lazy::new(|| num_cpus::get());
     &CPU_NUMS
+}
+
+pub trait AsAny {
+    fn as_any(&self) -> &dyn Any;
+
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any>;
+}
+#[macro_export]
+macro_rules! impl_as_any {
+    ( $st:ident ) => {
+        impl AsAny for $st {
+            #[inline]
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+
+            #[inline]
+            fn as_any_mut(&mut self) -> &mut dyn Any {
+                self
+            }
+
+            #[inline]
+            fn as_any_boxed(self: Box<Self>) -> Box<dyn Any> {
+                self
+            }
+        }
+    };
 }

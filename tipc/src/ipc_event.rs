@@ -1,7 +1,5 @@
 use std::time::Instant;
-
 use tlib::prelude::SystemCursorShape;
-
 use crate::mem::{IPC_KEY_EVT_SIZE, IPC_TEXT_EVT_SIZE};
 
 pub enum IpcEvent<T: 'static + Copy> {
@@ -10,29 +8,29 @@ pub enum IpcEvent<T: 'static + Copy> {
     /// The vsync event.
     VSync(Instant),
     /// (characters, key_code, modifier, timestamp)
-    KeyPressedEvent(String, i32, i32, u64),
+    KeyPressedEvent(String, u32, u32, Instant),
     /// (characters, key_code, modifier, timestamp)
-    KeyReleasedEvent(String, i32, i32, u64),
+    KeyReleasedEvent(String, u32, u32, Instant),
     /// (n_press, x, y, button, modifier, timestamp)
-    MousePressedEvent(i32, f64, f64, i32, i32, u64),
+    MousePressedEvent(i32, i32, i32, u32, u32, Instant),
     /// (x, y, button, modifier, timestamp)
-    MouseReleaseEvent(f64, f64, i32, i32, u64),
+    MouseReleaseEvent(i32, i32, u32, u32, Instant),
     /// (x, y, modifier, timestamp)
-    MouseEnterEvent(f64, f64, i32, u64),
+    MouseEnterEvent(i32, i32, u32, Instant),
     /// (modifier, timestamp)
-    MouseLeaveEvent(i32, u64),
+    MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
-    MouseMoveEvent(f64, f64, i32, u64),
+    MouseMoveEvent(i32, i32, u32, Instant),
     /// (x, y, amount, modifier, timestamp)
-    MouseWheelEvent(f64, f64, f64, i32, u64),
+    MouseWheelEvent(i32, i32, i32, u32, Instant),
     /// (is_focus, timestamp)
-    RequestFocusEvent(bool, u64),
+    RequestFocusEvent(bool, Instant),
     /// (system_cursor_shape)
     SetCursorShape(SystemCursorShape),
     /// (text, timestamp)
-    TextEvent(String, u64),
+    TextEvent(String, Instant),
     /// (customize_content, timestamp)
-    UserEvent(T, u64),
+    UserEvent(T, Instant),
 }
 
 #[repr(C)]
@@ -43,29 +41,29 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     /// (instant_of_vsync)
     VSync(Instant),
     /// (characters, key_code, modifier, timestamp)
-    KeyPressedEvent([u8; IPC_KEY_EVT_SIZE], i32, i32, u64),
+    KeyPressedEvent([u8; IPC_KEY_EVT_SIZE], u32, u32, Instant),
     /// (characters, key_code, modifier, timestamp)
-    KeyReleasedEvent([u8; IPC_KEY_EVT_SIZE], i32, i32, u64),
+    KeyReleasedEvent([u8; IPC_KEY_EVT_SIZE], u32, u32, Instant),
     /// (n_press, x, y, button, modifier, timestamp)
-    MousePressedEvent(i32, f64, f64, i32, i32, u64),
+    MousePressedEvent(i32, i32, i32, u32, u32, Instant),
     /// (x, y, button, modifier, timestamp)
-    MouseReleaseEvent(f64, f64, i32, i32, u64),
+    MouseReleaseEvent(i32, i32, u32, u32, Instant),
     /// (x, y, modifier, timestamp)
-    MouseEnterEvent(f64, f64, i32, u64),
+    MouseEnterEvent(i32, i32, u32, Instant),
     /// (modifier, timestamp)
-    MouseLeaveEvent(i32, u64),
+    MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
-    MouseMoveEvent(f64, f64, i32, u64),
+    MouseMoveEvent(i32, i32, u32, Instant),
     /// (x, y, amount, modifier, timestamp)
-    MouseWheelEvent(f64, f64, f64, i32, u64),
+    MouseWheelEvent(i32, i32, i32, u32, Instant),
     /// (is_focus, timestamp)
-    RequestFocusEvent(bool, u64),
+    RequestFocusEvent(bool, Instant),
     /// (system_cursor_shape)
     SetCursorShape(SystemCursorShape),
     /// (text, timestamp)
-    TextEvent([u8; IPC_TEXT_EVT_SIZE], u64),
+    TextEvent([u8; IPC_TEXT_EVT_SIZE], Instant),
     /// (customize_content, timestamp)
-    UserEvent(T, u64),
+    UserEvent(T, Instant),
 }
 
 impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {

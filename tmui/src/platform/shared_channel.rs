@@ -1,7 +1,6 @@
-use std::sync::{mpsc::Receiver, Arc};
+use std::{sync::{mpsc::Receiver, Arc}, time::Instant};
 
 use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
-use tlib::utils::TimeStamp;
 
 pub(crate) type SharedChannel<T, M> =
     (SharedSender<T, M>, SharedReceiver<T, M>);
@@ -65,13 +64,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedSen
                 .master
                 .as_ref()
                 .unwrap()
-                .try_send(IpcEvent::UserEvent(user_evt, TimeStamp::timestamp()))
+                .try_send(IpcEvent::UserEvent(user_evt, Instant::now()))
                 .unwrap(),
             SharedType::Slave => self
                 .slave
                 .as_ref()
                 .unwrap()
-                .try_send(IpcEvent::UserEvent(user_evt, TimeStamp::timestamp()))
+                .try_send(IpcEvent::UserEvent(user_evt, Instant::now()))
                 .unwrap(),
         }
     }

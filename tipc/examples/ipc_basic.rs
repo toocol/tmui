@@ -3,7 +3,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tipc::{ipc_event::IpcEvent, IpcBuilder, IpcNode};
-use tlib::utils::TimeStamp;
 
 const NAME: &'static str = "_ipc_test_02";
 const TEXT_SIZE: usize = 1024;
@@ -100,7 +99,7 @@ fn ipc_slave() {
         }
         if let Ok(_) = slave.try_send(IpcEvent::UserEvent(
             UserEvent::Test(cnt),
-            TimeStamp::timestamp(),
+            Instant::now(),
         )) {
             cnt += 1;
         }

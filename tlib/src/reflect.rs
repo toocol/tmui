@@ -126,3 +126,34 @@ pub trait ReflectTrait: Any + 'static {
 pub trait FromType<T: Reflect>: ReflectTrait {
     fn from_type() -> Self;
 }
+
+#[macro_export]
+macro_rules! impl_reflect {
+    ( $st:ident ) => {
+        impl Reflect for $st {
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+
+            fn as_mut_any(&mut self) -> &mut dyn Any {
+                self
+            }
+
+            fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
+                self
+            }
+
+            fn as_reflect(&self) -> &dyn Reflect {
+                self
+            }
+
+            fn as_mut_reflect(&mut self) -> &mut dyn Reflect {
+                self
+            }
+
+            fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect> {
+                self
+            }
+        }
+    };
+}
