@@ -1,10 +1,17 @@
-use crate::{application::Application, graphics::painter::Painter, prelude::*, widget::WidgetImpl};
+use crate::{
+    application::{wheel_scroll_lines, Application},
+    graphics::painter::Painter,
+    prelude::*,
+    widget::WidgetImpl,
+};
 use derivative::Derivative;
+use skia_safe::luma_color_filter::new;
 use std::mem::size_of;
 use tlib::{
     emit,
     global::bound,
-    namespace::{KeyboardModifier, Orientation},
+    implements_enum_value,
+    namespace::{AsNumeric, KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     signals,
     values::{FromBytes, FromValue, ToBytes},
@@ -36,8 +43,6 @@ pub struct ScrollBar {
     position: i32,
     /// Confirm if the scroll bar slider is held down
     pressed: bool,
-    #[derivative(Default(value = "true"))]
-    tracking: bool,
     offset_accumulated: f32,
 }
 
@@ -98,6 +103,7 @@ pub trait ScrollBarSignal: ActionExt {
 impl ScrollBarSignal for ScrollBar {}
 
 impl ScrollBar {
+    #[inline]
     pub fn new(orientation: Orientation) -> Self {
         let mut scroll_bar: Self = Object::new(&[]);
         scroll_bar.orientation = orientation;
@@ -105,6 +111,7 @@ impl ScrollBar {
     }
 
     /// Get the orientation of Widget
+    #[inline]
     pub fn orientation(&self) -> Orientation {
         self.orientation
     }
@@ -126,24 +133,29 @@ impl ScrollBar {
         emit!(self.value_changed(), value)
     }
     /// Getter of property `value`.
+    #[inline]
     pub fn value(&self) -> i32 {
         self.value
     }
 
     /// Setter of property `minimum`.
+    #[inline]
     pub fn set_minimum(&mut self, minimum: i32) {
         self.set_range(minimum, self.maximum.max(minimum))
     }
     /// Getter of property `minimum`.
+    #[inline]
     pub fn minimum(&self) -> i32 {
         self.minimum
     }
 
     /// Setter of property `maximum`.
+    #[inline]
     pub fn set_maximum(&mut self, maximum: i32) {
         self.set_range(self.minimum.min(maximum), maximum)
     }
     /// Getter of property `maximum`.
+    #[inline]
     pub fn maximum(&self) -> i32 {
         self.maximum
     }
@@ -163,17 +175,20 @@ impl ScrollBar {
     }
 
     /// Setter of property `page_step`.
+    #[inline]
     pub fn set_page_step(&mut self, page_step: i32) {
         if page_step != self.page_step {
             self.set_steps(self.single_step, page_step)
         }
     }
     /// Getter of property `page_step`.
+    #[inline]
     pub fn page_step(&self) -> i32 {
         self.page_step
     }
 
     /// Setter of property `single_step`.
+    #[inline]
     pub fn set_single_step(&mut self, mut step: i32) {
         if step < 0 {
             step = 1;
@@ -184,6 +199,7 @@ impl ScrollBar {
         }
     }
     /// Getter of property `single_step`.
+    #[inline]
     pub fn single_step(&self) -> i32 {
         self.single_step
     }
@@ -202,23 +218,40 @@ impl ScrollBar {
         self.trigger_action(SliderAction::SliderMove);
     }
     /// Getter of property `slider_position`.
+    #[inline]
     pub fn slider_position(&self) -> i32 {
         self.position
     }
 
     /// Trigger action manually.
-    pub fn trigger_action(&self, action: SliderAction) {
-        emit!(self.action_triggered(), action)
+    #[inline]
+    pub fn trigger_action(&mut self, action: SliderAction) {
+        match action {
+            SliderAction::SliderSingleStepAdd => {
+                self.set_slider_position(self.overflow_safe_add(self.effective_single_step()));
+            }
+            SliderAction::SliderSingleStepSub => {
+                self.set_slider_position(self.overflow_safe_add(-self.effective_single_step()));
+            }
+            SliderAction::SliderPageStepAdd => {
+                self.set_slider_position(self.overflow_safe_add(self.page_step));
+            }
+            SliderAction::SliderPageStepSub => {
+                self.set_slider_position(self.overflow_safe_add(-self.page_step));
+            }
+            SliderAction::SliderToMinimum => self.set_slider_position(self.minimum),
+            SliderAction::SliderToMaximum => self.set_slider_position(self.maximum),
+            SliderAction::SliderMove | SliderAction::SliderNoAction => {}
+        }
+        emit!(self.action_triggered(), action);
+        self.set_value(self.position);
     }
 
+    #[inline]
     fn set_steps(&mut self, single: i32, page: i32) {
         self.single_step = single.abs();
         self.page_step = page.abs();
         self.update();
-    }
-
-    fn bound(&self, val: i32) -> i32 {
-        self.minimum.max(self.maximum.min(val))
     }
 
     fn scroll_by_delta(
@@ -226,15 +259,16 @@ impl ScrollBar {
         orientation: Orientation,
         modifier: KeyboardModifier,
         mut delta: i32,
-    ) {
-        let mut steps_to_scroll = 0;
-        if self.orientation == Orientation::Horizontal {
+    ) -> bool {
+        let steps_to_scroll;
+        if orientation == Orientation::Horizontal {
             delta = -delta;
         }
         let offset = delta as f32 / 120.;
         if modifier.has(KeyboardModifier::ControlModifier)
             || modifier.has(KeyboardModifier::ShiftModifier)
         {
+            // Scroll one page regardless of delta:
             steps_to_scroll = bound(
                 -self.page_step,
                 offset as i32 * self.page_step,
@@ -242,15 +276,67 @@ impl ScrollBar {
             );
             self.offset_accumulated = 0.;
         } else {
-            let steps_to_scroll_f = offset * self.effective_single_step() as f32;
-            // check if
+            let steps_to_scroll_f =
+                wheel_scroll_lines() as f32 * offset * self.effective_single_step() as f32;
+            // Check if wheel changed direction since last event:
+            if self.offset_accumulated != 0. && (offset / self.offset_accumulated) < 0. {
+                self.offset_accumulated = 0.;
+            }
+
+            self.offset_accumulated += steps_to_scroll_f;
+
+            // Don't scroll more than one page in any case:
+            steps_to_scroll = bound(
+                -self.page_step,
+                self.offset_accumulated as i32,
+                self.page_step,
+            );
+
+            self.offset_accumulated -= (self.offset_accumulated as i32) as f32;
+            if steps_to_scroll == 0 {
+                // We moved less than a line, but might still have accumulated partial scroll,
+                // unless we already are at one of the ends.
+                if self.offset_accumulated > 0. && self.value < self.maximum {
+                    return true;
+                }
+                if self.offset_accumulated < 0. && self.value > self.minimum {
+                    return true;
+                }
+                self.offset_accumulated = 0.;
+                return false;
+            }
         }
-        todo!()
+
+        let pref_value = self.value;
+        self.position = self.bound(self.overflow_safe_add(steps_to_scroll));
+        self.trigger_action(SliderAction::SliderMove);
+
+        if pref_value == self.value {
+            self.offset_accumulated = 0.;
+            return false;
+        }
+        return true;
     }
 
     #[inline]
     fn effective_single_step(&self) -> i32 {
         self.single_step
+    }
+
+    #[inline]
+    fn bound(&self, val: i32) -> i32 {
+        self.minimum.max(self.maximum.min(val))
+    }
+
+    #[inline]
+    fn overflow_safe_add(&self, add: i32) -> i32 {
+        let mut new_value = self.value + add;
+        if add > 0 && new_value < self.value {
+            new_value = self.maximum;
+        } else if add < 0 && new_value > self.value {
+            new_value = self.minimum;
+        }
+        new_value
     }
 }
 
@@ -296,36 +382,9 @@ impl From<u8> for SliderAction {
         }
     }
 }
-impl StaticType for SliderAction {
-    fn static_type() -> Type {
-        Type::from_name("SliderAction")
-    }
-
-    fn bytes_len() -> usize {
-        size_of::<u8>()
+impl AsNumeric<u8> for SliderAction {
+    fn as_numeric(&self) -> u8 {
+        self.as_u8()
     }
 }
-impl ToBytes for SliderAction {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.as_u8().to_bytes()
-    }
-}
-impl ToValue for SliderAction {
-    fn to_value(&self) -> Value {
-        Value::new(self)
-    }
-
-    fn value_type(&self) -> Type {
-        Self::static_type()
-    }
-}
-impl FromBytes for SliderAction {
-    fn from_bytes(data: &[u8], len: usize) -> Self {
-        SliderAction::from(u8::from_bytes(data, len))
-    }
-}
-impl FromValue for SliderAction {
-    fn from_value(value: &Value) -> Self {
-        SliderAction::from_bytes(value.data(), Self::bytes_len())
-    }
-}
+implements_enum_value!(SliderAction, u8);

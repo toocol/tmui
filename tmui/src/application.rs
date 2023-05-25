@@ -7,12 +7,13 @@ use crate::platform::PlatformWin32;
 use crate::{
     application_window::{store_board, ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
+    event_hints::event_hints,
     graphics::{board::Board, cpu_balance::CpuBalance},
     platform::{
         shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
-    }, event_hints::event_hints,
+    },
 };
 use lazy_static::lazy_static;
 use log::debug;
@@ -447,27 +448,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             }
         });
     }
-
-    ///////////////////////////////////////////////////////////////////////
-    // Events hints
-    ///////////////////////////////////////////////////////////////////////
-    #[inline]
-    pub fn double_click_interval() -> i32 {
-        event_hints().double_click_interval()
-    }
-    #[inline]
-    pub fn set_double_click_interval(interval: i32) {
-        event_hints().set_double_click_interval(interval)
-    }
-
-    #[inline]
-    pub fn wheel_scroll_lines() -> i32 {
-        event_hints().wheel_scroll_lines()
-    }
-    #[inline]
-    pub fn set_wheel_scroll_lines(scroll_lines: i32) {
-        event_hints().set_wheel_scroll_lines(scroll_lines)
-    }
 }
 
 /// The builder to create the [`Application`] <br>
@@ -571,4 +551,25 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         CpuBalance::set_payload_threshold(threshold);
         self
     }
+}
+
+///////////////////////////////////////////////////////////////////////
+// Events hints
+///////////////////////////////////////////////////////////////////////
+#[inline]
+pub fn double_click_interval() -> i32 {
+    event_hints().double_click_interval()
+}
+#[inline]
+pub fn set_double_click_interval(interval: i32) {
+    event_hints().set_double_click_interval(interval)
+}
+
+#[inline]
+pub fn wheel_scroll_lines() -> i32 {
+    event_hints().wheel_scroll_lines()
+}
+#[inline]
+pub fn set_wheel_scroll_lines(scroll_lines: i32) {
+    event_hints().set_wheel_scroll_lines(scroll_lines)
 }

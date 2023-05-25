@@ -6,12 +6,12 @@ use once_cell::sync::Lazy;
 pub struct EventHints {
     #[derivative(Default(value = "300"))]
     double_click_interval: i32,
-    #[derivative(Default(value = "5"))]
+    #[derivative(Default(value = "3"))]
     wheel_scroll_lines: i32,
 }
 
 #[inline]
-pub fn event_hints() -> &'static mut EventHints {
+pub(crate) fn event_hints() -> &'static mut EventHints {
     static mut EVENT_HINTS: Lazy<EventHints> = Lazy::new(|| EventHints::default());
     unsafe { &mut EVENT_HINTS }
 }
