@@ -1,5 +1,5 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use skia_safe::Surface;
+use crate::skia_safe::Surface;
 use std::{cell::RefCell, ptr::NonNull};
 
 thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}

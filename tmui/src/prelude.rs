@@ -9,7 +9,7 @@ pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{
     Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl,
 };
-pub use crate::graphics::figure::{Point, Rect, Size, Color};
+pub use tlib::figure::{Point, Rect, Size, Color};
 pub use crate::graphics::board::Board;
 pub use crate::label::LabelSignal;
 pub use crate::layout::{Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment};
@@ -20,5 +20,5 @@ pub use crate::hbox::HBox;
 pub use crate::widget::{
     ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt, WidgetSignals,
 };
-pub use skia_safe::font::Font;
+pub use crate::skia_safe::font::Font;
 pub use tlib::tokio;

@@ -2,20 +2,16 @@ use std::ptr::NonNull;
 
 use crate::{
     application_window::ApplicationWindow,
-    graphics::{
-        drawing_context::DrawingContext,
-        element::ElementImpl,
-        figure::{Color, Size},
-        painter::Painter,
-    },
+    graphics::{drawing_context::DrawingContext, element::ElementImpl, painter::Painter},
     layout::LayoutManager,
     platform::Message,
     prelude::*,
     util::skia_font_clone,
 };
-use skia_safe::Font;
+use crate::skia_safe::Font;
 use tlib::{
     emit,
+    figure::{Color, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     signals,
@@ -187,6 +183,9 @@ pub trait WidgetAcquire: WidgetImpl + Default {}
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
+    /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
+    fn name(&self) -> String;
+
     /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
     fn as_element(&mut self) -> *mut dyn ElementImpl;
 
@@ -469,6 +468,10 @@ pub trait WidgetExt {
 }
 
 impl WidgetExt for Widget {
+    fn name(&self) -> String {
+        self.get_property("name").unwrap().get::<String>()
+    }
+
     fn as_element(&mut self) -> *mut dyn ElementImpl {
         self as *mut Self as *mut dyn ElementImpl
     }
@@ -804,10 +807,7 @@ impl WidgetExt for Widget {
     }
 
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
-        ApplicationWindow::send_message_with_id(
-            self.window_id(),
-            Message::SetCursorShape(cursor),
-        )
+        ApplicationWindow::send_message_with_id(self.window_id(), Message::SetCursorShape(cursor))
     }
 }
 

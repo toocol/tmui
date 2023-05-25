@@ -3,13 +3,11 @@ pub mod board;
 pub mod cpu_balance;
 pub mod drawing_context;
 pub mod element;
-pub mod figure;
 pub mod painter;
 
 #[cfg(test)]
 mod tests {
     use super::element::{Element, ElementAcquire, ElementExt, ElementImpl};
-    use super::figure::Rect;
     use crate::prelude::*;
     use tlib::object::{ObjectImpl, ObjectSubclass};
 

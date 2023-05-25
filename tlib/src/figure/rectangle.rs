@@ -1,5 +1,5 @@
 use super::{point::Point, FPoint, FSize, Size};
-use tlib::{
+use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Value,
@@ -282,8 +282,8 @@ impl Into<FRect> for Rect {
 }
 
 impl StaticType for Rect {
-    fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Rect")
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("Rect")
     }
 
     fn bytes_len() -> usize {
@@ -322,7 +322,7 @@ impl ToValue for Rect {
         Value::new(self)
     }
 
-    fn value_type(&self) -> tlib::Type {
+    fn value_type(&self) -> crate::Type {
         Self::static_type()
     }
 }
@@ -594,8 +594,8 @@ impl Into<Rect> for FRect {
 }
 
 impl StaticType for FRect {
-    fn static_type() -> tlib::Type {
-        tlib::Type::from_name("FRect")
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("FRect")
     }
 
     fn bytes_len() -> usize {
@@ -634,7 +634,7 @@ impl ToValue for FRect {
         Value::new(self)
     }
 
-    fn value_type(&self) -> tlib::Type {
+    fn value_type(&self) -> crate::Type {
         Self::static_type()
     }
 }

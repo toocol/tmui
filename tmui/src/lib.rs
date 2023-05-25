@@ -9,6 +9,7 @@ pub mod widget;
 pub mod label;
 pub mod layout;
 pub mod container;
+pub mod event_hints;
 pub mod scroll_bar;
 pub mod util;
 pub mod system;
@@ -17,7 +18,7 @@ pub mod vbox;
 pub mod hbox;
 
 pub mod skia_safe {
-    pub use skia_safe::*;
+    pub use tlib::skia_safe::*;
 }
 pub mod tokio {
     pub use tlib::tokio::*;

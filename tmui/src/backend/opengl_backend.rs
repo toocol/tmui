@@ -1,6 +1,6 @@
 use super::Backend;
 use crate::graphics::bitmap::Bitmap;
-use skia_safe::Surface;
+use crate::skia_safe::Surface;
 
 /// Backend for OpenGL,
 /// Support cross platform GPU acceleration.

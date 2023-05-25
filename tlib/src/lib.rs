@@ -1,3 +1,4 @@
+pub mod figure;
 pub mod actions;
 pub mod r#async;
 pub mod color_convert;
@@ -21,6 +22,10 @@ pub mod tokio {
 }
 pub mod winit {
     pub use winit::*;
+}
+
+pub mod skia_safe {
+    pub use skia_safe::*;
 }
 
 #[cfg(test)]

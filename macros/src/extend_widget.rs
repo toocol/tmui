@@ -26,7 +26,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 name,
                 "widget",
                 vec!["widget", "element", "object"],
-                false
+                false,
             )?;
 
             let element_trait_impl_clause =
@@ -86,6 +86,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
 
     Ok(quote!(
         impl WidgetExt for #name {
+            #[inline]
+            fn name(&self) -> String {
+                self.#(#widget_path).*.name()
+            }
+
             #[inline]
             fn as_element(&mut self) -> *mut dyn ElementImpl {
                 self as *mut Self as *mut dyn ElementImpl

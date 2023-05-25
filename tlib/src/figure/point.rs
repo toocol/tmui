@@ -1,5 +1,5 @@
 use std::ops::{Add, Sub};
-use tlib::{
+use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Type, Value,
@@ -103,8 +103,8 @@ impl Into<FPoint> for Point {
 }
 
 impl StaticType for Point {
-    fn static_type() -> tlib::Type {
-        tlib::Type::from_name("Point")
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("Point")
     }
 
     fn bytes_len() -> usize {
@@ -131,7 +131,7 @@ impl FromBytes for Point {
 
 impl ToValue for Point {
     fn to_value(&self) -> Value {
-        tlib::Value::new(self)
+       Value::new(self)
     }
 
     fn value_type(&self) -> Type {
@@ -252,8 +252,8 @@ impl Into<skia_safe::IPoint> for FPoint {
 }
 
 impl StaticType for FPoint {
-    fn static_type() -> tlib::Type {
-        tlib::Type::from_name("FPoint")
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("FPoint")
     }
 
     fn bytes_len() -> usize {
@@ -280,7 +280,7 @@ impl FromBytes for FPoint {
 
 impl ToValue for FPoint {
     fn to_value(&self) -> Value {
-        tlib::Value::new(self)
+        Value::new(self)
     }
 
     fn value_type(&self) -> Type {

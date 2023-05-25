@@ -1,7 +1,7 @@
 pub mod opengl_backend;
 pub mod raster_backend;
 
-use skia_safe::Surface;
+use crate::skia_safe::Surface;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]

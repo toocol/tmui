@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use tlib::{object::{ObjectImpl, ObjectSubclass}, timer::Timer, connect, disconnect};
-use tmui::{prelude::*, widget::WidgetImpl, graphics::figure::Color};
+use tmui::{prelude::*, widget::WidgetImpl, tlib::figure::Color};
 use log::debug;
 use lazy_static::lazy_static;
 

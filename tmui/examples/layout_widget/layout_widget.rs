@@ -2,12 +2,13 @@
 use std::time::{Duration, Instant};
 
 use log::debug;
-use tlib::{connect, object::ObjectSubclass, timer::Timer, disconnect};
-use tmui::{
-    graphics::figure::{FontTypeface, FontWidth},
-    label::Label,
-    prelude::*,
+use tlib::{
+    connect, disconnect,
+    figure::{FontTypeface, FontWidth},
+    object::ObjectSubclass,
+    timer::Timer,
 };
+use tmui::{label::Label, prelude::*};
 
 const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 
@@ -92,7 +93,10 @@ impl LayoutWidget {
         if self.idx >= 4 {
             self.idx = 0;
         }
-        debug!("Timeout change text. duration = {}ms", self.instant.elapsed().as_micros() as f32 / 1000.);
+        debug!(
+            "Timeout change text. duration = {}ms",
+            self.instant.elapsed().as_micros() as f32 / 1000.
+        );
         self.instant = Instant::now();
         self.label.set_text(TEXT[self.idx]);
         self.idx += 1;

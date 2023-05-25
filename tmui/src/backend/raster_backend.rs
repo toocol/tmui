@@ -1,6 +1,6 @@
 use super::Backend;
 use crate::graphics::bitmap::Bitmap;
-use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface};
+use crate::skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface};
 
 /// Backend for Raster,
 /// CPU rendering, no GPU acceleration.
