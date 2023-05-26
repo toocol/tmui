@@ -21,7 +21,7 @@ pub enum IpcEvent<T: 'static + Copy> {
     MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
     MouseMoveEvent(i32, i32, u32, Instant),
-    /// (x, y, amount, modifier, timestamp)
+    /// (x, y, delta, modifier, timestamp)
     MouseWheelEvent(i32, i32, i32, u32, Instant),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, Instant),
@@ -54,7 +54,7 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
     MouseMoveEvent(i32, i32, u32, Instant),
-    /// (x, y, amount, modifier, timestamp)
+    /// (x, y, delta, modifier, timestamp)
     MouseWheelEvent(i32, i32, i32, u32, Instant),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, Instant),

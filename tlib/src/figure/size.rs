@@ -1,9 +1,9 @@
-use std::ops::{Add, Sub};
 use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Type, Value,
 };
+use std::ops::{Add, Sub};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Size
@@ -47,7 +47,7 @@ impl Size {
 
     #[inline]
     pub fn add_height(&mut self, height: i32) {
-        self.height += height 
+        self.height += height
     }
 
     pub fn max(&mut self, size: Size) {
@@ -189,7 +189,7 @@ impl FSize {
 
     #[inline]
     pub fn add_height(&mut self, height: f32) {
-        self.height += height 
+        self.height += height
     }
 
     pub fn max(&mut self, size: FSize) {
@@ -286,5 +286,21 @@ impl ToValue for FSize {
 impl FromValue for FSize {
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_size_value() {
+        let size = Size::new(125, 250);
+        let val = size.to_value();
+        assert_eq!(size, val.get::<Size>());
+
+        let fsize = FSize::new(125., 250.);
+        let val = fsize.to_value();
+        assert_eq!(fsize, val.get::<FSize>());
     }
 }

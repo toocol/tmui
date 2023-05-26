@@ -103,6 +103,10 @@ impl WindowProcess {
                     }
                     control_flow.set_exit();
                 }
+                Event::WindowEvent { event: WindowEvent::Destroyed, .. } => {}
+                Event::WindowEvent { event, .. } => {
+
+                }
                 Event::UserEvent(Message::VSync(ins)) => {
                     debug!(
                         "vscyn track: {}ms",

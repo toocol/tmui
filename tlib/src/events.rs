@@ -1,11 +1,14 @@
+use winit::event::WindowEvent;
+
 use crate::{
+    figure::{Point, Size},
     impl_as_any, implements_enum_value,
     namespace::{AsNumeric, KeyCode, KeyboardModifier, MouseButton},
     prelude::*,
     values::{FromBytes, FromValue, ToBytes},
     Type, Value,
 };
-use std::{any::Any, fmt::Debug, mem::size_of};
+use std::{any::Any, fmt::Debug, mem::size_of, path::PathBuf};
 
 pub type Event = Box<dyn EventTrait>;
 pub trait EventTrait: 'static + AsAny + Debug + Sync + Send {
@@ -27,6 +30,26 @@ pub fn to_focus_event(evt: Event) -> Result<Box<FocusEvent>, Box<dyn Any>> {
     evt.as_any_boxed().downcast::<FocusEvent>()
 }
 
+#[inline]
+pub fn to_resize_event(evt: Event) -> Result<Box<ResizeEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<ResizeEvent>()
+}
+
+#[inline]
+pub fn to_moved_event(evt: Event) -> Result<Box<MovedEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<MovedEvent>()
+}
+
+#[inline]
+pub fn to_file_event(evt: Event) -> Result<Box<FileEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<FileEvent>()
+}
+
+#[inline]
+pub fn to_receive_character_event(evt: Event) -> Result<Box<ReceiveCharacterEvent>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<ReceiveCharacterEvent>()
+}
+
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum EventType {
@@ -44,7 +67,11 @@ pub enum EventType {
     FocusIn,
     FocusOut,
     Resize,
-    Paint,
+    Moved,
+    DroppedFile,
+    HoveredFile,
+    HoveredFileCancelled,
+    ReceivedCharacter,
 }
 impl From<u8> for EventType {
     fn from(value: u8) -> Self {
@@ -62,7 +89,11 @@ impl From<u8> for EventType {
             10 => Self::FocusIn,
             11 => Self::FocusOut,
             12 => Self::Resize,
-            13 => Self::Paint,
+            13 => Self::Moved,
+            14 => Self::DroppedFile,
+            15 => Self::HoveredFile,
+            16 => Self::HoveredFileCancelled,
+            17 => Self::ReceivedCharacter,
             _ => unimplemented!(),
         }
     }
@@ -121,6 +152,7 @@ impl KeyEvent {
     }
 }
 impl EventTrait for KeyEvent {
+    #[inline]
     fn type_(&self) -> EventType {
         self.type_
     }
@@ -278,6 +310,7 @@ impl MouseEvent {
 }
 
 impl EventTrait for MouseEvent {
+    #[inline]
     fn type_(&self) -> EventType {
         self.type_
     }
@@ -401,6 +434,7 @@ impl FocusEvent {
     }
 }
 impl EventTrait for FocusEvent {
+    #[inline]
     fn type_(&self) -> EventType {
         self.type_
     }
@@ -451,6 +485,370 @@ impl FromValue for FocusEvent {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct ResizeEvent {
     type_: EventType,
+    size: Size,
+}
+impl_as_any!(ResizeEvent);
+impl ResizeEvent {
+    pub fn new(width: i32, height: i32) -> Self {
+        Self {
+            type_: EventType::Resize,
+            size: (width, height).into(),
+        }
+    }
+
+    #[inline]
+    pub fn size(&self) -> Size {
+        self.size
+    }
+
+    #[inline]
+    pub fn width(&self) -> i32 {
+        self.size.width()
+    }
+
+    #[inline]
+    pub fn height(&self) -> i32 {
+        self.size.height()
+    }
+}
+impl EventTrait for ResizeEvent {
+    #[inline]
+    fn type_(&self) -> EventType {
+        self.type_
+    }
+}
+
+impl StaticType for ResizeEvent {
+    fn static_type() -> Type {
+        Type::from_name("ResizeEvent")
+    }
+
+    fn bytes_len() -> usize {
+        EventType::bytes_len() + Size::bytes_len()
+    }
+}
+impl ToBytes for ResizeEvent {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = self.type_.to_bytes();
+
+        bytes.append(&mut self.size.to_bytes());
+
+        bytes
+    }
+}
+impl ToValue for ResizeEvent {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for ResizeEvent {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let mut idx = 0usize;
+        let ty_len = EventType::bytes_len();
+        let ty = EventType::from_bytes(&data[idx..idx + ty_len], ty_len);
+        idx += ty_len;
+
+        let size_len = Size::bytes_len();
+        let size = Size::from_bytes(&data[idx..idx + size_len], size_len);
+
+        Self { type_: ty, size }
+    }
+}
+impl FromValue for ResizeEvent {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`MovedEvent`] Indicate the window moved.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub struct MovedEvent {
+    type_: EventType,
+    position: Point,
+}
+impl_as_any!(MovedEvent);
+impl MovedEvent {
+    #[inline]
+    pub fn new(x: i32, y: i32) -> Self {
+        Self {
+            type_: EventType::Moved,
+            position: (x, y).into(),
+        }
+    }
+
+    #[inline]
+    pub fn position(&self) -> Point {
+        self.position
+    }
+
+    #[inline]
+    pub fn x(&self) -> i32 {
+        self.position.x()
+    }
+
+    #[inline]
+    pub fn y(&self) -> i32 {
+        self.position.y()
+    }
+}
+impl EventTrait for MovedEvent {
+    #[inline]
+    fn type_(&self) -> EventType {
+        self.type_
+    }
+}
+
+impl StaticType for MovedEvent {
+    fn static_type() -> Type {
+        Type::from_name("MovedEvent")
+    }
+
+    fn bytes_len() -> usize {
+        EventType::bytes_len() + Point::bytes_len()
+    }
+}
+impl ToBytes for MovedEvent {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = self.type_.to_bytes();
+
+        bytes.append(&mut self.position.to_bytes());
+
+        bytes
+    }
+}
+impl ToValue for MovedEvent {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for MovedEvent {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let mut idx = 0usize;
+
+        let ty_len = EventType::bytes_len();
+        let type_ = EventType::from_bytes(&data[idx..idx + ty_len], ty_len);
+        idx += ty_len;
+
+        let pos_len = Point::bytes_len();
+        let position = Point::from_bytes(&data[idx..idx + pos_len], pos_len);
+
+        Self { type_, position }
+    }
+}
+impl FromValue for MovedEvent {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`FileEvent`] Indicate the window has dropped in([`DroppedFile`](EventType::DroppedFile))
+/// or horvered([`HoveredFile`](EventType::HoveredFile))/hovered canceled([`HoveredFileCancelled`](EventType::HoveredFileCancelled)).
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
+pub struct FileEvent {
+    type_: EventType,
+    path: Option<PathBuf>,
+}
+impl_as_any!(FileEvent);
+impl FileEvent {
+    #[inline]
+    pub fn dropped(path: PathBuf) -> Self {
+        Self {
+            type_: EventType::DroppedFile,
+            path: Some(path),
+        }
+    }
+
+    #[inline]
+    pub fn hovered(path: PathBuf) -> Self {
+        Self {
+            type_: EventType::HoveredFile,
+            path: Some(path),
+        }
+    }
+
+    #[inline]
+    pub fn hovered_cancel() -> Self {
+        Self {
+            type_: EventType::HoveredFileCancelled,
+            path: None,
+        }
+    }
+
+    #[inline]
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
+    }
+}
+impl EventTrait for FileEvent {
+    fn type_(&self) -> EventType {
+        self.type_
+    }
+}
+
+impl StaticType for FileEvent {
+    fn static_type() -> Type {
+        Type::from_name("FileEvent")
+    }
+
+    fn bytes_len() -> usize {
+        EventType::bytes_len() + PathBuf::bytes_len()
+    }
+
+    fn dyn_bytes_len(&self) -> usize {
+        let path_len = if self.path.is_none() {
+            0
+        } else {
+            if self.path.is_none() {
+                0
+            } else {
+                if let Some(str) = self.path().unwrap().as_os_str().to_str() {
+                    // Path string will end with '\0':
+                    str.len() + 1
+                } else {
+                    0
+                }
+            }
+        };
+        EventType::bytes_len() + path_len
+    }
+}
+impl ToBytes for FileEvent {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = self.type_.to_bytes();
+
+        if let Some(ref path) = self.path {
+            bytes.append(&mut path.to_bytes());
+        }
+
+        bytes
+    }
+}
+impl ToValue for FileEvent {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for FileEvent {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let mut idx = 0usize;
+
+        let ty_len = EventType::bytes_len();
+        let type_ = EventType::from_bytes(&data[idx..idx + ty_len], ty_len);
+        let path = if data.len() == EventType::bytes_len() {
+            None
+        } else {
+            idx += ty_len;
+            Some(PathBuf::from_bytes(&data[idx..], 0))
+        };
+
+        Self { type_, path }
+    }
+}
+impl FromValue for FileEvent {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`ReceiveCharacterEvent`] window receive the unicode character event.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
+pub struct ReceiveCharacterEvent {
+    type_: EventType,
+    c: char,
+}
+impl_as_any!(ReceiveCharacterEvent);
+impl ReceiveCharacterEvent {
+    #[inline]
+    pub fn new(c: char) -> Self {
+        Self {
+            type_: EventType::ReceivedCharacter,
+            c,
+        }
+    }
+
+    #[inline]
+    pub fn character(&self) -> char {
+        self.c
+    }
+}
+impl EventTrait for ReceiveCharacterEvent {
+    fn type_(&self) -> EventType {
+        self.type_
+    }
+}
+
+impl StaticType for ReceiveCharacterEvent {
+    fn static_type() -> Type {
+        Type::from_name("ReceiveCharacterEvent")
+    }
+
+    fn bytes_len() -> usize {
+        EventType::bytes_len() + char::bytes_len()
+    }
+}
+impl ToBytes for ReceiveCharacterEvent {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = self.type_.to_bytes();
+
+        bytes.append(&mut self.c.to_bytes());
+
+        bytes
+    }
+}
+impl ToValue for ReceiveCharacterEvent {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for ReceiveCharacterEvent {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let mut idx = 0usize;
+
+        let ty_len = EventType::bytes_len();
+        let type_ = EventType::from_bytes(&data[idx..idx + ty_len], ty_len);
+        idx += ty_len;
+
+        let char_len = char::bytes_len();
+        let c = char::from_bytes(&data[idx..], char_len);
+
+        Self { type_, c }
+    }
+}
+impl FromValue for ReceiveCharacterEvent {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Convert the [`WindowEvent`] from winit to [`Event`].
+/////////////////////////////////////////////////////////////////////////////////////
+impl<'a> Into<Event> for WindowEvent<'a> {
+    fn into(self) -> Event {
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -483,13 +881,40 @@ mod tests {
         assert_eq!(mouse_event.type_, EventType::MouseButtonPress);
         assert_eq!(mouse_event.position, (234, 12));
         assert_eq!(mouse_event.mouse_button, MouseButton::LeftButton);
-        assert_eq!(mouse_event.modifier, KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier));
+        assert_eq!(
+            mouse_event.modifier,
+            KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier)
+        );
         assert_eq!(mouse_event.n_press, 3);
         assert_eq!(mouse_event.delta, 100);
 
         let evt: Event = Box::new(FocusEvent::new(true));
         let focus_event = to_focus_event(evt).unwrap();
         assert_eq!(focus_event.type_, EventType::FocusIn);
+
+        let evt: Event = Box::new(ResizeEvent::new(225, 150));
+        let resize_evt = to_resize_event(evt).unwrap();
+        assert_eq!(resize_evt.type_, EventType::Resize);
+        assert_eq!(resize_evt.width(), 225);
+        assert_eq!(resize_evt.height(), 150);
+
+        let evt: Event = Box::new(MovedEvent::new(290, 15));
+        let moved_evt = to_moved_event(evt).unwrap();
+        assert_eq!(moved_evt.type_, EventType::Moved);
+        assert_eq!(moved_evt.x(), 290);
+        assert_eq!(moved_evt.y(), 15);
+
+        let path = "C:\\Windows\\System".into();
+        let evt: Event = Box::new(FileEvent::dropped(path));
+        let file_evt = to_file_event(evt).unwrap();
+        let path: Option<PathBuf> = Some("C:\\Windows\\System".into());
+        assert_eq!(file_evt.type_, EventType::DroppedFile);
+        assert_eq!(file_evt.path, path);
+
+        let evt: Event = Box::new(ReceiveCharacterEvent::new('好'));
+        let receive_char_evt = to_receive_character_event(evt).unwrap();
+        assert_eq!(receive_char_evt.type_, EventType::ReceivedCharacter);
+        assert_eq!(receive_char_evt.c, '好');
     }
 
     #[test]
@@ -526,6 +951,39 @@ mod tests {
     }
 
     #[test]
+    fn test_resize_event_value() {
+        let resize_evt = ResizeEvent::new(125, 225);
+        let val = resize_evt.to_value();
+        assert_eq!(resize_evt, val.get::<ResizeEvent>())
+    }
+
+    #[test]
+    fn test_moved_event_value() {
+        let moved_event = MovedEvent::new(290, 15);
+        let val = moved_event.to_value();
+        assert_eq!(moved_event, val.get::<MovedEvent>())
+    }
+
+    #[test]
+    fn test_file_event_value() {
+        let path = "C:\\Windows\\System".into();
+        let file_event = FileEvent::dropped(path);
+        let val = file_event.to_value();
+        assert_eq!(file_event, val.get::<FileEvent>());
+
+        let file_event = FileEvent::hovered_cancel();
+        let val = file_event.to_value();
+        assert_eq!(file_event, val.get::<FileEvent>());
+    }
+
+    #[test]
+    fn test_receive_character_value() {
+        let receive_char_evt = ReceiveCharacterEvent::new('好');
+        let val = receive_char_evt.to_value();
+        assert_eq!(receive_char_evt, val.get::<ReceiveCharacterEvent>())
+    }
+
+    #[test]
     fn test_event_value_tuple() {
         let key_event = KeyEvent::new(
             EventType::KeyPress,
@@ -541,9 +999,36 @@ mod tests {
             3,
             0,
         );
+        let path = "C:\\Windows\\System".into();
+        let file_event = FileEvent::dropped(path);
+        let hover_cancel_evt = FileEvent::hovered_cancel();
         let focus_event = FocusEvent::new(false);
-        let tuple = (key_event, mouse_event, focus_event);
+        let resize_evt = ResizeEvent::new(125, 225);
+        let moved_event = MovedEvent::new(290, 15);
+        let receive_char_evt = ReceiveCharacterEvent::new('好');
+        let tuple = (
+            key_event,
+            mouse_event,
+            file_event,
+            hover_cancel_evt,
+            focus_event,
+            resize_evt,
+            moved_event,
+            receive_char_evt
+        );
         let val = tuple.to_value();
-        assert_eq!(tuple, val.get::<(KeyEvent, MouseEvent, FocusEvent)>())
+        assert_eq!(
+            tuple,
+            val.get::<(
+                KeyEvent,
+                MouseEvent,
+                FileEvent,
+                FileEvent,
+                FocusEvent,
+                ResizeEvent,
+                MovedEvent,
+                ReceiveCharacterEvent
+            )>()
+        )
     }
 }

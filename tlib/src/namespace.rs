@@ -444,6 +444,8 @@ pub enum KeyboardModifier {
     AltModifier,
     MetaModifier,
     KeypadModifier,
+
+    // x11 only.
     GroupSwitchModifier,
 
     KeyboardModifierMask,

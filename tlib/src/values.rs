@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use std::path::PathBuf;
+
 use crate::types::{StaticType, Type};
 
 /// Generic Value type, basically, most basic types can be converted to Value.
@@ -511,7 +513,7 @@ impl ToBytes for String {
 impl FromBytes for String {
     fn from_bytes(data: &[u8], _: usize) -> Self {
         if data.len() == 0 {
-            return "".to_string()
+            return "".to_string();
         }
         let data = if data[data.len() - 1] == 0 {
             &data[0..data.len() - 1]
@@ -550,6 +552,34 @@ impl ToValue for &str {
 
     fn value_type(&self) -> Type {
         Self::static_type()
+    }
+}
+
+impl ToBytes for char {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = [0u8; 4];
+        self.encode_utf8(&mut bytes);
+        bytes.to_vec()
+    }
+}
+impl ToValue for char {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for char {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let str = std::str::from_utf8(data).unwrap();
+        str.chars().next().unwrap()
+    }
+}
+impl FromValue for char {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
     }
 }
 
@@ -616,6 +646,45 @@ impl<T: StaticType + ToBytes> ToValue for Vec<T> {
     }
 }
 
+impl StaticType for PathBuf {
+    fn static_type() -> Type {
+        Type::PATH_BUF
+    }
+
+    fn bytes_len() -> usize {
+        0
+    }
+}
+impl ToBytes for PathBuf {
+    fn to_bytes(&self) -> Vec<u8> {
+        if let Some(path) = self.as_os_str().to_str() {
+            path.to_bytes()
+        } else {
+            vec![]
+        }
+    }
+}
+impl ToValue for PathBuf {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for PathBuf {
+    fn from_bytes(data: &[u8], len: usize) -> Self {
+        let str = String::from_bytes(data, len);
+        str.into()
+    }
+}
+impl FromValue for PathBuf {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
 fn from_value_generic<T: StaticType + FromBytes + Default>(
     data: &[u8],
     vec: &Vec<usize>,
@@ -623,7 +692,7 @@ fn from_value_generic<T: StaticType + FromBytes + Default>(
     flag: usize,
 ) -> (T, usize) {
     let mut t = T::default();
-    if T::static_type().is_a(Type::STRING) {
+    if T::static_type().is_a(Type::STRING) || T::static_type().is_a(Type::PATH_BUF) {
         let mut seg_arr: Vec<u8> = vec![];
         loop {
             if data[idx] != 0 {
@@ -717,6 +786,8 @@ implements_tuple_value!(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T => a,b,c,d,e,f,g
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use crate::prelude::*;
 
     #[test]
@@ -724,5 +795,25 @@ mod tests {
         let tuple = (12, 64., "Hello".to_string(), 1024);
         let value = tuple.to_value();
         assert_eq!(tuple, value.get::<(i32, f64, String, i32)>())
+    }
+
+    #[test]
+    fn test_path_buf_value() {
+        let path_1: PathBuf = "D:\\workspace".into();
+        let val = path_1.to_value();
+        assert_eq!(path_1, val.get::<PathBuf>());
+
+        let path_2: PathBuf = "C:\\Windows\\System".into();
+        let path_3: PathBuf = "".into();
+        let tuple = (path_1, path_2, path_3);
+        let val = tuple.to_value();
+        assert_eq!(tuple, val.get::<(PathBuf, PathBuf, PathBuf)>())
+    }
+
+    #[test]
+    fn test_char_value() {
+        let c = 'A';
+        let val = c.to_value();
+        assert_eq!(c, val.get::<char>())
     }
 }
