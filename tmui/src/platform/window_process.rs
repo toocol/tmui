@@ -20,7 +20,7 @@ use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcN
 use tlib::{
     events::{EventType, KeyEvent, MouseEvent},
     figure::Point,
-    namespace::{KeyCode, KeyboardModifier, MouseButton},
+    namespace::{KeyboardModifier, MouseButton, KeyCode},
     prelude::SystemCursorShape,
     winit::event::{ElementState, KeyboardInput, ModifiersState, MouseScrollDelta},
 };
@@ -228,7 +228,7 @@ impl WindowProcess {
                         WindowEvent::KeyboardInput {
                             input:
                                 KeyboardInput {
-                                    scancode,
+                                    virtual_keycode,
                                     state: ElementState::Pressed,
                                     ..
                                 },
@@ -236,16 +236,17 @@ impl WindowProcess {
                         },
                     ..
                 } => {
-                    let key_code = KeyCode::from(scancode);
-                    println!("Key pressed: {}", key_code.to_string());
-                    let evt = KeyEvent::new(
-                        EventType::KeyPress,
-                        key_code,
-                        key_code.to_string(),
-                        *modifer,
-                    );
+                    if let Some(vkeycode) = virtual_keycode {
+                        let key_code: KeyCode = vkeycode.into();
+                        let evt = KeyEvent::new(
+                            EventType::KeyPress,
+                            key_code,
+                            key_code.to_string(),
+                            *modifer,
+                        );
 
-                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
                 }
 
                 // Key released event.
@@ -254,7 +255,7 @@ impl WindowProcess {
                         WindowEvent::KeyboardInput {
                             input:
                                 KeyboardInput {
-                                    scancode,
+                                    virtual_keycode,
                                     state: ElementState::Released,
                                     ..
                                 },
@@ -262,17 +263,23 @@ impl WindowProcess {
                         },
                     ..
                 } => {
-                    let key_code = KeyCode::from(scancode);
-                    let evt = KeyEvent::new(
-                        EventType::KeyRelease,
-                        key_code,
-                        key_code.to_string(),
-                        *modifer,
-                    );
+                    if let Some(vkeycode) = virtual_keycode {
+                        let key_code = vkeycode.into();
+                        let evt = KeyEvent::new(
+                            EventType::KeyRelease,
+                            key_code,
+                            key_code.to_string(),
+                            *modifer,
+                        );
 
-                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
                 }
+                
+                // Cleared event.
+                Event::MainEventsCleared => {}
 
+                // VSync event.
                 Event::UserEvent(Message::VSync(ins)) => {
                     debug!(
                         "vscyn track: {}ms",
@@ -280,7 +287,8 @@ impl WindowProcess {
                     );
                     window.request_redraw();
                 }
-                Event::MainEventsCleared => {}
+
+                // SetCursorShape event.
                 Event::UserEvent(Message::SetCursorShape(cursor)) => match cursor {
                     SystemCursorShape::BlankCursor => window.set_cursor_visible(false),
                     _ => {
@@ -288,10 +296,13 @@ impl WindowProcess {
                         window.set_cursor_icon(cursor.into())
                     }
                 },
+
+                // Redraw event.
                 Event::RedrawRequested(_) => {
                     // Redraw the application.
                     platform_context.redraw();
                 }
+
                 _ => (),
             }
         });
