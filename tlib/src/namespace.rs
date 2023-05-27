@@ -1,7 +1,7 @@
 use crate::{
     prelude::{StaticType, ToValue},
     values::{FromBytes, FromValue, ToBytes},
-    Type, Value,
+    Type, Value, 
 };
 use std::mem::size_of;
 use strum::IntoEnumIterator;
@@ -20,7 +20,7 @@ use winit::window::CursorIcon;
 /// use tlib::implements_enum_value;
 /// use tlib::namespace::AsNumeric;
 /// use std::mem::size_of;
-/// 
+///
 /// #[repr(u8)]
 /// #[derive(Clone, Copy)]
 /// pub enum Enum {
@@ -452,17 +452,20 @@ pub enum KeyboardModifier {
     Combination(u32),
 }
 impl AsNumeric<u32> for KeyboardModifier {
+    #[inline]
     fn as_numeric(&self) -> u32 {
         self.as_u32()
     }
 }
 impl KeyboardModifier {
+    #[inline]
     pub fn or(&self, other: KeyboardModifier) -> KeyboardModifier {
         let one = self.as_u32();
         let other = other.as_u32();
         Self::Combination(one | other)
     }
 
+    #[inline]
     pub fn has(&self, has: KeyboardModifier) -> bool {
         match self {
             Self::Combination(mask) => {
@@ -473,6 +476,27 @@ impl KeyboardModifier {
         }
     }
 
+    #[inline]
+    pub fn shift(&self) -> bool {
+        self.has(KeyboardModifier::ShiftModifier)
+    }
+
+    #[inline]
+    pub fn ctrl(&self) -> bool {
+        self.has(KeyboardModifier::ControlModifier)
+    }
+
+    #[inline]
+    pub fn alt(&self) -> bool {
+        self.has(KeyboardModifier::AltModifier)
+    }
+
+    #[inline]
+    pub fn meta(&self) -> bool {
+        self.has(KeyboardModifier::MetaModifier)
+    }
+
+    #[inline]
     pub fn as_u32(&self) -> u32 {
         match self {
             Self::NoModifier => 0x00000000,
@@ -759,6 +783,7 @@ pub enum MouseButton {
     LeftButton,
     RightButton,
     MiddleButton,
+    Other(u32),
     Combination(u32),
 }
 impl AsNumeric<u32> for MouseButton {
@@ -789,6 +814,7 @@ impl MouseButton {
             MouseButton::LeftButton => 0x00000001,
             MouseButton::RightButton => 0x00000002,
             MouseButton::MiddleButton => 0x00000004,
+            MouseButton::Other(x) => *x,
             MouseButton::Combination(x) => *x,
         }
     }
@@ -804,13 +830,25 @@ impl From<u32> for MouseButton {
         }
     }
 }
+impl Into<MouseButton> for winit::event::MouseButton {
+    fn into(self) -> MouseButton {
+        match self {
+            winit::event::MouseButton::Left => MouseButton::LeftButton,
+            winit::event::MouseButton::Right => MouseButton::RightButton,
+            winit::event::MouseButton::Middle => MouseButton::MiddleButton,
+            winit::event::MouseButton::Other(x) => MouseButton::Other(x as u32),
+        }
+    }
+}
 implements_enum_value!(MouseButton, u32);
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
 
-    use super::{Align, KeyCode, KeyboardModifier, SystemCursorShape, Coordinate, Orientation, BorderStyle};
+    use super::{
+        Align, BorderStyle, Coordinate, KeyCode, KeyboardModifier, Orientation, SystemCursorShape,
+    };
 
     #[test]
     fn test_key_code_value() {

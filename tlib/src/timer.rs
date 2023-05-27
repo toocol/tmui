@@ -61,6 +61,7 @@ impl TimerHub {
     }
 
     /// Check the timers, if any timer was arrival the interval, emit the [`timeout()`] signal.
+    #[inline]
     pub fn check_timers(&self) {
         for (id, timer) in self.timers.borrow_mut().iter_mut() {
             if let Some(timer) = timer.as_mut() {

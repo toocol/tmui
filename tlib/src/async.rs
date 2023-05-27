@@ -26,6 +26,7 @@ pub fn async_tasks<'a>() -> &'static mut HashMap<ThreadId, Vec<AsyncTask<'a>>> {
     unsafe { &mut ASYNC_TASK }
 }
 
+#[inline]
 pub fn async_callbacks() {
     let thread_id = thread::current().id();
 
