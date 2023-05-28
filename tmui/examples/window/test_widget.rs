@@ -39,7 +39,7 @@ impl ObjectImpl for TestWidget {
 }
 
 impl WidgetImpl for TestWidget {
-    fn mouse_pressed(&mut self, mouse_event: &tlib::events::MouseEvent) {
+    fn on_mouse_pressed(&mut self, mouse_event: &tlib::events::MouseEvent) {
         println!("Mouse pressed {:?}", mouse_event.position())
     }
 }
