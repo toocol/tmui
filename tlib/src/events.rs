@@ -1,4 +1,4 @@
-use winit::event::{ElementState, Ime, MouseScrollDelta, WindowEvent};
+use winit::event::Ime;
 use crate::{
     figure::{Point, Size},
     impl_as_any, implements_enum_value,
@@ -886,76 +886,6 @@ impl EventTrait for InputMethodEvent {
     #[inline]
     fn type_(&self) -> EventType {
         self.type_
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////////////
-/// Convert the [`WindowEvent`] from winit to [`Event`].
-/////////////////////////////////////////////////////////////////////////////////////
-impl<'a> Into<Event> for WindowEvent<'a> {
-    fn into(self) -> Event {
-        match self {
-            Self::CursorMoved { position, .. } => Box::new(MouseEvent::new(
-                EventType::MouseMove,
-                (position.x as i32, position.y as i32),
-                MouseButton::NoButton,
-                KeyboardModifier::NoModifier,
-                0,
-                Point::default(),
-            )),
-            Self::MouseWheel { delta, .. } => {
-                if let MouseScrollDelta::PixelDelta(pos) = delta {
-                    let point = Point::new(pos.x as i32, pos.y as i32);
-                    Box::new(MouseEvent::new(
-                        EventType::MouseWhell,
-                        (0, 0),
-                        MouseButton::NoButton,
-                        KeyboardModifier::NoModifier,
-                        0,
-                        point,
-                    ))
-                } else {
-                    unimplemented!()
-                }
-            }
-            Self::MouseInput { state, button, .. } => match state {
-                ElementState::Pressed => Box::new(MouseEvent::new(
-                    EventType::MouseButtonPress,
-                    (0, 0),
-                    button.into(),
-                    KeyboardModifier::NoModifier,
-                    1,
-                    Point::default(),
-                )),
-                ElementState::Released => Box::new(MouseEvent::new(
-                    EventType::MouseButtonRelease,
-                    (0, 0),
-                    button.into(),
-                    KeyboardModifier::NoModifier,
-                    1,
-                    Point::default(),
-                )),
-            },
-            Self::KeyboardInput { input, .. } => {
-                let key_code = KeyCode::from(input.scancode);
-                println!("Key event: {}", key_code.to_string());
-                match input.state {
-                    ElementState::Pressed => Box::new(KeyEvent::new(
-                        EventType::KeyPress,
-                        key_code,
-                        key_code.to_string(),
-                        KeyboardModifier::NoModifier,
-                    )),
-                    ElementState::Released => Box::new(KeyEvent::new(
-                        EventType::KeyRelease,
-                        key_code,
-                        key_code.to_string(),
-                        KeyboardModifier::NoModifier,
-                    )),
-                }
-            }
-            _ => unreachable!(),
-        }
     }
 }
 
