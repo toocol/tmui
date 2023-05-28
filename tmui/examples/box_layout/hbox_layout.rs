@@ -1,14 +1,21 @@
+use derivative::Derivative;
 use tlib::object::ObjectSubclass;
 use tmui::{prelude::*, label::Label};
 
 #[extends(Widget, Layout(HBox))]
-#[derive(Default, Childrenable)]
+#[derive(Derivative, Childrenable)]
+#[derivative(Default)]
 pub struct HBoxLayout {
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     label_1: Label,
+
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     label_2: Label,
+
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     label_3: Label,
 }
 

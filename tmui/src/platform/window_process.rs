@@ -17,7 +17,13 @@ use std::{
     time::{Duration, Instant},
 };
 use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
-use tlib::prelude::SystemCursorShape;
+use tlib::{
+    events::{EventType, KeyEvent, MouseEvent},
+    figure::Point,
+    namespace::{KeyCode, KeyboardModifier, MouseButton},
+    prelude::SystemCursorShape,
+    winit::event::{ElementState, KeyboardInput, ModifiersState, MouseScrollDelta},
+};
 
 pub(crate) struct WindowProcess;
 
@@ -34,14 +40,21 @@ impl WindowProcess {
         ipc_master: Option<Arc<IpcMaster<T, M>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
-        let _input_sender = platform_context.input_sender();
         static mut VSYNC_REC: Lazy<Option<Instant>> = Lazy::new(|| None);
         let vsync_rec = unsafe { VSYNC_REC.deref_mut() };
 
         static mut UPDATE_CNT: Lazy<usize> = Lazy::new(|| 0);
         let update_cnt = unsafe { UPDATE_CNT.deref_mut() };
 
+        static mut MODIFIER: Lazy<KeyboardModifier> = Lazy::new(|| KeyboardModifier::NoModifier);
+        let modifer = unsafe { MODIFIER.deref_mut() };
+
+        static mut MOUSE_POSITION: Lazy<(i32, i32)> = Lazy::new(|| (0, 0));
+        let mouse_position = unsafe { MOUSE_POSITION.deref_mut() };
+
         event_loop.run(move |event, _, control_flow| {
+            let input_sender = platform_context.input_sender();
+
             // Adjusting CPU usage based on vsync signals.
             if let Some(ins) = vsync_rec {
                 if ins.elapsed().as_millis() >= 500 {
@@ -92,6 +105,7 @@ impl WindowProcess {
             }
 
             match event {
+                // Window close event.
                 Event::WindowEvent {
                     event: WindowEvent::CloseRequested,
                     ..
@@ -103,6 +117,172 @@ impl WindowProcess {
                     }
                     control_flow.set_exit();
                 }
+
+                // Window destroy event.
+                Event::WindowEvent {
+                    event: WindowEvent::Destroyed,
+                    ..
+                } => {}
+
+                // Modifier change event.
+                Event::WindowEvent {
+                    event: WindowEvent::ModifiersChanged(modifier_state),
+                    ..
+                } => change_modifer(modifer, modifier_state),
+
+                // Mouse enter window event.
+                Event::WindowEvent {
+                    event: WindowEvent::CursorEntered { .. },
+                    ..
+                } => {}
+
+                // Mouse leave window event.
+                Event::WindowEvent {
+                    event: WindowEvent::CursorLeft { .. },
+                    ..
+                } => {}
+
+                // Mouse moved event.
+                Event::WindowEvent {
+                    event: WindowEvent::CursorMoved { position, .. },
+                    ..
+                } => {
+                    let evt = MouseEvent::new(
+                        EventType::MouseMove,
+                        (position.x as i32, position.y as i32),
+                        MouseButton::NoButton,
+                        *modifer,
+                        0,
+                        Point::default(),
+                    );
+                    let pos = evt.position();
+                    *mouse_position = (pos.0, pos.1);
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                }
+
+                // Mouse wheel event.
+                Event::WindowEvent {
+                    event: WindowEvent::MouseWheel { delta, .. },
+                    ..
+                } => {
+                    let point = match delta {
+                        MouseScrollDelta::PixelDelta(pos) => Point::new(pos.x as i32, pos.y as i32),
+                        MouseScrollDelta::LineDelta(x, y) => Point::new(x as i32, y as i32),
+                    };
+                    let evt = MouseEvent::new(
+                        EventType::MouseWhell,
+                        (mouse_position.0, mouse_position.1),
+                        MouseButton::NoButton,
+                        *modifer,
+                        0,
+                        point,
+                    );
+
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                }
+
+                // Mouse pressed event.
+                Event::WindowEvent {
+                    event:
+                        WindowEvent::MouseInput {
+                            state: ElementState::Pressed,
+                            button,
+                            ..
+                        },
+                    ..
+                } => {
+                    let evt = MouseEvent::new(
+                        EventType::MouseButtonPress,
+                        (mouse_position.0, mouse_position.1),
+                        button.into(),
+                        *modifer,
+                        1,
+                        Point::default(),
+                    );
+
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                }
+
+                // Mouse release event.
+                Event::WindowEvent {
+                    event:
+                        WindowEvent::MouseInput {
+                            state: ElementState::Released,
+                            button,
+                            ..
+                        },
+                    ..
+                } => {
+                    let evt = MouseEvent::new(
+                        EventType::MouseButtonRelease,
+                        (mouse_position.0, mouse_position.1),
+                        button.into(),
+                        *modifer,
+                        1,
+                        Point::default(),
+                    );
+
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                }
+
+                // Key pressed event.
+                Event::WindowEvent {
+                    event:
+                        WindowEvent::KeyboardInput {
+                            input:
+                                KeyboardInput {
+                                    virtual_keycode,
+                                    state: ElementState::Pressed,
+                                    ..
+                                },
+                            ..
+                        },
+                    ..
+                } => {
+                    if let Some(vkeycode) = virtual_keycode {
+                        let key_code: KeyCode = vkeycode.into();
+                        let evt = KeyEvent::new(
+                            EventType::KeyPress,
+                            key_code,
+                            key_code.to_string(),
+                            *modifer,
+                        );
+
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
+                }
+
+                // Key released event.
+                Event::WindowEvent {
+                    event:
+                        WindowEvent::KeyboardInput {
+                            input:
+                                KeyboardInput {
+                                    virtual_keycode,
+                                    state: ElementState::Released,
+                                    ..
+                                },
+                            ..
+                        },
+                    ..
+                } => {
+                    if let Some(vkeycode) = virtual_keycode {
+                        let key_code: KeyCode = vkeycode.into();
+                        let evt = KeyEvent::new(
+                            EventType::KeyRelease,
+                            key_code,
+                            key_code.to_string(),
+                            *modifer,
+                        );
+
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
+                }
+
+                // Cleared event.
+                Event::MainEventsCleared => {}
+
+                // VSync event.
                 Event::UserEvent(Message::VSync(ins)) => {
                     debug!(
                         "vscyn track: {}ms",
@@ -110,7 +290,8 @@ impl WindowProcess {
                     );
                     window.request_redraw();
                 }
-                Event::MainEventsCleared => {}
+
+                // SetCursorShape event.
                 Event::UserEvent(Message::SetCursorShape(cursor)) => match cursor {
                     SystemCursorShape::BlankCursor => window.set_cursor_visible(false),
                     _ => {
@@ -118,10 +299,13 @@ impl WindowProcess {
                         window.set_cursor_icon(cursor.into())
                     }
                 },
+
+                // Redraw event.
                 Event::RedrawRequested(_) => {
                     // Redraw the application.
                     platform_context.redraw();
                 }
+
                 _ => (),
             }
         });
@@ -174,4 +358,22 @@ impl WindowProcess {
             std::thread::park_timeout(Duration::from_micros(10));
         }
     }
+}
+
+#[inline]
+fn change_modifer(modifer: &mut KeyboardModifier, modifier_state: ModifiersState) {
+    let mut state = KeyboardModifier::NoModifier;
+    if modifier_state.shift() {
+        state = state.or(KeyboardModifier::ShiftModifier);
+    }
+    if modifier_state.ctrl() {
+        state = state.or(KeyboardModifier::ControlModifier);
+    }
+    if modifier_state.alt() {
+        state = state.or(KeyboardModifier::AltModifier);
+    }
+    if modifier_state.logo() {
+        state = state.or(KeyboardModifier::MetaModifier);
+    }
+    *modifer = state;
 }

@@ -1,9 +1,13 @@
 use std::time::Duration;
 
-use tlib::{object::{ObjectImpl, ObjectSubclass}, timer::Timer, connect, disconnect};
-use tmui::{prelude::*, widget::WidgetImpl, tlib::figure::Color};
-use log::debug;
 use lazy_static::lazy_static;
+use log::debug;
+use tlib::{
+    connect, disconnect,
+    object::{ObjectImpl, ObjectSubclass},
+    timer::Timer,
+};
+use tmui::{prelude::*, tlib::figure::Color, widget::WidgetImpl};
 
 lazy_static! {
     static ref COLORS: [Color; 3] = [Color::RED, Color::GREEN, Color::BLUE];
@@ -34,7 +38,11 @@ impl ObjectImpl for TestWidget {
     }
 }
 
-impl WidgetImpl for TestWidget {}
+impl WidgetImpl for TestWidget {
+    fn mouse_pressed(&mut self, mouse_event: &tlib::events::MouseEvent) {
+        println!("Mouse pressed {:?}", mouse_event.position())
+    }
+}
 
 impl TestWidget {
     pub fn new() -> Self {
@@ -51,8 +59,6 @@ impl TestWidget {
         self.set_background(COLORS[self.idx]);
         self.update();
 
-        tasync!({
-            debug!("timeout async")
-        });
+        tasync!({ debug!("timeout async") });
     }
 }

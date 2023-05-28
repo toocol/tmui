@@ -28,6 +28,7 @@ impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
     }
 }
 
+/// Maybe it's useless, write this just in case.
 #[inline]
 fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
     let ty = evt.type_();
@@ -116,6 +117,6 @@ fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
         FocusOut => {
             IpcEvent::RequestFocusEvent(false, Instant::now())
         }
-        _ => unimplemented!(),
+        _ => unreachable!()
     }
 }

@@ -1,5 +1,6 @@
 use std::ptr::NonNull;
 
+use crate::skia_safe::Font;
 use crate::{
     application_window::ApplicationWindow,
     graphics::{drawing_context::DrawingContext, element::ElementImpl, painter::Painter},
@@ -8,9 +9,9 @@ use crate::{
     prelude::*,
     util::skia_font_clone,
 };
-use crate::skia_safe::Font;
 use tlib::{
     emit,
+    events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
     figure::{Color, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
@@ -133,7 +134,6 @@ impl ObjectImpl for Widget {
                 let visible = value.get::<bool>();
                 self.notify_visible(visible)
             }
-            "focus" => {}
             _ => {}
         }
     }
@@ -465,6 +465,16 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::set_cursor_shape) (Defined in [`WidgetExt`])
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape);
+
+    /// Map the given point to global coordinate.
+    ///
+    /// Go to[`Function defination`](WidgetExt::map_to_global) (Defined in [`WidgetExt`])
+    fn map_to_global(&self, point: &Point) -> Point;
+
+    /// Map the given point to widget coordinate.
+    ///
+    /// Go to[`Function defination`](WidgetExt::map_to_widget) (Defined in [`WidgetExt`])
+    fn map_to_widget(&self, point: &Point) -> Point;
 }
 
 impl WidgetExt for Widget {
@@ -809,6 +819,16 @@ impl WidgetExt for Widget {
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
         ApplicationWindow::send_message_with_id(self.window_id(), Message::SetCursorShape(cursor))
     }
+
+    fn map_to_global(&self, point: &Point) -> Point {
+        let contents_rect = self.contents_rect(None);
+        Point::new(point.x() + contents_rect.x(), point.y() + contents_rect.y())
+    }
+
+    fn map_to_widget(&self, point: &Point) -> Point {
+        let contents_rect = self.contents_rect(None);
+        Point::new(point.x() - contents_rect.x(), point.y() - contents_rect.y())
+    }
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -862,6 +882,27 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
     }
 }
 
+////////////////////////////////////// PointEffective //////////////////////////////////////
+pub trait PointEffective {
+    /// Is the detection point effective.
+    fn point_effective(&self, point: &Point) -> bool;
+}
+impl PointEffective for Widget {
+    fn point_effective(&self, point: &Point) -> bool {
+        let self_rect = self.rect();
+        if let Some(child) = self.get_raw_child() {
+            let child_rect = unsafe { child.as_ref().unwrap().rect() };
+            return self_rect.contains(point) && !child_rect.contains(point);
+        } else {
+            return self_rect.contains(point);
+        }
+    }
+}
+
+////////////////////////////////////// InnerEventProcess //////////////////////////////////////
+pub trait InnerEventProcess {}
+impl<T: WidgetImpl> InnerEventProcess for T {}
+
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////
 /// Every struct modified by proc-macro [`extends_widget`] should impl this trait manually.
 /// WidgetImpl's `paint()` function Will be proxy executated by [`ElementImpl::on_renderer`] method .
@@ -877,6 +918,8 @@ pub trait WidgetImpl:
     + ObjectImpl
     + ParentType
     + Layout
+    + InnerEventProcess
+    + PointEffective
 {
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Option<SizeHint> {
@@ -888,6 +931,39 @@ pub trait WidgetImpl:
 
     /// Invoke when widget's font was changed.
     fn font_changed(&mut self) {}
+
+    /// Invoke when widget's receive mouse pressed event.
+    fn mouse_pressed(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse released event.
+    fn mouse_released(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse double click event.
+    fn mouse_double_click(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse move event.
+    fn mouse_move(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse wheel event.
+    fn mouse_wheel(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse enter event.
+    fn mouse_enter(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse leave event.
+    fn mouse_leave(&mut self, mouse_event: &MouseEvent) {}
+
+    /// Invoke when widget's receive key pressed event.
+    fn key_pressed(&mut self, key_event: &KeyEvent) {}
+
+    /// Invoke when widget's receive key released event.
+    fn key_released(&mut self, key_event: &KeyEvent) {}
+
+    /// Invoke when widget's receive character event.
+    fn receive_character(&mut self, characer_event: &ReceiveCharacterEvent) {}
+
+    /// Invoke when widget's receive input method event.
+    fn input_method(&mut self, input_method: &InputMethodEvent) {}
 }
 
 pub trait WidgetImplExt: WidgetImpl {

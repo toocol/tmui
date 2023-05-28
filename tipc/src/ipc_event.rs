@@ -1,5 +1,5 @@
 use std::time::Instant;
-use tlib::prelude::SystemCursorShape;
+use tlib::{prelude::SystemCursorShape, figure::Point};
 use crate::mem::{IPC_KEY_EVT_SIZE, IPC_TEXT_EVT_SIZE};
 
 pub enum IpcEvent<T: 'static + Copy> {
@@ -21,8 +21,8 @@ pub enum IpcEvent<T: 'static + Copy> {
     MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
     MouseMoveEvent(i32, i32, u32, Instant),
-    /// (x, y, amount, modifier, timestamp)
-    MouseWheelEvent(i32, i32, i32, u32, Instant),
+    /// (x, y, delta, modifier, timestamp)
+    MouseWheelEvent(i32, i32, Point, u32, Instant),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, Instant),
     /// (system_cursor_shape)
@@ -54,8 +54,8 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
     MouseMoveEvent(i32, i32, u32, Instant),
-    /// (x, y, amount, modifier, timestamp)
-    MouseWheelEvent(i32, i32, i32, u32, Instant),
+    /// (x, y, delta, modifier, timestamp)
+    MouseWheelEvent(i32, i32, Point, u32, Instant),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, Instant),
     /// (system_cursor_shape)

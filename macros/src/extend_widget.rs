@@ -58,6 +58,13 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         type_registry.register::<#name, ReflectWidgetImpl>();
                     }
                 }
+
+                impl PointEffective for #name {
+                    #[inline]
+                    fn point_effective(&self, point: &Point) -> bool {
+                        self.widget.point_effective(point)
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(
@@ -365,6 +372,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
                 self.#(#widget_path).*.set_cursor_shape(cursor)
+            }
+
+            #[inline]
+            fn map_to_global(&self, point: &Point) -> Point {
+                self.#(#widget_path).*.map_to_global(point)
+            }
+
+            #[inline]
+            fn map_to_widget(&self, point: &Point) -> Point {
+                self.#(#widget_path).*.map_to_widget(point)
             }
         }
 

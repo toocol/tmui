@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use std::time::{Duration, Instant};
 
+use derivative::Derivative;
 use log::debug;
 use tlib::{
     connect, disconnect,
@@ -13,28 +14,21 @@ use tmui::{label::Label, prelude::*};
 const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 
 #[extends(Widget, Layout(Stack))]
-#[derive(Childrenable)]
+#[derive(Derivative, Childrenable)]
+#[derivative(Default)]
 pub struct LayoutWidget {
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     label: Label,
+
     timer: Timer,
     idx: usize,
-    stop_instant: Instant,
-    instant: Instant,
-}
 
-impl Default for LayoutWidget {
-    fn default() -> Self {
-        Self {
-            label: Default::default(),
-            timer: Default::default(),
-            idx: Default::default(),
-            stop_instant: Instant::now(),
-            instant: Instant::now(),
-            container: Default::default(),
-            children: Default::default(),
-        }
-    }
+    #[derivative(Default(value = "Instant::now()"))]
+    stop_instant: Instant,
+
+    #[derivative(Default(value = "Instant::now()"))]
+    instant: Instant,
 }
 
 impl ObjectSubclass for LayoutWidget {

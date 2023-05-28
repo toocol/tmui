@@ -24,6 +24,8 @@ const TTYPE_OBJECT: TType = 0x0F;
 const TTYPE_ARRAY: TType = 0x10;
 const TTYPE_TUPLE: TType = 0x11;
 const TTYPE_USIZE: TType = 0x12;
+const TTYPE_PATH_BUF: TType = 0x13;
+const TTYPE_CHAR: TType = 0x14;
 
 /// Fundamental type of ObjectSystem
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -147,6 +149,16 @@ impl Type {
     pub const USIZE: Self = Self {
         ttype: TTYPE_USIZE,
         name: "usize",
+    };
+
+    pub const PATH_BUF: Self = Self {
+        ttype: TTYPE_PATH_BUF,
+        name: "PathBuf",
+    };
+
+    pub const CHAR: Self = Self {
+        ttype: TTYPE_CHAR,
+        name: "char",
     };
 
     pub fn from_name(name: &'static str) -> Self {
@@ -353,6 +365,16 @@ impl StaticType for &str {
     fn dyn_bytes_len(&self) -> usize {
         // An extra '\0'
         self.bytes().len() + 1
+    }
+}
+
+impl StaticType for char {
+    fn static_type() -> Type {
+        Type::CHAR
+    }
+
+    fn bytes_len() -> usize {
+        size_of::<char>()
     }
 }
 

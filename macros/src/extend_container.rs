@@ -95,6 +95,13 @@ pub(crate) fn expand(
                         #reflect_content_alignment
                     }
                 }
+
+                impl PointEffective for #name {
+                    #[inline]
+                    fn point_effective(&self, point: &Point) -> bool {
+                        self.container_point_effective(point)
+                    }
+                }
             ))
         }
         _ => Err(syn::Error::new_spanned(

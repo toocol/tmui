@@ -103,6 +103,7 @@ impl ActionHub {
         });
     }
 
+    #[inline]
     pub fn process_multi_thread_actions(&self) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
