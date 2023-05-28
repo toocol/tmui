@@ -243,7 +243,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     fn ui_main(
         backend_type: BackendType,
         output_sender: OutputSender,
-        _input_receiver: Receiver<Message>,
+        input_receiver: Receiver<Message>,
         shared_channel: Option<SharedChannel<T, M>>,
         on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
         on_user_event_receive: Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
@@ -323,10 +323,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     20..=24 => time_20_25 += 1,
                     _ => time_25 += 1,
                 }
-                debug!(
-                    "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
-                    time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
-                );
+                // debug!(
+                //     "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
+                //     time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
+                // );
                 let update = board.invalidate_visual();
                 if update {
                     window.send_message(Message::VSync(Instant::now()));
@@ -340,6 +340,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
+            if let Ok(Message::Event(evt)) = input_receiver.try_recv() {
+                window.dispatch_event(evt);
+                cpu_balance.add_payload();
+            }
 
             if let Some(ref on_user_event_receive) = on_user_event_receive {
                 Self::process_user_events(&mut window, &mut cpu_balance, on_user_event_receive);

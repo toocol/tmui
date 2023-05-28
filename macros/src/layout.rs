@@ -3,7 +3,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
 
-const SUPPORTED_LAYOUTS: [&'static str; 3] = ["Stack", "VBox", "HBox"];
+const SUPPORTED_LAYOUTS: [&'static str; 4] = ["Stack", "VBox", "HBox", "SplitPane"];
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,

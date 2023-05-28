@@ -9,6 +9,7 @@ use crate::{
 use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
+use tlib::events::{to_mouse_event, to_key_event};
 use std::{
     collections::{HashMap, VecDeque},
     ptr::{null_mut, NonNull},
@@ -18,9 +19,10 @@ use std::{
     },
     thread::{self, ThreadId},
 };
-use tlib::figure::{Color, Size};
 use tlib::{
     connect, emit,
+    events::{Event, EventType},
+    figure::{Color, Size},
     object::{ObjectImpl, ObjectSubclass},
 };
 
@@ -72,6 +74,7 @@ type ApplicationWindowContext = (
     ThreadId,
     Option<NonNull<ApplicationWindow>>,
     Box<LayoutManager>,
+    HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
 );
 
 impl ApplicationWindow {
@@ -85,17 +88,10 @@ impl ApplicationWindow {
                 thread_id,
                 NonNull::new(window.as_mut()),
                 Box::new(LayoutManager::default()),
+                HashMap::new()
             ),
         );
         window
-    }
-
-    #[inline]
-    pub(crate) fn window_widgets() -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>>
-    {
-        static mut WINDOW_WIDGETS: Lazy<HashMap<String, Option<NonNull<dyn WidgetImpl>>>> =
-            Lazy::new(|| HashMap::new());
-        unsafe { &mut WINDOW_WIDGETS }
     }
 
     /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
@@ -107,9 +103,23 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn layout_of<'a>(id: u16) -> &'a mut LayoutManager {
+    pub(crate) fn widgets_of(id: u16) -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>>
+    {
         let current_thread_id = thread::current().id();
-        let (thread_id, _, layout) = Self::windows()
+        let (thread_id, _, _, map) = Self::windows()
+            .get_mut(&id)
+            .expect(&format!("Unkonwn application window with id: {}", id));
+        if current_thread_id != *thread_id {
+            panic!("Execute `ApplicationWindow::layout_of()` in the wrong thrad.");
+        }
+        map
+    }
+
+
+    #[inline]
+    pub(crate) fn layout_of(id: u16) -> &'static mut LayoutManager {
+        let current_thread_id = thread::current().id();
+        let (thread_id, _, layout, _) = Self::windows()
             .get_mut(&id)
             .expect(&format!("Unkonwn application window with id: {}", id));
         if current_thread_id != *thread_id {
@@ -119,9 +129,9 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn window_of<'a>(id: u16) -> &'a mut ApplicationWindow {
+    pub fn window_of(id: u16) -> &'static mut ApplicationWindow {
         let current_thread_id = thread::current().id();
-        let (thread_id, window, _) = Self::windows()
+        let (thread_id, window, _, _) = Self::windows()
             .get_mut(&id)
             .expect(&format!("Unkonwn application window with id: {}", id));
         if current_thread_id != *thread_id {
@@ -134,9 +144,6 @@ impl ApplicationWindow {
     pub fn send_message_with_id(id: u16, message: Message) {
         Self::window_of(id).send_message(message)
     }
-
-    #[inline]
-    pub fn dispatch_event(&self) {}
 
     #[inline]
     pub fn send_message(&self, message: Message) {
@@ -171,6 +178,139 @@ impl ApplicationWindow {
     pub(crate) fn register_window(&mut self, sender: OutputSender) {
         self.output_sender = Some(sender)
     }
+
+    #[inline]
+    pub(crate) fn dispatch_event(&self, evt: Event) {
+        match evt.type_() {
+            // Mouse pressed.
+            EventType::MouseButtonPress => {
+                let mut evt = to_mouse_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+                let pos = evt.position().into();
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.point_effective(&pos) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+                        widget.mouse_pressed(evt.as_ref());
+                    }
+                }
+            }
+
+            // Mouse released.
+            EventType::MouseButtonRelease => {
+                let mut evt = to_mouse_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+                let pos = evt.position().into();
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.point_effective(&pos) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+                        widget.mouse_released(evt.as_ref());
+                    }
+                }
+            }
+
+            // Mouse double clicked.
+            EventType::MouseButtonDoubleClick => {
+                let mut evt = to_mouse_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+                let pos = evt.position().into();
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.point_effective(&pos) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+                        widget.mouse_double_click(evt.as_ref());
+                    }
+                }
+            }
+
+            // Mouse moved.
+            EventType::MouseMove => {
+                let mut evt = to_mouse_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+                let pos = evt.position().into();
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.point_effective(&evt.position().into()) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+                        widget.mouse_move(evt.as_ref());
+                    }
+                }
+            }
+
+            // Mouse wheeled.
+            EventType::MouseWhell => {
+                let mut evt = to_mouse_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+                let pos = evt.position().into();
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.point_effective(&evt.position().into()) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+                        widget.mouse_wheel(evt.as_ref());
+                    }
+                }
+            }
+
+            EventType::MouseEnter => {}
+
+            EventType::MouseLeave => {}
+
+            // Key pressed.
+            EventType::KeyPress => {
+                let evt = to_key_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.is_focus() {
+                        widget.key_pressed(&evt);
+                    }
+                }
+            }
+
+            // Key released.
+            EventType::KeyRelease => {
+                let evt = to_key_event(evt).unwrap();
+                let widgets_map = Self::widgets_of(self.id());
+
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+
+                    if widget.is_focus() {
+                        widget.key_released(&evt);
+                    }
+                }
+            }
+
+            EventType::FocusIn => {}
+            EventType::FocusOut => {}
+            EventType::Resize => {}
+            EventType::Moved => {}
+            EventType::DroppedFile => {}
+            EventType::HoveredFile => {}
+            EventType::HoveredFileCancelled => {}
+            EventType::ReceivedCharacter => {}
+            EventType::InputMethod => {}
+            EventType::None => {}
+        }
+    }
 }
 
 fn child_initialize(
@@ -185,7 +325,7 @@ fn child_initialize(
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
 
         board.add_element(child_ref.as_element());
-        ApplicationWindow::window_widgets().insert(child_ref.name(), NonNull::new(child_ptr));
+        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ptr));
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);

@@ -300,6 +300,11 @@ impl MouseEvent {
     }
 
     #[inline]
+    pub fn set_position(&mut self, pos: (i32, i32)) {
+        self.position = pos
+    }
+
+    #[inline]
     pub fn mouse_button(&self) -> MouseButton {
         self.mouse_button
     }

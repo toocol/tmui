@@ -20,7 +20,7 @@ use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcN
 use tlib::{
     events::{EventType, KeyEvent, MouseEvent},
     figure::Point,
-    namespace::{KeyboardModifier, MouseButton, KeyCode},
+    namespace::{KeyCode, KeyboardModifier, MouseButton},
     prelude::SystemCursorShape,
     winit::event::{ElementState, KeyboardInput, ModifiersState, MouseScrollDelta},
 };
@@ -48,6 +48,9 @@ impl WindowProcess {
 
         static mut MODIFIER: Lazy<KeyboardModifier> = Lazy::new(|| KeyboardModifier::NoModifier);
         let modifer = unsafe { MODIFIER.deref_mut() };
+
+        static mut MOUSE_POSITION: Lazy<(i32, i32)> = Lazy::new(|| (0, 0));
+        let mouse_position = unsafe { MOUSE_POSITION.deref_mut() };
 
         event_loop.run(move |event, _, control_flow| {
             let input_sender = platform_context.input_sender();
@@ -152,7 +155,8 @@ impl WindowProcess {
                         0,
                         Point::default(),
                     );
-
+                    let pos = evt.position();
+                    *mouse_position = (pos.0, pos.1);
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
 
@@ -161,19 +165,18 @@ impl WindowProcess {
                     event: WindowEvent::MouseWheel { delta, .. },
                     ..
                 } => {
-                    let evt = if let MouseScrollDelta::PixelDelta(pos) = delta {
-                        let point = Point::new(pos.x as i32, pos.y as i32);
-                        MouseEvent::new(
-                            EventType::MouseWhell,
-                            (0, 0),
-                            MouseButton::NoButton,
-                            *modifer,
-                            0,
-                            point,
-                        )
-                    } else {
-                        unimplemented!()
+                    let point = match delta {
+                        MouseScrollDelta::PixelDelta(pos) => Point::new(pos.x as i32, pos.y as i32),
+                        MouseScrollDelta::LineDelta(x, y) => Point::new(x as i32, y as i32),
                     };
+                    let evt = MouseEvent::new(
+                        EventType::MouseWhell,
+                        (mouse_position.0, mouse_position.1),
+                        MouseButton::NoButton,
+                        *modifer,
+                        0,
+                        point,
+                    );
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
@@ -190,7 +193,7 @@ impl WindowProcess {
                 } => {
                     let evt = MouseEvent::new(
                         EventType::MouseButtonPress,
-                        (0, 0),
+                        (mouse_position.0, mouse_position.1),
                         button.into(),
                         *modifer,
                         1,
@@ -212,7 +215,7 @@ impl WindowProcess {
                 } => {
                     let evt = MouseEvent::new(
                         EventType::MouseButtonRelease,
-                        (0, 0),
+                        (mouse_position.0, mouse_position.1),
                         button.into(),
                         *modifer,
                         1,
@@ -264,7 +267,7 @@ impl WindowProcess {
                     ..
                 } => {
                     if let Some(vkeycode) = virtual_keycode {
-                        let key_code = vkeycode.into();
+                        let key_code: KeyCode = vkeycode.into();
                         let evt = KeyEvent::new(
                             EventType::KeyRelease,
                             key_code,
@@ -275,7 +278,7 @@ impl WindowProcess {
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
                     }
                 }
-                
+
                 // Cleared event.
                 Event::MainEventsCleared => {}
 

@@ -1,16 +1,23 @@
+use derivative::Derivative;
 use tlib::object::ObjectSubclass;
 use tmui::prelude::*;
 
 use crate::hbox_layout::HBoxLayout;
 
 #[extends(Widget, Layout(VBox))]
-#[derive(Default, Childrenable)]
+#[derive(Derivative, Childrenable)]
+#[derivative(Default)]
 pub struct VBoxLayout {
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     hbox_1: HBoxLayout,
+
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     hbox_2: HBoxLayout,
+
     #[children]
+    #[derivative(Default(value = "Object::new(&[])"))]
     hbox_3: HBoxLayout,
 }
 
