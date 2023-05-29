@@ -10,6 +10,7 @@ pub mod label;
 pub mod layout;
 pub mod container;
 pub mod event_hints;
+pub mod scroll_area;
 pub mod scroll_bar;
 pub mod split_pane;
 pub mod util;

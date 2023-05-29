@@ -1,8 +1,5 @@
 use crate::{
-    application::wheel_scroll_lines,
-    graphics::painter::Painter,
-    prelude::*,
-    widget::WidgetImpl,
+    application::wheel_scroll_lines, graphics::painter::Painter, prelude::*, widget::WidgetImpl,
 };
 use derivative::Derivative;
 use std::mem::size_of;
@@ -22,6 +19,7 @@ pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
 #[derive(Derivative)]
 #[derivative(Default)]
 pub struct ScrollBar {
+    #[derivative(Default(value = "Orientation::Vertical"))]
     orientation: Orientation,
     /// Indicates the distance of the slider from the start of the scroll bar.
     value: i32,
@@ -43,6 +41,7 @@ pub struct ScrollBar {
     /// Confirm if the scroll bar slider is held down
     pressed: bool,
     offset_accumulated: f32,
+    scroll_bar_position: ScrollBarPosition,
 }
 
 impl ObjectSubclass for ScrollBar {
@@ -70,6 +69,30 @@ impl WidgetImpl for ScrollBar {
 
         let percentage = val as f32 / maximum as f32;
         let start_pos = (self.size().height() as f32 * percentage) as i32;
+    }
+
+    fn on_mouse_wheel(&mut self, event: &tlib::events::MouseEvent) {
+        let horizontal = event.delta().x().abs() > event.delta().y().abs();
+
+        if !horizontal && event.delta().x() != 0 && self.orientation() == Orientation::Horizontal {
+            return;
+        }
+
+        let delta = if horizontal {
+            -event.delta().x()
+        } else {
+            event.delta().y()
+        };
+
+        self.scroll_by_delta(
+            if horizontal {
+                Orientation::Horizontal
+            } else {
+                Orientation::Vertical
+            },
+            event.modifier(),
+            delta,
+        );
     }
 }
 
@@ -201,6 +224,19 @@ impl ScrollBar {
     #[inline]
     pub fn single_step(&self) -> i32 {
         self.single_step
+    }
+
+    /// Get the scroll bar position
+    #[inline]
+    pub fn scroll_bar_position(&self) -> ScrollBarPosition {
+        self.scroll_bar_position
+    }
+
+    /// Set the scroll bar position
+    #[inline]
+    pub fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition) {
+        self.scroll_bar_position = scroll_bar_position;
+        self.update()
     }
 
     /// Setter of property `slider_position`.
@@ -337,6 +373,14 @@ impl ScrollBar {
         }
         new_value
     }
+}
+
+#[repr(C)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum ScrollBarPosition {
+    Start,
+    #[default]
+    End
 }
 
 #[repr(u8)]

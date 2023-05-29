@@ -935,74 +935,74 @@ impl PointEffective for Widget {
 ////////////////////////////////////// InnerEventProcess //////////////////////////////////////
 pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse pressed event.
-    fn inner_mouse_pressed(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_pressed(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse released event.
-    fn inner_mouse_released(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_released(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse double click event.
-    fn inner_mouse_double_click(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_double_click(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse move event.
-    fn inner_mouse_move(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_move(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse wheel event.
-    fn inner_mouse_wheel(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_wheel(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse enter event.
-    fn inner_mouse_enter(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_enter(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse leave event.
-    fn inner_mouse_leave(&mut self, mouse_event: &MouseEvent);
+    fn inner_mouse_leave(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive key pressed event.
-    fn inner_key_pressed(&mut self, key_event: &KeyEvent);
+    fn inner_key_pressed(&mut self, event: &KeyEvent);
 
     /// Invoke when widget's receive key released event.
-    fn inner_key_released(&mut self, key_event: &KeyEvent);
+    fn inner_key_released(&mut self, event: &KeyEvent);
 
     /// Invoke when widget's receive character event.
-    fn inner_receive_character(&mut self, character_event: &ReceiveCharacterEvent);
+    fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent);
 }
 impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
-    fn inner_mouse_pressed(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_pressed(), mouse_event);
+    fn inner_mouse_pressed(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_pressed(), event);
     }
 
-    fn inner_mouse_released(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_released(), mouse_event);
+    fn inner_mouse_released(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_released(), event);
     }
 
-    fn inner_mouse_double_click(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_double_click(), mouse_event);
+    fn inner_mouse_double_click(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_double_click(), event);
     }
 
-    fn inner_mouse_move(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_move(), mouse_event);
+    fn inner_mouse_move(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_move(), event);
     }
 
-    fn inner_mouse_wheel(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_wheel(), mouse_event);
+    fn inner_mouse_wheel(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_wheel(), event);
     }
 
-    fn inner_mouse_enter(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_enter(), mouse_event);
+    fn inner_mouse_enter(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_enter(), event);
     }
 
-    fn inner_mouse_leave(&mut self, mouse_event: &MouseEvent) {
-        emit!(self.mouse_leave(), mouse_event);
+    fn inner_mouse_leave(&mut self, event: &MouseEvent) {
+        emit!(self.mouse_leave(), event);
     }
 
-    fn inner_key_pressed(&mut self, key_event: &KeyEvent) {
-        emit!(self.key_pressed(), key_event);
+    fn inner_key_pressed(&mut self, event: &KeyEvent) {
+        emit!(self.key_pressed(), event);
     }
 
-    fn inner_key_released(&mut self, key_event: &KeyEvent) {
-        emit!(self.key_released(), key_event);
+    fn inner_key_released(&mut self, event: &KeyEvent) {
+        emit!(self.key_released(), event);
     }
 
-    fn inner_receive_character(&mut self, character_event: &ReceiveCharacterEvent) {
-        emit!(self.receive_character(), character_event);
+    fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent) {
+        emit!(self.receive_character(), event);
     }
 }
 
@@ -1036,34 +1036,34 @@ pub trait WidgetImpl:
     fn font_changed(&mut self) {}
 
     /// Invoke when widget's receive mouse pressed event.
-    fn on_mouse_pressed(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_pressed(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse released event.
-    fn on_mouse_released(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse double click event.
-    fn on_mouse_double_click(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_double_click(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
-    fn on_mouse_move(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.
-    fn on_mouse_wheel(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
-    fn on_mouse_enter(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
-    fn on_mouse_leave(&mut self, mouse_event: &MouseEvent) {}
+    fn on_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
-    fn on_key_pressed(&mut self, key_event: &KeyEvent) {}
+    fn on_key_pressed(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive key released event.
-    fn on_key_released(&mut self, key_event: &KeyEvent) {}
+    fn on_key_released(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive character event.
-    fn on_receive_character(&mut self, characer_event: &ReceiveCharacterEvent) {}
+    fn on_receive_character(&mut self, event: &ReceiveCharacterEvent) {}
 
     /// Invoke when widget's receive input method event.
     fn on_input_method(&mut self, input_method: &InputMethodEvent) {}
