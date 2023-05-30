@@ -14,6 +14,7 @@ use tlib::{
 };
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
+pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 50;
 
 #[extends(Widget)]
 #[derive(Derivative)]
@@ -49,8 +50,11 @@ impl ObjectSubclass for ScrollBar {
 }
 
 impl ObjectImpl for ScrollBar {
-    fn construct(&mut self) {
-        self.width_request(DEFAULT_SCROLL_BAR_WIDTH)
+    fn initialize(&mut self) {
+        match self.orientation {
+            Orientation::Horizontal => self.height_request(DEFAULT_SCROLL_BAR_HEIGHT),
+            Orientation::Vertical => self.width_request(DEFAULT_SCROLL_BAR_WIDTH),
+        }
     }
 }
 
@@ -380,7 +384,7 @@ impl ScrollBar {
 pub enum ScrollBarPosition {
     Start,
     #[default]
-    End
+    End,
 }
 
 #[repr(u8)]

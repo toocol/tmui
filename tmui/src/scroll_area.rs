@@ -1,4 +1,8 @@
-use crate::{layout::LayoutManager, prelude::*, scroll_bar::ScrollBar};
+use crate::{
+    layout::LayoutManager,
+    prelude::*,
+    scroll_bar::{ScrollBar, ScrollBarPosition},
+};
 use derivative::Derivative;
 use tlib::{namespace::Orientation, object::ObjectSubclass, prelude::extends};
 
@@ -12,8 +16,51 @@ pub struct ScrollArea {
 }
 
 impl ScrollArea {
+    #[inline]
     pub fn set_area<T: WidgetImpl>(&mut self, area: T) {
         self.area = Some(Box::new(area));
+    }
+
+    #[inline]
+    pub fn get_area(&self) -> Option<&dyn WidgetImpl> {
+        self.area.as_ref().and_then(|w| Some(w.as_ref()))
+    }
+
+    #[inline]
+    pub fn get_area_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+        self.area.as_mut().and_then(|w| Some(w.as_mut()))
+    }
+
+    #[inline]
+    pub fn get_area_cast<T: WidgetImpl + ObjectSubclass>(&self) -> Option<&T> {
+        self.area.as_ref().and_then(|w| {
+            if !T::static_type().is_a(w.object_type()) {
+                None
+            } else {
+                w.as_ref().as_any().downcast_ref::<T>()
+            }
+        })
+    }
+
+    #[inline]
+    pub fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T> {
+        self.area.as_mut().and_then(|w| {
+            if !T::static_type().is_a(w.object_type()) {
+                None
+            } else {
+                w.as_mut().as_mut_any().downcast_mut::<T>()
+            }
+        })
+    }
+
+    #[inline]
+    pub fn get_scroll_bar(&self) -> &ScrollBar {
+        &self.scroll_bar
+    }
+
+    #[inline]
+    pub fn get_scroll_bar_mut(&mut self) -> &mut ScrollBar {
+        &mut self.scroll_bar
     }
 }
 
@@ -27,11 +74,19 @@ impl WidgetImpl for ScrollArea {}
 
 impl ContainerImpl for ScrollArea {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        vec![&self.scroll_bar, self.area.as_ref().unwrap().as_ref()]
+        let mut children: Vec<&dyn WidgetImpl> = vec![&self.scroll_bar];
+        if self.area.is_some() {
+            children.push(self.area.as_ref().unwrap().as_ref())
+        }
+        children
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-        vec![&mut self.scroll_bar, self.area.as_mut().unwrap().as_mut()]
+        let mut children: Vec<&mut dyn WidgetImpl> = vec![&mut self.scroll_bar];
+        if self.area.is_some() {
+            children.push(self.area.as_mut().unwrap().as_mut())
+        }
+        children
     }
 }
 
@@ -61,15 +116,31 @@ impl Layout for ScrollArea {
         LayoutManager::base_widget_position_layout(self, previous, parent, manage_by_container);
 
         // Deal with the area and scroll bar's position:
-        match self.scroll_bar.orientation() {
-            Orientation::Horizontal => layout_position_horizontal(self),
-            Orientation::Vertical => layout_position_vertical(self),
+        let rect = self.rect();
+        let scroll_bar = &mut self.scroll_bar;
+        match scroll_bar.scroll_bar_position() {
+            ScrollBarPosition::Start => {
+                scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
+                scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
+                if let Some(ref mut area) = self.area {
+                    let scroll_bar_rect = scroll_bar.rect();
+                    area.set_fixed_x(scroll_bar_rect.x() + area.margin_left());
+                    area.set_fixed_y(scroll_bar_rect.y() + area.margin_top());
+                }
+            }
+            ScrollBarPosition::End => {
+                if let Some(ref mut area) = self.area {
+                    area.set_fixed_x(rect.x() + area.margin_left());
+                    area.set_fixed_y(rect.y() + area.margin_top());
+
+                    let area_rect = area.rect();
+                    scroll_bar.set_fixed_x(area_rect.x() + scroll_bar.margin_left());
+                    scroll_bar.set_fixed_y(area_rect.y() + scroll_bar.margin_top());
+                } else {
+                    scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
+                    scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
+                }
+            }
         }
     }
 }
-
-fn layout_position_horizontal(widget: &mut ScrollArea) {
-
-}
-
-fn layout_position_vertical(widget: &mut ScrollArea) {}
