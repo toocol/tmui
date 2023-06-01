@@ -110,7 +110,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let platform_context = platform_mut.as_mut().unwrap();
         platform_context.set_input_sender(input_sender);
 
-        // Create the `UI` main thread.
         let backend_type = self.backend_type;
         let on_activate = self.on_activate.borrow().clone();
         *self.on_activate.borrow_mut() = None;
@@ -135,6 +134,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             None
         };
 
+        // Create the `UI` main thread.
         let join = thread::Builder::new()
             .name("tmui-main".to_string())
             .spawn(move || {
@@ -306,6 +306,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let mut update = true;
         let mut frame_cnt = 0;
         let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
+        let mut log_instant = Instant::now();
         loop {
             if APP_STOPPED.load(Ordering::Relaxed) {
                 break;
@@ -323,10 +324,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     20..=24 => time_20_25 += 1,
                     _ => time_25 += 1,
                 }
-                // debug!(
-                //     "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
-                //     time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
-                // );
+                if log_instant.elapsed().as_secs() >= 1 {
+                    debug!(
+                    "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
+                    time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
+                    );
+                    log_instant = Instant::now();
+                }
                 let update = board.invalidate_visual();
                 if update {
                     window.send_message(Message::VSync(Instant::now()));

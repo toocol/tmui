@@ -18,7 +18,7 @@ use std::{
 };
 use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
 use tlib::{
-    events::{EventType, KeyEvent, MouseEvent},
+    events::{DeltaType, EventType, KeyEvent, MouseEvent},
     figure::Point,
     namespace::{KeyCode, KeyboardModifier, MouseButton},
     prelude::SystemCursorShape,
@@ -154,6 +154,7 @@ impl WindowProcess {
                         *modifer,
                         0,
                         Point::default(),
+                        DeltaType::default(),
                     );
                     let pos = evt.position();
                     *mouse_position = (pos.0, pos.1);
@@ -165,9 +166,9 @@ impl WindowProcess {
                     event: WindowEvent::MouseWheel { delta, .. },
                     ..
                 } => {
-                    let point = match delta {
-                        MouseScrollDelta::PixelDelta(pos) => Point::new(pos.x as i32, pos.y as i32),
-                        MouseScrollDelta::LineDelta(x, y) => Point::new(x as i32, y as i32),
+                    let (point, delta_type) = match delta {
+                        MouseScrollDelta::PixelDelta(pos) => (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel),
+                        MouseScrollDelta::LineDelta(x, y) => (Point::new(x as i32, y as i32), DeltaType::Line),
                     };
                     let evt = MouseEvent::new(
                         EventType::MouseWhell,
@@ -176,6 +177,7 @@ impl WindowProcess {
                         *modifer,
                         0,
                         point,
+                        delta_type,
                     );
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
@@ -198,6 +200,7 @@ impl WindowProcess {
                         *modifer,
                         1,
                         Point::default(),
+                        DeltaType::default(),
                     );
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
@@ -220,6 +223,7 @@ impl WindowProcess {
                         *modifer,
                         1,
                         Point::default(),
+                        DeltaType::default(),
                     );
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();

@@ -84,6 +84,12 @@ impl Into<skia_safe::Point> for Point {
     }
 }
 
+impl Into<Option<skia_safe::Point>> for Point {
+    fn into(self) -> Option<skia_safe::Point> {
+        Some(self.into())
+    }
+}
+
 impl Into<skia_safe::IPoint> for Point {
     fn into(self) -> skia_safe::IPoint {
         skia_safe::IPoint {

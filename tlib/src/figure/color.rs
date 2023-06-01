@@ -30,7 +30,7 @@ impl Color {
     }
 
     #[inline]
-    pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
+    pub const fn from_rgb(r: u8, g: u8, b: u8) -> Self {
         Self {
             r,
             g,
@@ -41,7 +41,7 @@ impl Color {
     }
 
     #[inline]
-    pub fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub const fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self {
             r,
             g,

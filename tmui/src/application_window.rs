@@ -9,7 +9,6 @@ use crate::{
 use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
-use tlib::events::{to_mouse_event, to_key_event};
 use std::{
     collections::{HashMap, VecDeque},
     ptr::{null_mut, NonNull},
@@ -19,6 +18,7 @@ use std::{
     },
     thread::{self, ThreadId},
 };
+use tlib::events::{to_key_event, to_mouse_event};
 use tlib::{
     connect, emit,
     events::{Event, EventType},
@@ -88,7 +88,7 @@ impl ApplicationWindow {
                 thread_id,
                 NonNull::new(window.as_mut()),
                 Box::new(LayoutManager::default()),
-                HashMap::new()
+                HashMap::new(),
             ),
         );
         window
@@ -103,8 +103,9 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn widgets_of(id: u16) -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>>
-    {
+    pub(crate) fn widgets_of(
+        id: u16,
+    ) -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>> {
         let current_thread_id = thread::current().id();
         let (thread_id, _, _, map) = Self::windows()
             .get_mut(&id)
@@ -114,7 +115,6 @@ impl ApplicationWindow {
         }
         map
     }
-
 
     #[inline]
     pub(crate) fn layout_of(id: u16) -> &'static mut LayoutManager {
@@ -194,7 +194,8 @@ impl ApplicationWindow {
                     if widget.point_effective(&pos) {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.mouse_pressed(evt.as_ref());
+                        widget.inner_mouse_pressed(evt.as_ref());
+                        widget.on_mouse_pressed(evt.as_ref());
                     }
                 }
             }
@@ -211,7 +212,8 @@ impl ApplicationWindow {
                     if widget.point_effective(&pos) {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.mouse_released(evt.as_ref());
+                        widget.inner_mouse_released(evt.as_ref());
+                        widget.on_mouse_released(evt.as_ref());
                     }
                 }
             }
@@ -228,7 +230,8 @@ impl ApplicationWindow {
                     if widget.point_effective(&pos) {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.mouse_double_click(evt.as_ref());
+                        widget.inner_mouse_double_click(evt.as_ref());
+                        widget.on_mouse_double_click(evt.as_ref());
                     }
                 }
             }
@@ -245,7 +248,8 @@ impl ApplicationWindow {
                     if widget.point_effective(&evt.position().into()) {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.mouse_move(evt.as_ref());
+                        widget.inner_mouse_move(evt.as_ref());
+                        widget.on_mouse_move(evt.as_ref());
                     }
                 }
             }
@@ -262,7 +266,8 @@ impl ApplicationWindow {
                     if widget.point_effective(&evt.position().into()) {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.mouse_wheel(evt.as_ref());
+                        widget.inner_mouse_wheel(evt.as_ref());
+                        widget.on_mouse_wheel(evt.as_ref());
                     }
                 }
             }
@@ -280,7 +285,8 @@ impl ApplicationWindow {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
                     if widget.is_focus() {
-                        widget.key_pressed(&evt);
+                        widget.inner_key_pressed(&evt);
+                        widget.on_key_pressed(&evt);
                     }
                 }
             }
@@ -294,7 +300,8 @@ impl ApplicationWindow {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
                     if widget.is_focus() {
-                        widget.key_released(&evt);
+                        widget.inner_key_released(&evt);
+                        widget.on_key_released(&evt);
                     }
                 }
             }
@@ -351,11 +358,12 @@ fn child_initialize(
             });
         } else {
             children.push_back(child_ref.get_raw_child_mut());
-            if child_ref.get_raw_parent().is_none() {
-                child_ref.set_parent(parent);
-            }
-            parent = child_ptr;
         }
+
+        if child_ref.get_raw_parent().is_none() {
+            child_ref.set_parent(parent);
+        }
+        parent = child_ptr;
 
         child_ref.initialize();
 

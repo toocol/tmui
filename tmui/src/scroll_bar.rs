@@ -1,8 +1,5 @@
 use crate::{
-    application::wheel_scroll_lines,
-    graphics::painter::Painter,
-    prelude::*,
-    widget::WidgetImpl,
+    application::wheel_scroll_lines, graphics::painter::Painter, prelude::*, widget::WidgetImpl,
 };
 use derivative::Derivative;
 use std::mem::size_of;
@@ -16,12 +13,17 @@ use tlib::{
     values::{FromBytes, FromValue, ToBytes},
 };
 
-pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
+pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
+pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 10;
+
+pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::from_rgb(100, 100, 100);
+pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
 
 #[extends(Widget)]
 #[derive(Derivative)]
 #[derivative(Default)]
 pub struct ScrollBar {
+    #[derivative(Default(value = "Orientation::Vertical"))]
     orientation: Orientation,
     /// Indicates the distance of the slider from the start of the scroll bar.
     value: i32,
@@ -43,6 +45,7 @@ pub struct ScrollBar {
     /// Confirm if the scroll bar slider is held down
     pressed: bool,
     offset_accumulated: f32,
+    scroll_bar_position: ScrollBarPosition,
 }
 
 impl ObjectSubclass for ScrollBar {
@@ -50,26 +53,69 @@ impl ObjectSubclass for ScrollBar {
 }
 
 impl ObjectImpl for ScrollBar {
-    fn construct(&mut self) {
-        self.width_request(DEFAULT_SCROLL_BAR_WIDTH)
+    fn initialize(&mut self) {
+        match self.orientation {
+            Orientation::Horizontal => self.height_request(DEFAULT_SCROLL_BAR_HEIGHT),
+            Orientation::Vertical => self.width_request(DEFAULT_SCROLL_BAR_WIDTH),
+        }
     }
 }
 
 impl WidgetImpl for ScrollBar {
     fn paint(&mut self, mut painter: Painter) {
-        if self.size().height() <= 0 {
-            return;
-        }
+        let size = self.size();
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
         painter.draw_rect(content_rect);
-        painter.fill_rect(content_rect, self.background());
+        painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
+
+        let val = self.value();
+        let slider_len = (size.height() as f32 * 0.2) as i32;
+        let maximum = self.maximum();
+        let percentage = val as f32 / maximum as f32;
 
         // Draw the slider.
-        let val = self.value();
-        let maximum = self.maximum();
+        match self.orientation {
+            Orientation::Vertical => {
+                let start_y = (size.height() as f32 * percentage) as i32;
 
-        let percentage = val as f32 / maximum as f32;
-        let start_pos = (self.size().height() as f32 * percentage) as i32;
+                let rect = Rect::new(content_rect.x(), start_y, size.width(), slider_len);
+                painter.draw_rect(rect);
+                painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
+            }
+            Orientation::Horizontal => {
+                let start_x = (size.width() as f32 * percentage) as i32;
+
+                let rect = Rect::new(start_x, content_rect.y(), slider_len, size.height());
+                painter.draw_rect(rect);
+                painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
+            }
+        }
+    }
+
+    fn on_mouse_wheel(&mut self, event: &tlib::events::MouseEvent) {
+        let horizontal = event.delta().x().abs() > event.delta().y().abs();
+
+        if !horizontal && event.delta().x() != 0 && self.orientation() == Orientation::Horizontal {
+            return;
+        }
+
+        let delta = if horizontal {
+            -event.delta().x()
+        } else {
+            event.delta().y()
+        };
+
+        if self.scroll_by_delta(
+            if horizontal {
+                Orientation::Horizontal
+            } else {
+                Orientation::Vertical
+            },
+            event.modifier(),
+            delta,
+        ) {
+            self.update()
+        }
     }
 }
 
@@ -117,19 +163,16 @@ impl ScrollBar {
 
     /// Setter of property `value`.
     pub fn set_value(&mut self, value: i32) {
-        if self.value == value || self.position == value {
-            return;
-        }
         self.value = value;
 
         if self.position != value {
             self.position = value;
-            if self.pressed {
-                emit!(self.slider_moved(), self.position)
-            }
         }
+        if self.pressed {
+            emit!(self.slider_moved(), self.position)
+        }
+        emit!(self.value_changed(), value);
         self.update();
-        emit!(self.value_changed(), value)
     }
     /// Getter of property `value`.
     #[inline]
@@ -203,6 +246,19 @@ impl ScrollBar {
         self.single_step
     }
 
+    /// Get the scroll bar position
+    #[inline]
+    pub fn scroll_bar_position(&self) -> ScrollBarPosition {
+        self.scroll_bar_position
+    }
+
+    /// Set the scroll bar position
+    #[inline]
+    pub fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition) {
+        self.scroll_bar_position = scroll_bar_position;
+        self.update()
+    }
+
     /// Setter of property `slider_position`.
     pub fn set_slider_position(&mut self, position: i32) {
         let position = self.bound(position);
@@ -242,8 +298,8 @@ impl ScrollBar {
             SliderAction::SliderToMaximum => self.set_slider_position(self.maximum),
             SliderAction::SliderMove | SliderAction::SliderNoAction => {}
         }
-        emit!(self.action_triggered(), action);
         self.set_value(self.position);
+        emit!(self.action_triggered(), action);
     }
 
     #[inline]
@@ -260,10 +316,10 @@ impl ScrollBar {
         mut delta: i32,
     ) -> bool {
         let steps_to_scroll;
-        if orientation == Orientation::Horizontal {
+        if orientation == Orientation::Vertical {
             delta = -delta;
         }
-        let offset = delta as f32 / 120.;
+        let offset = delta as f32 / 1.;
         if modifier.has(KeyboardModifier::ControlModifier)
             || modifier.has(KeyboardModifier::ShiftModifier)
         {
@@ -308,6 +364,7 @@ impl ScrollBar {
 
         let pref_value = self.value;
         self.position = self.bound(self.overflow_safe_add(steps_to_scroll));
+        println!("{}", self.position);
         self.trigger_action(SliderAction::SliderMove);
 
         if pref_value == self.value {
@@ -337,6 +394,14 @@ impl ScrollBar {
         }
         new_value
     }
+}
+
+#[repr(C)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum ScrollBarPosition {
+    Start,
+    #[default]
+    End,
 }
 
 #[repr(u8)]

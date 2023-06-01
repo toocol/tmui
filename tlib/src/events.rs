@@ -1,4 +1,4 @@
-use winit::event::{ElementState, Ime, MouseScrollDelta, WindowEvent};
+use winit::event::Ime;
 use crate::{
     figure::{Point, Size},
     impl_as_any, implements_enum_value,
@@ -110,6 +110,29 @@ impl AsNumeric<u8> for EventType {
     }
 }
 implements_enum_value!(EventType, u8);
+
+#[repr(u8)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub enum DeltaType {
+    #[default]
+    Pixel = 0,
+    Line
+}
+impl From<u8> for DeltaType {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Pixel,
+            1 => Self::Line,
+            _ => unimplemented!()
+        }
+    }
+}
+impl AsNumeric<u8> for DeltaType {
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+implements_enum_value!(DeltaType, u8);
 
 /////////////////////////////////////////////////////////////////////////////////////
 /// [`KeyEvent`] Keyboard press/release events.
@@ -262,6 +285,7 @@ pub struct MouseEvent {
     n_press: i32,
     // x-horizontal, y-vertical
     delta: Point,
+    delta_type: DeltaType,
 }
 impl_as_any!(MouseEvent);
 impl MouseEvent {
@@ -272,6 +296,7 @@ impl MouseEvent {
         modifier: KeyboardModifier,
         n_press: i32,
         delta: Point,
+        delta_type: DeltaType,
     ) -> Self {
         let type_ = match type_ {
             EventType::MouseButtonPress => type_,
@@ -291,6 +316,7 @@ impl MouseEvent {
             modifier,
             n_press,
             delta,
+            delta_type
         }
     }
 
@@ -323,6 +349,11 @@ impl MouseEvent {
     pub fn delta(&self) -> Point {
         self.delta
     }
+
+    #[inline]
+    pub fn delta_type(&self) -> DeltaType { 
+        self.delta_type
+    }
 }
 
 impl EventTrait for MouseEvent {
@@ -343,6 +374,7 @@ impl StaticType for MouseEvent {
             + KeyboardModifier::bytes_len()
             + i32::bytes_len() * 3
             + Point::bytes_len()
+            + DeltaType::bytes_len()
     }
 }
 impl ToBytes for MouseEvent {
@@ -372,6 +404,8 @@ impl ToBytes for MouseEvent {
         bytes.append(&mut self.n_press.to_bytes());
 
         bytes.append(&mut self.delta.to_bytes());
+
+        bytes.append(&mut self.delta_type.to_bytes());
 
         bytes
     }
@@ -413,7 +447,11 @@ impl FromBytes for MouseEvent {
         let n_press = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
         idx += i32_len;
 
-        let delta = Point::from_bytes(&data[idx..], i32_len);
+        let point_len = Point::bytes_len();
+        let delta = Point::from_bytes(&data[idx..], point_len);
+        idx += point_len;
+
+        let delta_type = DeltaType::from_bytes(&data[idx..], DeltaType::bytes_len());
 
         Self {
             type_,
@@ -422,6 +460,7 @@ impl FromBytes for MouseEvent {
             modifier,
             n_press,
             delta,
+            delta_type
         }
     }
 }
@@ -889,76 +928,6 @@ impl EventTrait for InputMethodEvent {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-/// Convert the [`WindowEvent`] from winit to [`Event`].
-/////////////////////////////////////////////////////////////////////////////////////
-impl<'a> Into<Event> for WindowEvent<'a> {
-    fn into(self) -> Event {
-        match self {
-            Self::CursorMoved { position, .. } => Box::new(MouseEvent::new(
-                EventType::MouseMove,
-                (position.x as i32, position.y as i32),
-                MouseButton::NoButton,
-                KeyboardModifier::NoModifier,
-                0,
-                Point::default(),
-            )),
-            Self::MouseWheel { delta, .. } => {
-                if let MouseScrollDelta::PixelDelta(pos) = delta {
-                    let point = Point::new(pos.x as i32, pos.y as i32);
-                    Box::new(MouseEvent::new(
-                        EventType::MouseWhell,
-                        (0, 0),
-                        MouseButton::NoButton,
-                        KeyboardModifier::NoModifier,
-                        0,
-                        point,
-                    ))
-                } else {
-                    unimplemented!()
-                }
-            }
-            Self::MouseInput { state, button, .. } => match state {
-                ElementState::Pressed => Box::new(MouseEvent::new(
-                    EventType::MouseButtonPress,
-                    (0, 0),
-                    button.into(),
-                    KeyboardModifier::NoModifier,
-                    1,
-                    Point::default(),
-                )),
-                ElementState::Released => Box::new(MouseEvent::new(
-                    EventType::MouseButtonRelease,
-                    (0, 0),
-                    button.into(),
-                    KeyboardModifier::NoModifier,
-                    1,
-                    Point::default(),
-                )),
-            },
-            Self::KeyboardInput { input, .. } => {
-                let key_code = KeyCode::from(input.scancode);
-                println!("Key event: {}", key_code.to_string());
-                match input.state {
-                    ElementState::Pressed => Box::new(KeyEvent::new(
-                        EventType::KeyPress,
-                        key_code,
-                        key_code.to_string(),
-                        KeyboardModifier::NoModifier,
-                    )),
-                    ElementState::Released => Box::new(KeyEvent::new(
-                        EventType::KeyRelease,
-                        key_code,
-                        key_code.to_string(),
-                        KeyboardModifier::NoModifier,
-                    )),
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -984,6 +953,7 @@ mod tests {
             KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier),
             3,
             Point::new(100, 0),
+            DeltaType::Line,
         ));
         let mouse_event = to_mouse_event(evt).unwrap();
         assert_eq!(mouse_event.type_, EventType::MouseButtonPress);
@@ -1052,6 +1022,7 @@ mod tests {
             KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier),
             3,
             Point::new(100, 0),
+            DeltaType::default()
         );
         let val = mouse_event.to_value();
         assert_eq!(mouse_event, val.get::<MouseEvent>())
@@ -1112,6 +1083,7 @@ mod tests {
             KeyboardModifier::ControlModifier.or(KeyboardModifier::ShiftModifier),
             3,
             Point::new(100, 0),
+            DeltaType::default()
         );
         let path = "C:\\Windows\\System".into();
         let file_event = FileEvent::dropped(path);
