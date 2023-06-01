@@ -13,8 +13,8 @@ use tlib::{
     values::{FromBytes, FromValue, ToBytes},
 };
 
-pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
-pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 50;
+pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
+pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 10;
 
 pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::from_rgb(100, 100, 100);
 pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
@@ -69,24 +69,23 @@ impl WidgetImpl for ScrollBar {
         painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
 
         let val = self.value();
+        let slider_len = (size.height() as f32 * 0.2) as i32;
         let maximum = self.maximum();
         let percentage = val as f32 / maximum as f32;
 
         // Draw the slider.
         match self.orientation {
             Orientation::Vertical => {
-                let start_y = (self.size().height() as f32 * percentage) as i32;
-                let slider_len = (maximum as f32 * 0.1) as i32;
+                let start_y = (size.height() as f32 * percentage) as i32;
 
-                let rect = Rect::new(0, start_y, size.width(), slider_len);
+                let rect = Rect::new(content_rect.x(), start_y, size.width(), slider_len);
                 painter.draw_rect(rect);
                 painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
             }
             Orientation::Horizontal => {
-                let start_x = (self.size().width() as f32 * percentage) as i32;
-                let slider_len = (maximum as f32 * 0.1) as i32;
+                let start_x = (size.width() as f32 * percentage) as i32;
 
-                let rect = Rect::new(start_x, 0, slider_len, size.height());
+                let rect = Rect::new(start_x, content_rect.y(), slider_len, size.height());
                 painter.draw_rect(rect);
                 painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
             }
@@ -106,7 +105,7 @@ impl WidgetImpl for ScrollBar {
             event.delta().y()
         };
 
-        self.scroll_by_delta(
+        if self.scroll_by_delta(
             if horizontal {
                 Orientation::Horizontal
             } else {
@@ -114,7 +113,9 @@ impl WidgetImpl for ScrollBar {
             },
             event.modifier(),
             delta,
-        );
+        ) {
+            self.update()
+        }
     }
 }
 
@@ -162,19 +163,16 @@ impl ScrollBar {
 
     /// Setter of property `value`.
     pub fn set_value(&mut self, value: i32) {
-        if self.value == value || self.position == value {
-            return;
-        }
         self.value = value;
 
         if self.position != value {
             self.position = value;
-            if self.pressed {
-                emit!(self.slider_moved(), self.position)
-            }
         }
+        if self.pressed {
+            emit!(self.slider_moved(), self.position)
+        }
+        emit!(self.value_changed(), value);
         self.update();
-        emit!(self.value_changed(), value)
     }
     /// Getter of property `value`.
     #[inline]
@@ -300,8 +298,8 @@ impl ScrollBar {
             SliderAction::SliderToMaximum => self.set_slider_position(self.maximum),
             SliderAction::SliderMove | SliderAction::SliderNoAction => {}
         }
-        emit!(self.action_triggered(), action);
         self.set_value(self.position);
+        emit!(self.action_triggered(), action);
     }
 
     #[inline]
@@ -318,10 +316,10 @@ impl ScrollBar {
         mut delta: i32,
     ) -> bool {
         let steps_to_scroll;
-        if orientation == Orientation::Horizontal {
+        if orientation == Orientation::Vertical {
             delta = -delta;
         }
-        let offset = delta as f32 / 120.;
+        let offset = delta as f32 / 1.;
         if modifier.has(KeyboardModifier::ControlModifier)
             || modifier.has(KeyboardModifier::ShiftModifier)
         {
@@ -366,6 +364,7 @@ impl ScrollBar {
 
         let pref_value = self.value;
         self.position = self.bound(self.overflow_safe_add(steps_to_scroll));
+        println!("{}", self.position);
         self.trigger_action(SliderAction::SliderMove);
 
         if pref_value == self.value {

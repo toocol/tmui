@@ -4,7 +4,7 @@ use tmui::{
     prelude::*,
     scroll_area::ScrollArea,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    widget::WidgetImpl, scroll_bar::ScrollBarPosition,
 };
 
 #[extends(Widget)]
@@ -32,6 +32,10 @@ impl ObjectImpl for ScrollWindow {
 
         let mut scroll_area: ScrollArea = Object::new(&[]);
         scroll_area.set_area(label);
+        scroll_area.width_request(400);
+        scroll_area.height_request(300);
+        scroll_area.set_background(Color::RED);
+        scroll_area.set_scroll_bar_position(ScrollBarPosition::End);
 
         self.child(scroll_area);
     }

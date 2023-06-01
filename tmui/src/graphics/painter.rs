@@ -175,7 +175,8 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn draw_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
-        let rect: crate::skia_safe::Rect = rect.into();
+        let mut rect: crate::skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
         self.canvas.draw_rect(rect, &self.paint);
     }
 
