@@ -259,6 +259,7 @@ impl ApplicationWindow {
                 let mut evt = to_mouse_event(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
+                println!("Mouse wheel {:?}:{:?}", evt.delta(), evt.delta_type());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };

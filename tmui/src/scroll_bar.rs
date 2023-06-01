@@ -16,6 +16,9 @@ use tlib::{
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 50;
 pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 50;
 
+pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::from_rgb(100, 100, 100);
+pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
+
 #[extends(Widget)]
 #[derive(Derivative)]
 #[derivative(Default)]
@@ -60,19 +63,34 @@ impl ObjectImpl for ScrollBar {
 
 impl WidgetImpl for ScrollBar {
     fn paint(&mut self, mut painter: Painter) {
-        if self.size().height() <= 0 {
-            return;
-        }
+        let size = self.size();
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
         painter.draw_rect(content_rect);
-        painter.fill_rect(content_rect, self.background());
+        painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
 
-        // Draw the slider.
         let val = self.value();
         let maximum = self.maximum();
-
         let percentage = val as f32 / maximum as f32;
-        let start_pos = (self.size().height() as f32 * percentage) as i32;
+
+        // Draw the slider.
+        match self.orientation {
+            Orientation::Vertical => {
+                let start_y = (self.size().height() as f32 * percentage) as i32;
+                let slider_len = (maximum as f32 * 0.1) as i32;
+
+                let rect = Rect::new(0, start_y, size.width(), slider_len);
+                painter.draw_rect(rect);
+                painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
+            }
+            Orientation::Horizontal => {
+                let start_x = (self.size().width() as f32 * percentage) as i32;
+                let slider_len = (maximum as f32 * 0.1) as i32;
+
+                let rect = Rect::new(start_x, 0, slider_len, size.height());
+                painter.draw_rect(rect);
+                painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
+            }
+        }
     }
 
     fn on_mouse_wheel(&mut self, event: &tlib::events::MouseEvent) {

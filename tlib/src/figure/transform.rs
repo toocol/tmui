@@ -583,6 +583,8 @@ impl Mul for Transform {
 
 #[cfg(test)]
 mod tests {
+    use skia_safe::Matrix;
+
     use crate::figure::Rect;
     use super::Transform;
 
@@ -594,6 +596,17 @@ mod tests {
         transform.scale(2., 1.);
         transform.scale(1., 2.);
         let point = transform.inverted().map_point(&rect.top_left());
+        println!("{:?}", point)
+    }
+
+    #[test]
+    fn test_matrix() {
+        let rect = Rect::new(100, 100, 100, 100);
+        let mut matrix = Matrix::new_identity();
+        matrix.set_scale((2., 2.), None);
+
+        let matrix = matrix.invert().unwrap();
+        let point = matrix.map_point(rect.top_left());
         println!("{:?}", point)
     }
 }
