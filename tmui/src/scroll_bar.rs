@@ -76,14 +76,14 @@ impl WidgetImpl for ScrollBar {
         // Draw the slider.
         match self.orientation {
             Orientation::Vertical => {
-                let start_y = (size.height() as f32 * percentage) as i32;
+                let start_y = ((size.height() - slider_len) as f32 * percentage) as i32;
 
                 let rect = Rect::new(content_rect.x(), start_y, size.width(), slider_len);
                 painter.draw_rect(rect);
                 painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
             }
             Orientation::Horizontal => {
-                let start_x = (size.width() as f32 * percentage) as i32;
+                let start_x = ((size.width() - slider_len) as f32 * percentage) as i32;
 
                 let rect = Rect::new(start_x, content_rect.y(), slider_len, size.height());
                 painter.draw_rect(rect);
