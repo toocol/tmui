@@ -155,10 +155,16 @@ impl ScrollBar {
         scroll_bar
     }
 
-    /// Get the orientation of Widget
+    /// Get the orientation of Widget.
     #[inline]
     pub fn orientation(&self) -> Orientation {
         self.orientation
+    }
+
+    /// Set the orientation of Widget.
+    #[inline]
+    pub fn set_orientation(&mut self, orientation: Orientation) {
+        self.orientation = orientation;
     }
 
     /// Setter of property `value`.
