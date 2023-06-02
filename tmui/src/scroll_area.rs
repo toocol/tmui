@@ -67,6 +67,11 @@ impl ScrollArea {
     pub fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition) {
         self.scroll_bar.set_scroll_bar_position(scroll_bar_position)
     }
+
+    #[inline]
+    pub fn set_orientation(&mut self, orientation: Orientation) {
+        self.scroll_bar.set_orientation(orientation)
+    }
 }
 
 impl ObjectSubclass for ScrollArea {
