@@ -8,6 +8,7 @@ mod extend_object;
 mod extend_widget;
 mod layout;
 mod reflect_trait;
+mod split_pane;
 mod tasync;
 mod trait_info;
 
@@ -30,6 +31,7 @@ use trait_info::TraitInfo;
 ///     - Stack
 ///     - VBox
 ///     - HBox
+///     - SplitPane
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
@@ -70,7 +72,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "Container" => match extend_container::expand(&mut ast, true, false) {
+        "Container" => match extend_container::expand(&mut ast, true, false, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -99,7 +101,7 @@ pub fn childrenable_derive(_: TokenStream) -> TokenStream {
 ///
 /// impl ObjectImpl for Foo {
 ///     fn type_register(&self, type_registry: &mut TypeRegistry) {
-///         type_registry.register::<Foo, Trait>();
+///         type_registry.register::<Foo, ReflectTrait>();
 ///     }
 /// }
 /// ...

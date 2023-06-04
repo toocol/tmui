@@ -6,6 +6,7 @@ pub(crate) fn expand(
     ast: &mut DeriveInput,
     impl_children_construct: bool,
     has_content_alignment: bool,
+    is_split_pane: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
@@ -27,6 +28,14 @@ pub(crate) fn expand(
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             homogeneous: bool
+                        })?);
+                    }
+                    if is_split_pane {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            split_infos: std::collections::HashMap<u16, Box<SplitInfo>>
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>
                         })?);
                     }
                 }
@@ -66,6 +75,12 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
+            let reflect_split_infos_getter = if is_split_pane {
+                quote!(type_registry.register::<#name, ReflectSplitInfosGetter>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
             Ok(quote!(
                 #ast
 
@@ -93,6 +108,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectContainerImpl>();
                         type_registry.register::<#name, ReflectObjectChildrenConstruct>();
                         #reflect_content_alignment
+                        #reflect_split_infos_getter
                     }
                 }
 

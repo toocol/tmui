@@ -370,7 +370,6 @@ impl ScrollBar {
 
         let pref_value = self.value;
         self.position = self.bound(self.overflow_safe_add(steps_to_scroll));
-        println!("{}", self.position);
         self.trigger_action(SliderAction::SliderMove);
 
         if pref_value == self.value {

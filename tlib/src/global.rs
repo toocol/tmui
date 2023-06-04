@@ -89,3 +89,18 @@ macro_rules! impl_as_any {
         }
     };
 }
+
+
+#[macro_export]
+macro_rules! nonnull_ref {
+    ( $st:ident ) => {
+        unsafe { $st.as_ref().unwrap().as_ref() }
+    }
+}
+
+#[macro_export]
+macro_rules! nonnull_mut {
+    ( $st:ident ) => {
+        unsafe { $st.as_mut().unwrap().as_mut() }
+    }
+}

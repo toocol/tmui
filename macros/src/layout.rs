@@ -1,4 +1,4 @@
-use crate::extend_container;
+use crate::{extend_container, split_pane::generate_split_pane_impl};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
@@ -46,7 +46,8 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
 
 fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
-    let mut token = extend_container::expand(ast, false, has_content_alignment)?;
+    let is_split_pane = layout == "SplitPane";
+    let mut token = extend_container::expand(ast, false, has_content_alignment, is_split_pane)?;
     let name = &ast.ident;
 
     let children_fields = get_childrened_fields(ast);
@@ -91,6 +92,36 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         proc_macro2::TokenStream::new()
     };
 
+    let add_child_clause = if is_split_pane {
+        quote! {
+            if self.children.len() != 0 {
+                panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
+            }
+            let mut child = Box::new(child);
+            let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.as_mut());
+            let mut split_info = Box::new(SplitInfo::new(
+                child.id(),
+                widget_ptr.clone(),
+                None,
+                SplitType::SplitNone,
+            ));
+            self.split_infos_vec
+                .push(std::ptr::NonNull::new(split_info.as_mut()));
+            self.split_infos.insert(child.id(), split_info);
+            self.children.push(child);
+        }
+    } else {
+        quote! {
+            self.children.push(Box::new(child))
+        }
+    };
+
+    let impl_split_pane = if is_split_pane {
+        generate_split_pane_impl(name)?
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
     token.extend(quote!(
         impl ContainerImpl for #name {
             fn children(&self) -> Vec<&dyn WidgetImpl> {
@@ -115,7 +146,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             where
                 T: WidgetImpl + IsA<Widget>,
             {
-                self.children.push(Box::new(child))
+                #add_child_clause
             }
         }
 
@@ -143,6 +174,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         }
 
         #impl_content_alignment
+
+        #impl_split_pane
     ));
 
     Ok(token)

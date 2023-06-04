@@ -165,6 +165,11 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
+        Self::layout_of(self.id()).layout_change(widget)
+    }
+
+    #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
     }

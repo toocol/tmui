@@ -1,12 +1,11 @@
 use crate::{
     container::{Container, ContainerImpl},
-    
     prelude::*,
     widget::WidgetImpl,
 };
-use tlib::figure::Size;
 use log::debug;
 use std::collections::VecDeque;
+use tlib::figure::Size;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -16,6 +15,7 @@ pub enum Composition {
     Overlay,
     VerticalArrange,
     HorizontalArrange,
+    FixedContainer,
 }
 
 pub trait Layout {
@@ -144,6 +144,18 @@ impl LayoutManager {
                             child_size.set_width(child_size.width().max(inner.width()));
                             child_size.add_height(inner.height());
                         });
+                    }
+                    Composition::FixedContainer => {
+                        children.unwrap().iter_mut().for_each(|child| {
+                            Self::child_size_probe(window_size, size, *child);
+                        });
+                        child_size = widget_ref.size();
+                        if child_size.width() == 0 || child_size.height() == 0 {
+                            panic!(
+                                "`{}` FixedContainer should specified the size, the width or height can't be 0.",
+                                widget_ref.type_name()
+                            );
+                        }
                     }
                     _ => unimplemented!(),
                 }
