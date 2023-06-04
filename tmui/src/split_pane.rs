@@ -180,18 +180,22 @@ pub trait SplitPaneExt {
 }
 
 impl SplitPaneExt for SplitPane {
+    #[inline]
     fn split_left<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitLeft)
     }
 
+    #[inline]
     fn split_up<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitUp)
     }
 
+    #[inline]
     fn split_right<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitRight)
     }
 
+    #[inline]
     fn split_down<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitDown)
     }
@@ -256,7 +260,7 @@ impl SplitPaneExt for SplitPane {
     }
 
     fn split<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T, ty: SplitType) {
-        let split_info = if let Some(split_info) = self.split_infos.get_mut(&id) {
+        let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {
             NonNull::new(split_info.as_mut())
         } else {
             panic!("The widget with id {} is not exist in SplitPane.", id)
@@ -266,9 +270,11 @@ impl SplitPaneExt for SplitPane {
         let mut split_info = Box::new(SplitInfo::new(
             widget.id(),
             NonNull::new(widget.as_mut()),
-            split_info,
+            split_from,
             ty,
         ));
+
+        nonnull_mut!(split_from).split_to.push(NonNull::new(split_info.as_mut()));
         self.split_infos_vec
             .push(NonNull::new(split_info.as_mut()));
         self.split_infos.insert(widget.id(), split_info);
