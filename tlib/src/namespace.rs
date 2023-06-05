@@ -1116,3 +1116,33 @@ mod tests {
         )
     }
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`ExitStatus`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum ExitStatus {
+    #[default]
+    NormalExit = 0,
+    CrashExit,
+}
+impl AsNumeric<u8> for ExitStatus {
+    fn as_numeric(&self) -> u8 {
+        match self {
+            Self::NormalExit => 0,
+            Self::CrashExit => 1,
+        }
+    }
+}
+impl From<u8> for ExitStatus {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::NormalExit,
+            1 => Self::CrashExit,
+            _ => unimplemented!(),
+        }
+    }
+}
+implements_enum_value!(ExitStatus, u8);
