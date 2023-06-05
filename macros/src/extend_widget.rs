@@ -99,6 +99,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn initialized(&self) -> bool {
+                self.#(#widget_path).*.initialized()
+            }
+
+            #[inline]
+            fn set_initialized(&mut self, initialized: bool) {
+                self.#(#widget_path).*.set_initialized(initialized)
+            }
+
+            #[inline]
             fn as_element(&mut self) -> *mut dyn ElementImpl {
                 self as *mut Self as *mut dyn ElementImpl
             }

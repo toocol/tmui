@@ -17,11 +17,11 @@ impl WidgetImpl for TestContainer {}
 
 impl ContainerImpl for TestContainer {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.children.iter().map(|c| c.as_ref()).collect()
+        self.container.children.iter().map(|c| c.as_ref()).collect()
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-        self.children.iter_mut().map(|c| c.as_mut()).collect()
+        self.container.children.iter_mut().map(|c| c.as_mut()).collect()
     }
 }
 
@@ -30,7 +30,7 @@ impl ContainerImplExt for TestContainer {
     where
         T: WidgetImpl + IsA<Widget>,
     {
-        self.children.push(Box::new(child))
+        self.container.children.push(Box::new(child))
     }
 }
 

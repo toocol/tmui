@@ -51,6 +51,12 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
     let name = &ast.ident;
 
     let children_fields = get_childrened_fields(ast);
+    if is_split_pane && children_fields.len() > 0 {
+        return Err(syn::Error::new_spanned(
+            children_fields[0],
+            "`SplitPane` can not use `#[children]` attribute, please use `add_child`, `split` functions instead.",
+        ));
+    }
 
     let layout = Ident::new(layout, ast.span());
 
@@ -94,10 +100,12 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
 
     let add_child_clause = if is_split_pane {
         quote! {
-            if self.children.len() != 0 {
+            use tmui::application_window::ApplicationWindow;
+            if self.container.children.len() != 0 {
                 panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
             }
             let mut child = Box::new(child);
+            ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
             let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.as_mut());
             let mut split_info = Box::new(SplitInfo::new(
                 child.id(),
@@ -108,11 +116,16 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             self.split_infos_vec
                 .push(std::ptr::NonNull::new(split_info.as_mut()));
             self.split_infos.insert(child.id(), split_info);
-            self.children.push(child);
+            self.container.children.push(child);
+            self.update();
         }
     } else {
         quote! {
-            self.children.push(Box::new(child))
+            use tmui::application_window::ApplicationWindow;
+            let mut child = Box::new(child);
+            ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+            self.container.children.push(child);
+            self.update();
         }
     };
 
@@ -125,7 +138,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
     token.extend(quote!(
         impl ContainerImpl for #name {
             fn children(&self) -> Vec<&dyn WidgetImpl> {
-                let mut children: Vec<&dyn WidgetImpl> = self.children.iter().map(|c| c.as_ref()).collect();
+                let mut children: Vec<&dyn WidgetImpl> = self.container.children.iter().map(|c| c.as_ref()).collect();
                 #(
                     children.push(&self.#children_fields);
                 )*
@@ -133,7 +146,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             }
 
             fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-                let mut children: Vec<&mut dyn WidgetImpl> = self.children.iter_mut().map(|c| c.as_mut()).collect();
+                let mut children: Vec<&mut dyn WidgetImpl> = self.container.children.iter_mut().map(|c| c.as_mut()).collect();
                 #(
                     children.push(&mut self.#children_fields);
                 )*

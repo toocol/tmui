@@ -166,7 +166,16 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        Self::layout_of(self.id()).layout_change(widget)
+        // If the given widget's layout has changed, need pass ref of widget's parent.
+        let parent = unsafe {
+            widget
+                .get_raw_parent_mut()
+                .as_mut()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+        };
+        Self::layout_of(self.id()).layout_change(parent)
     }
 
     #[inline]
@@ -323,6 +332,34 @@ impl ApplicationWindow {
             EventType::None => {}
         }
     }
+
+    pub fn initialize_dynamic_component(parent: &mut dyn WidgetImpl, widget: &mut dyn WidgetImpl) {
+        let window_id = parent.window_id();
+        // window_id was 0 means there was no need to initialize the widget, it's created before ApplicationWindow's initialization,
+        // widget will be initialized later in function `child_initialize()`.
+        if window_id == 0 || window_id == parent.id() {
+            return;
+        }
+        if widget.initialized() {
+            return;
+        }
+
+        // Just check the thread was right or not:
+        let _ = Self::window_of(window_id);
+
+        widget.set_parent(parent);
+        let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
+        board.add_element(widget.as_element());
+        ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));
+
+        let type_registry = TypeRegistry::instance();
+        widget.inner_type_register(type_registry);
+        widget.type_register(type_registry);
+        widget.set_window_id(window_id);
+
+        widget.initialize();
+        widget.set_initialized(true);
+    }
 }
 
 fn child_initialize(
@@ -368,10 +405,12 @@ fn child_initialize(
         if child_ref.get_raw_parent().is_none() {
             child_ref.set_parent(parent);
         }
+
         parent = child_ptr;
 
         child_ref.initialize();
+        child_ref.set_initialized(true);
 
-        child = children.pop_front().take().unwrap();
+        child = children.pop_front().take().map_or(None, |widget| widget);
     }
 }
