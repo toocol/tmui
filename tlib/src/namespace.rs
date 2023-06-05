@@ -1058,12 +1058,41 @@ impl Into<MouseButton> for winit::event::MouseButton {
 }
 implements_enum_value!(MouseButton, u32);
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`ExitStatus`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum ExitStatus {
+    #[default]
+    NormalExit = 0,
+    CrashExit,
+}
+impl AsNumeric<u8> for ExitStatus {
+    fn as_numeric(&self) -> u8 {
+        match self {
+            Self::NormalExit => 0,
+            Self::CrashExit => 1,
+        }
+    }
+}
+impl From<u8> for ExitStatus {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::NormalExit,
+            1 => Self::CrashExit,
+            _ => unimplemented!(),
+        }
+    }
+}
+implements_enum_value!(ExitStatus, u8);
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
 
     use super::{
-        Align, BorderStyle, Coordinate, KeyCode, KeyboardModifier, Orientation, SystemCursorShape,
+        Align, BorderStyle, Coordinate, KeyCode, KeyboardModifier, Orientation, SystemCursorShape, ExitStatus,
     };
 
     #[test]
@@ -1115,34 +1144,10 @@ mod tests {
             SystemCursorShape::CrossCursor
         )
     }
-}
 
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-/// [`ExitStatus`]
-////////////////////////////////////////////////////////////////////////////////////////////////
-#[repr(u8)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
-pub enum ExitStatus {
-    #[default]
-    NormalExit = 0,
-    CrashExit,
-}
-impl AsNumeric<u8> for ExitStatus {
-    fn as_numeric(&self) -> u8 {
-        match self {
-            Self::NormalExit => 0,
-            Self::CrashExit => 1,
-        }
+    #[test]
+    fn test_exit_status() {
+        let val = ExitStatus::CrashExit.to_value();
+        assert_eq!(ExitStatus::CrashExit, val.get::<ExitStatus>())
     }
 }
-impl From<u8> for ExitStatus {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::NormalExit,
-            1 => Self::CrashExit,
-            _ => unimplemented!(),
-        }
-    }
-}
-implements_enum_value!(ExitStatus, u8);
