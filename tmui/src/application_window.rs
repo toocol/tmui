@@ -52,7 +52,6 @@ impl ObjectSubclass for ApplicationWindow {
 impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
-        self.set_window_id(self.id());
         debug!(
             "`ApplicationWindow` construct: static_type: {}",
             Self::static_type().name()
@@ -61,6 +60,7 @@ impl ObjectImpl for ApplicationWindow {
 
     fn initialize(&mut self) {
         connect!(self, size_changed(), self, when_size_change(Size));
+        self.set_window_id(self.id());
         child_initialize(self, self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
     }
@@ -337,7 +337,7 @@ impl ApplicationWindow {
         let window_id = parent.window_id();
         // window_id was 0 means there was no need to initialize the widget, it's created before ApplicationWindow's initialization,
         // widget will be initialized later in function `child_initialize()`.
-        if window_id == 0 || window_id == parent.id() {
+        if window_id == 0 {
             return;
         }
         if widget.initialized() {
