@@ -16,9 +16,9 @@ pub(crate) fn expand(
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub container: Container
                     })?);
-                    fields.named.push(syn::Field::parse_named.parse2(quote! {
-                        pub children: Vec<Box<dyn WidgetImpl>>
-                    })?);
+                    // fields.named.push(syn::Field::parse_named.parse2(quote! {
+                    //     pub children: Vec<Box<dyn WidgetImpl>>
+                    // })?);
                     if has_content_alignment {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             content_halign: Align

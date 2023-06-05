@@ -14,18 +14,22 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
         }
 
         impl SplitPaneExt for #name {
+            #[inline]
             fn split_left<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitLeft)
             }
 
+            #[inline]
             fn split_up<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitUp)
             }
 
+            #[inline]
             fn split_right<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitRight)
             }
 
+            #[inline]
             fn split_down<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitDown)
             }
@@ -90,6 +94,9 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
                     }
 
                     // Tell the `ApplicationWindow` that widget's layout has changed:
+                    if self.window_id() == 0 {
+                        panic!("`close_pane()` in SplitPane should invoke after window initialize.")
+                    }
                     ApplicationWindow::window_of(self.window_id()).layout_change(self);
                     self.update()
                 }
@@ -101,25 +108,31 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
                 use tmui::tlib::nonnull_mut;
                 use std::ptr::NonNull;
 
-                let split_info = if let Some(split_info) = self.split_infos.get_mut(&id) {
+                let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {
                     NonNull::new(split_info.as_mut())
                 } else {
                     panic!("The widget with id {} is not exist in SplitPane.", id)
                 };
 
                 let mut widget = Box::new(widget);
+                ApplicationWindow::initialize_dynamic_component(self, widget.as_mut());
                 let mut split_info = Box::new(SplitInfo::new(
                     widget.id(),
                     NonNull::new(widget.as_mut()),
-                    split_info,
+                    split_from,
                     ty,
                 ));
+
+                nonnull_mut!(split_from).split_to.push(NonNull::new(split_info.as_mut()));
                 self.split_infos_vec
                     .push(NonNull::new(split_info.as_mut()));
                 self.split_infos.insert(widget.id(), split_info);
-                self.children.push(widget);
+                self.container.children.push(widget);
 
                 // Tell the `ApplicationWindow` that widget's layout has changed:
+                if self.window_id() == 0 {
+                    panic!("`split()` in SplitPane should invoke after window initialize.")
+                }
                 ApplicationWindow::window_of(self.window_id()).layout_change(self);
                 self.update()
             }

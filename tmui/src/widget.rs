@@ -9,6 +9,7 @@ use crate::{
     prelude::*,
     util::skia_font_clone,
 };
+use derivative::Derivative;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
@@ -25,10 +26,14 @@ use tlib::{
 pub type SizeHint = (Size, Size, Size);
 
 #[extends(Element)]
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
     child: Option<Box<dyn WidgetImpl>>,
+    initialized: bool,
 
+    #[derivative(Default(value = "Color::WHITE"))]
     background: Color,
     font: Font,
     font_family: String,
@@ -36,6 +41,7 @@ pub struct Widget {
     paddings: [i32; 4],
     borders: [f32; 4],
     border_style: BorderStyle,
+    #[derivative(Default(value = "Color::BLACK"))]
     border_color: Color,
 }
 
@@ -82,30 +88,13 @@ pub trait WidgetSignals: ActionExt {
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
-impl Default for Widget {
-    fn default() -> Self {
-        Self {
-            parent: Default::default(),
-            child: Default::default(),
-            background: Color::WHITE,
-            font: Default::default(),
-            font_family: Default::default(),
-            margins: Default::default(),
-            paddings: Default::default(),
-            element: Default::default(),
-            borders: Default::default(),
-            border_style: Default::default(),
-            border_color: Color::BLACK,
-        }
-    }
-}
-
 impl Widget {
     pub fn child_internal<T>(&mut self, child: T)
     where
         T: WidgetImpl + IsA<Widget>,
     {
-        let child = Box::new(child);
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
         self.child = Some(child);
     }
 
@@ -145,6 +134,8 @@ impl ObjectImpl for Widget {
     }
 
     fn on_property_set(&mut self, name: &str, value: &Value) {
+        self.parent_on_property_set(name, value);
+
         match name {
             "width" => {
                 let width = value.get::<i32>();
@@ -218,6 +209,12 @@ pub trait WidgetAcquire: WidgetImpl + Default {}
 pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
     fn name(&self) -> String;
+
+    /// Go to[`Function defination`](WidgetExt::initialized) (Defined in [`WidgetExt`])
+    fn initialized(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_initialized) (Defined in [`WidgetExt`])
+    fn set_initialized(&mut self, initialized: bool);
 
     /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
     fn as_element(&mut self) -> *mut dyn ElementImpl;
@@ -513,6 +510,14 @@ pub trait WidgetExt {
 impl WidgetExt for Widget {
     fn name(&self) -> String {
         self.get_property("name").unwrap().get::<String>()
+    }
+
+    fn initialized(&self) -> bool {
+        self.initialized
+    }
+
+    fn set_initialized(&mut self, initialized: bool) {
+        self.initialized = initialized
     }
 
     fn as_element(&mut self) -> *mut dyn ElementImpl {

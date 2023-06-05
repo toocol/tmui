@@ -70,7 +70,7 @@ impl LayoutManager {
 
     pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl) {
         // Deal with the size first
-        let child = widget.get_raw_child_mut();
+        let child: Option<*mut dyn WidgetImpl> = widget.get_raw_child_mut();
         if let Some(child) = child {
             Self::child_size_probe(self.window_size, widget.size(), child);
         }
@@ -182,6 +182,7 @@ impl LayoutManager {
         let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
         while let Some(widget_ptr) = widget {
             let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
+            println!("Widget name: {}", widget_ref.name());
             let previous_ref = unsafe { previous.as_ref().unwrap().as_ref().unwrap() };
             let parent_ref = unsafe { parent.as_ref().unwrap().as_ref().unwrap() };
 
@@ -209,7 +210,7 @@ impl LayoutManager {
             } else {
                 children.push_back(widget_ref.get_raw_child_mut());
             }
-            widget = children.pop_front().take().unwrap();
+            widget = children.pop_front().take().map_or(None, |widget| widget);
             previous = Some(widget_ptr);
             parent = if let Some(c) = widget.as_ref() {
                 unsafe { c.as_ref().unwrap().get_raw_parent() }

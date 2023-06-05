@@ -223,7 +223,9 @@ impl<T: ObjectType> TypeDowncast for T {}
 #[reflect_trait]
 #[allow(unused_variables)]
 pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
-    /// Override this function should invoke `self.parent_construct()` manually.
+    /// Override this function should invoke `self.parent_construct()` manually. <br>
+    /// 
+    /// UI components can build and add in this function.
     fn construct(&mut self) {
         self.parent_construct()
     }
@@ -235,6 +237,8 @@ pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
 
     /// `initialize()` will be called when widget as a `child` of another widget.
     /// ### All the signals/slots [`connect!()`] should be called in this function.
+    /// 
+    /// ### !!! UI components can NOT build and add in this function.
     fn initialize(&mut self) {}
 
     /// Override to register the reflect type info to [`TypeRegistry`] in this function.

@@ -1,8 +1,10 @@
 mod split_pane_layout;
 
+use split_pane_layout::SplitPaneLayout;
+use tlib::Object;
 use tmui::{
     application::Application,
-    application_window::ApplicationWindow,
+    application_window::ApplicationWindow, widget::{WidgetImplExt, WidgetExt},
 };
 
 fn main() {
@@ -19,4 +21,10 @@ fn main() {
     app.run();
 }
 
-fn build_ui(window: &mut ApplicationWindow) {}
+fn build_ui(window: &mut ApplicationWindow) {
+    let mut split_pane: SplitPaneLayout = Object::new(&[]);
+    split_pane.width_request(window.size().width());
+    split_pane.height_request(window.size().height());
+
+    window.child(split_pane);
+}

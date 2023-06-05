@@ -3,13 +3,28 @@ use tlib::object::{ObjectImpl, ObjectSubclass};
 
 #[extends(Widget)]
 #[derive(Default)]
-pub struct Container {}
+pub struct Container {
+    pub children: Vec<Box<dyn WidgetImpl>>,
+}
 
 impl ObjectSubclass for Container {
     const NAME: &'static str = "Container";
 }
 
-impl ObjectImpl for Container {}
+impl ObjectImpl for Container {
+    fn on_property_set(&mut self,name: &str,value: &Value) {
+        self.parent_on_property_set(name, value);
+
+        match name {
+            "invalidate" => {
+                for child in self.children.iter_mut() {
+                    child.update()
+                }
+            }
+            _ => {}
+        }
+    }
+}
 
 impl WidgetImpl for Container {}
 
