@@ -210,6 +210,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_pressed(evt.as_ref());
                         widget.on_mouse_pressed(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -228,6 +229,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_released(evt.as_ref());
                         widget.on_mouse_released(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -246,6 +248,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_double_click(evt.as_ref());
                         widget.on_mouse_double_click(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -264,6 +267,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_move(evt.as_ref());
                         widget.on_mouse_move(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -282,6 +286,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_wheel(evt.as_ref());
                         widget.on_mouse_wheel(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -301,6 +306,7 @@ impl ApplicationWindow {
                     if widget.is_focus() {
                         widget.inner_key_pressed(&evt);
                         widget.on_key_pressed(&evt);
+                        break;
                     }
                 }
             }
@@ -316,6 +322,7 @@ impl ApplicationWindow {
                     if widget.is_focus() {
                         widget.inner_key_released(&evt);
                         widget.on_key_released(&evt);
+                        break;
                     }
                 }
             }
