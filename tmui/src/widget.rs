@@ -130,7 +130,6 @@ impl ObjectImpl for Widget {
         self.set_valign(Align::default());
 
         self.show();
-        self.set_focus(false);
     }
 
     fn on_property_set(&mut self, name: &str, value: &Value) {
@@ -140,12 +139,10 @@ impl ObjectImpl for Widget {
             "width" => {
                 let width = value.get::<i32>();
                 self.set_fixed_width(width);
-                emit!(self.size_changed(), self.size());
             }
             "height" => {
                 let height = value.get::<i32>();
                 self.set_fixed_height(height);
-                emit!(self.size_changed(), self.size());
             }
             "invalidate" => {
                 let invalidate = value.get::<bool>();
@@ -508,26 +505,32 @@ pub trait WidgetExt {
 }
 
 impl WidgetExt for Widget {
+    #[inline]
     fn name(&self) -> String {
         self.get_property("name").unwrap().get::<String>()
     }
 
+    #[inline]
     fn initialized(&self) -> bool {
         self.initialized
     }
 
+    #[inline]
     fn set_initialized(&mut self, initialized: bool) {
         self.initialized = initialized
     }
 
+    #[inline]
     fn as_element(&mut self) -> *mut dyn ElementImpl {
         self as *mut Self as *mut dyn ElementImpl
     }
 
+    #[inline]
     fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
         self.parent = NonNull::new(parent)
     }
 
+    #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
         match self.child.as_ref() {
             Some(child) => Some(child.as_ref() as *const dyn WidgetImpl),
@@ -535,6 +538,7 @@ impl WidgetExt for Widget {
         }
     }
 
+    #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
         match self.child.as_mut() {
             Some(child) => Some(child.as_mut() as *mut dyn WidgetImpl),
@@ -542,6 +546,7 @@ impl WidgetExt for Widget {
         }
     }
 
+    #[inline]
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
         match self.parent.as_ref() {
             Some(parent) => Some(unsafe { parent.as_ref() }),
@@ -549,6 +554,7 @@ impl WidgetExt for Widget {
         }
     }
 
+    #[inline]
     fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
         match self.parent.as_mut() {
             Some(parent) => Some(unsafe { parent.as_mut() }),
@@ -556,79 +562,98 @@ impl WidgetExt for Widget {
         }
     }
 
+    #[inline]
     fn hide(&mut self) {
         self.set_property("visible", false.to_value())
     }
 
+    #[inline]
     fn show(&mut self) {
         self.set_property("visible", true.to_value())
     }
 
+    #[inline]
     fn visible(&mut self) -> bool {
         self.get_property("visible").unwrap().get::<bool>()
     }
 
+    #[inline]
     fn set_focus(&mut self, focus: bool) {
-        self.set_property("focus", focus.to_value())
+        let id = if focus { self.id() } else { 0 };
+        ApplicationWindow::window_of(self.window_id()).set_focused_widget(id)
     }
 
+    #[inline]
     fn is_focus(&self) -> bool {
-        self.get_property("focus").unwrap().get::<bool>()
+        ApplicationWindow::window_of(self.window_id()).focused_widget() == self.id()
     }
 
+    #[inline]
     fn resize(&mut self, width: i32, height: i32) {
         self.set_property("width", width.to_value());
         self.set_property("height", height.to_value());
     }
 
+    #[inline]
     fn width_request(&mut self, width: i32) {
         self.set_property("width", width.to_value());
         self.set_property("width-request", width.to_value());
     }
 
+    #[inline]
     fn height_request(&mut self, height: i32) {
         self.set_property("height", height.to_value());
         self.set_property("height-request", height.to_value());
     }
 
+    #[inline]
     fn set_halign(&mut self, halign: Align) {
         self.set_property("halign", halign.to_value())
     }
 
+    #[inline]
     fn set_valign(&mut self, valign: Align) {
         self.set_property("valign", valign.to_value())
     }
 
+    #[inline]
     fn halign(&self) -> Align {
         self.get_property("halign").unwrap().get::<Align>()
     }
 
+    #[inline]
     fn valign(&self) -> Align {
         self.get_property("valign").unwrap().get::<Align>()
     }
 
+    #[inline]
     fn set_font(&mut self, font: Font) {
         self.font = font;
         self.font_changed();
     }
 
+    #[inline]
     fn font(&self) -> Font {
         skia_font_clone(&self.font)
     }
 
+    #[inline]
     fn set_font_family(&mut self, family: String) {
         self.font_family = family
     }
 
+    #[inline]
     fn font_family(&self) -> &str {
         &self.font_family
     }
 
+    #[inline]
     fn size(&self) -> Size {
         let rect = self.rect();
         Size::new(rect.width(), rect.height())
     }
 
+    #[inline]
     fn image_rect(&self) -> Rect {
         let mut rect = self.rect();
 
@@ -642,6 +667,7 @@ impl WidgetExt for Widget {
         rect
     }
 
+    #[inline]
     fn origin_rect(&self, coord: Option<Coordinate>) -> Rect {
         let mut rect = self.rect();
 
@@ -655,6 +681,7 @@ impl WidgetExt for Widget {
         rect
     }
 
+    #[inline]
     fn contents_rect(&self, coord: Option<Coordinate>) -> Rect {
         let mut rect = self.rect();
 
@@ -675,14 +702,17 @@ impl WidgetExt for Widget {
         rect
     }
 
+    #[inline]
     fn background(&self) -> Color {
         self.background
     }
 
+    #[inline]
     fn set_background(&mut self, color: Color) {
         self.background = color
     }
 
+    #[inline]
     fn margins(&self) -> (i32, i32, i32, i32) {
         (
             self.margins[0],
@@ -692,22 +722,27 @@ impl WidgetExt for Widget {
         )
     }
 
+    #[inline]
     fn margin_top(&self) -> i32 {
         self.margins[0]
     }
 
+    #[inline]
     fn margin_right(&self) -> i32 {
         self.margins[1]
     }
 
+    #[inline]
     fn margin_bottom(&self) -> i32 {
         self.margins[2]
     }
 
+    #[inline]
     fn margin_left(&self) -> i32 {
         self.margins[3]
     }
 
+    #[inline]
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
         self.margins[0] = top;
         self.margins[1] = right;
@@ -715,22 +750,27 @@ impl WidgetExt for Widget {
         self.margins[3] = left;
     }
 
+    #[inline]
     fn set_margin_top(&mut self, val: i32) {
         self.margins[0] = val;
     }
 
+    #[inline]
     fn set_margin_right(&mut self, val: i32) {
         self.margins[1] = val;
     }
 
+    #[inline]
     fn set_margin_bottom(&mut self, val: i32) {
         self.margins[2] = val;
     }
 
+    #[inline]
     fn set_margin_left(&mut self, val: i32) {
         self.margins[3] = val;
     }
 
+    #[inline]
     fn paddings(&self) -> (i32, i32, i32, i32) {
         (
             self.paddings[0],
@@ -740,22 +780,27 @@ impl WidgetExt for Widget {
         )
     }
 
+    #[inline]
     fn padding_top(&self) -> i32 {
         self.paddings[0]
     }
 
+    #[inline]
     fn padding_right(&self) -> i32 {
         self.paddings[1]
     }
 
+    #[inline]
     fn padding_bottom(&self) -> i32 {
         self.paddings[2]
     }
 
+    #[inline]
     fn padding_left(&self) -> i32 {
         self.paddings[3]
     }
 
+    #[inline]
     fn set_paddings(&mut self, mut top: i32, mut right: i32, mut bottom: i32, mut left: i32) {
         if top < 0 {
             top = 0;
@@ -779,6 +824,7 @@ impl WidgetExt for Widget {
         self.height_request(size.height() as i32 + top + bottom);
     }
 
+    #[inline]
     fn set_padding_top(&mut self, mut val: i32) {
         if val < 0 {
             val = 0;
@@ -788,6 +834,7 @@ impl WidgetExt for Widget {
         self.height_request(size.height() as i32 + val);
     }
 
+    #[inline]
     fn set_padding_right(&mut self, mut val: i32) {
         if val < 0 {
             val = 0;
@@ -797,6 +844,7 @@ impl WidgetExt for Widget {
         self.width_request(size.width() as i32 + val);
     }
 
+    #[inline]
     fn set_padding_bottom(&mut self, mut val: i32) {
         if val < 0 {
             val = 0;
@@ -806,6 +854,7 @@ impl WidgetExt for Widget {
         self.height_request(size.height() as i32 + val);
     }
 
+    #[inline]
     fn set_padding_left(&mut self, mut val: i32) {
         if val < 0 {
             val = 0;
@@ -815,6 +864,7 @@ impl WidgetExt for Widget {
         self.width_request(size.width() as i32 + val);
     }
 
+    #[inline]
     fn set_borders(&mut self, mut top: f32, mut right: f32, mut bottom: f32, mut left: f32) {
         if top < 0. {
             top = 0.;
@@ -834,35 +884,43 @@ impl WidgetExt for Widget {
         self.borders[3] = left;
     }
 
+    #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
         self.border_style = style;
     }
 
+    #[inline]
     fn set_border_color(&mut self, color: Color) {
         self.border_color = color;
     }
 
+    #[inline]
     fn borders(&self) -> [f32; 4] {
         self.borders
     }
 
+    #[inline]
     fn border_style(&self) -> BorderStyle {
         self.border_style
     }
 
+    #[inline]
     fn border_color(&self) -> Color {
         self.border_color
     }
 
+    #[inline]
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
         ApplicationWindow::send_message_with_id(self.window_id(), Message::SetCursorShape(cursor))
     }
 
+    #[inline]
     fn map_to_global(&self, point: &Point) -> Point {
         let contents_rect = self.contents_rect(None);
         Point::new(point.x() + contents_rect.x(), point.y() + contents_rect.y())
     }
 
+    #[inline]
     fn map_to_widget(&self, point: &Point) -> Point {
         let contents_rect = self.contents_rect(None);
         Point::new(point.x() - contents_rect.x(), point.y() - contents_rect.y())
@@ -970,42 +1028,55 @@ pub trait InnerEventProcess {
     fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent);
 }
 impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
+    #[inline]
     fn inner_mouse_pressed(&mut self, event: &MouseEvent) {
+        if self.enable_focus() {
+            self.set_focus(true)
+        }
         emit!(self.mouse_pressed(), event);
     }
 
+    #[inline]
     fn inner_mouse_released(&mut self, event: &MouseEvent) {
         emit!(self.mouse_released(), event);
     }
 
+    #[inline]
     fn inner_mouse_double_click(&mut self, event: &MouseEvent) {
         emit!(self.mouse_double_click(), event);
     }
 
+    #[inline]
     fn inner_mouse_move(&mut self, event: &MouseEvent) {
         emit!(self.mouse_move(), event);
     }
 
+    #[inline]
     fn inner_mouse_wheel(&mut self, event: &MouseEvent) {
         emit!(self.mouse_wheel(), event);
     }
 
+    #[inline]
     fn inner_mouse_enter(&mut self, event: &MouseEvent) {
         emit!(self.mouse_enter(), event);
     }
 
+    #[inline]
     fn inner_mouse_leave(&mut self, event: &MouseEvent) {
         emit!(self.mouse_leave(), event);
     }
 
+    #[inline]
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
         emit!(self.key_pressed(), event);
     }
 
+    #[inline]
     fn inner_key_released(&mut self, event: &KeyEvent) {
         emit!(self.key_released(), event);
     }
 
+    #[inline]
     fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent) {
         emit!(self.receive_character(), event);
     }
@@ -1032,6 +1103,11 @@ pub trait WidgetImpl:
     /// Invoke this function when widget's size change.
     fn size_hint(&mut self) -> Option<SizeHint> {
         None
+    }
+
+    /// The widget can be focused or not, default value was false.
+    fn enable_focus(&self) -> bool {
+        false
     }
 
     /// Invoke this function when renderering.

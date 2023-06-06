@@ -235,10 +235,10 @@ pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
         self.parent_on_property_set(name, value)
     }
 
-    /// `initialize()` will be called when widget as a `child` of another widget.
-    /// ### All the signals/slots [`connect!()`] should be called in this function.
+    /// `initialize()` will be called when widget as a `child` of another widget. <br>
+    /// UI components can build and add in this function.<br>
     /// 
-    /// ### !!! UI components can NOT build and add in this function.
+    /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}
 
     /// Override to register the reflect type info to [`TypeRegistry`] in this function.

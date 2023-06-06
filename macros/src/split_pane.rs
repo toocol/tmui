@@ -1,6 +1,29 @@
 use quote::quote;
 use syn::Ident;
 
+pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenStream> {
+    Ok(quote! {
+        use tmui::application_window::ApplicationWindow;
+        if self.container.children.len() != 0 {
+            panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
+        }
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.as_mut());
+        let mut split_info = Box::new(SplitInfo::new(
+            child.id(),
+            widget_ptr.clone(),
+            None,
+            SplitType::SplitNone,
+        ));
+        self.split_infos_vec
+            .push(std::ptr::NonNull::new(split_info.as_mut()));
+        self.split_infos.insert(child.id(), split_info);
+        self.container.children.push(child);
+        self.update();
+    })
+}
+
 pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         impl SplitInfosGetter for #name {

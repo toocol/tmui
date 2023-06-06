@@ -1,4 +1,7 @@
-use crate::{extend_container, split_pane::generate_split_pane_impl};
+use crate::{
+    extend_container,
+    split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
+};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
@@ -99,26 +102,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
     };
 
     let add_child_clause = if is_split_pane {
-        quote! {
-            use tmui::application_window::ApplicationWindow;
-            if self.container.children.len() != 0 {
-                panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
-            }
-            let mut child = Box::new(child);
-            ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
-            let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.as_mut());
-            let mut split_info = Box::new(SplitInfo::new(
-                child.id(),
-                widget_ptr.clone(),
-                None,
-                SplitType::SplitNone,
-            ));
-            self.split_infos_vec
-                .push(std::ptr::NonNull::new(split_info.as_mut()));
-            self.split_infos.insert(child.id(), split_info);
-            self.container.children.push(child);
-            self.update();
-        }
+        generate_split_pane_add_child()?
     } else {
         quote! {
             use tmui::application_window::ApplicationWindow;

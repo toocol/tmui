@@ -43,6 +43,7 @@ pub(crate) fn store_board(board: &mut Board) {
 pub struct ApplicationWindow {
     output_sender: Option<OutputSender>,
     activated: bool,
+    focused_widget: u16,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -146,6 +147,16 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_focused_widget(&mut self, id: u16) {
+        self.focused_widget = id
+    }
+
+    #[inline]
+    pub(crate) fn focused_widget(&self) -> u16 {
+        self.focused_widget
+    }
+
+    #[inline]
     pub fn send_message(&self, message: Message) {
         match self.output_sender {
             Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
@@ -181,6 +192,7 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
+        self.window_layout_change();
     }
 
     #[inline]
@@ -210,6 +222,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_pressed(evt.as_ref());
                         widget.on_mouse_pressed(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -228,6 +241,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_released(evt.as_ref());
                         widget.on_mouse_released(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -246,6 +260,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_double_click(evt.as_ref());
                         widget.on_mouse_double_click(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -264,6 +279,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_move(evt.as_ref());
                         widget.on_mouse_move(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -282,6 +298,7 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_wheel(evt.as_ref());
                         widget.on_mouse_wheel(evt.as_ref());
+                        break;
                     }
                 }
             }
@@ -298,9 +315,10 @@ impl ApplicationWindow {
                 for (_name, widget_opt) in widgets_map.iter_mut() {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
-                    if widget.is_focus() {
+                    if widget.id() == self.focused_widget {
                         widget.inner_key_pressed(&evt);
                         widget.on_key_pressed(&evt);
+                        break;
                     }
                 }
             }
@@ -313,9 +331,10 @@ impl ApplicationWindow {
                 for (_name, widget_opt) in widgets_map.iter_mut() {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
-                    if widget.is_focus() {
+                    if widget.id() == self.focused_widget {
                         widget.inner_key_released(&evt);
                         widget.on_key_released(&evt);
+                        break;
                     }
                 }
             }

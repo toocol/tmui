@@ -1,6 +1,4 @@
 use std::ptr::NonNull;
-
-use derivative::Derivative;
 use tlib::{connect, events::MouseEvent, nonnull_ref};
 use tmui::{
     label::Label,
@@ -10,8 +8,7 @@ use tmui::{
 };
 
 #[extends(Widget, Layout(SplitPane))]
-#[derive(Derivative, Childrenable)]
-#[derivative(Default)]
+#[derive(Default)]
 pub struct SplitPaneLayout {
     left: u16,
     cnt: i32,
