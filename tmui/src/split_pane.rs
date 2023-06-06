@@ -330,7 +330,6 @@ impl SplitInfo {
     }
 
     pub(crate) fn calculate_layout(&mut self, parent_rect: Rect) {
-        println!("SplitPane calculate layout!!!");
         let widget = split_widget!(self);
 
         match self.ty {

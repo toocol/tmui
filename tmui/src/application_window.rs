@@ -43,6 +43,7 @@ pub(crate) fn store_board(board: &mut Board) {
 pub struct ApplicationWindow {
     output_sender: Option<OutputSender>,
     activated: bool,
+    focused_widget: u16,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -143,6 +144,16 @@ impl ApplicationWindow {
     #[inline]
     pub fn send_message_with_id(id: u16, message: Message) {
         Self::window_of(id).send_message(message)
+    }
+
+    #[inline]
+    pub(crate) fn set_focused_widget(&mut self, id: u16) {
+        self.focused_widget = id
+    }
+
+    #[inline]
+    pub(crate) fn focused_widget(&self) -> u16 {
+        self.focused_widget
     }
 
     #[inline]
@@ -303,7 +314,7 @@ impl ApplicationWindow {
                 for (_name, widget_opt) in widgets_map.iter_mut() {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
-                    if widget.is_focus() {
+                    if widget.id() == self.focused_widget {
                         widget.inner_key_pressed(&evt);
                         widget.on_key_pressed(&evt);
                         break;
@@ -319,7 +330,7 @@ impl ApplicationWindow {
                 for (_name, widget_opt) in widgets_map.iter_mut() {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
-                    if widget.is_focus() {
+                    if widget.id() == self.focused_widget {
                         widget.inner_key_released(&evt);
                         widget.on_key_released(&evt);
                         break;
@@ -355,6 +366,7 @@ impl ApplicationWindow {
         let _ = Self::window_of(window_id);
 
         widget.set_parent(parent);
+        widget.set_window_id(window_id);
         let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
         board.add_element(widget.as_element());
         ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));

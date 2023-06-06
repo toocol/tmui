@@ -4,7 +4,7 @@ use crate::{
     scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
-use tlib::{namespace::Orientation, object::ObjectSubclass, prelude::extends};
+use tlib::{namespace::Orientation, object::ObjectSubclass, prelude::extends, events::MouseEvent};
 
 #[extends(Container)]
 #[derive(Derivative)]
@@ -80,7 +80,11 @@ impl ObjectSubclass for ScrollArea {
 
 impl ObjectImpl for ScrollArea {}
 
-impl WidgetImpl for ScrollArea {}
+impl WidgetImpl for ScrollArea {
+    fn on_mouse_wheel(&mut self, event: &MouseEvent) {
+        self.scroll_bar.on_mouse_wheel(event)
+    }
+}
 
 impl ContainerImpl for ScrollArea {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
