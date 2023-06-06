@@ -139,12 +139,10 @@ impl ObjectImpl for Widget {
             "width" => {
                 let width = value.get::<i32>();
                 self.set_fixed_width(width);
-                emit!(self.size_changed(), self.size());
             }
             "height" => {
                 let height = value.get::<i32>();
                 self.set_fixed_height(height);
-                emit!(self.size_changed(), self.size());
             }
             "invalidate" => {
                 let invalidate = value.get::<bool>();

@@ -192,6 +192,7 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
+        self.window_layout_change();
     }
 
     #[inline]
@@ -366,7 +367,6 @@ impl ApplicationWindow {
         let _ = Self::window_of(window_id);
 
         widget.set_parent(parent);
-        widget.set_window_id(window_id);
         let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
         board.add_element(widget.as_element());
         ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));
