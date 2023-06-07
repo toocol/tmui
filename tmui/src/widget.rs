@@ -564,12 +564,14 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn hide(&mut self) {
-        self.set_property("visible", false.to_value())
+        self.set_property("visible", false.to_value());
+        self.update();
     }
 
     #[inline]
     fn show(&mut self) {
-        self.set_property("visible", true.to_value())
+        self.set_property("visible", true.to_value());
+        self.update();
     }
 
     #[inline]
