@@ -197,9 +197,98 @@ impl Rect {
     }
 
     #[inline]
-    pub fn intersects(&self, rect: &Rect) -> bool {
-        self.x.max(rect.x) <= self.width.min(rect.width)
-            && self.y.max(rect.y) <= self.height.min(rect.height)
+    pub fn is_intersects(&self, rect: &Rect) -> bool {
+        self.x.max(rect.x) < (self.x + self.width).min(rect.x + rect.width)
+            && self.y.max(rect.y) < (self.y + self.height).min(rect.y + rect.height)
+    }
+
+    #[inline]
+    pub fn intersects(&self, rect: &Rect) -> Option<Rect> {
+        if !self.is_intersects(rect) {
+            None
+        } else {
+            let left = self.x.max(rect.x);
+            let top = self.y.max(rect.y);
+            let right = (self.x + self.width).min(rect.x + rect.width);
+            let bottom = (self.y + self.height).min(rect.y + rect.height);
+
+            let x = left;
+            let y = top;
+            let width = right - left;
+            let height = bottom - top;
+
+            Some(Rect { x, y, width, height })
+        }
+    }
+
+    #[inline]
+    pub fn union(&self, rect: &Rect) -> Rect {
+        let left = self.x.min(rect.x);
+        let right = (self.x + self.width).max(rect.x + rect.width);
+        let top = self.y.min(rect.y);
+        let bottom = (self.y + self.height).max(rect.y + rect.height);
+        
+        Rect {
+            x: left,
+            y: top,
+            width: right - left,
+            height: bottom - top,
+        }
+    }
+
+    #[inline]
+    pub fn subtracted(&self, other: &Rect) -> Option<Vec<Rect>> {
+        let left = self.x.max(other.x);
+        let top = self.y.max(other.y);
+        let right = (self.x + self.width).min(other.x + other.width);
+        let bottom = (self.y + self.height).min(other.y + other.height);
+
+        if left >= right || top >= bottom {
+            return None;
+        }
+        let mut result = vec![];
+
+        if self.x < left {
+            result.push(Rect {
+                x: self.x,
+                y: self.y,
+                width: left - self.x,
+                height: self.height,
+            });
+        }
+
+        if self.y < top {
+            result.push(Rect {
+                x: self.x,
+                y: self.y,
+                width: self.width,
+                height: top - self.y,
+            });
+        }
+
+        if self.x + self.width > right {
+            result.push(Rect {
+                x: right,
+                y: self.y,
+                width: self.x + self.width - right,
+                height: self.height,
+            });
+        }
+
+        if self.y + self.height > bottom {
+            result.push(Rect {
+                x: self.x,
+                y: bottom,
+                width: self.width,
+                height: self.y + self.height - bottom,
+            });
+        }
+
+        if result.is_empty() {
+            None
+        } else {
+            Some(result)
+        }
     }
 
     #[inline]
@@ -525,9 +614,98 @@ impl FRect {
     }
 
     #[inline]
-    pub fn intersects(&self, rect: &FRect) -> bool {
+    pub fn is_intersects(&self, rect: &FRect) -> bool {
         self.x.max(rect.x) <= self.width.min(rect.width)
             && self.y.max(rect.y) <= self.height.min(rect.height)
+    }
+
+    #[inline]
+    pub fn intersects(&self, rect: &FRect) -> Option<FRect> {
+        if !self.is_intersects(rect) {
+            None
+        } else {
+            let left = self.x.max(rect.x);
+            let top = self.y.max(rect.y);
+            let right = (self.x + self.width).min(rect.x + rect.width);
+            let bottom = (self.y + self.height).min(rect.y + rect.height);
+
+            let x = left;
+            let y = top;
+            let width = right - left;
+            let height = bottom - top;
+
+            Some(FRect { x, y, width, height })
+        }
+    }
+
+    #[inline]
+    pub fn union(&self, rect: &FRect) -> FRect {
+        let left = self.x.min(rect.x);
+        let right = (self.x + self.width).max(rect.x + rect.width);
+        let top = self.y.min(rect.y);
+        let bottom = (self.y + self.height).max(rect.y + rect.height);
+        
+        FRect {
+            x: left,
+            y: top,
+            width: right - left,
+            height: bottom - top,
+        }
+    }
+
+    #[inline]
+    pub fn subtracted(&self, other: &FRect) -> Option<Vec<FRect>> {
+        let left = self.x.max(other.x);
+        let top = self.y.max(other.y);
+        let right = (self.x + self.width).min(other.x + other.width);
+        let bottom = (self.y + self.height).min(other.y + other.height);
+
+        if left >= right || top >= bottom {
+            return None;
+        }
+        let mut result = vec![];
+
+        if self.x < left {
+            result.push(FRect {
+                x: self.x,
+                y: self.y,
+                width: left - self.x,
+                height: self.height,
+            });
+        }
+
+        if self.y < top {
+            result.push(FRect {
+                x: self.x,
+                y: self.y,
+                width: self.width,
+                height: top - self.y,
+            });
+        }
+
+        if self.x + self.width > right {
+            result.push(FRect {
+                x: right,
+                y: self.y,
+                width: self.x + self.width - right,
+                height: self.height,
+            });
+        }
+
+        if self.y + self.height > bottom {
+            result.push(FRect {
+                x: self.x,
+                y: bottom,
+                width: self.width,
+                height: self.y + self.height - bottom,
+            });
+        }
+
+        if result.is_empty() {
+            None
+        } else {
+            Some(result)
+        }
     }
 
     #[inline]

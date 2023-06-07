@@ -25,5 +25,5 @@ pub use crate::widget::{
     WidgetSignals,
 };
 pub use crate::split_pane::{SplitPane, SplitInfosGetter, ReflectSplitInfosGetter, SplitPaneExt, SplitInfo, SplitType};
-pub use tlib::figure::{Color, Point, Rect, Size};
+pub use tlib::figure::{Color, Point, Rect, Size, Region};
 pub use tlib::tokio;
