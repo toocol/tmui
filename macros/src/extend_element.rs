@@ -94,6 +94,18 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
+            fn update_region(&mut self, rect: Rect) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_region(rect);
+            }
+
+            #[inline]
+            fn redraw_region(&self) -> &Region {
+                self.#(#element_path).*.redraw_region()
+            }
+
+            #[inline]
             fn rect(&self) -> Rect {
                 self.#(#element_path).*.rect()
             }

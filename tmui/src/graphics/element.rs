@@ -1,7 +1,7 @@
 use super::{drawing_context::DrawingContext, board::Board};
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
-    prelude::*, figure::Rect,
+    prelude::*, figure::{Rect, Region},
 };
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
@@ -11,6 +11,7 @@ pub struct Element {
     window_id: u16,
     rect: Rect,
     fixed_size: bool,
+    redraw_region: Region,
 }
 
 impl ObjectSubclass for Element {
@@ -45,6 +46,16 @@ pub trait ElementExt: 'static {
     /// 
     /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
     fn force_update(&mut self);
+
+    /// Specified the region to redraw.
+    /// 
+    /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
+    fn update_region(&mut self, rect: Rect);
+
+    /// Get the redraw region.
+    /// 
+    /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
+    fn redraw_region(&self) -> &Region;
 
     /// Go to[`Function defination`](ElementExt::rect) (Defined in [`ElementExt`])
     fn rect(&self) -> Rect;
@@ -95,6 +106,16 @@ impl ElementExt for Element {
     fn force_update(&mut self) {
         self.set_property("invalidate", true.to_value());
         // TODO: invoke `Board`'s `invalidate_visual` obligatory.
+    }
+
+    #[inline]
+    fn update_region(&mut self, rect: Rect) {
+        self.redraw_region.add_rect(rect)
+    }
+
+    #[inline]
+    fn redraw_region(&self) -> &Region {
+        &self.redraw_region
     }
 
     #[inline]
