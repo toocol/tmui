@@ -17,7 +17,6 @@ const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 #[derive(Childrenable)]
 pub struct LayoutWidget {
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     label: Label,
 
     timer: Timer,

@@ -15,7 +15,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 _ => {
                     return Err(syn::Error::new_spanned(
                         ast,
-                        "`extend_object` should defined on named fields struct.",
+                        "`extends(Object)` should defined on named fields struct.",
                     ))
                 }
             }
@@ -51,7 +51,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
         }
         _ => Err(syn::Error::new_spanned(
             ast,
-            "`extends_object` has to be used with structs ",
+            "`extends(Object)` has to be used with structs ",
         )),
     }
 }

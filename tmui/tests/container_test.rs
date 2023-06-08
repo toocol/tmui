@@ -1,10 +1,18 @@
 use tlib::object::{ObjectImpl, ObjectSubclass};
 use tmui::container::{ContainerImpl, ContainerImplExt};
+use tmui::label::Label;
 use tmui::prelude::*;
 use tmui::widget::{Widget, WidgetImpl};
 
 #[extends(Container)]
-pub struct TestContainer {}
+#[derive(Childrenable)]
+pub struct TestContainer {
+    #[derivative(Default(value = "99"))]
+    _num: i32,
+    #[children]
+    // #[derivative(Default(value = "Object::new(&[])"))]
+    _label: Label,
+}
 
 impl ObjectSubclass for TestContainer {
     const NAME: &'static str = "TestContainer";

@@ -8,15 +8,12 @@ use crate::hbox_layout::HBoxLayout;
 #[derive(Childrenable)]
 pub struct VBoxLayout {
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     hbox_1: HBoxLayout,
 
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     hbox_2: HBoxLayout,
 
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     hbox_3: HBoxLayout,
 }
 

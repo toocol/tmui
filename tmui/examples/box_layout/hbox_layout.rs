@@ -6,15 +6,12 @@ use tmui::{prelude::*, label::Label};
 #[derive(Childrenable)]
 pub struct HBoxLayout {
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     label_1: Label,
 
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     label_2: Label,
 
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     label_3: Label,
 }
 

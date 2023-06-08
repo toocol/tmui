@@ -301,6 +301,16 @@ impl ScrollBar {
         emit!(self.action_triggered(), action);
     }
 
+    /// Scroll the ScrollBar. </br>
+    /// delta was positive value when scroll down/right.
+    #[inline]
+    pub fn scroll(&mut self, delta: i32) {
+        self.scroll_by_delta(
+            KeyboardModifier::NoModifier,
+            delta,
+        );
+    }
+
     #[inline]
     fn set_steps(&mut self, single: i32, page: i32) {
         self.single_step = single.abs();
