@@ -1,6 +1,6 @@
 use crate::{extend_element, extend_object, extend_widget};
 use quote::quote;
-use syn::{parse::Parser, DeriveInput};
+use syn::{parse::Parser, DeriveInput, punctuated::Punctuated, Token, spanned::Spanned, Attribute, token::Pound, Path};
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
@@ -16,9 +16,6 @@ pub(crate) fn expand(
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub container: Container
                     })?);
-                    // fields.named.push(syn::Field::parse_named.parse2(quote! {
-                    //     pub children: Vec<Box<dyn WidgetImpl>>
-                    // })?);
                     if has_content_alignment {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             content_halign: Align
@@ -38,11 +35,46 @@ pub(crate) fn expand(
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>
                         })?);
                     }
+
+                    // If field with attribute `#[children]`,
+                    // add attribute `#[derivative(Default(value = "Object::new(&[])"))]` to it:
+                    for field in fields.named.iter_mut() {
+                        let mut childrenable = false;
+                        for attr in field.attrs.iter() {
+                            if let Some(attr_ident) = attr.path.get_ident() {
+                                if attr_ident.to_string() == "children" {
+                                    childrenable = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if childrenable {
+                            let mut segments = Punctuated::<syn::PathSegment, Token![::]>::new();
+                            segments.push(syn::PathSegment {
+                                ident: syn::Ident::new("derivative", field.span()),
+                                arguments: syn::PathArguments::None,
+                            });
+                            let attr = Attribute {
+                                pound_token: Pound {
+                                    spans: [field.span()],
+                                },
+                                style: syn::AttrStyle::Outer,
+                                bracket_token: syn::token::Bracket { span: field.span() },
+                                path: Path {
+                                    leading_colon: None,
+                                    segments,
+                                },
+                                tokens: quote! {(Default(value = "Object::new(&[])"))},
+                            };
+                            field.attrs.push(attr);
+                        }
+                    }
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
                         ast,
-                        "`extend_container` should defined on named fields struct.",
+                        "`extends(Container)` should defined on named fields struct.",
                     ))
                 }
             }
@@ -82,6 +114,8 @@ pub(crate) fn expand(
             };
 
             Ok(quote!(
+                #[derive(Derivative)]
+                #[derivative(Default)]
                 #ast
 
                 #object_trait_impl_clause
@@ -122,7 +156,7 @@ pub(crate) fn expand(
         }
         _ => Err(syn::Error::new_spanned(
             ast,
-            "`extends_container` has to be used with structs ",
+            "`extends(Container)` has to be used with structs ",
         )),
     }
 }

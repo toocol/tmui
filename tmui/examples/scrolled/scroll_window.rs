@@ -8,8 +8,6 @@ use tmui::{
 };
 
 #[extends(Widget)]
-#[derive(Derivative)]
-#[derivative(Default)]
 pub struct ScrollWindow {}
 
 impl ObjectSubclass for ScrollWindow {

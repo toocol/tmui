@@ -2,7 +2,6 @@ use crate::{layout::LayoutManager, prelude::*};
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
-#[derive(Default)]
 pub struct HBox {
     content_halign: Align,
     content_valign: Align,

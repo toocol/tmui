@@ -6,7 +6,6 @@ use crate::{
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
 #[extends(Container)]
-#[derive(Default)]
 pub struct Stack {}
 
 impl ObjectSubclass for Stack {

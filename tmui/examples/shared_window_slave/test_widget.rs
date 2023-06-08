@@ -15,7 +15,6 @@ lazy_static! {
 }
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct TestWidget {
     idx: usize,
     timer: Timer,

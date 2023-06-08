@@ -12,21 +12,8 @@ pub struct Label {
     label: Vec<u16>,
     content_halign: Align,
     content_valign: Align,
+    #[derivative(Default(value = "Color::BLACK"))]
     color: Color,
-}
-
-impl Default for Label {
-    fn default() -> Self {
-        let mut label = Self {
-            label: Default::default(),
-            content_halign: Default::default(),
-            content_valign: Default::default(),
-            color: Color::BLACK,
-            widget: Default::default(),
-        };
-        label.font_changed();
-        label
-    }
 }
 
 impl ObjectSubclass for Label {
@@ -34,6 +21,12 @@ impl ObjectSubclass for Label {
 }
 
 impl ObjectImpl for Label {
+    fn construct(&mut self) {
+        self.parent_construct();
+
+        self.font_changed();
+    }
+
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<Label, ReflectContentAlignment>();
     }

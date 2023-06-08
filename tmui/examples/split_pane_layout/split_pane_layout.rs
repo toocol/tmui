@@ -8,7 +8,6 @@ use tmui::{
 };
 
 #[extends(Widget, Layout(SplitPane))]
-#[derive(Default)]
 pub struct SplitPaneLayout {
     left: u16,
     cnt: i32,

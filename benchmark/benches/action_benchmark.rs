@@ -10,7 +10,6 @@ use tlib::{
 };
 
 #[extends(Object)]
-#[derive(Default)]
 struct Widget {}
 
 impl Widget {

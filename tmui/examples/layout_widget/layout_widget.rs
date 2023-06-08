@@ -14,11 +14,9 @@ use tmui::{label::Label, prelude::*};
 const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 
 #[extends(Widget, Layout(Stack))]
-#[derive(Derivative, Childrenable)]
-#[derivative(Default)]
+#[derive(Childrenable)]
 pub struct LayoutWidget {
     #[children]
-    #[derivative(Default(value = "Object::new(&[])"))]
     label: Label,
 
     timer: Timer,

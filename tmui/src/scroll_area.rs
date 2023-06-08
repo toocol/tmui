@@ -4,11 +4,14 @@ use crate::{
     scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
-use tlib::{namespace::Orientation, object::ObjectSubclass, prelude::extends, events::MouseEvent};
+use tlib::{
+    events::MouseEvent,
+    namespace::{KeyboardModifier, Orientation},
+    object::ObjectSubclass,
+    prelude::extends,
+};
 
 #[extends(Container)]
-#[derive(Derivative)]
-#[derivative(Default)]
 pub struct ScrollArea {
     #[derivative(Default(value = "Object::new(&[])"))]
     scroll_bar: ScrollBar,
@@ -71,6 +74,16 @@ impl ScrollArea {
     #[inline]
     pub fn set_orientation(&mut self, orientation: Orientation) {
         self.scroll_bar.set_orientation(orientation)
+    }
+
+    /// Scroll the widget. </br>
+    /// delta was positive value when scroll down/right.
+    #[inline]
+    pub fn scroll(&mut self, delta: i32) {
+        self.scroll_bar.scroll_by_delta(
+            KeyboardModifier::NoModifier,
+            delta,
+        );
     }
 }
 
@@ -138,8 +151,12 @@ impl Layout for ScrollArea {
                 scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
                 if let Some(ref mut area) = self.area {
                     let scroll_bar_rect = scroll_bar.rect();
-                    area.set_fixed_x(scroll_bar_rect.x() + scroll_bar_rect.width() + area.margin_left());
-                    area.set_fixed_y(scroll_bar_rect.y() + scroll_bar_rect.width() + area.margin_top());
+                    area.set_fixed_x(
+                        scroll_bar_rect.x() + scroll_bar_rect.width() + area.margin_left(),
+                    );
+                    area.set_fixed_y(
+                        scroll_bar_rect.y() + scroll_bar_rect.width() + area.margin_top(),
+                    );
                 }
             }
             ScrollBarPosition::End => {
@@ -148,10 +165,16 @@ impl Layout for ScrollArea {
                     area.set_fixed_y(rect.y() + area.margin_top());
 
                     let area_rect = area.rect();
-                    scroll_bar.set_fixed_x(rect.x() + rect.width() + scroll_bar.margin_left() - DEFAULT_SCROLL_BAR_WIDTH);
+                    scroll_bar.set_fixed_x(
+                        rect.x() + rect.width() + scroll_bar.margin_left()
+                            - DEFAULT_SCROLL_BAR_WIDTH,
+                    );
                     scroll_bar.set_fixed_y(area_rect.y() + scroll_bar.margin_top());
                 } else {
-                    scroll_bar.set_fixed_x(rect.x() + rect.width() + scroll_bar.margin_left() - DEFAULT_SCROLL_BAR_WIDTH);
+                    scroll_bar.set_fixed_x(
+                        rect.x() + rect.width() + scroll_bar.margin_left()
+                            - DEFAULT_SCROLL_BAR_WIDTH,
+                    );
                     scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
                 }
             }

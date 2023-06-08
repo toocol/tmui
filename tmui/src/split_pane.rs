@@ -16,7 +16,6 @@ use std::{
 use tlib::{implements_enum_value, namespace::AsNumeric, nonnull_mut};
 
 #[extends(Container)]
-#[derive(Default)]
 pub struct SplitPane {
     /// The HashMap to hold all the ownership of SplitInfo.
     split_infos: HashMap<u16, Box<SplitInfo>>,

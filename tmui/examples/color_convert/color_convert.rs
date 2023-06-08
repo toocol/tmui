@@ -8,7 +8,6 @@ use tmui::{
 };
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct ColorConvert {
     timer: Timer,
     front: Box<Vec<u8>>,

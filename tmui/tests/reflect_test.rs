@@ -12,7 +12,6 @@ pub trait DoB {
 }
 
 #[extends(Object)]
-#[derive(Default)]
 pub struct Foo {}
 impl ObjectSubclass for Foo {
     const NAME: &'static str = "Foo";
@@ -30,7 +29,6 @@ impl DoB for Foo {
 }
 
 #[extends(Object)]
-#[derive(Default)]
 pub struct Bar {}
 impl ObjectSubclass for Bar {
     const NAME: &'static str = "Bar";

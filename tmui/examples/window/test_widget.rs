@@ -1,5 +1,4 @@
 use std::time::Duration;
-
 use lazy_static::lazy_static;
 use log::debug;
 use tlib::{
@@ -14,7 +13,6 @@ lazy_static! {
 }
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct TestWidget {
     idx: usize,
     timer: Timer,

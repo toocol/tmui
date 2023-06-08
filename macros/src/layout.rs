@@ -50,10 +50,14 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
 fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
     let is_split_pane = layout == "SplitPane";
+
     let mut token = extend_container::expand(ast, false, has_content_alignment, is_split_pane)?;
+
     let name = &ast.ident;
+    let span = ast.span();
 
     let children_fields = get_childrened_fields(ast);
+
     if is_split_pane && children_fields.len() > 0 {
         return Err(syn::Error::new_spanned(
             children_fields[0],
@@ -61,7 +65,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         ));
     }
 
-    let layout = Ident::new(layout, ast.span());
+    let layout = Ident::new(layout, span);
 
     let impl_content_alignment = if has_content_alignment {
         quote!(

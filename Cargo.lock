@@ -1942,6 +1942,7 @@ dependencies = [
 name = "tlib"
 version = "0.1.0"
 dependencies = [
+ "derivative",
  "hex_color",
  "lazy_static",
  "libc",

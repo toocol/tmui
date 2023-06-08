@@ -17,7 +17,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 _ => {
                     return Err(syn::Error::new_spanned(
                         ast,
-                        "`extend_widget` should defined on named fields struct.",
+                        "`extends(Widget)` should defined on named fields struct.",
                     ))
                 }
             }
@@ -35,6 +35,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             let widget_trait_impl_clause = gen_widget_trait_impl_clause(name, vec!["widget"])?;
 
             Ok(quote! {
+                #[derive(Derivative)]
+                #[derivative(Default)]
                 #ast
 
                 #object_trait_impl_clause
@@ -69,7 +71,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
         }
         _ => Err(syn::Error::new_spanned(
             ast,
-            "`extends_widget` has to be used with structs ",
+            "`extends(Widget)` has to be used with structs ",
         )),
     }
 }
