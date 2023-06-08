@@ -14,3 +14,4 @@ pub use crate::types::{IsA, ObjectType, StaticType, Type, TypeDowncast};
 pub use crate::values::{ToValue, Value};
 pub use crate::global::AsAny;
 pub use std::any::Any;
+pub use derivative::Derivative;

@@ -3,8 +3,7 @@ use tlib::object::ObjectSubclass;
 use tmui::{prelude::*, label::Label};
 
 #[extends(Widget, Layout(HBox))]
-#[derive(Derivative, Childrenable)]
-#[derivative(Default)]
+#[derive(Childrenable)]
 pub struct HBoxLayout {
     #[children]
     #[derivative(Default(value = "Object::new(&[])"))]

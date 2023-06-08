@@ -444,7 +444,6 @@ mod tests {
     use std::{rc::Rc, sync::atomic::Ordering, thread, time::Duration};
 
     #[extends(Object)]
-    #[derive(Default)]
     pub struct Widget {}
 
     impl ObjectSubclass for Widget {

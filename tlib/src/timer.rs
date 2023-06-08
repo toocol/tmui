@@ -113,25 +113,12 @@ impl TimerHub {
 #[extends(Object)]
 pub struct Timer {
     duration: Duration,
+    #[derivative(Default(value = "SystemTime::now()"))]
     last_strike: SystemTime,
     started: bool,
     single_shoot: bool,
     once_timer: bool,
     triggered: i32,
-}
-
-impl Default for Timer {
-    fn default() -> Self {
-        Self {
-            duration: Default::default(),
-            last_strike: SystemTime::now(),
-            object: Default::default(),
-            started: false,
-            single_shoot: false,
-            once_timer: false,
-            triggered: 0,
-        }
-    }
 }
 
 impl Drop for Timer {
@@ -247,7 +234,6 @@ mod tests {
     };
 
     #[extends(Object)]
-    #[derive(Default)]
     pub struct Widget {
         num: i32,
     }

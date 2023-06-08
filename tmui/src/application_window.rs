@@ -39,7 +39,6 @@ pub(crate) fn store_board(board: &mut Board) {
 }
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct ApplicationWindow {
     output_sender: Option<OutputSender>,
     activated: bool,

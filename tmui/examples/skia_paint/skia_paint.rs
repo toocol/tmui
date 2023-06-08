@@ -6,7 +6,6 @@ use tmui::{
 };
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct SkiaPaint {}
 
 impl ObjectSubclass for SkiaPaint {

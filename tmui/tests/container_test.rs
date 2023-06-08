@@ -4,7 +4,6 @@ use tmui::prelude::*;
 use tmui::widget::{Widget, WidgetImpl};
 
 #[extends(Container)]
-#[derive(Default)]
 pub struct TestContainer {}
 
 impl ObjectSubclass for TestContainer {

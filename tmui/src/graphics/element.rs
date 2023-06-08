@@ -6,7 +6,6 @@ use tlib::{
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends(Object)]
-#[derive(Default)]
 pub struct Element {
     window_id: u16,
     rect: Rect,

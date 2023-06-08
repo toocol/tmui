@@ -35,6 +35,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             let widget_trait_impl_clause = gen_widget_trait_impl_clause(name, vec!["widget"])?;
 
             Ok(quote! {
+                #[derive(Derivative)]
+                #[derivative(Default)]
                 #ast
 
                 #object_trait_impl_clause

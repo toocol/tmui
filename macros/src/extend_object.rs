@@ -24,6 +24,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 gen_object_trait_impl_clause(name, "object", vec!["object"], false)?;
 
             return Ok(quote! {
+                #[derive(Derivative)]
+                #[derivative(Default)]
                 #ast
 
                 #object_trait_impl_clause

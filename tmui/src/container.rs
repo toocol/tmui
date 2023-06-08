@@ -2,7 +2,6 @@ use crate::{prelude::*, widget::WidgetImpl};
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct Container {
     pub children: Vec<Box<dyn WidgetImpl>>,
 }

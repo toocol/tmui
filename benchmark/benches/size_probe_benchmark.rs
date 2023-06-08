@@ -29,7 +29,6 @@ criterion_group!(benches, criterion_values);
 criterion_main!(benches);
 
 #[extends(Widget)]
-#[derive(Default)]
 pub struct TestWidget {}
 
 impl ObjectSubclass for TestWidget {

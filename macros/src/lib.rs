@@ -5,6 +5,7 @@ mod extend_attr;
 mod extend_container;
 mod extend_element;
 mod extend_object;
+mod extend_scroll_area;
 mod extend_widget;
 mod layout;
 mod reflect_trait;

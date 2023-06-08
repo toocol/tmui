@@ -4,8 +4,6 @@ use log::debug;
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
-#[derive(Derivative)]
-#[derivative(Default)]
 pub struct VBox {
     content_halign: Align,
     content_valign: Align,

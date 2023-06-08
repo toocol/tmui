@@ -38,7 +38,6 @@ mod tests {
     };
 
     #[extends(Object)]
-    #[derive(Default)]
     pub struct TestObject {}
 
     impl ObjectSubclass for TestObject {

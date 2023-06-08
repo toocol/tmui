@@ -12,7 +12,6 @@ mod tests {
     use tlib::object::{ObjectImpl, ObjectSubclass};
 
     #[extends(Element)]
-    #[derive(Default)]
     pub struct SubElement {}
 
     impl ObjectSubclass for SubElement {

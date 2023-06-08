@@ -26,8 +26,6 @@ use tlib::{
 pub type SizeHint = (Size, Size, Size);
 
 #[extends(Element)]
-#[derive(Derivative)]
-#[derivative(Default)]
 pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
     child: Option<Box<dyn WidgetImpl>>,
@@ -1189,7 +1187,6 @@ mod tests {
     use tlib::object::{ObjectImpl, ObjectSubclass};
 
     #[extends(Widget)]
-    #[derive(Default)]
     struct SubWidget {}
 
     impl ObjectSubclass for SubWidget {
@@ -1201,7 +1198,6 @@ mod tests {
     impl WidgetImpl for SubWidget {}
 
     #[extends(Widget)]
-    #[derive(Default)]
     struct ChildWidget {}
 
     impl ObjectSubclass for ChildWidget {

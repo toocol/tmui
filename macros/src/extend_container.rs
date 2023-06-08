@@ -42,7 +42,7 @@ pub(crate) fn expand(
                 _ => {
                     return Err(syn::Error::new_spanned(
                         ast,
-                        "`extend_container` should defined on named fields struct.",
+                        "`extend(Container)` should defined on named fields struct.",
                     ))
                 }
             }
@@ -82,6 +82,8 @@ pub(crate) fn expand(
             };
 
             Ok(quote!(
+                #[derive(Derivative)]
+                #[derivative(Default)]
                 #ast
 
                 #object_trait_impl_clause
@@ -122,7 +124,7 @@ pub(crate) fn expand(
         }
         _ => Err(syn::Error::new_spanned(
             ast,
-            "`extends_container` has to be used with structs ",
+            "`extends(Container)` has to be used with structs ",
         )),
     }
 }

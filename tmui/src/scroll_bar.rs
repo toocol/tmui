@@ -10,7 +10,7 @@ use tlib::{
     namespace::{AsNumeric, KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     signals,
-    values::{FromBytes, FromValue, ToBytes},
+    values::{FromBytes, FromValue, ToBytes}, events::DeltaType,
 };
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
@@ -20,8 +20,6 @@ pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::from_rgb(100, 100, 100);
 pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
 
 #[extends(Widget)]
-#[derive(Derivative)]
-#[derivative(Default)]
 pub struct ScrollBar {
     #[derivative(Default(value = "Orientation::Vertical"))]
     orientation: Orientation,
@@ -102,18 +100,13 @@ impl WidgetImpl for ScrollBar {
         let delta = if horizontal {
             -event.delta().x()
         } else {
-            event.delta().y()
+            match event.delta_type() {
+                DeltaType::Line => -event.delta().y(),
+                DeltaType::Pixel => event.delta().y(),
+            }
         };
 
-        if self.scroll_by_delta(
-            if horizontal {
-                Orientation::Horizontal
-            } else {
-                Orientation::Vertical
-            },
-            event.modifier(),
-            delta,
-        ) {
+        if self.scroll_by_delta(event.modifier(), delta) {
             self.update()
         }
     }
@@ -315,16 +308,8 @@ impl ScrollBar {
         self.update();
     }
 
-    fn scroll_by_delta(
-        &mut self,
-        orientation: Orientation,
-        modifier: KeyboardModifier,
-        mut delta: i32,
-    ) -> bool {
+    pub(crate) fn scroll_by_delta(&mut self, modifier: KeyboardModifier, delta: i32) -> bool {
         let steps_to_scroll;
-        if orientation == Orientation::Vertical {
-            delta = -delta;
-        }
         let offset = delta as f32 / 1.;
         if modifier.has(KeyboardModifier::ControlModifier)
             || modifier.has(KeyboardModifier::ShiftModifier)
