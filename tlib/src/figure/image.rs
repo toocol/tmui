@@ -30,6 +30,11 @@ impl Image {
     pub fn image_mut(&mut self) -> &mut skia_safe::Image {
         &mut self.image
     }
+
+    #[inline]
+    pub fn raw_file(&self) -> &[u8] {
+        &self.file
+    }
 }
 
 impl AsRef<skia_safe::Image> for Image {
