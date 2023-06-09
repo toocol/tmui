@@ -49,6 +49,11 @@ impl Region {
     }
 
     #[inline]
+    pub fn regions(&self) -> &Vec<Rect> {
+        &self.regions
+    }
+
+    #[inline]
     pub fn iter(&self) -> Iter<Rect> {
         self.regions.iter()
     }

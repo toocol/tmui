@@ -5,12 +5,13 @@ use derivative::Derivative;
 use std::mem::size_of;
 use tlib::{
     emit,
+    events::DeltaType,
     global::bound,
     implements_enum_value,
     namespace::{AsNumeric, KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     signals,
-    values::{FromBytes, FromValue, ToBytes}, events::DeltaType,
+    values::{FromBytes, FromValue, ToBytes},
 };
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
@@ -106,7 +107,7 @@ impl WidgetImpl for ScrollBar {
             }
         };
 
-        if self.scroll_by_delta(event.modifier(), delta) {
+        if self.scroll_by_delta(event.modifier(), delta, event.delta_type()) {
             self.update()
         }
     }
@@ -304,11 +305,8 @@ impl ScrollBar {
     /// Scroll the ScrollBar. </br>
     /// delta was positive value when scroll down/right.
     #[inline]
-    pub fn scroll(&mut self, delta: i32) {
-        self.scroll_by_delta(
-            KeyboardModifier::NoModifier,
-            delta,
-        );
+    pub fn scroll(&mut self, delta: i32, delta_type: DeltaType) {
+        self.scroll_by_delta(KeyboardModifier::NoModifier, delta, delta_type);
     }
 
     #[inline]
@@ -318,9 +316,13 @@ impl ScrollBar {
         self.update();
     }
 
-    pub(crate) fn scroll_by_delta(&mut self, modifier: KeyboardModifier, delta: i32) -> bool {
+    pub(crate) fn scroll_by_delta(&mut self, modifier: KeyboardModifier, delta: i32, delta_type: DeltaType) -> bool {
         let steps_to_scroll;
-        let offset = delta as f32 / 1.;
+        let dividend = match delta_type {
+            DeltaType::Line => 1.,
+            DeltaType::Pixel => 120.,
+        };
+        let offset = delta as f32 / dividend;
         if modifier.has(KeyboardModifier::ControlModifier)
             || modifier.has(KeyboardModifier::ShiftModifier)
         {

@@ -10,6 +10,7 @@ pub struct Element {
     window_id: u16,
     rect: Rect,
     fixed_size: bool,
+    /// The region rect of element's coordinate was `Widget`.
     redraw_region: Region,
 }
 
@@ -51,7 +52,13 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
     fn update_region(&mut self, rect: Rect);
 
-    /// Get the redraw region.
+    /// Cleaer the region.
+    /// 
+    /// Go to[`Function defination`](ElementExt::clear_region) (Defined in [`ElementExt`])
+    fn clear_region(&mut self);
+
+    /// Get the redraw region. <br>
+    /// The region rect of element's coordinate was `Widget`.
     /// 
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn redraw_region(&self) -> &Region;
@@ -110,6 +117,11 @@ impl ElementExt for Element {
     #[inline]
     fn update_region(&mut self, rect: Rect) {
         self.redraw_region.add_rect(rect)
+    }
+
+    #[inline]
+    fn clear_region(&mut self) {
+        self.redraw_region.clear()
     }
 
     #[inline]
