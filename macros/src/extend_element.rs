@@ -103,6 +103,11 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
+            fn clear_region(&mut self) {
+                self.#(#element_path).*.clear_region();
+            }
+
+            #[inline]
             fn redraw_region(&self) -> &Region {
                 self.#(#element_path).*.redraw_region()
             }

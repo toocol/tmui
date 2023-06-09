@@ -48,6 +48,7 @@ impl Board {
                         let cr = DrawingContext::new(self);
                         element.on_renderer(&cr);
                         element.validate();
+                        element.clear_region();
                         update = true;
                     }
                 }

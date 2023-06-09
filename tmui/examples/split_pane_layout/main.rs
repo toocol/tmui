@@ -4,7 +4,8 @@ use split_pane_layout::SplitPaneLayout;
 use tlib::Object;
 use tmui::{
     application::Application,
-    application_window::ApplicationWindow, widget::{WidgetImplExt, WidgetExt},
+    application_window::ApplicationWindow,
+    widget::{WidgetExt, WidgetImplExt},
 };
 
 fn main() {
