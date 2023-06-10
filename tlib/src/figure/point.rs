@@ -1,9 +1,9 @@
-use std::ops::{Add, Sub};
 use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Type, Value,
 };
+use std::ops::{Add, Sub};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Point
@@ -106,6 +106,26 @@ impl Into<skia_safe::IPoint> for Point {
     }
 }
 
+impl Into<Point> for skia_safe::Point {
+    #[inline]
+    fn into(self) -> Point {
+        Point {
+            x: self.x as i32,
+            y: self.y as i32,
+        }
+    }
+}
+
+impl Into<Point> for skia_safe::IPoint {
+    #[inline]
+    fn into(self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
 impl Into<FPoint> for Point {
     #[inline]
     fn into(self) -> FPoint {
@@ -150,7 +170,7 @@ impl FromBytes for Point {
 impl ToValue for Point {
     #[inline]
     fn to_value(&self) -> Value {
-       Value::new(self)
+        Value::new(self)
     }
 
     #[inline]
@@ -268,6 +288,26 @@ impl Into<skia_safe::IPoint> for FPoint {
         skia_safe::IPoint {
             x: self.x as i32,
             y: self.y as i32,
+        }
+    }
+}
+
+impl Into<FPoint> for skia_safe::Point {
+    #[inline]
+    fn into(self) -> FPoint {
+        FPoint {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
+impl Into<FPoint> for skia_safe::IPoint {
+    #[inline]
+    fn into(self) -> FPoint {
+        FPoint {
+            x: self.x as f32,
+            y: self.y as f32,
         }
     }
 }
