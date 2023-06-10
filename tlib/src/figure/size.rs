@@ -50,11 +50,13 @@ impl Size {
         self.height += height
     }
 
+    #[inline]
     pub fn max(&mut self, size: Size) {
         self.width = self.width.max(size.width);
         self.height = self.height.max(size.height);
     }
 
+    #[inline]
     pub fn min(&mut self, size: Size) {
         self.width = self.width.min(size.width);
         self.height = self.height.min(size.height);
@@ -62,18 +64,21 @@ impl Size {
 }
 
 impl From<(i32, i32)> for Size {
+    #[inline]
     fn from((width, height): (i32, i32)) -> Self {
         Self { width, height }
     }
 }
 
 impl Into<(i32, i32)> for Size {
+    #[inline]
     fn into(self) -> (i32, i32) {
         (self.width, self.height)
     }
 }
 
 impl Into<FSize> for Size {
+    #[inline]
     fn into(self) -> FSize {
         FSize {
             width: self.width as f32,
@@ -85,6 +90,7 @@ impl Into<FSize> for Size {
 impl Add for Size {
     type Output = Size;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             width: self.width + rhs.width,
@@ -96,6 +102,7 @@ impl Add for Size {
 impl Sub for Size {
     type Output = Size;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
             width: self.width - rhs.width,
@@ -105,16 +112,19 @@ impl Sub for Size {
 }
 
 impl StaticType for Size {
+    #[inline]
     fn static_type() -> crate::Type {
         crate::Type::from_name("Size")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         i32::bytes_len() + i32::bytes_len()
     }
 }
 
 impl ToBytes for Size {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.append(&mut self.width.to_bytes());
@@ -124,6 +134,7 @@ impl ToBytes for Size {
 }
 
 impl FromBytes for Size {
+    #[inline]
     fn from_bytes(data: &[u8], _len: usize) -> Self {
         let width = i32::from_bytes(&data[0..4], 4);
         let height = i32::from_bytes(&data[4..8], 4);
@@ -132,16 +143,19 @@ impl FromBytes for Size {
 }
 
 impl ToValue for Size {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
 }
 
 impl FromValue for Size {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -192,11 +206,13 @@ impl FSize {
         self.height += height
     }
 
+    #[inline]
     pub fn max(&mut self, size: FSize) {
         self.width = self.width.max(size.width);
         self.height = self.height.max(size.height);
     }
 
+    #[inline]
     pub fn min(&mut self, size: FSize) {
         self.width = self.width.min(size.width);
         self.height = self.height.min(size.height);
@@ -204,18 +220,21 @@ impl FSize {
 }
 
 impl From<(f32, f32)> for FSize {
+    #[inline]
     fn from((width, height): (f32, f32)) -> Self {
         Self { width, height }
     }
 }
 
 impl Into<(f32, f32)> for FSize {
+    #[inline]
     fn into(self) -> (f32, f32) {
         (self.width, self.height)
     }
 }
 
 impl Into<Size> for FSize {
+    #[inline]
     fn into(self) -> Size {
         Size {
             width: self.width as i32,
@@ -227,6 +246,7 @@ impl Into<Size> for FSize {
 impl Add for FSize {
     type Output = FSize;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             width: self.width + rhs.width,
@@ -238,6 +258,7 @@ impl Add for FSize {
 impl Sub for FSize {
     type Output = FSize;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
             width: self.width - rhs.width,
@@ -247,16 +268,19 @@ impl Sub for FSize {
 }
 
 impl StaticType for FSize {
+    #[inline]
     fn static_type() -> crate::Type {
         crate::Type::from_name("FSize")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         f32::bytes_len() + f32::bytes_len()
     }
 }
 
 impl ToBytes for FSize {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.append(&mut self.width.to_bytes());
@@ -266,6 +290,7 @@ impl ToBytes for FSize {
 }
 
 impl FromBytes for FSize {
+    #[inline]
     fn from_bytes(data: &[u8], _len: usize) -> Self {
         let width = f32::from_bytes(&data[0..4], 4);
         let height = f32::from_bytes(&data[4..8], 4);
@@ -274,16 +299,19 @@ impl FromBytes for FSize {
 }
 
 impl ToValue for FSize {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
 }
 
 impl FromValue for FSize {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }

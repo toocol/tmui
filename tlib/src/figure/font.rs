@@ -15,20 +15,25 @@ pub struct FontTypeface {
 
 impl FontTypeface {
     /// Get the [`FontTypefaceBuilder`]
+    #[inline]
     pub fn builder() -> FontTypefaceBuilder {
         FontTypefaceBuilder::default()
     }
 
+    #[inline]
     pub fn faimly(&self) -> &str {
         &self.family
     }
+    #[inline]
     pub fn set_family<T: ToString>(&mut self, family: T) {
         self.family = family.to_string();
     }
 
+    #[inline]
     pub fn bold(&self) -> bool {
         self.weight == FontWeight::Bold
     }
+    #[inline]
     pub fn set_bold(&mut self, bold: bool) {
         if bold {
             self.weight = FontWeight::Bold
@@ -37,29 +42,36 @@ impl FontTypeface {
         }
     }
 
+    #[inline]
     pub fn font_weight(&self) -> FontWeight {
         self.weight
     }
+    #[inline]
     pub fn set_font_weight(&mut self, weight: FontWeight) {
         self.weight = weight
     }
 
+    #[inline]
     pub fn font_width(&self) -> FontWidth {
         self.width
     }
+    #[inline]
     pub fn set_font_width(&mut self, width: FontWidth) {
         self.width = width
     }
 
+    #[inline]
     pub fn italic(&self) -> bool {
         self.italic
     }
+    #[inline]
     pub fn set_italic(&mut self, italic: bool) {
         self.italic = italic
     }
 }
 
 impl Into<Typeface> for FontTypeface {
+    #[inline]
     fn into(self) -> Typeface {
         let font_style = FontStyle::new(
             self.weight.into(),
@@ -86,6 +98,7 @@ pub struct FontTypefaceBuilder {
 
 impl FontTypefaceBuilder {
     /// Build the [`FontTypeface`]
+    #[inline]
     pub fn build(self) -> FontTypeface {
         let mut typeface = FontTypeface::default();
         if let Some(ref family) = self.family {
@@ -96,11 +109,13 @@ impl FontTypefaceBuilder {
         typeface
     }
 
+    #[inline]
     pub fn family<T: ToString>(mut self, family: T) -> Self {
         self.family = Some(family.to_string());
         self
     }
 
+    #[inline]
     pub fn bold(mut self, bold: bool) -> Self {
         if bold {
             self.weight = FontWeight::Bold
@@ -110,16 +125,19 @@ impl FontTypefaceBuilder {
         self
     }
 
+    #[inline]
     pub fn weight(mut self, weight: FontWeight) -> Self {
         self.weight = weight;
         self
     }
 
+    #[inline]
     pub fn width(mut self, width: FontWidth) -> Self {
         self.width = width;
         self
     }
 
+    #[inline]
     pub fn italic(mut self, italic: bool) -> Self {
         self.italic = italic;
         self
