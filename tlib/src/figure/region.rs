@@ -1,4 +1,6 @@
-use std::{vec::IntoIter, slice::Iter};
+use std::{vec::IntoIter, slice::{Iter, IterMut}};
+use skia_safe::region::RegionOp;
+
 use super::Rect;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,6 +59,18 @@ impl Region {
     pub fn iter(&self) -> Iter<Rect> {
         self.regions.iter()
     }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<Rect> {
+        self.regions.iter_mut()
+    }
+
+    #[inline]
+    pub fn offset(&mut self, offset: (i32, i32)) {
+        for rect in self.iter_mut() {
+            rect.offset(offset.0, offset.1);
+        }
+    }
 }
 
 impl IntoIterator for Region {
@@ -67,6 +81,17 @@ impl IntoIterator for Region {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.regions.into_iter()
+    }
+}
+
+impl Into<skia_safe::Region> for Region {
+    fn into(self) -> skia_safe::Region {
+        let mut region = skia_safe::Region::new();
+        for rect in self.into_iter() {
+            let rect: skia_safe::IRect = rect.into();
+            region.op_rect(rect, RegionOp::Union);
+        }
+        region
     }
 }
 

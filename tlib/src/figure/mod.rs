@@ -1,6 +1,6 @@
 pub mod color;
 pub mod font;
-pub mod image;
+pub mod image_buf;
 pub mod point;
 pub mod size;
 pub mod rectangle;
@@ -8,7 +8,7 @@ pub mod region;
 
 pub use color::*;
 pub use font::*;
-pub use image::*;
+pub use image_buf::*;
 pub use point::*;
 pub use size::*;
 pub use rectangle::*;

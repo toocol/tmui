@@ -18,6 +18,7 @@ pub mod system;
 pub mod stack;
 pub mod vbox;
 pub mod hbox;
+pub mod image;
 
 pub mod skia_safe {
     pub use tlib::skia_safe::*;

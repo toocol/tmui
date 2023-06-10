@@ -1087,12 +1087,46 @@ impl From<u8> for ExitStatus {
 }
 implements_enum_value!(ExitStatus, u8);
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`ImageOption`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum ImageOption {
+    #[default]
+    Fill = 0,
+    Adapt,
+    Tile,
+    Stretch,
+    Center,
+}
+impl AsNumeric<u8> for ImageOption {
+    #[inline]
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+impl From<u8> for ImageOption {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Fill,
+            1 => Self::Adapt,
+            2 => Self::Tile,
+            3 => Self::Stretch,
+            4 => Self::Center,
+            _ => unreachable!()
+        }
+    }
+}
+implements_enum_value!(ImageOption, u8);
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;
 
     use super::{
-        Align, BorderStyle, Coordinate, KeyCode, KeyboardModifier, Orientation, SystemCursorShape, ExitStatus,
+        Align, BorderStyle, Coordinate, KeyCode, KeyboardModifier, Orientation, SystemCursorShape, ExitStatus, ImageOption,
     };
 
     #[test]
@@ -1149,5 +1183,11 @@ mod tests {
     fn test_exit_status() {
         let val = ExitStatus::CrashExit.to_value();
         assert_eq!(ExitStatus::CrashExit, val.get::<ExitStatus>())
+    }
+
+    #[test]
+    fn test_image_option() {
+        let val = ImageOption::Stretch.to_value();
+        assert_eq!(ImageOption::Stretch, val.get::<ImageOption>())
     }
 }

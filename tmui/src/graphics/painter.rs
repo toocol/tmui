@@ -1,10 +1,15 @@
 #![allow(dead_code)]
-use crate::skia_safe::{Canvas, Font, Paint, Path, Point};
-use crate::{util::skia_font_clone, widget::WidgetImpl};
+use crate::{
+    skia_safe::{self, Canvas, Font, Matrix, Paint, Path, Point},
+    util::skia_font_clone,
+    widget::WidgetImpl,
+};
 use log::error;
-use tlib::skia_safe::Matrix;
 use std::cell::RefMut;
-use tlib::figure::{Color, FRect};
+use tlib::{
+    figure::{Color, FRect, ImageBuf, Rect, Region},
+    skia_safe::canvas::SrcRectConstraint,
+};
 
 pub struct Painter<'a> {
     canvas: RefMut<'a, Canvas>,
@@ -50,7 +55,12 @@ impl<'a> Painter<'a> {
 
     #[inline]
     pub fn path(&self) -> Path {
-        Path::new()
+        Path::default()
+    }
+
+    #[inline]
+    pub fn paint(&self) -> Paint {
+        Paint::default()
     }
 
     #[inline]
@@ -60,6 +70,7 @@ impl<'a> Painter<'a> {
         } else {
             self.transform = transform
         }
+        self.canvas.set_matrix(&self.transform.into());
     }
 
     /// Save the canvas status.
@@ -160,11 +171,14 @@ impl<'a> Painter<'a> {
         self.paint.set_stroke_cap(cap);
     }
 
-    /// Stroke and fill the specified Rect with offset.
+    /// Stroke and fill the specified Rect with offset. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn fill_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
-        self.paint.set_style(crate::skia_safe::PaintStyle::StrokeAndFill);
+        self.paint
+            .set_style(crate::skia_safe::PaintStyle::StrokeAndFill);
 
         let mut rect: crate::skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
@@ -172,7 +186,9 @@ impl<'a> Painter<'a> {
         self.canvas.draw_rect(rect, &self.paint);
     }
 
-    /// Stroke the specified Rect with offset.
+    /// Stroke the specified Rect with offset. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
@@ -181,7 +197,9 @@ impl<'a> Painter<'a> {
         self.canvas.draw_rect(rect, &self.paint);
     }
 
-    /// Draw text at specified position `origin` with offset.
+    /// Draw text at specified position `origin` with offset. <br>
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_text<T: Into<Point>>(&mut self, text: &str, origin: T) {
         if let Some(font) = self.font.as_ref() {
@@ -194,13 +212,17 @@ impl<'a> Painter<'a> {
         }
     }
 
-    /// Draw a line from (x1, y1) to (x2, y2) with offset.
+    /// Draw a line from (x1, y1) to (x2, y2) with offset. <br>
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
         self.draw_line_f(x1 as f32, y1 as f32, x2 as f32, y2 as f32)
     }
 
-    /// Draw a line from (x1, y1) to (x2, y2) with offset.
+    /// Draw a line from (x1, y1) to (x2, y2) with offset with the float numbers. <br>
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_line_f(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
         let mut p1: Point = (x1, y1).into();
@@ -211,7 +233,9 @@ impl<'a> Painter<'a> {
         self.canvas.draw_line(p1, p2, &self.paint);
     }
 
-    /// Draw arc
+    /// Draw the arc. <br>
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_arc(&mut self, x: i32, y: i32, w: i32, h: i32, a: i32, alen: i32) {
         self.draw_arc_f(
@@ -224,7 +248,9 @@ impl<'a> Painter<'a> {
         )
     }
 
-    /// Draw arc
+    /// Draw the arc with float numbers. <br>
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, a: f32, alen: f32) {
         let rect: FRect = (x, y, w, h).into();
@@ -235,12 +261,16 @@ impl<'a> Painter<'a> {
     }
 
     /// Draw a point at (x, y) with offset.
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_point(&mut self, x: i32, y: i32) {
         self.draw_point_f(x as f32, y as f32)
     }
 
-    /// Draw a point at (x, y) with offset.
+    /// Draw a point at (x, y) with offset. <br>
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_point_f(&mut self, x: f32, y: f32) {
         let mut point: Point = (x, y).into();
@@ -249,14 +279,53 @@ impl<'a> Painter<'a> {
         self.canvas.draw_point(point, &self.paint);
     }
 
+    /// Clip the region to draw.
+    #[inline]
+    pub fn clip(&mut self, mut region: Region) {
+        region.offset((self.x_offset, self.y_offset));
+        let region: skia_safe::Region = region.into();
+        self.canvas.clip_region(&region, None);
+    }
+
+    /// Draw the path tho canvas.
     #[inline]
     pub fn draw_path(&mut self, path: &mut Path) {
         self.canvas.draw_path(path, &self.paint);
     }
 
-    /// Draw a pixmap.
     #[inline]
-    pub fn draw_pixmap(&mut self) {
-        todo!()
+    pub fn draw_paint(&mut self, paint: &Paint) {
+        self.canvas.draw_paint(paint);
+    }
+
+    /// Draw the original image with the actual size to the canvas. <br>
+    ///
+    /// point (x, y) represent the left-top point to display. <br>
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_image(&mut self, image: &ImageBuf, x: i32, y: i32) {
+        let mut point: Point = (x, y).into();
+        point.offset((self.x_offset, self.y_offset));
+
+        self.canvas.draw_image(image, point, Some(&self.paint));
+    }
+
+    /// Draw the original image with the given rect to the canvas. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_image_rect(&mut self, image: &ImageBuf, from: Option<Rect>, dst: Rect) {
+        let mut from_rect: skia_safe::Rect;
+        let from = if let Some(from) = from {
+            from_rect = from.into();
+            from_rect.offset((self.x_offset, self.y_offset));
+            Some((&from_rect, SrcRectConstraint::Strict))
+        } else {
+            None
+        };
+        let mut dst: skia_safe::Rect = dst.into();
+        dst.offset((self.x_offset, self.y_offset));
+
+        self.canvas.draw_image_rect(image, from, dst, &self.paint);
     }
 }
