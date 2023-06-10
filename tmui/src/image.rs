@@ -29,30 +29,42 @@ impl WidgetImpl for Image {
 
         match self.option {
             ImageOption::Fill => {
-                let src: skia_safe::Rect = skia_safe::Rect::from_wh(
+                let rect = self.contents_rect(None);
+                let src: skia_safe::Rect = skia_safe::Rect::from_xywh(
+                    rect.x() as f32,
+                    rect.y() as f32,
                     image_buf.width() as f32,
                     image_buf.height() as f32,
                 );
-                let dst: skia_safe::Rect = skia_safe::Rect::from_wh(
+                let dst: skia_safe::Rect = skia_safe::Rect::from_xywh(
+                    rect.x() as f32,
+                    rect.y() as f32,
                     contents_rect.width() as f32,
                     contents_rect.height() as f32,
                 );
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Start)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, dst.x() as i32, dst.y() as i32, false);
             }
             ImageOption::Adapt => {
-                let src: skia_safe::Rect =
-                    skia_safe::Rect::from_wh(image_buf.width() as f32, image_buf.height() as f32);
-                let dst: skia_safe::Rect = skia_safe::Rect::from_wh(
+                let rect = self.contents_rect(None);
+                let src: skia_safe::Rect = skia_safe::Rect::from_xywh(
+                    rect.x() as f32,
+                    rect.y() as f32,
+                    image_buf.width() as f32,
+                    image_buf.height() as f32,
+                );
+                let dst: skia_safe::Rect = skia_safe::Rect::from_xywh(
+                    rect.x() as f32,
+                    rect.y() as f32,
                     contents_rect.width() as f32,
                     contents_rect.height() as f32,
                 );
                 let matrix = Matrix::rect_to_rect(src, dst, None).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y(), false);
             }
             ImageOption::Tile => {
                 let mut paint = painter.paint();
@@ -73,16 +85,23 @@ impl WidgetImpl for Image {
                 painter.draw_image_rect(image_buf, None, contents_rect);
             }
             ImageOption::Center => {
-                let src: skia_safe::Rect =
-                    skia_safe::Rect::from_wh(image_buf.width() as f32, image_buf.height() as f32);
-                let dst: skia_safe::Rect = skia_safe::Rect::from_wh(
+                let rect = self.contents_rect(None);
+                let src: skia_safe::Rect = skia_safe::Rect::from_xywh(
+                    rect.x() as f32,
+                    rect.y() as f32,
+                    image_buf.width() as f32,
+                    image_buf.height() as f32,
+                );
+                let dst: skia_safe::Rect = skia_safe::Rect::from_xywh(
+                    rect.x() as f32,
+                    rect.y() as f32,
                     contents_rect.width() as f32,
                     contents_rect.height() as f32,
                 );
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Center)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y(), false);
             }
         }
     }

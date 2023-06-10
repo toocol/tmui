@@ -303,9 +303,11 @@ impl<'a> Painter<'a> {
     /// point (x, y) represent the left-top point to display. <br>
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_image(&mut self, image: &ImageBuf, x: i32, y: i32) {
+    pub fn draw_image(&mut self, image: &ImageBuf, x: i32, y: i32, offset: bool) {
         let mut point: Point = (x, y).into();
-        point.offset((self.x_offset, self.y_offset));
+        if offset {
+            point.offset((self.x_offset, self.y_offset));
+        }
 
         self.canvas.draw_image(image, point, Some(&self.paint));
     }
