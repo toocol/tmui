@@ -2,8 +2,9 @@
 use crate::skia_safe::{Canvas, Font, Paint, Path, Point};
 use crate::{util::skia_font_clone, widget::WidgetImpl};
 use log::error;
+use tlib::skia_safe::Matrix;
 use std::cell::RefMut;
-use tlib::figure::{Color, FRect, Transform};
+use tlib::figure::{Color, FRect};
 
 pub struct Painter<'a> {
     canvas: RefMut<'a, Canvas>,
@@ -22,7 +23,7 @@ pub struct Painter<'a> {
     x_offset: i32,
     y_offset: i32,
 
-    transform: Transform,
+    transform: Matrix,
 }
 
 impl<'a> Painter<'a> {
@@ -43,7 +44,7 @@ impl<'a> Painter<'a> {
             height: rect.height(),
             x_offset: rect.x(),
             y_offset: rect.y(),
-            transform: Transform::new(),
+            transform: Matrix::new_identity(),
         }
     }
 
@@ -53,7 +54,7 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn set_transform(&mut self, transform: Transform, combined: bool) {
+    pub fn set_transform(&mut self, transform: Matrix, combined: bool) {
         if combined {
             self.transform = self.transform * transform;
         } else {

@@ -44,6 +44,7 @@ impl Point {
 impl Add for Point {
     type Output = Point;
 
+    #[inline]
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             x: self.x + rhs.x,
@@ -55,6 +56,7 @@ impl Add for Point {
 impl Sub for Point {
     type Output = Point;
 
+    #[inline]
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
             x: self.x - rhs.x,
@@ -64,18 +66,21 @@ impl Sub for Point {
 }
 
 impl From<(i32, i32)> for Point {
+    #[inline]
     fn from((x, y): (i32, i32)) -> Self {
         Self { x, y }
     }
 }
 
 impl Into<(i32, i32)> for Point {
+    #[inline]
     fn into(self) -> (i32, i32) {
         (self.x, self.y)
     }
 }
 
 impl Into<skia_safe::Point> for Point {
+    #[inline]
     fn into(self) -> skia_safe::Point {
         skia_safe::Point {
             x: self.x as f32,
@@ -85,12 +90,14 @@ impl Into<skia_safe::Point> for Point {
 }
 
 impl Into<Option<skia_safe::Point>> for Point {
+    #[inline]
     fn into(self) -> Option<skia_safe::Point> {
         Some(self.into())
     }
 }
 
 impl Into<skia_safe::IPoint> for Point {
+    #[inline]
     fn into(self) -> skia_safe::IPoint {
         skia_safe::IPoint {
             x: self.x,
@@ -100,6 +107,7 @@ impl Into<skia_safe::IPoint> for Point {
 }
 
 impl Into<FPoint> for Point {
+    #[inline]
     fn into(self) -> FPoint {
         FPoint {
             x: self.x as f32,
@@ -109,16 +117,19 @@ impl Into<FPoint> for Point {
 }
 
 impl StaticType for Point {
+    #[inline]
     fn static_type() -> crate::Type {
         crate::Type::from_name("Point")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         i32::bytes_len() + i32::bytes_len()
     }
 }
 
 impl ToBytes for Point {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.append(&mut self.x.to_bytes());
@@ -128,6 +139,7 @@ impl ToBytes for Point {
 }
 
 impl FromBytes for Point {
+    #[inline]
     fn from_bytes(data: &[u8], _len: usize) -> Self {
         let x = i32::from_bytes(&data[0..4], 4);
         let y = i32::from_bytes(&data[4..8], 4);
@@ -136,16 +148,19 @@ impl FromBytes for Point {
 }
 
 impl ToValue for Point {
+    #[inline]
     fn to_value(&self) -> Value {
        Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
 }
 
 impl FromValue for Point {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
