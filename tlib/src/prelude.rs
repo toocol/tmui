@@ -11,7 +11,7 @@ pub use crate::r#async::{async_tasks, tokio_runtime, AsyncTask};
 pub use crate::reflect::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry};
 pub use crate::timer::TimerSignal;
 pub use crate::types::{IsA, ObjectType, StaticType, Type, TypeDowncast};
-pub use crate::values::{ToValue, Value};
+pub use crate::values::{ToValue, Value, ToBytes, FromBytes};
 pub use crate::global::AsAny;
 pub use std::any::Any;
 pub use derivative::{Derivative, self};

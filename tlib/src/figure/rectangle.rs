@@ -37,6 +37,12 @@ impl Rect {
     }
 
     #[inline]
+    pub fn offset(&mut self, x: i32, y: i32) {
+        self.x += x;
+        self.y += y;
+    }
+
+    #[inline]
     pub fn size(&self) -> Size {
         Size::new(self.width, self.height)
     }
@@ -217,7 +223,12 @@ impl Rect {
             let width = right - left;
             let height = bottom - top;
 
-            Some(Rect { x, y, width, height })
+            Some(Rect {
+                x,
+                y,
+                width,
+                height,
+            })
         }
     }
 
@@ -227,7 +238,7 @@ impl Rect {
         let right = (self.x + self.width).max(rect.x + rect.width);
         let top = self.y.min(rect.y);
         let bottom = (self.y + self.height).max(rect.y + rect.height);
-        
+
         Rect {
             x: left,
             y: top,
@@ -356,6 +367,12 @@ impl Into<skia_safe::Rect> for Rect {
             self.width as f32,
             self.height as f32,
         )
+    }
+}
+
+impl Into<skia_safe::IRect> for Rect {
+    fn into(self) -> skia_safe::IRect {
+        skia_safe::IRect::from_xywh(self.x, self.y, self.width, self.height)
     }
 }
 
@@ -634,7 +651,12 @@ impl FRect {
             let width = right - left;
             let height = bottom - top;
 
-            Some(FRect { x, y, width, height })
+            Some(FRect {
+                x,
+                y,
+                width,
+                height,
+            })
         }
     }
 
@@ -644,7 +666,7 @@ impl FRect {
         let right = (self.x + self.width).max(rect.x + rect.width);
         let top = self.y.min(rect.y);
         let bottom = (self.y + self.height).max(rect.y + rect.height);
-        
+
         FRect {
             x: left,
             y: top,
