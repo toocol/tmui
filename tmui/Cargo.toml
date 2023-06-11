@@ -31,6 +31,9 @@ objc = "0.2.7"
 core-foundation = "0.9.3"
 core-graphics = "0.22.3"
 cocoa = "0.24.1"
+coreaudio-sys = "0.2.12"
+
+[target.'cfg(target_os = "unix")'.dependencies]
 dimensioned = "0.8.0"
 beep = "0.3.0"
 
