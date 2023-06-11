@@ -1,9 +1,10 @@
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "unix")]
 extern crate beep;
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "unix")]
 extern crate dimensioned;
-#[cfg(not(target_os = "windows"))]
+use coreaudio_sys::{AudioServicesPlaySystemSound, kSystemSoundID_UserPreferredAlert};
+#[cfg(target_os = "unix")]
 use dimensioned::si;
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::MessageBeep;
@@ -35,9 +36,13 @@ impl System {
 
     #[inline]
     pub fn beep() {
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "unix")]
         {
-            beep::beep(440. * si::HZ);
+            beep::beep(si::Hertz::new(400)).unwrap();
+        }
+        #[cfg(target_os = "macos")]
+        {
+            unsafe { AudioServicesPlaySystemSound(kSystemSoundID_UserPreferredAlert) };
         }
         #[cfg(target_os = "windows")]
         {
