@@ -3,11 +3,12 @@
 extern crate beep;
 #[cfg(target_os = "unix")]
 extern crate dimensioned;
-use coreaudio_sys::{AudioServicesPlaySystemSound, kSystemSoundID_UserPreferredAlert};
 #[cfg(target_os = "unix")]
 use dimensioned::si;
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::MessageBeep;
+#[cfg(target_os = "macos")]
+use coreaudio_sys::{AudioServicesPlaySystemSound, kSystemSoundID_UserPreferredAlert};
 
 use crate::clipboard::Clipboard;
 use once_cell::sync::Lazy;
