@@ -194,6 +194,7 @@ impl<'a> Painter<'a> {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
         let mut rect: crate::skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
+
         self.canvas.draw_rect(rect, &self.paint);
     }
 
@@ -303,11 +304,9 @@ impl<'a> Painter<'a> {
     /// point (x, y) represent the left-top point to display. <br>
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_image(&mut self, image: &ImageBuf, x: i32, y: i32, offset: bool) {
+    pub fn draw_image(&mut self, image: &ImageBuf, x: i32, y: i32) {
         let mut point: Point = (x, y).into();
-        if offset {
-            point.offset((self.x_offset, self.y_offset));
-        }
+        point.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_image(image, point, Some(&self.paint));
     }

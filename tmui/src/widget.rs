@@ -819,9 +819,6 @@ impl WidgetExt for Widget {
         self.paddings[1] = right;
         self.paddings[2] = bottom;
         self.paddings[3] = left;
-        let size = self.size();
-        self.width_request(size.width() as i32 + left + right);
-        self.height_request(size.height() as i32 + top + bottom);
     }
 
     #[inline]

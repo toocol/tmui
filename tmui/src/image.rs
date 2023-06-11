@@ -26,6 +26,7 @@ impl WidgetImpl for Image {
     fn paint(&mut self, mut painter: crate::graphics::painter::Painter) {
         let contents_rect = self.contents_rect(Some(Coordinate::Widget));
         let image_buf = self.image_buf.as_ref().unwrap();
+        println!("{:?}", contents_rect);
 
         match self.option {
             ImageOption::Fill => {
@@ -42,10 +43,10 @@ impl WidgetImpl for Image {
                     contents_rect.width() as f32,
                     contents_rect.height() as f32,
                 );
-                let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Start)).unwrap();
+                let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Fill)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, dst.x() as i32, dst.y() as i32, false);
+                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
             }
             ImageOption::Adapt => {
                 let rect = self.contents_rect(None);
@@ -64,7 +65,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, None).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y(), false);
+                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
             }
             ImageOption::Tile => {
                 let mut paint = painter.paint();
@@ -101,7 +102,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Center)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y(), false);
+                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
             }
         }
     }
