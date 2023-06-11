@@ -181,6 +181,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn update_geometry(&mut self) {
+                self.#(#widget_path).*.update_geometry()
+            }
+
+            #[inline]
             fn set_halign(&mut self, halign: Align) {
                 self.set_property("halign", halign.to_value())
             }

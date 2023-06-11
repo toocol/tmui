@@ -283,6 +283,11 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
     fn height_request(&mut self, width: i32);
 
+    /// Update widget's geometry: size, layout...
+    ///
+    /// Go to[`Function defination`](WidgetExt::update_geometry) (Defined in [`WidgetExt`])
+    fn update_geometry(&mut self);
+
     /// Set alignment on the horizontal direction.
     ///
     /// Go to[`Function defination`](WidgetExt::set_halign) (Defined in [`WidgetExt`])
@@ -604,6 +609,12 @@ impl WidgetExt for Widget {
     fn height_request(&mut self, height: i32) {
         self.set_property("height", height.to_value());
         self.set_property("height-request", height.to_value());
+    }
+
+    #[inline]
+    fn update_geometry(&mut self) {
+        ApplicationWindow::window_of(self.window_id()).layout_change(self);
+        self.update();
     }
 
     #[inline]

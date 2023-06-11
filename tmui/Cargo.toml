@@ -24,27 +24,15 @@ windows = { version = "0.43.0", features = [
     "Win32_Graphics_Gdi",
     "Win32_System_LibraryLoader",
 ] }
+winapi = { version = "0.3.9", features = ["consoleapi"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2.7"
 core-foundation = "0.9.3"
 core-graphics = "0.22.3"
 cocoa = "0.24.1"
+dimensioned = "0.8.0"
+beep = "0.3.0"
 
 [dev-dependencies]
 log4rs = "1.1.1"
-
-[[example]]
-name = "box_layout"
-
-[[example]]
-name = "window"
-
-[[example]]
-name = "layout_widget"
-
-[[example]]
-name = "shared_window_master"
-
-[[example]]
-name = "shared_window_slave"
