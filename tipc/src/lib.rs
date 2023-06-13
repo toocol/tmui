@@ -2,6 +2,7 @@ use ipc_event::IpcEvent;
 use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
 use mem::mem_queue::MemQueueError;
+use tlib::figure::Rect;
 use std::{marker::PhantomData, error::Error, ffi::c_void};
 
 pub mod ipc_event;
@@ -135,4 +136,6 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn wait(&self);
     
     fn signal(&self);
+
+    fn region(&self) -> Rect;
 }

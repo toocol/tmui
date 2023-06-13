@@ -26,7 +26,6 @@ impl WidgetImpl for Image {
     fn paint(&mut self, mut painter: crate::graphics::painter::Painter) {
         let contents_rect = self.contents_rect(Some(Coordinate::Widget));
         let image_buf = self.image_buf.as_ref().unwrap();
-        println!("{:?}", contents_rect);
 
         match self.option {
             ImageOption::Fill => {

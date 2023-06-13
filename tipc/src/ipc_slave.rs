@@ -1,10 +1,11 @@
+use tlib::figure::Rect;
 use crate::{
     ipc_event::IpcEvent,
     mem::{mem_queue::MemQueueError, slave_context::SlaveContext, MemContext},
     IpcNode,
 };
 use core::slice;
-use std::{error::Error, ffi::c_void};
+use std::{error::Error, ffi::c_void, sync::atomic::Ordering};
 
 pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
     width: usize,
@@ -114,5 +115,16 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M>
     #[inline]
     fn signal(&self) {
         self.slave_context.signal()
+    }
+
+    #[inline]
+    fn region(&self) -> Rect {
+        let shared_info = self.slave_context.shared_info();
+        Rect::new(
+            shared_info.x.load(Ordering::SeqCst) as i32,
+            shared_info.y.load(Ordering::SeqCst) as i32,
+            shared_info.width.load(Ordering::SeqCst) as i32,
+            shared_info.height.load(Ordering::SeqCst) as i32,
+        )
     }
 }

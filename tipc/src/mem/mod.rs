@@ -60,6 +60,10 @@ pub(crate) enum RequestSide {
 
 #[repr(C)]
 pub(crate) struct SharedInfo<M: 'static + Copy> {
+    /// The clip region left-top point's x position.
+    pub(crate) x: AtomicU32,
+    /// The clip region left-top point's y position.
+    pub(crate) y: AtomicU32,
     pub(crate) width: AtomicU32,
     pub(crate) height: AtomicU32,
 
