@@ -1062,6 +1062,16 @@ impl AtomicRect {
             && self.width() == other.width()
             && self.height() == other.height()
     }
+
+    #[inline]
+    pub fn as_rect(&self) -> Rect {
+        Rect {
+            x: self.x(),
+            y: self.y(),
+            width: self.width(),
+            height: self.height(),
+        }
+    }
 }
 
 impl StaticType for AtomicRect {

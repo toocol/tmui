@@ -199,6 +199,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
                 shared_channel = Some(platform_context.shared_channel());
+
+                // Ipc slave app's size was determined by the main program:
+                self.width = platform_context.width();
+                self.height = platform_context.height();
+
                 platform_context.wrap()
             }
             #[cfg(target_os = "windows")]

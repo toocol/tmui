@@ -35,7 +35,6 @@ fn build_ui(window: &mut ApplicationWindow) {
     label.set_size(30);
     label.set_margin_left(50);
     label.set_margin_top(50);
-    label.set_paddings(15, 0, 15, 0);
 
     let mut test_widget = TestWidget::new();
     test_widget.set_background(Color::RED);
