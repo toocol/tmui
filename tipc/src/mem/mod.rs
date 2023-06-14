@@ -1,9 +1,11 @@
+use tlib::figure::AtomicRect;
+
 use self::mem_queue::MemQueueError;
 use crate::ipc_event::IpcEvent;
 use std::{
     error::Error,
     fmt::Display,
-    sync::atomic::{AtomicBool, AtomicU32},
+    sync::atomic::AtomicBool,
 };
 
 pub mod master_context;
@@ -60,8 +62,8 @@ pub(crate) enum RequestSide {
 
 #[repr(C)]
 pub(crate) struct SharedInfo<M: 'static + Copy> {
-    pub(crate) width: AtomicU32,
-    pub(crate) height: AtomicU32,
+    /// The clip region to renderer in slave.
+    pub(crate) region: AtomicRect,
 
     pub(crate) occupied: AtomicBool,
     pub(crate) request_side: RequestSide,

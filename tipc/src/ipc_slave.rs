@@ -5,6 +5,7 @@ use crate::{
 };
 use core::slice;
 use std::{error::Error, ffi::c_void};
+use tlib::figure::Rect;
 
 pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
     width: usize,
@@ -31,9 +32,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
     }
 }
 
-impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M>
-    for IpcSlave<T, M>
-{
+impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     #[inline]
     fn primary_buffer(&self) -> &'static mut [u8] {
         unsafe {
@@ -114,5 +113,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M>
     #[inline]
     fn signal(&self) {
         self.slave_context.signal()
+    }
+
+    #[inline]
+    fn region(&self) -> Rect {
+        self.slave_context.shared_info().region.as_rect()
     }
 }

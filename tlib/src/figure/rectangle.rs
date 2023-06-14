@@ -4,6 +4,7 @@ use crate::{
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Value,
 };
+use std::sync::atomic::{AtomicI32, Ordering};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Rect
@@ -842,5 +843,305 @@ impl ToValue for FRect {
 impl FromValue for FRect {
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// AtomicRect
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default)]
+pub struct AtomicRect {
+    x: AtomicI32,
+    y: AtomicI32,
+    width: AtomicI32,
+    height: AtomicI32,
+}
+
+impl AtomicRect {
+    /// Construct to create new `AtomicRect`
+    #[inline]
+    pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
+        Self {
+            x: AtomicI32::new(x),
+            y: AtomicI32::new(y),
+            width: AtomicI32::new(width),
+            height: AtomicI32::new(height),
+        }
+    }
+
+    #[inline]
+    pub fn offset(&mut self, x: i32, y: i32) {
+        self.x.fetch_add(x, Ordering::Release);
+        self.y.fetch_add(y, Ordering::Release);
+    }
+
+    #[inline]
+    pub fn size(&self) -> Size {
+        Size::new(
+            self.width.load(Ordering::Acquire),
+            self.height.load(Ordering::Acquire),
+        )
+    }
+
+    #[inline]
+    pub fn point(&self) -> Point {
+        Point::new(
+            self.x.load(Ordering::Acquire),
+            self.y.load(Ordering::Acquire),
+        )
+    }
+
+    #[inline]
+    pub fn x(&self) -> i32 {
+        self.x.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn y(&self) -> i32 {
+        self.y.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn width(&self) -> i32 {
+        self.width.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn height(&self) -> i32 {
+        self.height.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn set_width(&mut self, width: i32) {
+        self.width.store(width, Ordering::Release)
+    }
+
+    #[inline]
+    pub fn set_height(&mut self, height: i32) {
+        self.height.store(height, Ordering::Release)
+    }
+
+    #[inline]
+    pub fn set_x(&mut self, x: i32) {
+        self.x.store(x, Ordering::Release)
+    }
+
+    #[inline]
+    pub fn set_y(&mut self, y: i32) {
+        self.y.store(y, Ordering::Release)
+    }
+
+    #[inline]
+    pub fn top_left(&self) -> Point {
+        Point::new(
+            self.x.load(Ordering::Acquire),
+            self.y.load(Ordering::Acquire),
+        )
+    }
+
+    #[inline]
+    pub fn top_right(&self) -> Point {
+        Point::new(
+            self.x.load(Ordering::Acquire) + self.width.load(Ordering::Acquire),
+            self.y.load(Ordering::Acquire),
+        )
+    }
+
+    #[inline]
+    pub fn bottom_left(&self) -> Point {
+        Point::new(
+            self.x.load(Ordering::Acquire),
+            self.y.load(Ordering::Acquire) + self.height.load(Ordering::Acquire),
+        )
+    }
+
+    #[inline]
+    pub fn bottom_right(&self) -> Point {
+        Point::new(
+            self.x.load(Ordering::Acquire) + self.width.load(Ordering::Acquire),
+            self.y.load(Ordering::Acquire) + self.height.load(Ordering::Acquire),
+        )
+    }
+
+    #[inline]
+    pub fn left(&self) -> i32 {
+        self.x.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn top(&self) -> i32 {
+        self.y.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn right(&self) -> i32 {
+        self.x.load(Ordering::Acquire) + self.width.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn bottom(&self) -> i32 {
+        self.y.load(Ordering::Acquire) + self.height.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn move_left(&mut self, pos: i32) {
+        self.x.store(pos, Ordering::Release);
+    }
+
+    #[inline]
+    pub fn move_top(&mut self, pos: i32) {
+        self.y.store(pos, Ordering::Release);
+    }
+
+    #[inline]
+    pub fn move_right(&mut self, pos: i32) {
+        self.x.fetch_add(pos - self.right(), Ordering::Release);
+    }
+
+    #[inline]
+    pub fn move_bottom(&mut self, pos: i32) {
+        self.y.fetch_add(pos - self.bottom(), Ordering::Release);
+    }
+
+    #[inline]
+    pub fn move_top_left(&mut self, point: &Point) {
+        self.move_left(point.x());
+        self.move_top(point.y());
+    }
+
+    #[inline]
+    pub fn move_bottom_right(&mut self, point: &Point) {
+        self.move_right(point.x());
+        self.move_bottom(point.y());
+    }
+
+    #[inline]
+    pub fn move_top_right(&mut self, point: &Point) {
+        self.move_right(point.x());
+        self.move_top(point.y());
+    }
+
+    #[inline]
+    pub fn move_bottom_left(&mut self, point: &Point) {
+        self.move_left(point.x());
+        self.move_bottom(point.y());
+    }
+
+    #[inline]
+    pub fn move_center(&mut self, point: &Point) {
+        self.x
+            .store(point.x() - self.width() / 2, Ordering::Release);
+        self.y
+            .store(point.y() - self.height() / 2, Ordering::Release);
+    }
+
+    #[inline]
+    pub fn set_left(&mut self, pos: i32) {
+        self.x.store(pos, Ordering::Release);
+    }
+
+    #[inline]
+    pub fn set_top(&mut self, pos: i32) {
+        self.y.store(pos, Ordering::Release);
+    }
+
+    #[inline]
+    pub fn set_right(&mut self, pos: i32) {
+        self.width.store(pos - self.x(), Ordering::Release);
+    }
+
+    #[inline]
+    pub fn set_bottom(&mut self, pos: i32) {
+        self.height.store(pos - self.y(), Ordering::Release);
+    }
+
+    #[inline]
+    pub fn equals(&self, other: &Self) -> bool {
+        self.x() == other.x()
+            && self.y() == other.y()
+            && self.width() == other.width()
+            && self.height() == other.height()
+    }
+
+    #[inline]
+    pub fn as_rect(&self) -> Rect {
+        Rect {
+            x: self.x(),
+            y: self.y(),
+            width: self.width(),
+            height: self.height(),
+        }
+    }
+}
+
+impl StaticType for AtomicRect {
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("AtomicRect")
+    }
+
+    fn bytes_len() -> usize {
+        i32::bytes_len() * 4
+    }
+}
+impl ToBytes for AtomicRect {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = self.x().to_bytes();
+        bytes.append(&mut self.y().to_bytes());
+        bytes.append(&mut self.width().to_bytes());
+        bytes.append(&mut self.height().to_bytes());
+        bytes
+    }
+}
+impl ToValue for AtomicRect {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> crate::Type {
+        Self::static_type()
+    }
+}
+impl FromBytes for AtomicRect {
+    fn from_bytes(data: &[u8], _: usize) -> Self {
+        let i32_len = i32::bytes_len();
+        let mut idx = 0;
+
+        let x = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
+        idx += i32_len;
+
+        let y = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
+        idx += i32_len;
+
+        let width = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
+        idx += i32_len;
+
+        let height = i32::from_bytes(&data[idx..idx + i32_len], i32_len);
+
+        Self::new(x, y, width, height)
+    }
+}
+impl FromValue for AtomicRect {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_values() {
+        let rect = Rect::new(20, 25, 300, 400);
+        let val = rect.to_value();
+        assert_eq!(rect, val.get::<Rect>());
+
+        let rect = FRect::new(20., 25., 300., 400.);
+        let val = rect.to_value();
+        assert_eq!(rect, val.get::<FRect>());
+
+        let rect = AtomicRect::new(20, 25, 300, 400);
+        let val = rect.to_value();
+        assert!(val.get::<AtomicRect>().equals(&rect));
     }
 }

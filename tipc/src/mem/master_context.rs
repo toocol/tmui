@@ -59,8 +59,8 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
                 .as_mut()
                 .unwrap()
         };
-        info_data.width.store(width, Ordering::SeqCst);
-        info_data.height.store(height, Ordering::SeqCst);
+        info_data.region.set_width(width as i32);
+        info_data.region.set_height(height as i32);
 
         let mut event_signal_name = name.to_string();
         event_signal_name.push_str(IPC_MEM_SIGNAL_EVT);
@@ -120,12 +120,12 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
 
     #[inline]
     fn width(&self) -> u32 {
-        self.shared_info().width.load(Ordering::Relaxed)
+        self.shared_info().region.width() as u32
     }
 
     #[inline]
     fn height(&self) -> u32 {
-        self.shared_info().height.load(Ordering::Relaxed)
+        self.shared_info().region.height() as u32
     }
 
     #[inline]

@@ -6,7 +6,7 @@ use tmui::{
 };
 
 fn main() {
-   log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
+   log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
    let app = Application::builder()
        .width(1280)
@@ -21,7 +21,7 @@ fn main() {
 
 fn build_ui(window: &mut ApplicationWindow) {
     let window_size = window.size();
-    let mut image = Image::new("tmui/examples/resources/rust.png");
+    let mut image = Image::new("examples/resources/rust.png");
     image.width_request(window_size.width());
     image.height_request(window_size.height());
     image.set_valign(Align::Center);

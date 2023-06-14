@@ -2,7 +2,7 @@ use std::{time::Instant, sync::atomic::AtomicI32};
 use tmui::{application::Application, application_window::ApplicationWindow};
 use log::info;
 
-pub const IPC_NAME: &'static str = "shared_i";
+pub const IPC_NAME: &'static str = "shared_inf";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]
@@ -20,7 +20,7 @@ enum Request {
 }
 
 fn main() {
-    log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
+    log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
     let app = Application::<UserEvent, Request>::shared_builder(IPC_NAME)
         .width(1280)

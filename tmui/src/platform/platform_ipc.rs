@@ -60,12 +60,17 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let front_bitmap = Bitmap::new(slave.primary_buffer_raw_pointer(), self.width, self.height);
+        let region = slave.region();
+        let front_bitmap = Bitmap::new(
+            slave.primary_buffer_raw_pointer(),
+            region.width() as u32,
+            region.height() as u32,
+        );
 
         let back_bitmap = Bitmap::new(
             slave.secondary_buffer_raw_pointer(),
-            self.width,
-            self.height,
+            region.width() as u32,
+            region.height() as u32,
         );
 
         self.front_bitmap = Some(front_bitmap);
@@ -133,7 +138,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 platform.as_mut(),
                 output_receiver,
                 self.slave.as_ref().unwrap().clone(),
-                self.user_ipc_event_sender.take()
+                self.user_ipc_event_sender.take(),
             )
         } else {
             panic!("Invalid window context.")

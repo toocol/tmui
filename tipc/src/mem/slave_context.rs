@@ -95,12 +95,12 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
 
     #[inline]
     fn width(&self) -> u32 {
-        self.shared_info().width.load(Ordering::Relaxed)
+        self.shared_info().region.width() as u32
     }
 
     #[inline]
     fn height(&self) -> u32 {
-        self.shared_info().height.load(Ordering::Relaxed)
+        self.shared_info().region.height() as u32
     }
 
     #[inline]

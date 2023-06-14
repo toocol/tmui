@@ -1,0 +1,54 @@
+[package]
+name = "examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tipc = { path = "../tipc/" }
+tlib = { path = "../tlib/" }
+tmui = { path = "../tmui/" }
+
+log = "0.4"
+log4rs = "1.1.1"
+lazy_static = "1.4.0"
+once_cell = "1.17.0"
+
+[[bin]]
+name = "box_layout"
+path = "box_layout/main.rs"
+
+[[bin]]
+name = "color_convert"
+path = "color_convert/main.rs"
+
+[[bin]]
+name = "image_draw"
+path = "image_draw/main.rs"
+
+[[bin]]
+name = "layout_widget"
+path = "layout_widget/main.rs"
+
+[[bin]]
+name = "scrolled"
+path = "scrolled/main.rs"
+
+[[bin]]
+name = "shared_window_master"
+path = "shared_window_master/main.rs"
+
+[[bin]]
+name = "shared_window_slave"
+path = "shared_window_slave/main.rs"
+
+[[bin]]
+name = "skia_paint"
+path = "skia_paint/main.rs"
+
+[[bin]]
+name = "split_pane_layout"
+path = "split_pane_layout/main.rs"
+
+[[bin]]
+name = "window"
+path = "window/main.rs"

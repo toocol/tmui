@@ -7,7 +7,7 @@ use tmui::{
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shared_i";
+pub const IPC_NAME: &'static str = "shared_inf";
 
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
@@ -23,12 +23,9 @@ enum Request {
 }
 
 fn main() {
-    log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
+    log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
     let app = Application::<UserEvent, Request>::shared_builder(IPC_NAME)
-        .width(1280)
-        .height(800)
-        .title("Shared Window")
         .platform(PlatformType::Ipc)
         .build();
 

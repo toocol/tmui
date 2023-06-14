@@ -25,7 +25,7 @@ use std::{
     sync::{
         atomic::{AtomicBool, AtomicPtr, Ordering},
         mpsc::{channel, Receiver},
-        Arc,
+        Arc, Once,
     },
     thread,
     time::Instant,
@@ -52,6 +52,8 @@ pub const FRAME_INTERVAL: u128 = 16000;
 const INVALID_GENERIC_PARAM_ERROR: &'static str =
     "Invalid generic parameters, please use generic parameter defined on Application.";
 static APP_STOPPED: AtomicBool = AtomicBool::new(false);
+static IS_SHARED: AtomicBool = AtomicBool::new(false);
+static ONCE: Once = Once::new();
 
 /// ### The main application of tmui. <br>
 ///
@@ -83,6 +85,7 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
 impl Application<(), ()> {
     /// Get the default builder [`ApplicationBuilder`] of `Application`.
     pub fn builder() -> ApplicationBuilder<(), ()> {
+        ONCE.call_once(|| {});
         ApplicationBuilder::<(), ()>::new(None)
     }
 }
@@ -93,13 +96,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     /// M: Generic type for blocked request with response in ipc communication.
     #[inline]
     pub fn shared_builder(shared_mem_name: &'static str) -> ApplicationBuilder<T, M> {
+        ONCE.call_once(|| {});
+        IS_SHARED.store(true, Ordering::SeqCst);
         ApplicationBuilder::<T, M>::new(Some(shared_mem_name))
-    }
-
-    /// Determine whether the current thread is the UI main thread.
-    #[inline]
-    pub fn is_ui_thread() -> bool {
-        IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
     }
 
     /// Start to run this application.
@@ -200,6 +199,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
                 shared_channel = Some(platform_context.shared_channel());
+
+                // Ipc slave app's size was determined by the main program:
+                self.width = platform_context.width();
+                self.height = platform_context.height();
+
                 platform_context.wrap()
             }
             #[cfg(target_os = "windows")]
@@ -455,6 +459,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             }
         });
     }
+}
+
+/// Determine whether the current thread is the UI main thread.
+#[inline]
+pub fn is_ui_thread() -> bool {
+    IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
+}
+
+/// Is shared memory application or not.
+#[inline]
+pub(crate) fn is_shared() -> bool {
+    IS_SHARED.load(Ordering::SeqCst)
 }
 
 /// The builder to create the [`Application`] <br>

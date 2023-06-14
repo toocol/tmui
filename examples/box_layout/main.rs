@@ -9,7 +9,7 @@ use tmui::{
 use vbox_layout::VBoxLayout;
 
 fn main() {
-    log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
+    log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
     let app = Application::builder()
         .width(1280)
