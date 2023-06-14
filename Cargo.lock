@@ -639,6 +639,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
+name = "examples"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "log",
+ "log4rs",
+ "once_cell",
+ "tipc",
+ "tlib",
+ "tmui",
+]
+
+[[package]]
 name = "filetime"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"

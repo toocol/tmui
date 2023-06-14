@@ -1,5 +1,6 @@
-mod skia_paint;
-use skia_paint::SkiaPaint;
+mod color_convert;
+
+use color_convert::ColorConvert;
 use tlib::Object;
 use tmui::{
     application::Application,
@@ -7,7 +8,7 @@ use tmui::{
 };
 
 fn main() {
-    log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
+    log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
     let app = Application::builder()
         .width(1280)
@@ -21,6 +22,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let w: SkiaPaint = Object::new(&[]);
-    window.child(w)
+    let color_convert: ColorConvert = Object::new(&[]);
+    window.child(color_convert)
 }

@@ -1,21 +1,32 @@
-mod test_widget;
-
+use std::time::Instant;
 use test_widget::TestWidget;
 use tmui::{
-    application::Application,
-    application_window::ApplicationWindow,
-    label::Label,
-    prelude::{Align, Color, ContentAlignment},
-    widget::{WidgetExt, WidgetImplExt},
+    application::Application, application_window::ApplicationWindow, label::Label,
+    platform::PlatformType, prelude::*,
 };
 
-fn main() {
-    log4rs::init_file("tmui/examples/log4rs.yaml", Default::default()).unwrap();
+mod test_widget;
 
-    let app = Application::builder()
-        .width(1280)
-        .height(800)
-        .title("window")
+pub const IPC_NAME: &'static str = "shared_inf";
+
+#[derive(Debug, Clone, Copy)]
+enum UserEvent {
+    TestEvent(i32, Instant),
+    _E,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+enum Request {
+    Request,
+    Response(i32),
+}
+
+fn main() {
+    log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
+
+    let app = Application::<UserEvent, Request>::shared_builder(IPC_NAME)
+        .platform(PlatformType::Ipc)
         .build();
 
     app.connect_activate(build_ui);
@@ -35,6 +46,7 @@ fn build_ui(window: &mut ApplicationWindow) {
     label.set_size(30);
     label.set_margin_left(50);
     label.set_margin_top(50);
+    label.set_paddings(15, 0, 15, 0);
 
     let mut test_widget = TestWidget::new();
     test_widget.set_background(Color::RED);
