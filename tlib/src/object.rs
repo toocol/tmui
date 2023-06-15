@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry},
+    prelude::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry, AsAny},
     types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
@@ -21,15 +21,10 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 /// use tlib::object::{ObjectImpl, ObjectSubclass};
 ///
 /// #[extends(Object)]
-/// #[derive(Default)]
 /// pub struct SubObject {};
 ///
 /// impl ObjectSubclass for SubObject {
 ///     const NAME: &'static str = "SubObject";
-///
-///     type Type = SubObject;
-///
-///     type ParentType = Object;
 /// }
 ///
 /// impl ObjectImpl for SubObject {
@@ -109,34 +104,36 @@ impl ObjectOperation for Object {
     }
 }
 
-impl Reflect for Object {
+impl AsAny for Object {
     #[inline]
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
     #[inline]
-    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 
     #[inline]
-    fn as_boxed_any(self: Box<Self>) -> Box<dyn std::any::Any> {
+    fn as_any_boxed(self: Box<Self>) -> Box<dyn std::any::Any> {
         self
     }
+}
 
+impl Reflect for Object {
     #[inline]
     fn as_reflect(&self) -> &dyn Reflect {
         self
     }
 
     #[inline]
-    fn as_mut_reflect(&mut self) -> &mut dyn Reflect {
+    fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
         self
     }
 
     #[inline]
-    fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect> {
+    fn as_reflect_boxed(self: Box<Self>) -> Box<dyn Reflect> {
         self
     }
 }
@@ -224,7 +221,7 @@ impl<T: ObjectType> TypeDowncast for T {}
 #[allow(unused_variables)]
 pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
     /// Override this function should invoke `self.parent_construct()` manually. <br>
-    /// 
+    ///
     /// UI components can build and add in this function.
     fn construct(&mut self) {
         self.parent_construct()
@@ -237,7 +234,7 @@ pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
 
     /// `initialize()` will be called when widget as a `child` of another widget. <br>
     /// UI components can build and add in this function.<br>
-    /// 
+    ///
     /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}
 

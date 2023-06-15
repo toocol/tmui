@@ -59,8 +59,8 @@ pub(crate) fn generate_reflect_trait(ast: &mut TraitInfo) -> syn::Result<proc_ma
             fn from_type() -> Self {
                 Self {
                     get_func: |obj| obj.as_any().downcast_ref::<T>().unwrap(),
-                    get_mut_func: |obj| obj.as_mut_any().downcast_mut::<T>().unwrap(),
-                    get_boxed_func: |obj| obj.as_boxed_any().downcast::<T>().unwrap(),
+                    get_mut_func: |obj| obj.as_any_mut().downcast_mut::<T>().unwrap(),
+                    get_boxed_func: |obj| obj.as_any_boxed().downcast::<T>().unwrap(),
                 }
             }
         }

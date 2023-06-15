@@ -114,34 +114,37 @@ pub(crate) fn gen_object_trait_impl_clause(
             }
         }
 
-        impl Reflect for #name {
+        impl AsAny for #name {
             #[inline]
             fn as_any(&self) -> &dyn Any {
                 self
             }
 
             #[inline]
-            fn as_mut_any(&mut self) -> &mut dyn Any {
+            fn as_any_mut(&mut self) -> &mut dyn Any {
                 self
             }
 
             #[inline]
-            fn as_boxed_any(self: Box<Self>) -> Box<dyn Any> {
+            fn as_any_boxed(self: Box<Self>) -> Box<dyn Any> {
                 self
             }
 
+        }
+
+        impl Reflect for #name {
             #[inline]
             fn as_reflect(&self) -> &dyn Reflect {
                 self
             }
 
             #[inline]
-            fn as_mut_reflect(&mut self) -> &mut dyn Reflect {
+            fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
                 self
             }
 
             #[inline]
-            fn as_boxed_reflect(self: Box<Self>) -> Box<dyn Reflect> {
+            fn as_reflect_boxed(self: Box<Self>) -> Box<dyn Reflect> {
                 self
             }
         }
