@@ -5,7 +5,7 @@ use crate::platform::PlatformMacos;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
 use crate::{
-    application_window::{store_board, ApplicationWindow},
+    application_window::{ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
     graphics::{board::Board, cpu_balance::CpuBalance},
@@ -272,18 +272,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let backend: Box<dyn Backend>;
         match backend_type {
             BackendType::Raster => {
-                backend = RasterBackend::new(platform.front_bitmap(), platform.back_bitmap())
+                backend = RasterBackend::new(platform.bitmap())
             }
             BackendType::OpenGL => {
-                backend = OpenGLBackend::new(platform.front_bitmap(), platform.back_bitmap())
+                backend = OpenGLBackend::new(platform.bitmap())
             }
         }
 
-        // Prepare ApplicationWindow env: Create the `Board`, windows layouts
-        let mut board = Board::new(backend.surface());
-        store_board(&mut board);
+        // Prepare ApplicationWindow env: Create the `Board`.
+        let mut board = Box::new(Board::new(backend.surface()));
 
         let mut window = ApplicationWindow::new(backend.width() as i32, backend.height() as i32);
+        window.set_board(board.as_mut());
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);

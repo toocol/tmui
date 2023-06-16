@@ -1,8 +1,8 @@
 use super::{
     mem_queue::{BuildType, MemQueue, MemQueueBuilder, MemQueueError},
     IpcError, MemContext, RequestSide, SharedInfo, IPC_MEM_MASTER_QUEUE,
-    IPC_MEM_PRIMARY_BUFFER_NAME, IPC_MEM_SECONDARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME,
-    IPC_MEM_SIGNAL_EVT, IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
+    IPC_MEM_PRIMARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SIGNAL_EVT, IPC_MEM_SLAVE_QUEUE,
+    IPC_QUEUE_SIZE,
 };
 use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use parking_lot::Mutex;
@@ -14,8 +14,7 @@ use shared_memory::{Shmem, ShmemConf};
 use std::{error::Error, marker::PhantomData, sync::atomic::Ordering};
 
 pub(crate) struct SlaveContext<T: 'static + Copy, M: 'static + Copy> {
-    primary_buffer: Shmem,
-    secondary_buffer: Shmem,
+    buffer: Shmem,
     shared_info: Shmem,
     wait_signal_mem: Shmem,
     master_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
@@ -28,14 +27,7 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
     pub(crate) fn open<P: ToString>(name: P) -> Self {
         let mut primary_buffer_name = name.to_string();
         primary_buffer_name.push_str(IPC_MEM_PRIMARY_BUFFER_NAME);
-        let primary_buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
-
-        let mut secondary_buffer_name = name.to_string();
-        secondary_buffer_name.push_str(IPC_MEM_SECONDARY_BUFFER_NAME);
-        let secondary_buffer = ShmemConf::new()
-            .os_id(secondary_buffer_name)
-            .open()
-            .unwrap();
+        let buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
 
         let mut shared_info_name = name.to_string();
         shared_info_name.push_str(IPC_MEM_SHARED_INFO_NAME);
@@ -62,8 +54,7 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
             .unwrap();
 
         Self {
-            primary_buffer,
-            secondary_buffer,
+            buffer,
             shared_info,
             wait_signal_mem: event_signal_mem,
             master_queue,
@@ -84,13 +75,8 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
 
 impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, M> {
     #[inline]
-    fn primary_buffer(&self) -> *mut u8 {
-        self.primary_buffer.as_ptr()
-    }
-
-    #[inline]
-    fn secondary_buffer(&self) -> *mut u8 {
-        self.secondary_buffer.as_ptr()
+    fn buffer(&self) -> *mut u8 {
+        self.buffer.as_ptr()
     }
 
     #[inline]
@@ -117,7 +103,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
     fn try_recv(&self) -> Option<IpcEvent<T>> {
         match self.master_queue.try_read() {
             Some(ipc_evt) => Some(ipc_evt.into()),
-            None => None
+            None => None,
         }
     }
 

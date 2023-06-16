@@ -7,29 +7,27 @@ use crate::skia_safe::Surface;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct OpenGLBackend {
-    front_buffer: Bitmap,
-    back_buffer: Bitmap,
+    buffer: Bitmap,
 }
 
 impl OpenGLBackend {
-    pub fn new(front: Bitmap, back: Bitmap) -> Box<Self> {
+    pub fn new(buffer: Bitmap) -> Box<Self> {
         Box::new(Self {
-            front_buffer: front,
-            back_buffer: back,
+            buffer,
         })
     }
 }
 
 impl Backend for OpenGLBackend {
-    fn surface(&self) -> (Surface, Surface) {
+    fn surface(&self) -> Surface {
         todo!()
     }
 
     fn width(&self) -> u32 {
-        self.front_buffer.width()
+        self.buffer.width()
     }
 
     fn height(&self) -> u32 {
-        self.front_buffer.height()
+        self.buffer.height()
     }
 }

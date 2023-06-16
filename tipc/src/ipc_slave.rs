@@ -34,33 +34,15 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
 
 impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     #[inline]
-    fn primary_buffer(&self) -> &'static mut [u8] {
+    fn buffer(&self) -> &'static mut [u8] {
         unsafe {
-            slice::from_raw_parts_mut(
-                self.slave_context.primary_buffer(),
-                self.height * self.width * 4,
-            )
+            slice::from_raw_parts_mut(self.slave_context.buffer(), self.height * self.width * 4)
         }
     }
 
     #[inline]
-    fn secondary_buffer(&self) -> &'static mut [u8] {
-        unsafe {
-            slice::from_raw_parts_mut(
-                self.slave_context.secondary_buffer(),
-                self.height * self.width * 4,
-            )
-        }
-    }
-
-    #[inline]
-    fn primary_buffer_raw_pointer(&self) -> *mut c_void {
-        self.slave_context.primary_buffer() as *mut c_void
-    }
-
-    #[inline]
-    fn secondary_buffer_raw_pointer(&self) -> *mut c_void {
-        self.slave_context.secondary_buffer() as *mut c_void
+    fn buffer_raw_pointer(&self) -> *mut c_void {
+        self.slave_context.buffer() as *mut c_void
     }
 
     #[inline]

@@ -17,7 +17,7 @@ impl ObjectImpl for SharedWidget {
         self.parent_construct();
 
         if !application::is_shared() {
-            panic!("`SharedWidget` can only used in shared memory mode.");
+            panic!("`SharedWidget` can only used in shared memory application.");
         }
     }
 }

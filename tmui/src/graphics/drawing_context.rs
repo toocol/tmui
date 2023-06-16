@@ -18,12 +18,12 @@ impl<'a> DrawingContext<'a> {
 
     #[inline]
     pub fn surface(&self) -> RefMut<Surface> {
-        self.board.front_surface.borrow_mut()
+        self.board.surface()
     }
 
     #[inline]
     pub fn canvas(&self) -> RefMut<Canvas> {
-        RefMut::map(self.board.front_surface.borrow_mut(), |surface| {
+        RefMut::map(self.board.surface(), |surface| {
             surface.canvas()
         })
     }

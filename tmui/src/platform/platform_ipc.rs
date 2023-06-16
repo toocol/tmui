@@ -16,8 +16,7 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
     width: u32,
     height: u32,
 
-    front_bitmap: Option<Bitmap>,
-    back_bitmap: Option<Bitmap>,
+    bitmap: Option<Bitmap>,
 
     input_sender: Option<Sender<Message>>,
 
@@ -33,8 +32,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
             title: title.to_string(),
             width,
             height,
-            front_bitmap: None,
-            back_bitmap: None,
+            bitmap: None,
             input_sender: None,
             slave: None,
             user_ipc_event_sender: None,
@@ -62,19 +60,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let slave = self.slave.as_ref().unwrap();
         let region = slave.region();
         let front_bitmap = Bitmap::new(
-            slave.primary_buffer_raw_pointer(),
+            slave.buffer_raw_pointer(),
             region.width() as u32,
             region.height() as u32,
         );
 
-        let back_bitmap = Bitmap::new(
-            slave.secondary_buffer_raw_pointer(),
-            region.width() as u32,
-            region.height() as u32,
-        );
-
-        self.front_bitmap = Some(front_bitmap);
-        self.back_bitmap = Some(back_bitmap);
+        self.bitmap = Some(front_bitmap);
     }
 
     #[inline]
@@ -100,13 +91,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn front_bitmap(&self) -> Bitmap {
-        self.front_bitmap.unwrap()
-    }
-
-    #[inline]
-    fn back_bitmap(&self) -> Bitmap {
-        self.back_bitmap.unwrap()
+    fn bitmap(&self) -> Bitmap {
+        self.bitmap.unwrap()
     }
 
     #[inline]

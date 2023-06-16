@@ -13,7 +13,7 @@ pub enum BackendType {
 
 /// Renderer backend, provide skia Surface
 pub trait Backend: 'static {
-    fn surface(&self) -> (Surface, Surface);
+    fn surface(&self) -> Surface;
 
     fn width(&self) -> u32;
 

@@ -2,11 +2,7 @@ use tlib::figure::AtomicRect;
 
 use self::mem_queue::MemQueueError;
 use crate::ipc_event::IpcEvent;
-use std::{
-    error::Error,
-    fmt::Display,
-    sync::atomic::AtomicBool,
-};
+use std::{error::Error, fmt::Display, sync::atomic::AtomicBool};
 
 pub mod master_context;
 pub mod mem_queue;
@@ -17,17 +13,14 @@ pub(crate) const IPC_QUEUE_SIZE: usize = 10000;
 pub(crate) const IPC_KEY_EVT_SIZE: usize = 8;
 pub(crate) const IPC_TEXT_EVT_SIZE: usize = 4096;
 
-pub(crate) const IPC_MEM_PRIMARY_BUFFER_NAME: &'static str = "_mem_pb";
-pub(crate) const IPC_MEM_SECONDARY_BUFFER_NAME: &'static str = "_mem_sb";
+pub(crate) const IPC_MEM_PRIMARY_BUFFER_NAME: &'static str = "_mem_bf";
 pub(crate) const IPC_MEM_SHARED_INFO_NAME: &'static str = "_mem_sh_info";
 pub(crate) const IPC_MEM_MASTER_QUEUE: &'static str = "_mem_m_q";
 pub(crate) const IPC_MEM_SLAVE_QUEUE: &'static str = "_mem_s_q";
 pub(crate) const IPC_MEM_SIGNAL_EVT: &'static str = "_mem_e_s";
 
 pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
-    fn primary_buffer(&self) -> *mut u8;
-
-    fn secondary_buffer(&self) -> *mut u8;
+    fn buffer(&self) -> *mut u8;
 
     fn width(&self) -> u32;
 

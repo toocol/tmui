@@ -6,19 +6,16 @@ use crate::{
     prelude::*,
     widget::{WidgetImpl, WidgetSignals},
 };
-use lazy_static::lazy_static;
 use log::debug;
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, VecDeque},
-    ptr::{null_mut, NonNull},
-    sync::{
-        atomic::{AtomicPtr, Ordering},
-        Once,
-    },
+    ptr::NonNull,
+    sync::Once,
     thread::{self, ThreadId},
 };
 use tlib::events::{to_key_event, to_mouse_event};
+use tlib::nonnull_mut;
 use tlib::{
     connect, emit,
     events::{Event, EventType},
@@ -27,19 +24,10 @@ use tlib::{
 };
 
 static INIT: Once = Once::new();
-lazy_static! {
-    static ref BOARD: AtomicPtr<Board> = AtomicPtr::new(null_mut());
-}
-
-/// Store the [`Board`] as raw ptr.
-pub(crate) fn store_board(board: &mut Board) {
-    INIT.call_once(move || {
-        BOARD.store(board, Ordering::SeqCst);
-    })
-}
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     activated: bool,
     focused_widget: u16,
@@ -96,9 +84,9 @@ impl ApplicationWindow {
 
     /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
-    pub(crate) fn windows() -> &'static mut HashMap<u16, ApplicationWindowContext> {
-        static mut WINDOWS: Lazy<HashMap<u16, ApplicationWindowContext>> =
-            Lazy::new(|| HashMap::new());
+    pub(crate) fn windows() -> &'static mut Box<HashMap<u16, ApplicationWindowContext>> {
+        static mut WINDOWS: Lazy<Box<HashMap<u16, ApplicationWindowContext>>> =
+            Lazy::new(|| Box::new(HashMap::new()));
         unsafe { &mut WINDOWS }
     }
 
@@ -202,6 +190,18 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn register_window(&mut self, sender: OutputSender) {
         self.output_sender = Some(sender)
+    }
+
+    #[inline]
+    pub(crate) fn set_board(&mut self, board: &mut Board) {
+        INIT.call_once(move || {
+            self.board = NonNull::new(board);
+        });
+    }
+
+    #[inline]
+    pub(crate) fn board(&mut self) -> &mut Board {
+        nonnull_mut!(self.board)
     }
 
     #[inline]
@@ -362,11 +362,10 @@ impl ApplicationWindow {
             return;
         }
 
-        // Just check the thread was right or not:
-        let _ = Self::window_of(window_id);
+        let window = Self::window_of(window_id);
 
         widget.set_parent(parent);
-        let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
+        let board = window.board();
         board.add_element(widget.as_element());
         ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));
 
@@ -385,7 +384,7 @@ fn child_initialize(
     mut child: Option<*mut dyn WidgetImpl>,
     window_id: u16,
 ) {
-    let board = unsafe { BOARD.load(Ordering::SeqCst).as_mut().unwrap() };
+    let board = ApplicationWindow::window_of(window_id).board();
     let type_registry = TypeRegistry::instance();
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
     while let Some(child_ptr) = child {
