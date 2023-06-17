@@ -105,6 +105,11 @@ pub(crate) fn gen_object_trait_impl_clause(
             fn get_property(&self, name: &str) -> Option<&Value> {
                 self.#(#object_path).*.get_property(name)
             }
+
+            #[inline]
+            fn constructed(&self) -> bool {
+                self.#(#object_path).*.constructed()
+            }
         }
 
         impl ObjectType for #name {

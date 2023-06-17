@@ -39,6 +39,7 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 pub struct Object {
     id: u16,
     properties: HashMap<String, Box<Value>>,
+    constructed: bool,
 }
 
 impl Default for Object {
@@ -46,6 +47,7 @@ impl Default for Object {
         Self {
             id: ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
             properties: HashMap::new(),
+            constructed: false,
         }
     }
 }
@@ -62,6 +64,9 @@ pub trait ObjectOperation {
 
     /// Go to[`Function defination`](ObjectOperation::get_property) (Defined in [`ObjectOperation`])
     fn get_property(&self, name: &str) -> Option<&Value>;
+
+    /// Go to[`Function defination`](ObjectOperation::constructed) (Defined in [`ObjectOperation`])
+    fn constructed(&self) -> bool;
 }
 
 impl Object {
@@ -91,16 +96,24 @@ impl Object {
 }
 
 impl ObjectOperation for Object {
+    #[inline]
     fn id(&self) -> u16 {
         self.id
     }
 
+    #[inline]
     fn set_property(&mut self, name: &str, value: Value) {
         self.primitive_set_property(name, value);
     }
 
+    #[inline]
     fn get_property(&self, name: &str) -> Option<&Value> {
         self.primitive_get_property(name)
+    }
+
+    #[inline]
+    fn constructed(&self) -> bool {
+        self.constructed
     }
 }
 
@@ -150,7 +163,13 @@ impl ObjectType for Object {
 
 impl IsA<Object> for Object {}
 
-impl ObjectImpl for Object {}
+impl ObjectImpl for Object {
+    fn construct(&mut self) {
+        self.parent_construct();
+
+        self.constructed = true;
+    }
+}
 
 impl ObjectImplExt for Object {
     /// Go to[`Function defination`](ObjectImplExt::parent_construct) (Defined in [`ObjectImplExt`])
