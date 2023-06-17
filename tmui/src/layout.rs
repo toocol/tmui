@@ -182,6 +182,7 @@ impl LayoutManager {
         let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
         while let Some(widget_ptr) = widget {
             let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
+            debug!("Widget position probe: {}", widget_ref.name());
             let previous_ref = unsafe { previous.as_ref().unwrap().as_ref().unwrap() };
             let parent_ref = unsafe { parent.as_ref().unwrap().as_ref().unwrap() };
 
