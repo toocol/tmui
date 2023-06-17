@@ -14,12 +14,11 @@ use std::{
     sync::Once,
     thread::{self, ThreadId},
 };
-use tlib::events::{to_key_event, to_mouse_event};
-use tlib::nonnull_mut;
 use tlib::{
     connect, emit,
-    events::{Event, EventType},
+    events::{to_key_event, to_mouse_event, Event, EventType},
     figure::{Color, Size},
+    nonnull_mut,
     object::{ObjectImpl, ObjectSubclass},
 };
 
@@ -374,8 +373,8 @@ impl ApplicationWindow {
         widget.type_register(type_registry);
         widget.set_window_id(window_id);
 
-        widget.initialize();
         widget.set_initialized(true);
+        widget.initialize();
     }
 }
 
@@ -425,8 +424,8 @@ fn child_initialize(
 
         parent = child_ptr;
 
-        child_ref.initialize();
         child_ref.set_initialized(true);
+        child_ref.initialize();
 
         child = children.pop_front().take().map_or(None, |widget| widget);
     }
