@@ -1,7 +1,7 @@
 use crate::{
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, application_window::ApplicationWindow,
 };
 use derivative::Derivative;
 use tlib::{
@@ -21,7 +21,9 @@ pub struct ScrollArea {
 impl ScrollArea {
     #[inline]
     pub fn set_area<T: WidgetImpl>(&mut self, area: T) {
-        self.area = Some(Box::new(area));
+        let mut area = Box::new(area);
+        ApplicationWindow::initialize_dynamic_component(self, area.as_mut());
+        self.area = Some(area)
     }
 
     #[inline]
