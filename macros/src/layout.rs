@@ -169,7 +169,9 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         impl ObjectChildrenConstruct for #name {
             fn children_construct(&mut self) {
                 #(
-                    self.#children_fields.construct();
+                    if !self.#children_fields.constructed() {
+                        self.#children_fields.construct();
+                    }
                 )*
             }
         }
