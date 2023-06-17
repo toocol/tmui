@@ -1,7 +1,8 @@
 use crate::{
+    application_window::ApplicationWindow,
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, application_window::ApplicationWindow,
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
 use tlib::{
@@ -91,7 +92,14 @@ impl ObjectSubclass for ScrollArea {
     const NAME: &'static str = "ScrollArea";
 }
 
-impl ObjectImpl for ScrollArea {}
+impl ObjectImpl for ScrollArea {
+    fn initialize(&mut self) {
+        let scroll_bar_ptr = &mut self.scroll_bar as *mut dyn WidgetImpl;
+        ApplicationWindow::initialize_dynamic_component(self, unsafe {
+            scroll_bar_ptr.as_mut().unwrap()
+        });
+    }
+}
 
 impl WidgetImpl for ScrollArea {
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
