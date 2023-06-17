@@ -43,7 +43,7 @@ impl CastInfo {
         let trait_ident = Ident::new(&trait_name, self.ty.span());
         Ok(quote!(
             if let Some(reflect) = TypeRegistry::get_type_data::<#trait_ident>(#obj.as_reflect()) {
-                Some((reflect.get_mut_func)(#obj.as_mut_reflect()))
+                Some((reflect.get_mut_func)(#obj.as_reflect_mut()))
             } else {
                 None
             }
@@ -57,7 +57,7 @@ impl CastInfo {
         let trait_ident = Ident::new(&trait_name, self.ty.span());
         Ok(quote!(
             if let Some(reflect) = TypeRegistry::get_type_data::<#trait_ident>(#obj.as_reflect()) {
-                Some((reflect.get_boxed_func)(#obj.as_boxed_reflect()))
+                Some((reflect.get_boxed_func)(#obj.as_reflect_boxed()))
             } else {
                 None
             }

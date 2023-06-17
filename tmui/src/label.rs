@@ -44,7 +44,6 @@ impl LabelSignal for Label {}
 
 impl WidgetImpl for Label {
     fn paint(&mut self, mut painter: Painter) {
-        debug!("Paint label.");
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
         let font = self.font();
@@ -107,7 +106,6 @@ impl WidgetImpl for Label {
     }
 
     fn font_changed(&mut self) {
-        debug!("`Label` font changed.");
         let font = self.font();
 
         let mut widths = vec![0f32; self.label.len()];

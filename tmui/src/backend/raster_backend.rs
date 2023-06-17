@@ -7,12 +7,11 @@ use crate::skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface};
 #[derive(Debug)]
 pub struct RasterBackend {
     image_info: ImageInfo,
-    front_buffer: Bitmap,
-    back_buffer: Bitmap,
+    buffer: Bitmap,
 }
 
 impl RasterBackend {
-    pub fn new(front: Bitmap, back: Bitmap) -> Box<Self> {
+    pub fn new(buffer: Bitmap) -> Box<Self> {
         #[cfg(target_os = "windows")]
         let color_type = ColorType::BGRA8888;
         #[cfg(target_os = "macos")]
@@ -20,45 +19,35 @@ impl RasterBackend {
 
         Box::new(Self {
             image_info: ImageInfo::new(
-                (front.width() as i32, front.height() as i32),
+                (buffer.width() as i32, buffer.height() as i32),
                 color_type,
                 AlphaType::Premul,
                 ColorSpace::new_srgb(),
             ),
-            front_buffer: front,
-            back_buffer: back,
+            buffer,
         })
     }
 }
 
 impl Backend for RasterBackend {
-    fn surface(&self) -> (Surface, Surface) {
+    fn surface(&self) -> Surface {
         let front_surface = Surface::new_raster_direct(
             &self.image_info,
-            self.front_buffer.get_pixels(),
-            self.front_buffer.row_bytes(),
+            self.buffer.get_pixels(),
+            self.buffer.row_bytes(),
             None,
         )
         .expect("Create rawster skia surface failed.")
         .to_owned();
 
-        let back_surface = Surface::new_raster_direct(
-            &self.image_info,
-            self.back_buffer.get_pixels(),
-            self.back_buffer.row_bytes(),
-            None,
-        )
-        .expect("Create rawster skia surface failed.")
-        .to_owned();
-
-        (front_surface, back_surface)
+        front_surface
     }
 
     fn width(&self) -> u32 {
-        self.front_buffer.width()
+        self.buffer.width()
     }
 
     fn height(&self) -> u32 {
-        self.front_buffer.height()
+        self.buffer.height()
     }
 }

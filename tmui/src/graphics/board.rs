@@ -1,6 +1,9 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::skia_safe::Surface;
-use std::{cell::RefCell, ptr::NonNull};
+use std::{
+    cell::{RefCell, RefMut},
+    ptr::NonNull,
+};
 
 thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
 
@@ -11,17 +14,15 @@ thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
 /// Board contains a renderer method `invalidate_visual`, every frame will call this function automaticly and redraw the invalidated element.
 /// (All elements call it's `update()` method can set it's `invalidate` field to true, or call `force_update()` to invoke `invalidate_visual` directly)
 pub struct Board {
-    pub front_surface: RefCell<Surface>,
-    pub back_surface: RefCell<Surface>,
-    pub element_list: Vec<RefCell<Option<NonNull<dyn ElementImpl>>>>,
+    surface: RefCell<Surface>,
+    element_list: Vec<RefCell<Option<NonNull<dyn ElementImpl>>>>,
 }
 
 impl Board {
     #[inline]
-    pub fn new(surface: (Surface, Surface)) -> Self {
+    pub fn new(surface: Surface) -> Self {
         Self {
-            front_surface: RefCell::new(surface.0),
-            back_surface: RefCell::new(surface.1),
+            surface: RefCell::new(surface),
             element_list: vec![],
         }
     }
@@ -36,7 +37,13 @@ impl Board {
         self.element_list.push(RefCell::new(NonNull::new(element)))
     }
 
-    pub fn invalidate_visual(&self) -> bool {
+    #[inline]
+    pub(crate) fn surface(&self) -> RefMut<Surface> {
+        self.surface.borrow_mut()
+    }
+
+    #[inline]
+    pub(crate) fn invalidate_visual(&self) -> bool {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
             if *notify_update.borrow() {

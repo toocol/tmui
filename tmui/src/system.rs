@@ -1,4 +1,3 @@
-
 #[cfg(target_os = "unix")]
 extern crate beep;
 #[cfg(target_os = "unix")]

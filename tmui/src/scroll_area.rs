@@ -5,7 +5,7 @@ use crate::{
 };
 use derivative::Derivative;
 use tlib::{
-    events::{MouseEvent, DeltaType},
+    events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
     prelude::extends,
@@ -51,7 +51,7 @@ impl ScrollArea {
             if !T::static_type().is_a(w.object_type()) {
                 None
             } else {
-                w.as_mut().as_mut_any().downcast_mut::<T>()
+                w.as_mut().as_any_mut().downcast_mut::<T>()
             }
         })
     }
@@ -80,11 +80,8 @@ impl ScrollArea {
     /// delta was positive value when scroll down/right.
     #[inline]
     pub fn scroll(&mut self, delta: i32, delta_type: DeltaType) {
-        self.scroll_bar.scroll_by_delta(
-            KeyboardModifier::NoModifier,
-            delta,
-            delta_type
-        );
+        self.scroll_bar
+            .scroll_by_delta(KeyboardModifier::NoModifier, delta, delta_type);
     }
 }
 

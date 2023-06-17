@@ -5,7 +5,7 @@ use crate::platform::PlatformMacos;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
 use crate::{
-    application_window::{store_board, ApplicationWindow},
+    application_window::{ApplicationWindow},
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
     graphics::{board::Board, cpu_balance::CpuBalance},
@@ -25,7 +25,7 @@ use std::{
     sync::{
         atomic::{AtomicBool, AtomicPtr, Ordering},
         mpsc::{channel, Receiver},
-        Arc, Once,
+        Once,
     },
     thread,
     time::Instant,
@@ -73,10 +73,10 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
 
     platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
 
-    on_activate: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
-    on_user_event_receive: RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>>,
+    on_activate: RefCell<Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
+    on_user_event_receive: RefCell<Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>>,
     on_request_receive:
-        RefCell<Option<Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>>,
+        RefCell<Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>>,
 
     shared_mem_name: Option<&'static str>,
     shared_channel: RefCell<Option<SharedChannel<T, M>>>,
@@ -110,7 +110,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         platform_context.set_input_sender(input_sender);
 
         let backend_type = self.backend_type;
-        let on_activate = self.on_activate.borrow().clone();
+        let on_activate = self.on_activate.borrow_mut().take();
         *self.on_activate.borrow_mut() = None;
 
         let mut window_context = platform_context.create_window();
@@ -122,16 +122,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let shared_channel = self.shared_channel.borrow_mut().take();
 
         // Ipc shared user events and request process function.
-        let on_user_event_receive = if let Some(f) = self.on_user_event_receive.borrow().as_ref() {
-            Some(f.clone())
-        } else {
-            None
-        };
-        let on_request_receive = if let Some(f) = self.on_request_receive.borrow().as_ref() {
-            Some(f.clone())
-        } else {
-            None
-        };
+        let on_user_event_receive = self.on_user_event_receive.borrow_mut().take();
+        let on_request_receive = self.on_request_receive.borrow_mut().take();
 
         // Create the `UI` main thread.
         let join = thread::Builder::new()
@@ -165,7 +157,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     where
         F: Fn(&mut ApplicationWindow) + Send + Sync + 'static,
     {
-        *self.on_activate.borrow_mut() = Some(Arc::new(f));
+        *self.on_activate.borrow_mut() = Some(Box::new(f));
     }
 
     /// The method will be invoked when ipc user events received.
@@ -173,7 +165,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     where
         F: Fn(&mut ApplicationWindow, T) + Send + Sync + 'static,
     {
-        *self.on_user_event_receive.borrow_mut() = Some(Arc::new(f));
+        *self.on_user_event_receive.borrow_mut() = Some(Box::new(f));
     }
 
     /// The method will be invoked when ipc request received.
@@ -181,7 +173,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     where
         F: Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync + 'static,
     {
-        *self.on_request_receive.borrow_mut() = Some(Arc::new(f));
+        *self.on_request_receive.borrow_mut() = Some(Box::new(f));
     }
 
     fn startup_initialize(&mut self) {
@@ -249,10 +241,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         output_sender: OutputSender,
         input_receiver: Receiver<Message>,
         shared_channel: Option<SharedChannel<T, M>>,
-        on_activate: Option<Arc<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-        on_user_event_receive: Option<Arc<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
+        on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+        on_user_event_receive: Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
         on_request_receive: Option<
-            Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>,
+            Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>,
         >,
     ) {
         // Set up the ipc shared channel.
@@ -280,18 +272,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let backend: Box<dyn Backend>;
         match backend_type {
             BackendType::Raster => {
-                backend = RasterBackend::new(platform.front_bitmap(), platform.back_bitmap())
+                backend = RasterBackend::new(platform.bitmap())
             }
             BackendType::OpenGL => {
-                backend = OpenGLBackend::new(platform.front_bitmap(), platform.back_bitmap())
+                backend = OpenGLBackend::new(platform.bitmap())
             }
         }
 
-        // Prepare ApplicationWindow env: Create the `Board`, windows layouts
-        let mut board = Board::new(backend.surface());
-        store_board(&mut board);
+        // Prepare ApplicationWindow env: Create the `Board`.
+        let mut board = Box::new(Board::new(backend.surface()));
 
         let mut window = ApplicationWindow::new(backend.width() as i32, backend.height() as i32);
+        window.set_board(board.as_mut());
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);
@@ -411,7 +403,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     fn process_user_events(
         window: &mut ApplicationWindow,
         cpu_balance: &mut CpuBalance,
-        on_user_event_receive: &Arc<dyn Fn(&mut ApplicationWindow, T) + Sync + Send>,
+        on_user_event_receive: &Box<dyn Fn(&mut ApplicationWindow, T) + Sync + Send>,
     ) {
         SHARED_CHANNEL.with(|s| {
             if let Some(channel) = s.borrow().as_ref() {
@@ -431,7 +423,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     fn process_request(
         window: &mut ApplicationWindow,
         cpu_balance: &mut CpuBalance,
-        on_request_receive: &Arc<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Sync + Send>,
+        on_request_receive: &Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Sync + Send>,
     ) {
         SHARED_CHANNEL.with(|s| {
             if let Some(channel) = s.borrow().as_ref() {

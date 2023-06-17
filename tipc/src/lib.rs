@@ -2,8 +2,8 @@ use ipc_event::IpcEvent;
 use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
 use mem::mem_queue::MemQueueError;
+use std::{error::Error, ffi::c_void, marker::PhantomData};
 use tlib::figure::Rect;
-use std::{marker::PhantomData, error::Error, ffi::c_void};
 
 pub mod ipc_event;
 pub mod ipc_master;
@@ -109,13 +109,9 @@ pub trait WithIpcSlave<T: 'static + Copy, M: 'static + Copy> {
 }
 
 pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
-    fn primary_buffer(&self) -> &'static mut [u8];
+    fn buffer(&self) -> &'static mut [u8];
 
-    fn secondary_buffer(&self) -> &'static mut [u8];
-
-    fn primary_buffer_raw_pointer(&self) -> *mut c_void;
-
-    fn secondary_buffer_raw_pointer(&self) -> *mut c_void;
+    fn buffer_raw_pointer(&self) -> *mut c_void;
 
     fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError>;
 
@@ -134,7 +130,7 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn terminate(&self);
 
     fn wait(&self);
-    
+
     fn signal(&self);
 
     fn region(&self) -> Rect;

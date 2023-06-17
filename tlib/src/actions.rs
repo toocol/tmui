@@ -10,15 +10,10 @@
 //! use tlib::{signals, signal, connect, emit};
 //!
 //! #[extends(Object)]
-//! #[derive(Default)]
 //! pub struct Widget {}
 //!
 //! impl ObjectSubclass for Widget {
 //!     const NAME: &'static str = "Widget";
-//!
-//!     type Type = Widget;
-//!
-//!     type ParentType = Object;
 //! }
 //!
 //! impl ObjectImpl for Widget {}

@@ -51,11 +51,8 @@ pub(crate) trait PlatformContext: 'static {
     /// Resize the platform by specific width and height.
     fn resize(&mut self, width: u32, height: u32);
 
-    /// Get the front `Bitmap` of platform context.
-    fn front_bitmap(&self) -> Bitmap;
-
-    /// Get the front `Bitmap` of platform context.
-    fn back_bitmap(&self) -> Bitmap;
+    /// Get current effective `Bitmap` of platform context.
+    fn bitmap(&self) -> Bitmap;
 
     /// Set the `input_sender` to transfer user input.
     fn set_input_sender(&mut self, input_sender: Sender<Message>);
