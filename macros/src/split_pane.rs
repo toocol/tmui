@@ -38,22 +38,22 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
 
         impl SplitPaneExt for #name {
             #[inline]
-            fn split_left<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+            fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitLeft)
             }
 
             #[inline]
-            fn split_up<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+            fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitUp)
             }
 
             #[inline]
-            fn split_right<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+            fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitRight)
             }
 
             #[inline]
-            fn split_down<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+            fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: T) {
                 self.split(id, widget, SplitType::SplitDown)
             }
 
@@ -125,7 +125,7 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
                 }
             }
 
-            fn split<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T, ty: SplitType) {
+            fn split<T: WidgetImpl>(&mut self, id: u16, widget: T, ty: SplitType) {
                 use tmui::application_window::ApplicationWindow;
                 use tmui::{split_widget, split_from};
                 use tmui::tlib::nonnull_mut;

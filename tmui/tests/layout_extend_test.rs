@@ -28,6 +28,6 @@ fn main() {
     assert_eq!(1, children.len());
     let label_dyn = *children.first().unwrap();
     assert_eq!(widget.label.id(), label_dyn.id());
-    let label = label_dyn.as_any().downcast_ref::<Label>().unwrap();
+    let label = label_dyn.downcast_ref::<Label>().unwrap();
     assert_eq!("Hello World", label.text())
 }

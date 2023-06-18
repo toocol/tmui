@@ -52,7 +52,7 @@ impl ContainerImpl for SplitPane {
 impl ContainerImplExt for SplitPane {
     fn add_child<T>(&mut self, child: T)
     where
-        T: WidgetImpl + IsA<Widget>,
+        T: WidgetImpl,
     {
         if self.container.children.len() != 0 {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
@@ -148,7 +148,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_left<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T);
+    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: T);
 
     /// Split new widget up.
     ///
@@ -156,7 +156,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_up<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T);
+    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: T);
 
     /// Split new widget right.
     ///
@@ -164,7 +164,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_right<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T);
+    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: T);
 
     /// Split new widget down.
     ///
@@ -172,7 +172,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_down<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T);
+    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: T);
 
     /// Close the split pane, the widgets were splited from this pane will be closed automatically.
     ///
@@ -180,27 +180,27 @@ pub trait SplitPaneExt {
     fn close_pane(&mut self, id: u16);
 
     /// Common function of split().
-    fn split<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T, ty: SplitType);
+    fn split<T: WidgetImpl>(&mut self, id: u16, widget: T, ty: SplitType);
 }
 
 impl SplitPaneExt for SplitPane {
     #[inline]
-    fn split_left<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitLeft)
     }
 
     #[inline]
-    fn split_up<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitUp)
     }
 
     #[inline]
-    fn split_right<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitRight)
     }
 
     #[inline]
-    fn split_down<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T) {
+    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: T) {
         self.split(id, widget, SplitType::SplitDown)
     }
 
@@ -266,7 +266,7 @@ impl SplitPaneExt for SplitPane {
         }
     }
 
-    fn split<T: WidgetImpl + IsA<Widget>>(&mut self, id: u16, widget: T, ty: SplitType) {
+    fn split<T: WidgetImpl>(&mut self, id: u16, widget: T, ty: SplitType) {
         let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {
             NonNull::new(split_info.as_mut())
         } else {

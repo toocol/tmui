@@ -39,24 +39,12 @@ impl ScrollArea {
 
     #[inline]
     pub fn get_area_cast<T: WidgetImpl + ObjectSubclass>(&self) -> Option<&T> {
-        self.area.as_ref().and_then(|w| {
-            if !T::static_type().is_a(w.object_type()) {
-                None
-            } else {
-                w.as_ref().as_any().downcast_ref::<T>()
-            }
-        })
+        self.area.as_ref().and_then(|w| w.downcast_ref::<T>())
     }
 
     #[inline]
     pub fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T> {
-        self.area.as_mut().and_then(|w| {
-            if !T::static_type().is_a(w.object_type()) {
-                None
-            } else {
-                w.as_mut().as_any_mut().downcast_mut::<T>()
-            }
-        })
+        self.area.as_mut().and_then(|w| w.downcast_mut::<T>())
     }
 
     #[inline]
@@ -128,7 +116,7 @@ impl ContainerImpl for ScrollArea {
 impl ContainerImplExt for ScrollArea {
     fn add_child<T>(&mut self, _: T)
     where
-        T: WidgetImpl + IsA<Widget>,
+        T: WidgetImpl,
     {
         panic!("Please use `set_area()` instead in `ScrollArea`")
     }

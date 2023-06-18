@@ -145,7 +145,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         impl ContainerImplExt for #name {
             fn add_child<T>(&mut self, child: T)
             where
-                T: WidgetImpl + IsA<Widget>,
+                T: WidgetImpl,
             {
                 #add_child_clause
             }
