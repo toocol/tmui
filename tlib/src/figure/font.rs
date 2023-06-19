@@ -1,13 +1,168 @@
 use skia_safe::{
+    self,
+    font::Edging,
     font_style::{Slant, Weight, Width},
     FontStyle, Typeface,
 };
 use FontWeight::*;
 use FontWidth::*;
 
-#[derive(Debug, Default, PartialEq, Eq, Clone)]
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`Font`]
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub struct Font {
+    force_auto_hinting: bool,
+    embedded_bitmaps: bool,
+    subpixel: bool,
+    linear_metrics: bool,
+    embolden: bool,
+    baseline_snap: bool,
+    edging: FontEdging,
+    hinting: FontHinting,
+    typeface: Option<FontTypeface>,
+    size: f32,
+    scale_x: f32,
+    skew_x: f32,
+}
+
+impl Into<skia_safe::Font> for Font {
+    fn into(self) -> skia_safe::Font {
+        let mut font = skia_safe::Font::default();
+        font.set_force_auto_hinting(self.is_force_auto_hinting());
+        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+        font.set_subpixel(self.is_subpixel());
+        font.set_linear_metrics(self.is_linear_metrics());
+        font.set_embolden(self.is_embolden());
+        font.set_baseline_snap(self.is_baseline_snap());
+        font.set_edging(self.edging().into());
+        font.set_hinting(self.hinting().into());
+        if let Some(typeface) = self.typeface() {
+            font.set_typeface(typeface);
+        }
+        font.set_size(self.size());
+        font.set_scale_x(self.scale_x());
+        font.set_skew_x(self.skew_x());
+        font
+    }
+}
+
+impl Font {
+    #[inline]
+    pub fn set_force_auto_hinting(&mut self, force_auto_hinting: bool) {
+        self.force_auto_hinting = force_auto_hinting
+    }
+    #[inline]
+    pub fn is_force_auto_hinting(&self) -> bool {
+        self.force_auto_hinting
+    }
+
+    #[inline]
+    pub fn set_embedded_bitmaps(&mut self, embedded_bitmaps: bool) {
+        self.embedded_bitmaps = embedded_bitmaps
+    }
+    #[inline]
+    pub fn is_embedded_bitmaps(&self) -> bool {
+        self.embedded_bitmaps
+    }
+
+    #[inline]
+    pub fn set_subpixel(&mut self, subpixel: bool) {
+        self.subpixel = subpixel
+    }
+    #[inline]
+    pub fn is_subpixel(&self) -> bool {
+        self.subpixel
+    }
+
+    #[inline]
+    pub fn set_linear_metrics(&mut self, linear_metrics: bool) {
+        self.linear_metrics = linear_metrics
+    }
+    #[inline]
+    pub fn is_linear_metrics(&self) -> bool {
+        self.linear_metrics
+    }
+
+    #[inline]
+    pub fn set_embolden(&mut self, embolden: bool) {
+        self.embolden = embolden
+    }
+    #[inline]
+    pub fn is_embolden(&self) -> bool {
+        self.embolden
+    }
+
+    #[inline]
+    pub fn set_baseline_snap(&mut self, baseline_snap: bool) {
+        self.baseline_snap = baseline_snap
+    }
+    #[inline]
+    pub fn is_baseline_snap(&self) -> bool {
+        self.baseline_snap
+    }
+
+    #[inline]
+    pub fn set_edging(&mut self, edging: FontEdging) {
+        self.edging = edging
+    }
+    #[inline]
+    pub fn edging(&self) -> FontEdging {
+        self.edging
+    }
+
+    #[inline]
+    pub fn set_hinting(&mut self, hiting: FontHinting) {
+        self.hinting = hiting
+    }
+    #[inline]
+    pub fn hinting(&self) -> FontHinting {
+        self.hinting
+    }
+
+    #[inline]
+    pub fn set_typeface(&mut self, typeface: FontTypeface) {
+        self.typeface = Some(typeface)
+    }
+    #[inline]
+    pub fn typeface(&self) -> Option<FontTypeface> {
+        self.typeface
+    }
+
+    #[inline]
+    pub fn set_size(&mut self, size: f32) {
+        self.size = size
+    }
+    #[inline]
+    pub fn size(&self) -> f32 {
+        self.size
+    }
+
+    #[inline]
+    pub fn set_scale_x(&mut self, scale_x: f32) {
+        self.scale_x = scale_x
+    }
+    #[inline]
+    pub fn scale_x(&self) -> f32 {
+        self.scale_x
+    }
+
+    #[inline]
+    pub fn set_skew_x(&mut self, skew_x: f32) {
+        self.skew_x = skew_x
+    }
+    #[inline]
+    pub fn skew_x(&self) -> f32 {
+        self.skew_x
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontTypeface`]
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct FontTypeface {
-    family: String,
+    family: &'static str,
     weight: FontWeight,
     width: FontWidth,
     italic: bool,
@@ -26,7 +181,7 @@ impl FontTypeface {
     }
     #[inline]
     pub fn set_family<T: ToString>(&mut self, family: T) {
-        self.family = family.to_string();
+        self.family = Box::leak(family.to_string().into_boxed_str());
     }
 
     #[inline]
@@ -87,6 +242,9 @@ impl Into<Typeface> for FontTypeface {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontTypefaceBuilder`] Builder to create `FontTypeface`
+/////////////////////////////////////////////////////////////////////////////////////////
 /// The builder to construct the [`FontTypeface`]
 #[derive(Debug, Default)]
 pub struct FontTypefaceBuilder {
@@ -101,8 +259,8 @@ impl FontTypefaceBuilder {
     #[inline]
     pub fn build(self) -> FontTypeface {
         let mut typeface = FontTypeface::default();
-        if let Some(ref family) = self.family {
-            typeface.family = family.clone();
+        if let Some(family) = self.family {
+            typeface.family = Box::leak(family.into_boxed_str());
         }
         typeface.weight = self.weight;
         typeface.italic = self.italic;
@@ -144,6 +302,9 @@ impl FontTypefaceBuilder {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontWeight`]
+/////////////////////////////////////////////////////////////////////////////////////////
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum FontWeight {
@@ -162,6 +323,7 @@ pub enum FontWeight {
 }
 
 impl Into<Weight> for FontWeight {
+    #[inline]
     fn into(self) -> Weight {
         match self {
             Invisible => Weight::INVISIBLE,
@@ -179,6 +341,9 @@ impl Into<Weight> for FontWeight {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontWidth`]
+/////////////////////////////////////////////////////////////////////////////////////////
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum FontWidth {
@@ -195,6 +360,7 @@ pub enum FontWidth {
 }
 
 impl Into<Width> for FontWidth {
+    #[inline]
     fn into(self) -> Width {
         match self {
             UltraCondensed => Width::ULTRA_CONDENSED,
@@ -206,6 +372,54 @@ impl Into<Width> for FontWidth {
             Expanded => Width::EXPANDED,
             ExtraExpanded => Width::EXTRA_EXPANDED,
             UltraExpanded => Width::ULTRA_EXPANDED,
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontEdging`]
+/////////////////////////////////////////////////////////////////////////////////////////
+#[repr(C)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum FontEdging {
+    #[default]
+    Alias,
+    AntiAlias,
+    SubpixelAntiAlias,
+}
+
+impl Into<Edging> for FontEdging {
+    #[inline]
+    fn into(self) -> Edging {
+        match self {
+            Self::Alias => Edging::Alias,
+            Self::AntiAlias => Edging::AntiAlias,
+            Self::SubpixelAntiAlias => Edging::SubpixelAntiAlias,
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontHinting`]
+/////////////////////////////////////////////////////////////////////////////////////////
+#[repr(C)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum FontHinting {
+    #[default]
+    None,
+    Slight,
+    Normal,
+    Full,
+}
+
+impl Into<skia_safe::FontHinting> for FontHinting {
+    #[inline]
+    fn into(self) -> skia_safe::FontHinting {
+        match self {
+            Self::None => skia_safe::FontHinting::None,
+            Self::Slight => skia_safe::FontHinting::Slight,
+            Self::Normal => skia_safe::FontHinting::Normal,
+            Self::Full => skia_safe::FontHinting::Full,
         }
     }
 }

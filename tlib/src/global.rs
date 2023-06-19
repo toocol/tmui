@@ -1,5 +1,5 @@
-use std::any::Any;
 use once_cell::sync::Lazy;
+use std::any::Any;
 
 #[inline]
 pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
@@ -61,6 +61,11 @@ pub fn cpu_nums() -> &'static usize {
     &CPU_NUMS
 }
 
+#[inline]
+pub fn to_static<T>(t: T) -> &'static T {
+    Box::leak(Box::new(t))
+}
+
 pub trait AsAny {
     fn as_any(&self) -> &dyn Any;
 
@@ -90,7 +95,6 @@ macro_rules! impl_as_any {
     };
 }
 
-
 #[macro_export]
 macro_rules! nonnull_ref {
     ( $st:ident ) => {
@@ -98,7 +102,7 @@ macro_rules! nonnull_ref {
     };
     ( $st:expr ) => {
         unsafe { $st.as_ref().unwrap().as_ref() }
-    }
+    };
 }
 
 #[macro_export]
@@ -108,5 +112,5 @@ macro_rules! nonnull_mut {
     };
     ( $st:expr ) => {
         unsafe { $st.as_mut().unwrap().as_mut() }
-    }
+    };
 }
