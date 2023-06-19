@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry, AsAny},
+    prelude::{AsAny, FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry},
     types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
@@ -251,8 +251,8 @@ pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
         self.parent_on_property_set(name, value)
     }
 
-    /// `initialize()` will be called when widget as a `child` of another widget. <br>
-    /// UI components can build and add in this function.<br>
+    /// `initialize()` the widget as a `child` of another widget. <br>
+    /// UI components build and add in this function should be very careful.<br>
     ///
     /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}

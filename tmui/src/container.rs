@@ -11,7 +11,7 @@ impl ObjectSubclass for Container {
 }
 
 impl ObjectImpl for Container {
-    fn on_property_set(&mut self,name: &str,value: &Value) {
+    fn on_property_set(&mut self, name: &str, value: &Value) {
         self.parent_on_property_set(name, value);
 
         match name {
@@ -44,7 +44,7 @@ pub trait ContainerImplExt: ContainerImpl {
     /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
     fn add_child<T>(&mut self, child: T)
     where
-        T: WidgetImpl + IsA<Widget>;
+        T: WidgetImpl;
 }
 
 pub trait ContainerPointEffective {

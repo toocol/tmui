@@ -65,6 +65,7 @@ type ApplicationWindowContext = (
 );
 
 impl ApplicationWindow {
+    #[inline]
     pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =

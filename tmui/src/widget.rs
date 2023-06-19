@@ -1,5 +1,3 @@
-use std::ptr::NonNull;
-
 use crate::skia_safe::Font;
 use crate::{
     application_window::ApplicationWindow,
@@ -10,6 +8,8 @@ use crate::{
     util::skia_font_clone,
 };
 use derivative::Derivative;
+use log::error;
+use std::ptr::NonNull;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
@@ -89,7 +89,7 @@ impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
 impl Widget {
     pub fn child_internal<T>(&mut self, child: T)
     where
-        T: WidgetImpl + IsA<Widget>,
+        T: WidgetImpl,
     {
         let mut child = Box::new(child);
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
@@ -1156,6 +1156,57 @@ pub trait WidgetImpl:
 
     /// Invoke when widget's receive input method event.
     fn on_input_method(&mut self, input_method: &InputMethodEvent) {}
+}
+
+impl dyn WidgetImpl {
+    #[inline]
+    pub fn is<T: StaticType + 'static>(&self) -> bool {
+        self.object_type().is_a(T::static_type()) && self.as_any().is::<T>()
+    }
+
+    #[inline]
+    pub fn downcast_ref<T: StaticType + 'static>(&self) -> Option<&T> {
+        if self.is::<T>() {
+            self.as_any().downcast_ref::<T>()
+        } else {
+            error!(
+                "Downcast widget type mismatched, require {}, get {}",
+                self.object_type().name(),
+                T::static_type().name()
+            );
+            None
+        }
+    }
+
+    #[inline]
+    pub fn downcast_mut<T: StaticType + 'static>(&mut self) -> Option<&mut T> {
+        if self.is::<T>() {
+            self.as_any_mut().downcast_mut::<T>()
+        } else {
+            error!(
+                "Downcast widget type mismatched, require {}, get {}",
+                self.object_type().name(),
+                T::static_type().name()
+            );
+            None
+        }
+    }
+
+    #[inline]
+    pub fn downcast<T: StaticType + 'static>(self: Box<Self>) -> Option<Box<T>> {
+        let require = self.object_type().name();
+        match self.as_any_boxed().downcast::<T>() {
+            Ok(v) => Some(v),
+            _ => {
+                error!(
+                    "Downcast widget type mismatched, require {}, get {}",
+                    require,
+                    T::static_type().name()
+                );
+                None
+            }
+        }
+    }
 }
 
 pub trait WidgetImplExt: WidgetImpl {

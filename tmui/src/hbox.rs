@@ -1,4 +1,4 @@
-use crate::{layout::LayoutManager, prelude::*};
+use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*};
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
@@ -26,16 +26,23 @@ impl ContainerImpl for HBox {
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-        self.container.children.iter_mut().map(|c| c.as_mut()).collect()
+        self.container
+            .children
+            .iter_mut()
+            .map(|c| c.as_mut())
+            .collect()
     }
 }
 
 impl ContainerImplExt for HBox {
     fn add_child<T>(&mut self, child: T)
     where
-        T: WidgetImpl + IsA<Widget>,
+        T: WidgetImpl,
     {
-        self.container.children.push(Box::new(child))
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        self.container.children.push(child);
+        self.update();
     }
 }
 

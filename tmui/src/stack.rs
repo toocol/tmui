@@ -1,4 +1,5 @@
 use crate::{
+    application_window::ApplicationWindow,
     container::{ContainerImpl, ContainerImplExt},
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
@@ -22,16 +23,23 @@ impl ContainerImpl for Stack {
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-        self.container.children.iter_mut().map(|c| c.as_mut()).collect()
+        self.container
+            .children
+            .iter_mut()
+            .map(|c| c.as_mut())
+            .collect()
     }
 }
 
 impl ContainerImplExt for Stack {
     fn add_child<T>(&mut self, child: T)
     where
-        T: WidgetImpl + IsA<Widget>,
+        T: WidgetImpl,
     {
-        self.container.children.push(Box::new(child))
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        self.container.children.push(child);
+        self.update();
     }
 }
 
