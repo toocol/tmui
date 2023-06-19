@@ -1,4 +1,4 @@
-use crate::{layout::LayoutManager, prelude::*};
+use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*};
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
@@ -39,7 +39,10 @@ impl ContainerImplExt for HBox {
     where
         T: WidgetImpl,
     {
-        self.container.children.push(Box::new(child))
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        self.container.children.push(child);
+        self.update();
     }
 }
 

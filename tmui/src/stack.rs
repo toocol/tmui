@@ -1,4 +1,5 @@
 use crate::{
+    application_window::ApplicationWindow,
     container::{ContainerImpl, ContainerImplExt},
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
@@ -35,7 +36,10 @@ impl ContainerImplExt for Stack {
     where
         T: WidgetImpl,
     {
-        self.container.children.push(Box::new(child))
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        self.container.children.push(child);
+        self.update();
     }
 }
 

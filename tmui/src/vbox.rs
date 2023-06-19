@@ -1,4 +1,4 @@
-use crate::{layout::LayoutManager, prelude::*};
+use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*};
 use derivative::Derivative;
 use log::debug;
 use tlib::object::ObjectSubclass;
@@ -42,7 +42,10 @@ impl ContainerImplExt for VBox {
     where
         T: WidgetImpl,
     {
-        self.container.children.push(Box::new(child))
+        let mut child = Box::new(child);
+        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        self.container.children.push(child);
+        self.update();
     }
 }
 
