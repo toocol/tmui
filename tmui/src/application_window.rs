@@ -18,7 +18,7 @@ use tlib::{
     events::{to_key_event, to_mouse_event, Event, EventType},
     figure::{Color, Size},
     nonnull_mut,
-    object::{ObjectImpl, ObjectSubclass},
+    object::{ObjectImpl, ObjectSubclass}, nonnull_ref,
 };
 
 static INIT: Once = Once::new();
@@ -27,6 +27,9 @@ static INIT: Once = Once::new();
 pub struct ApplicationWindow {
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
+    layout_manager: LayoutManager,
+    widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
+
     activated: bool,
     focused_widget: u16,
 }
@@ -59,8 +62,6 @@ impl WidgetImpl for ApplicationWindow {
 type ApplicationWindowContext = (
     ThreadId,
     Option<NonNull<ApplicationWindow>>,
-    Box<LayoutManager>,
-    HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
 );
 
 impl ApplicationWindow {
@@ -74,8 +75,6 @@ impl ApplicationWindow {
             (
                 thread_id,
                 NonNull::new(window.as_mut()),
-                Box::new(LayoutManager::default()),
-                HashMap::new(),
             ),
         );
         window
@@ -93,43 +92,55 @@ impl ApplicationWindow {
     pub(crate) fn widgets_of(
         id: u16,
     ) -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>> {
-        let current_thread_id = thread::current().id();
-        let (thread_id, _, _, map) = Self::windows()
-            .get_mut(&id)
-            .expect(&format!("Unkonwn application window with id: {}", id));
-        if current_thread_id != *thread_id {
-            panic!("Execute `ApplicationWindow::layout_of()` in the wrong thrad.");
-        }
-        map
+        let window = Self::window_of(id);
+        &mut window.widgets
     }
 
     #[inline]
     pub(crate) fn layout_of(id: u16) -> &'static mut LayoutManager {
-        let current_thread_id = thread::current().id();
-        let (thread_id, _, layout, _) = Self::windows()
-            .get_mut(&id)
-            .expect(&format!("Unkonwn application window with id: {}", id));
-        if current_thread_id != *thread_id {
-            panic!("Execute `ApplicationWindow::layout_of()` in the wrong thrad.");
-        }
-        layout.as_mut()
+        let window = Self::window_of(id);
+        &mut window.layout_manager
     }
 
     #[inline]
     pub fn window_of(id: u16) -> &'static mut ApplicationWindow {
         let current_thread_id = thread::current().id();
-        let (thread_id, window, _, _) = Self::windows()
+        let (thread_id, window) = Self::windows()
             .get_mut(&id)
             .expect(&format!("Unkonwn application window with id: {}", id));
         if current_thread_id != *thread_id {
-            panic!("Execute `ApplicationWindow::window_of()` in the wrong thrad.");
+            panic!("Get `ApplicationWindow` in the wrong thread.");
         }
-        unsafe { window.unwrap().as_mut() }
+        nonnull_mut!(window)
     }
 
     #[inline]
     pub fn send_message_with_id(id: u16, message: Message) {
         Self::window_of(id).send_message(message)
+    }
+
+    #[inline]
+    pub fn finds<'a, T: StaticType + 'static>(id: u16) -> Vec<&'a T> {
+        let mut finds = vec![];
+        for (_, widget) in Self::widgets_of(id).iter() {
+            let widget = nonnull_ref!(widget);
+            if widget.object_type().is_a(T::static_type()) {
+                finds.push(widget.downcast_ref::<T>().unwrap())
+            }
+        }
+        finds
+    }
+
+    #[inline]
+    pub fn finds_mut<'a, T: StaticType + 'static>(id: u16) -> Vec<&'a mut T> {
+        let mut finds = vec![];
+        for (_, widget) in Self::widgets_of(id).iter_mut() {
+            let widget = nonnull_mut!(widget);
+            if widget.object_type().is_a(T::static_type()) {
+                finds.push(widget.downcast_mut::<T>().unwrap())
+            }
+        }
+        finds
     }
 
     #[inline]
