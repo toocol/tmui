@@ -1,4 +1,3 @@
-use crate::skia_safe::Font;
 use crate::{
     graphics::{board::Board, painter::Painter},
     layout::LayoutManager,

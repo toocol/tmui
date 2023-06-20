@@ -17,7 +17,6 @@ pub use crate::layout::{
     Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment,
 };
 pub use crate::scroll_bar::ScrollBarSignal;
-pub use crate::skia_safe::font::Font;
 pub use crate::stack::Stack;
 pub use crate::vbox::VBox;
 pub use crate::widget::{

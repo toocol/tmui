@@ -1,4 +1,4 @@
-use crate::{graphics::painter::Painter, layout::ContentAlignment, prelude::*, widget::WidgetImpl};
+use crate::{graphics::painter::Painter, layout::ContentAlignment, prelude::*, widget::WidgetImpl, skia_safe};
 use log::debug;
 use tlib::{
     emit,
@@ -46,7 +46,7 @@ impl WidgetImpl for Label {
     fn paint(&mut self, mut painter: Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
-        let font = self.font();
+        let font: skia_safe::Font = self.font().to_skia_font();
         let metrics = font.metrics().1;
         let mut widths = vec![0f32; self.label.len()];
         font.get_widths(&self.label, &mut widths);
@@ -106,7 +106,7 @@ impl WidgetImpl for Label {
     }
 
     fn font_changed(&mut self) {
-        let font = self.font();
+        let font: skia_safe::Font = self.font().to_skia_font();
 
         let mut widths = vec![0f32; self.label.len()];
         font.get_widths(&self.label, &mut widths);
@@ -148,13 +148,14 @@ impl Label {
     }
 
     pub fn set_color(&mut self, color: Color) {
-        self.color = color
+        self.color = color;
+        self.update();
     }
 
     pub fn set_size(&mut self, size: i32) {
-        let mut font = self.font();
+        let font = self.font_mut();
         font.set_size(size as f32);
-        self.set_font(font);
+        self.update();
     }
 }
 

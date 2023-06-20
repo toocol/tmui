@@ -1,5 +1,6 @@
 pub use macros::{cast, cast_boxed, cast_mut, extends, reflect_trait, tasync, Childrenable};
 
+pub use crate::figure::font::Font;
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
 pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{

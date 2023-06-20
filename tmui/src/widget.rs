@@ -1,11 +1,9 @@
-use crate::skia_safe::Font;
 use crate::{
     application_window::ApplicationWindow,
     graphics::{drawing_context::DrawingContext, element::ElementImpl, painter::Painter},
     layout::LayoutManager,
     platform::Message,
     prelude::*,
-    util::skia_font_clone,
 };
 use derivative::Derivative;
 use log::error;
@@ -13,7 +11,7 @@ use std::ptr::NonNull;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
-    figure::{Color, Size},
+    figure::{Color, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     signals,
@@ -316,7 +314,12 @@ pub trait WidgetExt {
     /// Get the font of widget.
     ///
     /// Go to[`Function defination`](WidgetExt::font) (Defined in [`WidgetExt`])
-    fn font(&self) -> Font;
+    fn font(&self) -> &Font;
+
+    /// Get the mut font of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::font_mut) (Defined in [`WidgetExt`])
+    fn font_mut(&mut self) -> &mut Font;
 
     /// Set the font family of Widget.
     ///
@@ -644,13 +647,21 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn font(&self) -> Font {
-        skia_font_clone(&self.font)
+    fn font(&self) -> &Font {
+        &self.font
+    }
+
+    #[inline]
+    fn font_mut(&mut self) -> &mut Font {
+        &mut self.font
     }
 
     #[inline]
     fn set_font_family(&mut self, family: String) {
-        self.font_family = family
+        let typeface = FontTypeface::builder().family(family.clone()).build();
+        self.font_family = family;
+        self.font.set_typeface(typeface);
+        self.update()
     }
 
     #[inline]
