@@ -34,50 +34,6 @@ impl Default for Font {
     }
 }
 
-impl Into<skia_safe::Font> for Font {
-    #[inline]
-    fn into(self) -> skia_safe::Font {
-        let mut font = skia_safe::Font::default();
-        font.set_force_auto_hinting(self.is_force_auto_hinting());
-        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
-        font.set_subpixel(self.is_subpixel());
-        font.set_linear_metrics(self.is_linear_metrics());
-        font.set_embolden(self.is_embolden());
-        font.set_baseline_snap(self.is_baseline_snap());
-        font.set_edging(self.edging().into());
-        font.set_hinting(self.hinting().into());
-        if let Some(typeface) = self.typeface() {
-            font.set_typeface(typeface);
-        }
-        font.set_size(self.size());
-        font.set_scale_x(self.scale_x());
-        font.set_skew_x(self.skew_x());
-        font
-    }
-}
-
-impl Into<Font> for skia_safe::Font {
-    #[inline]
-    fn into(self) -> Font {
-        let mut font = Font::new();
-        font.set_force_auto_hinting(self.is_force_auto_hinting());
-        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
-        font.set_subpixel(self.is_subpixel());
-        font.set_linear_metrics(self.is_linear_metrics());
-        font.set_embolden(self.is_embolden());
-        font.set_baseline_snap(self.is_baseline_snap());
-        font.set_edging(self.edging().into());
-        font.set_hinting(self.hinting().into());
-        if let Some(typeface) = self.typeface() {
-            font.set_typeface(typeface.into());
-        }
-        font.set_size(self.size());
-        font.set_scale_x(self.scale_x());
-        font.set_skew_x(self.skew_x());
-        font
-    }
-}
-
 impl Font {
     #[inline]
     fn new() -> Self {
@@ -95,6 +51,15 @@ impl Font {
             scale_x: Default::default(),
             skew_x: Default::default(),
         }
+    }
+
+    #[inline]
+    pub fn with_family<T: ToString>(family: T) -> Self {
+        let mut font = Self::default();
+        let mut typeface = FontTypeface::default();
+        typeface.set_family(family);
+        font.set_typeface(typeface);
+        font
     }
 
     #[inline]
@@ -204,6 +169,55 @@ impl Font {
     pub fn skew_x(&self) -> f32 {
         self.skew_x
     }
+
+    #[inline]
+    pub fn to_skia_font(&self) -> skia_safe::Font {
+        let mut font = skia_safe::Font::default();
+        font.set_force_auto_hinting(self.is_force_auto_hinting());
+        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+        font.set_subpixel(self.is_subpixel());
+        font.set_linear_metrics(self.is_linear_metrics());
+        font.set_embolden(self.is_embolden());
+        font.set_baseline_snap(self.is_baseline_snap());
+        font.set_edging(self.edging().into());
+        font.set_hinting(self.hinting().into());
+        if let Some(typeface) = self.typeface() {
+            font.set_typeface(typeface);
+        }
+        font.set_size(self.size());
+        font.set_scale_x(self.scale_x());
+        font.set_skew_x(self.skew_x());
+        font
+    }
+}
+
+impl Into<skia_safe::Font> for Font {
+    #[inline]
+    fn into(self) -> skia_safe::Font {
+        self.to_skia_font()
+    }
+}
+
+impl Into<Font> for skia_safe::Font {
+    #[inline]
+    fn into(self) -> Font {
+        let mut font = Font::new();
+        font.set_force_auto_hinting(self.is_force_auto_hinting());
+        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+        font.set_subpixel(self.is_subpixel());
+        font.set_linear_metrics(self.is_linear_metrics());
+        font.set_embolden(self.is_embolden());
+        font.set_baseline_snap(self.is_baseline_snap());
+        font.set_edging(self.edging().into());
+        font.set_hinting(self.hinting().into());
+        if let Some(typeface) = self.typeface() {
+            font.set_typeface(typeface.into());
+        }
+        font.set_size(self.size());
+        font.set_scale_x(self.scale_x());
+        font.set_skew_x(self.skew_x());
+        font
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -225,7 +239,7 @@ impl FontTypeface {
     }
 
     #[inline]
-    pub fn faimly(&self) -> &str {
+    pub fn family(&self) -> &str {
         &self.family
     }
     #[inline]
@@ -286,8 +300,8 @@ impl Into<Typeface> for FontTypeface {
                 Slant::Upright
             },
         );
-        Typeface::new(self.faimly(), font_style)
-            .expect(format!("Create typeface from `{}` failed.", self.faimly()).as_str())
+        Typeface::new(self.family(), font_style)
+            .expect(format!("Create typeface from `{}` failed.", self.family()).as_str())
     }
 }
 

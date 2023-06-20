@@ -212,8 +212,13 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn font(&self) -> Font {
+            fn font(&self) -> &Font {
                 self.#(#widget_path).*.font()
+            }
+
+            #[inline]
+            fn font_mut(&mut self) -> &mut Font {
+                self.#(#widget_path).*.font_mut()
             }
 
             #[inline]

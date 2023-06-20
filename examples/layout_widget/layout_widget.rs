@@ -38,7 +38,7 @@ impl ObjectImpl for LayoutWidget {
         self.parent_construct();
 
         self.label.set_background(Color::CYAN);
-        let mut font = self.label.font();
+        let font = self.label.font_mut();
         font.set_typeface(
             FontTypeface::builder()
                 .family("Consolas")
@@ -47,7 +47,6 @@ impl ObjectImpl for LayoutWidget {
                 .build(),
         );
         font.set_size(20.);
-        self.label.set_font(font);
         self.label.set_content_halign(Align::Center);
         self.label.set_content_valign(Align::Center);
         self.label.set_halign(Align::Center);
