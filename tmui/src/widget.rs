@@ -11,7 +11,7 @@ use std::ptr::NonNull;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
-    figure::{Color, Size},
+    figure::{Color, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     signals,
@@ -658,7 +658,10 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_font_family(&mut self, family: String) {
-        self.font_family = family
+        let typeface = FontTypeface::builder().family(family.clone()).build();
+        self.font_family = family;
+        self.font.set_typeface(typeface);
+        self.update()
     }
 
     #[inline]
