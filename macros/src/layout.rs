@@ -110,7 +110,6 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
     } else {
         quote! {
             use tmui::application_window::ApplicationWindow;
-            let mut child = Box::new(child);
             ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
             self.container.children.push(child);
             self.update();
@@ -128,7 +127,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             fn children(&self) -> Vec<&dyn WidgetImpl> {
                 let mut children: Vec<&dyn WidgetImpl> = self.container.children.iter().map(|c| c.as_ref()).collect();
                 #(
-                    children.push(&self.#children_fields);
+                    children.push(self.#children_fields.as_ref());
                 )*
                 children
             }
@@ -136,14 +135,14 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
                 let mut children: Vec<&mut dyn WidgetImpl> = self.container.children.iter_mut().map(|c| c.as_mut()).collect();
                 #(
-                    children.push(&mut self.#children_fields);
+                    children.push(self.#children_fields.as_mut());
                 )*
                 children
             }
         }
 
         impl ContainerImplExt for #name {
-            fn add_child<T>(&mut self, child: T)
+            fn add_child<T>(&mut self, mut child: Box<T>)
             where
                 T: WidgetImpl,
             {

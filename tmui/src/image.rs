@@ -109,13 +109,13 @@ impl WidgetImpl for Image {
 
 impl Image {
     #[inline]
-    pub fn new<T: AsRef<Path>>(path: T) -> Self {
+    pub fn new<T: AsRef<Path>>(path: T) -> Box<Self> {
         let image_buf = ImageBuf::from_file(&path).expect(&format!(
             "load image file `{:?}` failed, maybe it's not exist",
             path.as_ref().as_os_str()
         ));
 
-        let mut image: Self = Object::new(&[]);
+        let mut image: Box<Self> = Object::new(&[]);
         image.image_buf = Some(image_buf);
         image
     }

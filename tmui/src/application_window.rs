@@ -17,8 +17,8 @@ use tlib::{
     connect, emit,
     events::{to_key_event, to_mouse_event, Event, EventType},
     figure::{Color, Size},
-    nonnull_mut,
-    object::{ObjectImpl, ObjectSubclass}, nonnull_ref,
+    nonnull_mut, nonnull_ref,
+    object::{ObjectImpl, ObjectSubclass},
 };
 
 static INIT: Once = Once::new();
@@ -59,24 +59,15 @@ impl WidgetImpl for ApplicationWindow {
     fn paint(&mut self, mut _painter: Painter) {}
 }
 
-type ApplicationWindowContext = (
-    ThreadId,
-    Option<NonNull<ApplicationWindow>>,
-);
+type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);
 
 impl ApplicationWindow {
     #[inline]
     pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =
-            Box::new(Object::new(&[("width", &width), ("height", &height)]));
-        Self::windows().insert(
-            window.id(),
-            (
-                thread_id,
-                NonNull::new(window.as_mut()),
-            ),
-        );
+            Object::new(&[("width", &width), ("height", &height)]);
+        Self::windows().insert(window.id(), (thread_id, NonNull::new(window.as_mut())));
         window
     }
 

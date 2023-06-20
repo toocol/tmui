@@ -39,7 +39,7 @@ mod tests {
         test_is_a(element);
     }
 
-    fn test_is_a<T: IsA<Element>>(obj: T) {
+    fn test_is_a<T: IsA<Element>>(obj: Box<T>) {
         let element = obj.downcast_ref::<SubElement>().unwrap();
         assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());

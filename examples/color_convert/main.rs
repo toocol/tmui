@@ -22,6 +22,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let color_convert: ColorConvert = Object::new(&[]);
+    let color_convert: Box<ColorConvert> = Object::new(&[]);
     window.child(color_convert)
 }

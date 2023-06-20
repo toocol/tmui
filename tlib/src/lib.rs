@@ -54,13 +54,13 @@ mod tests {
 
     #[test]
     fn test_object() {
-        let obj: TestObject = Object::new(&[("property", &"val")]);
+        let obj: Box<TestObject> = Object::new(&[("property", &"val")]);
         assert_eq!("TestObject", obj.type_().name());
         assert!(obj.is::<TestObject>());
         test_is_a(obj)
     }
 
-    fn test_is_a<T: IsA<Object>>(obj: T) {
+    fn test_is_a<T: IsA<Object>>(obj: Box<T>) {
         let test_obj = obj.downcast_ref::<TestObject>().unwrap();
         assert_eq!("TestObject", test_obj.type_().name());
         assert!(test_obj.is::<TestObject>());

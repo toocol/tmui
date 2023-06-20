@@ -36,7 +36,7 @@ pub fn hashmap_property_test(
 }
 
 pub fn criterion_values(c: &mut Criterion) {
-    let mut widget: Widget = Object::new(&[]);
+    let mut widget: Box<Widget> = Object::new(&[]);
     let tuple = (
         i32::MAX,
         i32::MIN,
@@ -50,7 +50,7 @@ pub fn criterion_values(c: &mut Criterion) {
     let mut map = HashMap::new();
 
     c.bench_function("object-downcast-test", |b| {
-        b.iter(|| object_downcast_test(&widget))
+        b.iter(|| object_downcast_test(widget.as_ref()))
     });
     c.bench_function("object-property-test", |b| {
         b.iter(|| object_property_test(&mut widget, &tuple))

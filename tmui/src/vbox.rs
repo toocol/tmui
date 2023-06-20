@@ -38,11 +38,10 @@ impl ContainerImpl for VBox {
 }
 
 impl ContainerImplExt for VBox {
-    fn add_child<T>(&mut self, child: T)
+    fn add_child<T>(&mut self, mut child: Box<T>)
     where
         T: WidgetImpl,
     {
-        let mut child = Box::new(child);
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
         self.container.children.push(child);
         self.update();
@@ -125,7 +124,7 @@ impl ContentAlignment for VBox {
 }
 
 impl VBox {
-    pub fn new() -> Self {
+    pub fn new() -> Box<Self> {
         Object::new(&[])
     }
 }

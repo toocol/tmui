@@ -41,7 +41,7 @@ impl ObjectImpl for TestWidget {
 impl WidgetImpl for TestWidget {}
 
 impl TestWidget {
-    pub fn new() -> Self {
+    pub fn new() -> Box<Self> {
         Object::new(&[])
     }
 }

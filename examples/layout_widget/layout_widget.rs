@@ -17,7 +17,7 @@ const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 #[derive(Childrenable)]
 pub struct LayoutWidget {
     #[children]
-    label: Label,
+    label: Box<Label>,
 
     timer: Timer,
     idx: usize,
@@ -72,7 +72,7 @@ impl ObjectImpl for LayoutWidget {
 impl WidgetImpl for LayoutWidget {}
 
 impl LayoutWidget {
-    pub fn new() -> Self {
+    pub fn new() -> Box<Self> {
         Object::new(&[])
     }
 

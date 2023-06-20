@@ -28,7 +28,7 @@ impl ObjectImpl for ScrollWindow {
         label.set_content_valign(Align::End);
         label.set_size(30);
 
-        let mut scroll_area: ScrollArea = Object::new(&[]);
+        let mut scroll_area: Box<ScrollArea> = Object::new(&[]);
         scroll_area.set_area(label);
         scroll_area.width_request(400);
         scroll_area.height_request(300);

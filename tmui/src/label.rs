@@ -123,8 +123,8 @@ impl WidgetImpl for Label {
 }
 
 impl Label {
-    pub fn new(text: Option<&str>) -> Self {
-        let mut label: Label = Object::new(&[]);
+    pub fn new(text: Option<&str>) -> Box<Self> {
+        let mut label: Box<Self> = Object::new(&[]);
         if let Some(text) = text {
             label.label = U16String::from_str(text).as_slice().to_vec();
 

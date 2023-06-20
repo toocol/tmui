@@ -459,7 +459,7 @@ mod tests {
             action_no_param();
         }
 
-        pub fn new() -> Self {
+        pub fn new() -> Box<Self> {
             Object::new(&[])
         }
 

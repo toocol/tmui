@@ -72,7 +72,7 @@ pub trait ObjectOperation {
 impl Object {
     pub fn new<T: ObjectSubclass + Default + ObjectImpl + ObjectOperation>(
         properties: &[(&str, &dyn ToValue)],
-    ) -> T {
+    ) -> Box<T> {
         let mut obj = T::default();
         obj.construct();
 
@@ -83,7 +83,7 @@ impl Object {
         for (name, value) in properties {
             obj.set_property(*name, value.to_value())
         }
-        obj
+        Box::new(obj)
     }
 
     pub fn primitive_set_property(&mut self, name: &str, value: Value) {

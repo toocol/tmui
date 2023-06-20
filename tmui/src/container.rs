@@ -42,7 +42,7 @@ pub trait ContainerImpl: WidgetImpl + ContainerPointEffective {
 
 pub trait ContainerImplExt: ContainerImpl {
     /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
-    fn add_child<T>(&mut self, child: T)
+    fn add_child<T>(&mut self, child: Box<T>)
     where
         T: WidgetImpl;
 }

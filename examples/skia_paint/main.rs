@@ -21,6 +21,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let w: SkiaPaint = Object::new(&[]);
+    let w: Box<SkiaPaint> = Object::new(&[]);
     window.child(w)
 }
