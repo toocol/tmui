@@ -85,11 +85,10 @@ impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl Widget {
-    pub fn child_internal<T>(&mut self, child: T)
+    pub fn child_internal<T>(&mut self, mut child: Box<T>)
     where
         T: WidgetImpl,
     {
-        let mut child = Box::new(child);
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
         self.child = Some(child);
     }
@@ -1223,7 +1222,7 @@ impl dyn WidgetImpl {
 pub trait WidgetImplExt: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
-    fn child<T: WidgetImpl + ElementImpl + IsA<Widget>>(&mut self, child: T);
+    fn child<T: WidgetImpl>(&mut self, child: Box<T>);
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
@@ -1280,11 +1279,11 @@ mod tests {
 
     #[test]
     fn test_sub_widget() {
-        let mut widget: SubWidget = Object::new(&[("width", &&120), ("height", &&80)]);
+        let mut widget: Box<SubWidget> = Object::new(&[("width", &&120), ("height", &&80)]);
         assert_eq!(120, widget.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, widget.get_property("height").unwrap().get::<i32>());
 
-        let child: ChildWidget = Object::new(&[("width", &&120), ("height", &&80)]);
+        let child: Box<ChildWidget> = Object::new(&[("width", &&120), ("height", &&80)]);
         let child_id = child.id();
 
         widget.child(child);

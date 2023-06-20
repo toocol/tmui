@@ -50,14 +50,13 @@ impl ContainerImpl for SplitPane {
 }
 
 impl ContainerImplExt for SplitPane {
-    fn add_child<T>(&mut self, child: T)
+    fn add_child<T>(&mut self, mut child: Box<T>)
     where
         T: WidgetImpl,
     {
         if self.container.children.len() != 0 {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
-        let mut child = Box::new(child);
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
         let widget_ptr: Option<NonNull<dyn WidgetImpl>> = NonNull::new(child.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
@@ -148,7 +147,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: T);
+    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
 
     /// Split new widget up.
     ///
@@ -156,7 +155,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: T);
+    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
 
     /// Split new widget right.
     ///
@@ -164,7 +163,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: T);
+    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
 
     /// Split new widget down.
     ///
@@ -172,7 +171,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: T);
+    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
 
     /// Close the split pane, the widgets were splited from this pane will be closed automatically.
     ///
@@ -180,27 +179,27 @@ pub trait SplitPaneExt {
     fn close_pane(&mut self, id: u16);
 
     /// Common function of split().
-    fn split<T: WidgetImpl>(&mut self, id: u16, widget: T, ty: SplitType);
+    fn split<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>, ty: SplitType);
 }
 
 impl SplitPaneExt for SplitPane {
     #[inline]
-    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: T) {
+    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
         self.split(id, widget, SplitType::SplitLeft)
     }
 
     #[inline]
-    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: T) {
+    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
         self.split(id, widget, SplitType::SplitUp)
     }
 
     #[inline]
-    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: T) {
+    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
         self.split(id, widget, SplitType::SplitRight)
     }
 
     #[inline]
-    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: T) {
+    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
         self.split(id, widget, SplitType::SplitDown)
     }
 
@@ -266,14 +265,13 @@ impl SplitPaneExt for SplitPane {
         }
     }
 
-    fn split<T: WidgetImpl>(&mut self, id: u16, widget: T, ty: SplitType) {
+    fn split<T: WidgetImpl>(&mut self, id: u16, mut widget: Box<T>, ty: SplitType) {
         let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {
             NonNull::new(split_info.as_mut())
         } else {
             panic!("The widget with id {} is not exist in SplitPane.", id)
         };
 
-        let mut widget = Box::new(widget);
         ApplicationWindow::initialize_dynamic_component(self, widget.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
             widget.id(),

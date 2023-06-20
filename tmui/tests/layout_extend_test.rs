@@ -5,7 +5,7 @@ use tmui::{prelude::*, label::Label};
 #[derive(Childrenable)]
 struct TestWidget {
     #[children]
-    label: Label,
+    label: Box<Label>,
 }
 
 impl ObjectSubclass for TestWidget {
@@ -23,7 +23,7 @@ impl WidgetImpl for TestWidget {}
 
 #[test]
 fn main() {
-    let widget: TestWidget = Object::new(&[]);
+    let widget: Box<TestWidget> = Object::new(&[]);
     let children = widget.children();
     assert_eq!(1, children.len());
     let label_dyn = *children.first().unwrap();

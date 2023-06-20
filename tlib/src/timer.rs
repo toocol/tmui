@@ -28,7 +28,7 @@ lazy_static! {
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
     timers: RefCell<Box<HashMap<u16, Option<NonNull<Timer>>>>>,
-    once_timers: RefCell<Box<HashMap<u16, Timer>>>,
+    once_timers: RefCell<Box<HashMap<u16, Box<Timer>>>>,
 }
 
 impl TimerHub {
@@ -96,11 +96,11 @@ impl TimerHub {
             .insert(timer.id(), NonNull::new(timer));
     }
 
-    fn add_once_timer(&self, timer: Timer) -> RefMut<Timer> {
+    fn add_once_timer(&self, timer: Box<Timer>) -> RefMut<Timer> {
         let id = timer.id();
         self.once_timers.borrow_mut().insert(id, timer);
         RefMut::map(self.once_timers.borrow_mut(), |map| {
-            map.get_mut(&id).unwrap()
+            map.get_mut(&id).unwrap().as_mut()
         })
     }
 
@@ -130,7 +130,7 @@ impl Drop for Timer {
 
 impl Timer {
     /// Normal constructor to build a `Timer`
-    pub fn new() -> Self {
+    pub fn new() -> Box<Self> {
         Object::new(&[])
     }
 
@@ -261,7 +261,7 @@ mod tests {
 
         ACTIVATE.store(true, Ordering::SeqCst);
 
-        let mut widget: Widget = Object::new(&[]);
+        let mut widget: Box<Widget> = Object::new(&[]);
         let mut timer = Timer::new();
 
         connect!(timer, timeout(), widget, deal_num());

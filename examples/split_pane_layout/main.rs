@@ -23,7 +23,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut split_pane: SplitPaneLayout = Object::new(&[]);
+    let mut split_pane: Box<SplitPaneLayout> = Object::new(&[]);
     split_pane.width_request(window.size().width());
     split_pane.height_request(window.size().height());
 

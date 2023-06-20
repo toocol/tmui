@@ -15,14 +15,13 @@ use tlib::{
 #[extends(Container)]
 pub struct ScrollArea {
     #[derivative(Default(value = "Object::new(&[])"))]
-    scroll_bar: ScrollBar,
+    scroll_bar: Box<ScrollBar>,
     area: Option<Box<dyn WidgetImpl>>,
 }
 
 impl ScrollArea {
     #[inline]
-    pub fn set_area<T: WidgetImpl>(&mut self, area: T) {
-        let mut area = Box::new(area);
+    pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
         ApplicationWindow::initialize_dynamic_component(self, area.as_mut());
         self.area = Some(area)
     }
@@ -82,7 +81,7 @@ impl ObjectSubclass for ScrollArea {
 
 impl ObjectImpl for ScrollArea {
     fn initialize(&mut self) {
-        let scroll_bar_ptr = &mut self.scroll_bar as *mut dyn WidgetImpl;
+        let scroll_bar_ptr = self.scroll_bar.as_mut() as *mut dyn WidgetImpl;
         ApplicationWindow::initialize_dynamic_component(self, unsafe {
             scroll_bar_ptr.as_mut().unwrap()
         });
@@ -97,7 +96,7 @@ impl WidgetImpl for ScrollArea {
 
 impl ContainerImpl for ScrollArea {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        let mut children: Vec<&dyn WidgetImpl> = vec![&self.scroll_bar];
+        let mut children: Vec<&dyn WidgetImpl> = vec![self.scroll_bar.as_ref()];
         if self.area.is_some() {
             children.push(self.area.as_ref().unwrap().as_ref())
         }
@@ -105,7 +104,7 @@ impl ContainerImpl for ScrollArea {
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-        let mut children: Vec<&mut dyn WidgetImpl> = vec![&mut self.scroll_bar];
+        let mut children: Vec<&mut dyn WidgetImpl> = vec![self.scroll_bar.as_mut()];
         if self.area.is_some() {
             children.push(self.area.as_mut().unwrap().as_mut())
         }
@@ -114,7 +113,7 @@ impl ContainerImpl for ScrollArea {
 }
 
 impl ContainerImplExt for ScrollArea {
-    fn add_child<T>(&mut self, _: T)
+    fn add_child<T>(&mut self, _: Box<T>)
     where
         T: WidgetImpl,
     {

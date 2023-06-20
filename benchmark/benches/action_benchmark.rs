@@ -53,14 +53,14 @@ fn test_action_string(widget: &Widget) {
     )
 }
 
-fn test_emit_action(widget: &[Widget], idx: usize) {
+fn test_emit_action(widget: &[Box<Widget>], idx: usize) {
     emit!(
         widget[idx].action_benchmark_string(),
         "action benchmark string param"
     )
 }
 
-fn test_disconnect(widget: &[Widget], idx: usize) {
+fn test_disconnect(widget: &[Box<Widget>], idx: usize) {
     disconnect!(null, null, widget[idx], null);
 }
 
@@ -69,7 +69,7 @@ fn criterion_values(c: &mut Criterion) {
     action_hub.initialize();
     ACTIVATE.store(true, Ordering::SeqCst);
 
-    let widget: Widget = Object::new(&[]);
+    let widget: Box<Widget> = Object::new(&[]);
     widget.connect(
         widget.action_benchmark_tuple(),
         widget.id(),
@@ -99,7 +99,7 @@ fn criterion_values(c: &mut Criterion) {
 
     let mut widgets = vec![];
     for _ in 0..10000usize {
-        let mut widget: Widget = Object::new(&[]);
+        let mut widget: Box<Widget> = Object::new(&[]);
         for _ in 0..100usize {
             connect!(
                 widget,

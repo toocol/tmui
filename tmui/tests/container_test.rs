@@ -10,8 +10,7 @@ pub struct TestContainer {
     #[derivative(Default(value = "99"))]
     _num: i32,
     #[children]
-    // #[derivative(Default(value = "Object::new(&[])"))]
-    _label: Label,
+    _label: Box<Label>,
 }
 
 impl ObjectSubclass for TestContainer {
@@ -37,11 +36,11 @@ impl ContainerImpl for TestContainer {
 }
 
 impl ContainerImplExt for TestContainer {
-    fn add_child<T>(&mut self, child: T)
+    fn add_child<T>(&mut self, child: Box<T>)
     where
         T: WidgetImpl,
     {
-        self.container.children.push(Box::new(child))
+        self.container.children.push(child)
     }
 }
 
@@ -58,9 +57,9 @@ fn main() {
     let r = TypeRegistry::instance();
     let mut c = Object::new::<TestContainer>(&[]);
     c.inner_type_register(r);
-    cast_test(&c);
-    cast_mut_test(&mut c);
-    cast_boxed_test(Box::new(c));
+    cast_test(c.as_ref());
+    cast_mut_test(c.as_mut());
+    cast_boxed_test(c);
 }
 
 fn cast_test(widget: &dyn WidgetImpl) {
