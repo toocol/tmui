@@ -1,3 +1,4 @@
+use lazy_static::__Deref;
 use skia_safe::{
     self,
     font::Edging,
@@ -10,7 +11,7 @@ use FontWidth::*;
 /////////////////////////////////////////////////////////////////////////////////////////
 /// [`Font`]
 /////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, Default, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Font {
     force_auto_hinting: bool,
     embedded_bitmaps: bool,
@@ -26,7 +27,15 @@ pub struct Font {
     skew_x: f32,
 }
 
+impl Default for Font {
+    #[inline]
+    fn default() -> Self {
+        skia_safe::Font::default().into()
+    }
+}
+
 impl Into<skia_safe::Font> for Font {
+    #[inline]
     fn into(self) -> skia_safe::Font {
         let mut font = skia_safe::Font::default();
         font.set_force_auto_hinting(self.is_force_auto_hinting());
@@ -47,7 +56,47 @@ impl Into<skia_safe::Font> for Font {
     }
 }
 
+impl Into<Font> for skia_safe::Font {
+    #[inline]
+    fn into(self) -> Font {
+        let mut font = Font::new();
+        font.set_force_auto_hinting(self.is_force_auto_hinting());
+        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+        font.set_subpixel(self.is_subpixel());
+        font.set_linear_metrics(self.is_linear_metrics());
+        font.set_embolden(self.is_embolden());
+        font.set_baseline_snap(self.is_baseline_snap());
+        font.set_edging(self.edging().into());
+        font.set_hinting(self.hinting().into());
+        if let Some(typeface) = self.typeface() {
+            font.set_typeface(typeface.into());
+        }
+        font.set_size(self.size());
+        font.set_scale_x(self.scale_x());
+        font.set_skew_x(self.skew_x());
+        font
+    }
+}
+
 impl Font {
+    #[inline]
+    fn new() -> Self {
+        Self {
+            force_auto_hinting: Default::default(),
+            embedded_bitmaps: Default::default(),
+            subpixel: Default::default(),
+            linear_metrics: Default::default(),
+            embolden: Default::default(),
+            baseline_snap: Default::default(),
+            edging: Default::default(),
+            hinting: Default::default(),
+            typeface: Default::default(),
+            size: Default::default(),
+            scale_x: Default::default(),
+            skew_x: Default::default(),
+        }
+    }
+
     #[inline]
     pub fn set_force_auto_hinting(&mut self, force_auto_hinting: bool) {
         self.force_auto_hinting = force_auto_hinting
@@ -112,8 +161,8 @@ impl Font {
     }
 
     #[inline]
-    pub fn set_hinting(&mut self, hiting: FontHinting) {
-        self.hinting = hiting
+    pub fn set_hinting(&mut self, hinting: FontHinting) {
+        self.hinting = hinting
     }
     #[inline]
     pub fn hinting(&self) -> FontHinting {
@@ -242,6 +291,19 @@ impl Into<Typeface> for FontTypeface {
     }
 }
 
+impl Into<FontTypeface> for Typeface {
+    #[inline]
+    fn into(self) -> FontTypeface {
+        let font_style = self.font_style();
+        FontTypeface::builder()
+            .family(self.family_name())
+            .weight(font_style.weight().into())
+            .width(font_style.width().into())
+            .italic(font_style.slant() == Slant::Italic)
+            .build()
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 /// [`FontTypefaceBuilder`] Builder to create `FontTypeface`
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -320,6 +382,7 @@ pub enum FontWeight {
     ExtraBold,
     Black,
     ExtraBlack,
+    Custom(i32),
 }
 
 impl Into<Weight> for FontWeight {
@@ -337,6 +400,27 @@ impl Into<Weight> for FontWeight {
             ExtraBold => Weight::EXTRA_BOLD,
             Black => Weight::BLACK,
             ExtraBlack => Weight::EXTRA_BLACK,
+            Self::Custom(x) => Weight::from(x),
+        }
+    }
+}
+
+impl Into<FontWeight> for Weight {
+    #[inline]
+    fn into(self) -> FontWeight {
+        match self {
+            Weight::INVISIBLE => Invisible,
+            Weight::THIN => Thin,
+            Weight::EXTRA_LIGHT => ExtraLight,
+            Weight::LIGHT => Light,
+            Weight::NORMAL => FontWeight::Normal,
+            Weight::MEDIUM => Medium,
+            Weight::SEMI_BOLD => SemiBold,
+            Weight::BOLD => Bold,
+            Weight::EXTRA_BOLD => ExtraBold,
+            Weight::BLACK => Black,
+            Weight::EXTRA_BLACK => ExtraBlack,
+            _ => FontWeight::Custom(*self.deref()),
         }
     }
 }
@@ -357,6 +441,7 @@ pub enum FontWidth {
     Expanded,
     ExtraExpanded,
     UltraExpanded,
+    Custom(i32),
 }
 
 impl Into<Width> for FontWidth {
@@ -372,6 +457,25 @@ impl Into<Width> for FontWidth {
             Expanded => Width::EXPANDED,
             ExtraExpanded => Width::EXTRA_EXPANDED,
             UltraExpanded => Width::ULTRA_EXPANDED,
+            Self::Custom(x) => Width::from(x),
+        }
+    }
+}
+
+impl Into<FontWidth> for Width {
+    #[inline]
+    fn into(self) -> FontWidth {
+        match self {
+            Width::ULTRA_CONDENSED => UltraCondensed,
+            Width::EXTRA_CONDENSED => ExtraCondensed,
+            Width::CONDENSED => Condensed,
+            Width::SEMI_CONDENSED => SemiCondensed,
+            Width::NORMAL => FontWidth::Normal,
+            Width::SEMI_EXPANDED => SemiExpanded,
+            Width::EXPANDED => Expanded,
+            Width::EXTRA_EXPANDED => ExtraExpanded,
+            Width::ULTRA_EXPANDED => UltraExpanded,
+            _ => FontWidth::Custom(*self.deref()),
         }
     }
 }
@@ -395,6 +499,17 @@ impl Into<Edging> for FontEdging {
             Self::Alias => Edging::Alias,
             Self::AntiAlias => Edging::AntiAlias,
             Self::SubpixelAntiAlias => Edging::SubpixelAntiAlias,
+        }
+    }
+}
+
+impl Into<FontEdging> for Edging {
+    #[inline]
+    fn into(self) -> FontEdging {
+        match self {
+            Edging::Alias => FontEdging::Alias,
+            Edging::AntiAlias => FontEdging::AntiAlias,
+            Edging::SubpixelAntiAlias => FontEdging::SubpixelAntiAlias,
         }
     }
 }
@@ -424,9 +539,21 @@ impl Into<skia_safe::FontHinting> for FontHinting {
     }
 }
 
+impl Into<FontHinting> for skia_safe::FontHinting {
+    #[inline]
+    fn into(self) -> FontHinting {
+        match self {
+            skia_safe::FontHinting::None => FontHinting::None,
+            skia_safe::FontHinting::Slight => FontHinting::Slight,
+            skia_safe::FontHinting::Normal => FontHinting::Normal,
+            skia_safe::FontHinting::Full => FontHinting::Full,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::FontTypeface;
+    use super::{Font, FontTypeface};
 
     #[test]
     fn test_font_typeface() {
@@ -440,5 +567,10 @@ mod tests {
         let typeface: skia_safe::Typeface = typeface.into();
         assert!(typeface.is_bold());
         assert!(typeface.is_italic());
+    }
+
+    #[test]
+    fn test_font() {
+        let _font = Font::default();
     }
 }
