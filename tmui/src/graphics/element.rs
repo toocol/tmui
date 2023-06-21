@@ -1,3 +1,5 @@
+use crate::application_window::current_window_id;
+
 use super::{drawing_context::DrawingContext, board::Board};
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
@@ -21,7 +23,13 @@ impl ObjectSubclass for Element {
 impl ObjectImpl for Element {
     fn construct(&mut self) {
         self.parent_construct();
+
         self.update();
+
+        let try_window_id = current_window_id();
+        if try_window_id != 0 {
+            self.window_id = try_window_id
+        }
     }
 }
 
