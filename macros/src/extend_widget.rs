@@ -405,6 +405,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn map_to_widget(&self, point: &Point) -> Point {
                 self.#(#widget_path).*.map_to_widget(point)
             }
+
+            #[inline]
+            fn mouse_tracking(&self) -> bool {
+                self.#(#widget_path).*.mouse_tracking()
+            }
+
+            #[inline]
+            fn set_mouse_tracking(&mut self, is_tracking: bool) {
+                self.#(#widget_path).*.set_mouse_tracking(is_tracking)
+            }
         }
 
         impl WidgetImplExt for #name {

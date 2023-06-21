@@ -39,6 +39,9 @@ pub struct Widget {
     border_style: BorderStyle,
     #[derivative(Default(value = "Color::BLACK"))]
     border_color: Color,
+
+    /// Let the widget track the `MouseMoveEvent`, the default value was false.
+    mouse_tracking: bool,
 }
 
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
@@ -507,6 +510,16 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::map_to_widget) (Defined in [`WidgetExt`])
     fn map_to_widget(&self, point: &Point) -> Point;
+
+    /// The widget tracking the `MouseMoveEvent` or not.
+    ///
+    /// Go to[`Function defination`](WidgetExt::mouse_tracking) (Defined in [`WidgetExt`])
+    fn mouse_tracking(&self) -> bool;
+
+    /// Set the `mouse_tracking` status of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
+    fn set_mouse_tracking(&mut self, is_tracking: bool);
 }
 
 impl WidgetExt for Widget {
@@ -942,6 +955,16 @@ impl WidgetExt for Widget {
     fn map_to_widget(&self, point: &Point) -> Point {
         let contents_rect = self.contents_rect(None);
         Point::new(point.x() - contents_rect.x(), point.y() - contents_rect.y())
+    }
+
+    #[inline]
+    fn mouse_tracking(&self) -> bool {
+        self.mouse_tracking
+    }
+
+    #[inline]
+    fn set_mouse_tracking(&mut self, is_tracking: bool) {
+        self.mouse_tracking = is_tracking
     }
 }
 

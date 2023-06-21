@@ -27,6 +27,7 @@ impl ObjectImpl for SplitPaneLayout {
         label.set_background(Color::RED);
         label.set_content_halign(Align::Center);
         label.set_content_valign(Align::Center);
+        label.set_mouse_tracking(true);
         self.left = label.id();
         self.add_child(label);
 
