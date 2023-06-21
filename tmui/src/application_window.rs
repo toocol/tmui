@@ -275,6 +275,9 @@ impl ApplicationWindow {
                     let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
 
                     if widget.point_effective(&evt.position().into()) {
+                        if !widget.mouse_tracking() {
+                            break;
+                        }
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_move(evt.as_ref());
