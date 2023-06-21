@@ -2,6 +2,7 @@ pub use std::cell::Ref;
 pub use tlib::prelude::*;
 pub use tlib::signal;
 
+pub use crate::application_window::current_window_id;
 pub use crate::container::{
     Container, ContainerAcquire, ContainerImpl, ContainerImplExt, ContainerPointEffective,
     ReflectContainerImpl,

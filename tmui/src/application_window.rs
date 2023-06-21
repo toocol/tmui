@@ -8,6 +8,7 @@ use crate::{
 use log::debug;
 use once_cell::sync::Lazy;
 use std::{
+    cell::RefCell,
     collections::{HashMap, VecDeque},
     ptr::NonNull,
     sync::Once,
@@ -20,6 +21,10 @@ use tlib::{
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
 };
+
+thread_local! {
+    pub static WINDOW_ID: RefCell<u16> = RefCell::new(0);
+}
 
 static INIT: Once = Once::new();
 
@@ -50,6 +55,7 @@ impl ObjectImpl for ApplicationWindow {
     fn initialize(&mut self) {
         connect!(self, size_changed(), self, when_size_change(Size));
         self.set_window_id(self.id());
+        WINDOW_ID.with(|id| *id.borrow_mut() = self.id());
         child_initialize(self, self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
     }
@@ -381,6 +387,12 @@ impl ApplicationWindow {
         widget.set_initialized(true);
         widget.initialize();
     }
+}
+
+/// Get window id in current ui thread.
+#[inline]
+pub fn current_window_id() -> u16 {
+    WINDOW_ID.with(|id| *id.borrow())
 }
 
 fn child_initialize(
