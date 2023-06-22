@@ -5,15 +5,22 @@ use crate::{
     prelude::*,
 };
 use tlib::object::{ObjectImpl, ObjectSubclass};
+use log::warn;
 
 #[extends(Container)]
-pub struct Stack {}
+pub struct Stack {
+    current_index: usize,
+}
 
 impl ObjectSubclass for Stack {
     const NAME: &'static str = "Stack";
 }
 
-impl ObjectImpl for Stack {}
+impl ObjectImpl for Stack {
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Stack, ReflectStackTrait>();
+    }
+}
 
 impl WidgetImpl for Stack {}
 
@@ -37,6 +44,11 @@ impl ContainerImplExt for Stack {
         T: WidgetImpl,
     {
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        if self.current_index == self.container.children.len() {
+            child.show()
+        } else {
+            child.hide()
+        }
         self.container.children.push(child);
         self.update();
     }
@@ -72,16 +84,69 @@ impl ContainerLayout for Stack {
 
         // deal with the children's position
         let widget_ptr = widget as *const dyn WidgetImpl;
-        let mut previous = unsafe { widget_ptr.as_ref().unwrap() };
-        for child in widget.children_mut().into_iter() {
+        let previous = unsafe { widget_ptr.as_ref().unwrap() };
+
+        let stack_trait_obj = cast!(widget as StackTrait).unwrap();
+        let index = stack_trait_obj.current_index();
+
+        if let Some(child) = widget.children_mut().get_mut(index) {
             child.position_layout(previous, previous, true);
-            previous = child;
         }
     }
 }
 
 impl Stack {
+    #[inline]
     pub fn new() -> Box<Self> {
         Object::new(&[])
+    }
+}
+
+#[reflect_trait]
+pub trait StackTrait {
+    fn current_index(&self) -> usize;
+
+    fn switch(&mut self);
+
+    fn switch_index(&mut self, index: usize);
+}
+impl StackTrait for Stack {
+    #[inline]
+    fn current_index(&self) -> usize {
+        self.current_index
+    }
+
+    #[inline]
+    fn switch(&mut self) {
+        let index = self.current_index;
+        self.children_mut().get_mut(index).unwrap().hide();
+
+        self.current_index += 1;
+        if self.current_index == self.container.children.len() {
+            self.current_index = 0;
+        }
+        
+        let index = self.current_index;
+        self.children_mut().get_mut(index).unwrap().show();
+
+        ApplicationWindow::window_of(self.window_id()).layout_change(self);
+        self.update()
+    }
+
+    #[inline]
+    fn switch_index(&mut self, index: usize) {
+        if index >= self.container.children.len() {
+            warn!("`index` overrange, skip the `switch_index()`, max {}, get {}", self.container.children.len() - 1, index);
+            return
+        }
+        let old_index = self.current_index;
+        self.children_mut().get_mut(old_index).unwrap().hide();
+
+        self.current_index = index;
+
+        self.children_mut().get_mut(index).unwrap().show();
+
+        ApplicationWindow::window_of(self.window_id()).layout_change(self);
+        self.update()
     }
 }
