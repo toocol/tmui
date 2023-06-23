@@ -32,7 +32,7 @@
 //!     let mut action_hub = ActionHub::new();
 //!     action_hub.initialize();
 //!
-//!     let mut widget: Widget = Object::new(&[]);
+//!     let mut widget: Box<Widget> = Object::new(&[]);
 //!     connect!(widget, action_test(), widget, slot());
 //!     emit!(widget.action_test());
 //! }
