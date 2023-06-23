@@ -9,12 +9,14 @@ mod extend_widget;
 mod layout;
 mod reflect_trait;
 mod split_pane;
+mod stack;
 mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use syn::{self, parse_macro_input, DeriveInput};
 use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
@@ -168,6 +170,24 @@ pub fn cast_mut(input: TokenStream) -> TokenStream {
 pub fn cast_boxed(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as CastInfo);
     match ast.expand_boxed() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn split_pane_impl(input: TokenStream) -> TokenStream {
+    let ident = parse_macro_input!(input as Ident);
+    match split_pane::generate_split_pane_impl(&ident, "crate") {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn stack_impl(input: TokenStream) -> TokenStream {
+    let ident = parse_macro_input!(input as Ident);
+    match stack::generate_stack_impl(&ident, "crate") {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }

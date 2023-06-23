@@ -23,7 +23,8 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
     })
 }
 
-pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::Result<proc_macro2::TokenStream> {
+    let use_prefix = Ident::new(use_prefix, name.span());
     Ok(quote! {
         impl SplitInfosGetter for #name {
             fn split_infos(&mut self) -> &mut std::collections::HashMap<u16, Box<SplitInfo>> {
@@ -57,9 +58,9 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
             }
 
             fn close_pane(&mut self, id: u16) {
-                use tmui::application_window::ApplicationWindow;
-                use tmui::{split_widget, split_from};
-                use tmui::tlib::nonnull_mut;
+                use #use_prefix::application_window::ApplicationWindow;
+                use #use_prefix::{split_widget, split_from};
+                use #use_prefix::tlib::nonnull_mut;
                 use std::ptr::NonNull;
                 use std::collections::VecDeque;
 
@@ -125,9 +126,9 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
             }
 
             fn split<T: WidgetImpl>(&mut self, id: u16, mut widget: Box<T>, ty: SplitType) {
-                use tmui::application_window::ApplicationWindow;
-                use tmui::{split_widget, split_from};
-                use tmui::tlib::nonnull_mut;
+                use #use_prefix::application_window::ApplicationWindow;
+                use #use_prefix::{split_widget, split_from};
+                use #use_prefix::tlib::nonnull_mut;
                 use std::ptr::NonNull;
 
                 let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {

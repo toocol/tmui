@@ -4,8 +4,7 @@ use crate::{
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
 };
-use tlib::object::{ObjectImpl, ObjectSubclass};
-use log::warn;
+use tlib::{object::{ObjectImpl, ObjectSubclass}, stack_impl};
 
 #[extends(Container)]
 pub struct Stack {
@@ -110,43 +109,4 @@ pub trait StackTrait {
 
     fn switch_index(&mut self, index: usize);
 }
-impl StackTrait for Stack {
-    #[inline]
-    fn current_index(&self) -> usize {
-        self.current_index
-    }
-
-    #[inline]
-    fn switch(&mut self) {
-        let index = self.current_index;
-        self.children_mut().get_mut(index).unwrap().hide();
-
-        self.current_index += 1;
-        if self.current_index == self.container.children.len() {
-            self.current_index = 0;
-        }
-        
-        let index = self.current_index;
-        self.children_mut().get_mut(index).unwrap().show();
-
-        ApplicationWindow::window_of(self.window_id()).layout_change(self);
-        self.update()
-    }
-
-    #[inline]
-    fn switch_index(&mut self, index: usize) {
-        if index >= self.container.children.len() {
-            warn!("`index` overrange, skip the `switch_index()`, max {}, get {}", self.container.children.len() - 1, index);
-            return
-        }
-        let old_index = self.current_index;
-        self.children_mut().get_mut(old_index).unwrap().hide();
-
-        self.current_index = index;
-
-        self.children_mut().get_mut(index).unwrap().show();
-
-        ApplicationWindow::window_of(self.window_id()).layout_change(self);
-        self.update()
-    }
-}
+stack_impl!(Stack);

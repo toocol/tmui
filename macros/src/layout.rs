@@ -1,6 +1,7 @@
 use crate::{
     extend_container,
     split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
+    stack::{generate_stack_add_child, generate_stack_impl},
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -117,73 +118,18 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             }
         }
         (true, false) => generate_split_pane_add_child()?,
-        (false, true) => {
-            quote! {
-                use tmui::application_window::ApplicationWindow;
-                ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
-                if self.current_index == self.container.children.len() {
-                    child.show()
-                } else {
-                    child.hide()
-                }
-                self.container.children.push(child);
-                self.update();
-            }
-        }
+        (false, true) => generate_stack_add_child()?,
         _ => unreachable!(),
     };
 
     let impl_split_pane = if is_split_pane {
-        generate_split_pane_impl(name)?
+        generate_split_pane_impl(name, "tmui")?
     } else {
         proc_macro2::TokenStream::new()
     };
 
     let impl_stack_trait = if is_stack {
-        quote!(
-            impl StackTrait for #name {
-                #[inline]
-                fn current_index(&self) -> usize {
-                    self.current_index
-                }
-
-                #[inline]
-                fn switch(&mut self) {
-                    use tmui::application_window::ApplicationWindow;
-                    let index = self.current_index;
-                    self.children_mut().get_mut(index).unwrap().hide();
-
-                    self.current_index += 1;
-                    if self.current_index == self.container.children.len() {
-                        self.current_index = 0;
-                    }
-
-                    let index = self.current_index;
-                    self.children_mut().get_mut(index).unwrap().show();
-
-                    ApplicationWindow::window_of(self.window_id()).layout_change(self);
-                    self.update()
-                }
-
-                #[inline]
-                fn switch_index(&mut self, index: usize) {
-                    use tmui::application_window::ApplicationWindow;
-                    if index >= self.container.children.len() {
-                        log::warn!("`index` overrange, skip the `switch_index()`, max {}, get {}", self.container.children.len() - 1, index);
-                        return
-                    }
-                    let old_index = self.current_index;
-                    self.children_mut().get_mut(old_index).unwrap().hide();
-
-                    self.current_index = index;
-
-                    self.children_mut().get_mut(index).unwrap().show();
-
-                    ApplicationWindow::window_of(self.window_id()).layout_change(self);
-                    self.update()
-                }
-            }
-        )
+        generate_stack_impl(name, "tmui")?
     } else {
         proc_macro2::TokenStream::new()
     };
