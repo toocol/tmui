@@ -10,6 +10,7 @@ use std::sync::{
     Arc,
 };
 use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
+use tlib::{figure::Rect, prelude::*, reflect_trait};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -153,5 +154,48 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSl
 {
     fn proc_ipc_slave(&mut self, slave: tipc::ipc_slave::IpcSlave<T, M>) {
         self.slave = Some(Arc::new(slave))
+    }
+}
+
+#[reflect_trait]
+pub trait IpcContext {
+    fn add_region(&mut self, rect: Rect);
+}
+
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> AsAny for PlatformIpc<T, M> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
+
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Reflect
+    for PlatformIpc<T, M>
+{
+    fn as_reflect(&self) -> &dyn Reflect {
+        self
+    }
+
+    fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
+        self
+    }
+
+    fn as_reflect_boxed(self: Box<Self>) -> Box<dyn Reflect> {
+        self
+    }
+}
+
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcContext
+    for PlatformIpc<T, M>
+{
+    fn add_region(&mut self, rect: Rect) {
+        todo!()
     }
 }
