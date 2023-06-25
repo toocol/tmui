@@ -520,6 +520,8 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_mouse_tracking(&mut self, is_tracking: bool);
+
+    fn parent_run_after(&mut self);
 }
 
 impl WidgetExt for Widget {
@@ -966,6 +968,11 @@ impl WidgetExt for Widget {
     fn set_mouse_tracking(&mut self, is_tracking: bool) {
         self.mouse_tracking = is_tracking
     }
+
+    #[inline]
+    fn parent_run_after(&mut self) {
+        println!("Widget parent run after")
+    }
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -1156,6 +1163,12 @@ pub trait WidgetImpl:
 
     /// Invoke when widget's font was changed.
     fn font_changed(&mut self) {}
+
+    /// `run_after()` will be invoked when application was started. <br>
+    /// Should annotated macro `[run_after]` to enable this function.
+    fn run_after(&mut self) {
+        self.parent_run_after();
+    }
 
     /// Invoke when widget's receive mouse pressed event.
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {}

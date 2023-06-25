@@ -13,7 +13,7 @@ use crate::{
         shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
-    },
+    }, widget::WidgetImpl,
 };
 use lazy_static::lazy_static;
 use log::debug;
@@ -295,6 +295,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         window.register_window(output_sender);
         window.initialize();
         window.activate();
+        window.run_after();
 
         let mut cpu_balance = CpuBalance::new();
         let mut last_frame = Instant::now();

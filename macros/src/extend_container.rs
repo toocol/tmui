@@ -98,7 +98,7 @@ pub(crate) fn expand(
             )?;
 
             let widget_trait_impl_clause =
-                extend_widget::gen_widget_trait_impl_clause(name, vec!["container", "widget"])?;
+                extend_widget::gen_widget_trait_impl_clause(name, Some("container"), vec!["container", "widget"])?;
 
             let mut children_construct_clause = proc_macro2::TokenStream::new();
             if impl_children_construct {
@@ -147,7 +147,7 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl InnerTypeRegister for #name {
+                impl InnerInitializer for #name {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();

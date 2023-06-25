@@ -7,7 +7,7 @@ use tmui::{
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shared_inf";
+pub const IPC_NAME: &'static str = "shmem_app";
 
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {

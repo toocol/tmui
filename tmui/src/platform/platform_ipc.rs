@@ -10,7 +10,7 @@ use std::sync::{
     Arc,
 };
 use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
-use tlib::{figure::Rect, prelude::*, reflect_trait};
+use tlib::figure::Rect;
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -59,12 +59,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let region = slave.region();
         let front_bitmap = Bitmap::new(
             slave.buffer_raw_pointer(),
-            region.width() as u32,
-            region.height() as u32,
+            slave.width(),
+            slave.height(),
         );
+
+        self.width = slave.width();
+        self.height = slave.height();
 
         self.bitmap = Some(front_bitmap);
     }
@@ -132,6 +134,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
     fn redraw(&mut self) {}
 
     #[inline]
@@ -147,6 +150,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             slave.signal()
         }
     }
+
+    #[inline]
+    fn add_shared_region(&self, _: Rect) {}
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>
@@ -154,48 +160,5 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSl
 {
     fn proc_ipc_slave(&mut self, slave: tipc::ipc_slave::IpcSlave<T, M>) {
         self.slave = Some(Arc::new(slave))
-    }
-}
-
-#[reflect_trait]
-pub trait IpcContext {
-    fn add_region(&mut self, rect: Rect);
-}
-
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> AsAny for PlatformIpc<T, M> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-}
-
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Reflect
-    for PlatformIpc<T, M>
-{
-    fn as_reflect(&self) -> &dyn Reflect {
-        self
-    }
-
-    fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
-        self
-    }
-
-    fn as_reflect_boxed(self: Box<Self>) -> Box<dyn Reflect> {
-        self
-    }
-}
-
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcContext
-    for PlatformIpc<T, M>
-{
-    fn add_region(&mut self, rect: Rect) {
-        todo!()
     }
 }

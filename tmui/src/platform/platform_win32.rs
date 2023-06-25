@@ -21,6 +21,7 @@ use std::{
     },
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
+use tlib::figure::Rect;
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -221,6 +222,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn signal(&self) {
         if let Some(ref master) = self.master {
             master.signal()
+        }
+    }
+
+    #[inline]
+    fn add_shared_region(&self, rect: Rect) {
+        if let Some(ref master) = self.master {
+            master.add_rect(rect)
         }
     }
 }

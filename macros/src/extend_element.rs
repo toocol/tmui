@@ -48,7 +48,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     }
                 }
 
-                impl InnerTypeRegister for #name {
+                impl InnerInitializer for #name {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectElementImpl>();

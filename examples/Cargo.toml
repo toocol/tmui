@@ -30,6 +30,10 @@ name = "layout_widget"
 path = "layout_widget/main.rs"
 
 [[bin]]
+name = "run_after"
+path = "run_after/main.rs"
+
+[[bin]]
 name = "scrolled"
 path = "scrolled/main.rs"
 

@@ -98,7 +98,17 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     }
 
     #[inline]
-    fn region(&self) -> Rect {
-        self.slave_context.shared_info().region.as_rect()
+    fn regions(&self) -> &[Rect] {
+        &self.slave_context.shared_info().regions
+    }
+
+    #[inline]
+    fn width(&self) -> u32 {
+        self.slave_context.width()
+    }
+
+    #[inline]
+    fn height(&self) -> u32 {
+        self.slave_context.height()
     }
 }

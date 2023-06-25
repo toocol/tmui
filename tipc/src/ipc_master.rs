@@ -27,6 +27,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
             master_context: master_context,
         }
     }
+
+    pub fn add_rect(&self, rect: Rect) {
+        self.master_context.shared_info().regions.push(rect)
+    }
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> Drop for IpcMaster<T, M> {
@@ -101,7 +105,17 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     }
 
     #[inline]
-    fn region(&self) -> Rect {
-        self.master_context.shared_info().region.as_rect()
+    fn regions(&self) -> &[Rect] {
+        &self.master_context.shared_info().regions
+    }
+
+    #[inline]
+    fn width(&self) -> u32 {
+        self.master_context.width()
+    }
+
+    #[inline]
+    fn height(&self) -> u32 {
+        self.master_context.height()
     }
 }

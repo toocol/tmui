@@ -133,5 +133,9 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
 
     fn signal(&self);
 
-    fn region(&self) -> Rect;
+    fn regions(&self) -> &[Rect];
+
+    fn width(&self) -> u32;
+
+    fn height(&self) -> u32;
 }

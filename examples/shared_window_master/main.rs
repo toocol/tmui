@@ -2,7 +2,7 @@ use std::{time::Instant, sync::atomic::AtomicI32};
 use tmui::{application::Application, application_window::ApplicationWindow};
 use log::info;
 
-pub const IPC_NAME: &'static str = "shared_inf";
+pub const IPC_NAME: &'static str = "shmem_app";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]

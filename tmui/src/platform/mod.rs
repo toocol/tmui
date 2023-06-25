@@ -15,6 +15,7 @@ pub(crate) use platform_ipc::*;
 pub(crate) use platform_macos::*;
 #[cfg(target_os = "windows")]
 pub(crate) use platform_win32::*;
+use tlib::figure::Rect;
 
 use self::window_context::WindowContext;
 
@@ -78,4 +79,7 @@ pub(crate) trait PlatformContext: 'static {
     ///
     /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
     fn signal(&self);
+
+    /// For shared-memory application, add shared region rect
+    fn add_shared_region(&self, rect: Rect);
 }

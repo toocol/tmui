@@ -1,11 +1,10 @@
 use crate::{
-    graphics::{board::Board, painter::Painter},
+    graphics::board::Board,
     layout::LayoutManager,
     platform::{window_context::OutputSender, Message},
     prelude::*,
     widget::{WidgetImpl, WidgetSignals},
 };
-use log::debug;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
@@ -34,6 +33,7 @@ pub struct ApplicationWindow {
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
     widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
+    run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
 
     activated: bool,
     focused_widget: u16,
@@ -44,14 +44,6 @@ impl ObjectSubclass for ApplicationWindow {
 }
 
 impl ObjectImpl for ApplicationWindow {
-    fn construct(&mut self) {
-        self.parent_construct();
-        debug!(
-            "`ApplicationWindow` construct: static_type: {}",
-            Self::static_type().name()
-        )
-    }
-
     fn initialize(&mut self) {
         connect!(self, size_changed(), self, when_size_change(Size));
         self.set_window_id(self.id());
@@ -62,7 +54,13 @@ impl ObjectImpl for ApplicationWindow {
 }
 
 impl WidgetImpl for ApplicationWindow {
-    fn paint(&mut self, mut _painter: Painter) {}
+    #[inline]
+    fn run_after(&mut self) {
+        for widget in self.run_afters.iter_mut() {
+            nonnull_mut!(widget).run_after()
+        }
+        self.run_afters.clear();
+    }
 }
 
 type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);
@@ -97,6 +95,12 @@ impl ApplicationWindow {
     pub(crate) fn layout_of(id: u16) -> &'static mut LayoutManager {
         let window = Self::window_of(id);
         &mut window.layout_manager
+    }
+
+    #[inline]
+    pub fn run_afters_of(id: u16) -> &'static mut Vec<Option<NonNull<dyn WidgetImpl>>> {
+        let window = Self::window_of(id);
+        &mut window.run_afters
     }
 
     #[inline]
@@ -443,6 +447,7 @@ fn child_initialize(
 
         child_ref.set_initialized(true);
         child_ref.initialize();
+        child_ref.inner_initialize();
 
         child = children.pop_front().take().map_or(None, |widget| widget);
     }

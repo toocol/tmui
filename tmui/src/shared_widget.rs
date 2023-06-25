@@ -1,14 +1,17 @@
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::Ordering;
+
 use crate::{
-    application,
+    application::{self, PLATFORM_CONTEXT},
     prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
+    tlib::{
+        object::{ObjectImpl, ObjectSubclass},
+        run_after,
+    },
     widget::WidgetImpl,
 };
 
-static COUNTER: AtomicU8 = AtomicU8::new(0);
-
 #[extends(Widget)]
+#[run_after]
 pub struct SharedWidget {}
 
 impl ObjectSubclass for SharedWidget {
@@ -21,13 +24,13 @@ impl ObjectImpl for SharedWidget {
             panic!("`SharedWidget` can only used in shared memory application.");
         }
 
-        if COUNTER.load(Ordering::Acquire) > 0 {
-            panic!("Only support one `SharedWidget` in application.");
-        }
-        COUNTER.fetch_add(1, Ordering::Release);
-
         self.parent_construct();
     }
 }
 
-impl WidgetImpl for SharedWidget {}
+impl WidgetImpl for SharedWidget {
+    fn run_after(&mut self) {
+        let platform_context = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
+        platform_context.add_shared_region(self.rect());
+    }
+}
