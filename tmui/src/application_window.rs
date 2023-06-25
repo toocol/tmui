@@ -1,7 +1,7 @@
 use crate::{
     graphics::board::Board,
     layout::LayoutManager,
-    platform::{window_context::OutputSender, Message},
+    platform::{window_context::OutputSender, Message, PlatformType},
     prelude::*,
     widget::{WidgetImpl, WidgetSignals},
 };
@@ -29,11 +29,13 @@ static INIT: Once = Once::new();
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    platform_type: PlatformType,
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
     widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
     run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
+    base_offset: Point,
 
     activated: bool,
     focused_widget: u16,
@@ -67,10 +69,11 @@ type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);
 
 impl ApplicationWindow {
     #[inline]
-    pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
+    pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =
             Object::new(&[("width", &width), ("height", &height)]);
+        window.platform_type = platform_type;
         Self::windows().insert(window.id(), (thread_id, NonNull::new(window.as_mut())));
         window
     }
@@ -145,6 +148,11 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn base_offset(&self) -> Point {
+        self.base_offset
+    }
+
+    #[inline]
     pub(crate) fn set_focused_widget(&mut self, id: u16) {
         self.focused_widget = id
     }
@@ -190,6 +198,9 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
+        if self.platform_type == PlatformType::Ipc {
+            return
+        }
         self.window_layout_change();
     }
 

@@ -4,7 +4,7 @@ use crate::{
     IpcNode,
 };
 use core::slice;
-use std::{error::Error, ffi::c_void};
+use std::{collections::HashMap, error::Error, ffi::c_void};
 use tlib::figure::Rect;
 
 pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
@@ -98,7 +98,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     }
 
     #[inline]
-    fn regions(&self) -> &[Rect] {
+    fn regions(&self) -> &HashMap<&'static str, Rect> {
         &self.slave_context.shared_info().regions
     }
 
@@ -110,5 +110,15 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     #[inline]
     fn height(&self) -> u32 {
         self.slave_context.height()
+    }
+
+    #[inline]
+    fn size(&self, id: &'static str) -> tlib::figure::Size {
+        self.slave_context
+            .shared_info()
+            .regions
+            .get(id)
+            .unwrap()
+            .size()
     }
 }

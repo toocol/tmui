@@ -81,5 +81,5 @@ pub(crate) trait PlatformContext: 'static {
     fn signal(&self);
 
     /// For shared-memory application, add shared region rect
-    fn add_shared_region(&self, rect: Rect);
+    fn add_shared_region(&self, id: &'static str, rect: Rect);
 }

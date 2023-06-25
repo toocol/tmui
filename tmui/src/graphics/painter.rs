@@ -2,7 +2,7 @@
 use crate::{
     skia_safe::{self, Canvas, Font, Matrix, Paint, Path, Point},
     util::skia_font_clone,
-    widget::WidgetImpl,
+    widget::WidgetImpl, application_window::ApplicationWindow,
 };
 use log::error;
 use std::cell::RefMut;
@@ -34,6 +34,7 @@ pub struct Painter<'a> {
 impl<'a> Painter<'a> {
     /// The constructer to build the Painter.
     pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
+        let base_offset = ApplicationWindow::window_of(widget.window_id()).base_offset();
         let rect = widget.rect();
         Painter {
             canvas,
@@ -47,8 +48,8 @@ impl<'a> Painter<'a> {
             saved_line_width: None,
             width: rect.width(),
             height: rect.height(),
-            x_offset: rect.x(),
-            y_offset: rect.y(),
+            x_offset: rect.x() + base_offset.x(),
+            y_offset: rect.y() + base_offset.y(),
             transform: Matrix::new_identity(),
         }
     }

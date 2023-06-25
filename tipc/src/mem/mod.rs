@@ -4,7 +4,7 @@ use crate::ipc_event::IpcEvent;
 use std::{
     error::Error,
     fmt::Display,
-    sync::atomic::{AtomicBool, AtomicU32},
+    sync::atomic::{AtomicBool, AtomicU32}, collections::HashMap,
 };
 
 pub mod master_context;
@@ -63,7 +63,7 @@ pub(crate) struct SharedInfo<M: 'static + Copy> {
     pub(crate) height: AtomicU32,
 
     /// The clip region to renderer in slave.
-    pub(crate) regions: Vec<Rect>,
+    pub(crate) regions: HashMap<&'static str, Rect>,
 
     pub(crate) occupied: AtomicBool,
     pub(crate) request_side: RequestSide,

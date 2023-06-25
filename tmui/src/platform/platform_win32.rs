@@ -226,9 +226,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn add_shared_region(&self, rect: Rect) {
+    fn add_shared_region(&self, id: &'static str, rect: Rect) {
         if let Some(ref master) = self.master {
-            master.add_rect(rect)
+            master.add_rect(id, rect)
         }
     }
 }

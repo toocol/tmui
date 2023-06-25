@@ -2,8 +2,8 @@ use ipc_event::IpcEvent;
 use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
 use mem::mem_queue::MemQueueError;
-use std::{error::Error, ffi::c_void, marker::PhantomData};
-use tlib::figure::Rect;
+use std::{error::Error, ffi::c_void, marker::PhantomData, collections::HashMap};
+use tlib::figure::{Rect, Size};
 
 pub mod ipc_event;
 pub mod ipc_master;
@@ -133,9 +133,11 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
 
     fn signal(&self);
 
-    fn regions(&self) -> &[Rect];
+    fn regions(&self) -> &HashMap<&'static str, Rect>;
 
     fn width(&self) -> u32;
 
     fn height(&self) -> u32;
+
+    fn size(&self, id: &'static str) -> Size;
 }

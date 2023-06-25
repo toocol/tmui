@@ -59,11 +59,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let front_bitmap = Bitmap::new(
-            slave.buffer_raw_pointer(),
-            slave.width(),
-            slave.height(),
-        );
+        let front_bitmap = Bitmap::new(slave.buffer_raw_pointer(), slave.width(), slave.height());
 
         self.width = slave.width();
         self.height = slave.height();
@@ -152,7 +148,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn add_shared_region(&self, _: Rect) {}
+    fn add_shared_region(&self, _: &'static str, _: Rect) {}
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>

@@ -24,6 +24,7 @@ pub use crate::widget::{
     PointEffective, ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt,
     WidgetSignals,
 };
+pub use crate::shared_widget::{SharedWidget, SharedWidgetExt};
 pub use crate::split_pane::{SplitPane, SplitInfosGetter, ReflectSplitInfosGetter, SplitPaneExt, SplitInfo, SplitType};
 pub use tlib::figure::{Color, Point, Rect, Size, Region};
 pub use tlib::tokio;
