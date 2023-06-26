@@ -73,7 +73,7 @@ impl Object {
     pub fn new<T: ObjectSubclass + Default + ObjectImpl + ObjectOperation>(
         properties: &[(&str, &dyn ToValue)],
     ) -> Box<T> {
-        let mut obj = T::default();
+        let mut obj = Box::new(T::default());
         obj.construct();
 
         let default_name = format!("{}#{}", T::NAME, obj.id());
@@ -83,7 +83,7 @@ impl Object {
         for (name, value) in properties {
             obj.set_property(*name, value.to_value())
         }
-        Box::new(obj)
+        obj
     }
 
     pub fn primitive_set_property(&mut self, name: &str, value: Value) {
@@ -250,8 +250,6 @@ pub trait ObjectImpl: ObjectImplExt + InnerInitializer + TypeName {
     }
 
     /// `initialize()` the widget as a `child` of another widget. <br>
-    ///
-    /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}
 
     /// Override to register the reflect type info to [`TypeRegistry`] in this function.

@@ -33,7 +33,7 @@ use std::{
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
 use tlib::{
-    actions::{ActionHub, ACTIVATE},
+    actions::ActionHub,
     object::ObjectImpl,
     prelude::tokio_runtime,
     timer::TimerHub,
@@ -299,7 +299,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             on_activate(&mut window);
             drop(on_activate);
         }
-        ACTIVATE.store(true, Ordering::SeqCst);
 
         board.add_element(window.as_mut());
         window.register_window(output_sender);

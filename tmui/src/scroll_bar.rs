@@ -52,7 +52,9 @@ impl ObjectSubclass for ScrollBar {
 }
 
 impl ObjectImpl for ScrollBar {
-    fn initialize(&mut self) {
+    fn construct(&mut self) {
+        self.parent_construct();
+
         match self.orientation {
             Orientation::Horizontal => self.height_request(DEFAULT_SCROLL_BAR_HEIGHT),
             Orientation::Vertical => self.width_request(DEFAULT_SCROLL_BAR_WIDTH),
