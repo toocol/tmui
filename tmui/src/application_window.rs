@@ -1,4 +1,5 @@
 use crate::{
+    application::PLATFORM_CONTEXT,
     graphics::board::Board,
     layout::LayoutManager,
     platform::{window_context::OutputSender, Message, PlatformType},
@@ -10,7 +11,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     ptr::NonNull,
-    sync::Once,
+    sync::{atomic::Ordering, Once},
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -52,6 +53,12 @@ impl ObjectImpl for ApplicationWindow {
         WINDOW_ID.with(|id| *id.borrow_mut() = self.id());
         child_initialize(self, self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
+
+        if self.platform_type == PlatformType::Ipc {
+            let platform_context =
+                unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
+            self.base_offset = platform_context.region().top_left();
+        }
     }
 }
 
@@ -163,6 +170,11 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub fn platform_type(&self) -> PlatformType {
+        self.platform_type
+    }
+
+    #[inline]
     pub fn send_message(&self, message: Message) {
         match self.output_sender {
             Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
@@ -198,9 +210,6 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
-        if self.platform_type == PlatformType::Ipc {
-            return
-        }
         self.window_layout_change();
     }
 

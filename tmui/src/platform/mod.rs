@@ -49,6 +49,9 @@ pub(crate) trait PlatformContext: 'static {
     /// Get the height of the platform.
     fn height(&self) -> u32;
 
+    /// Get the region of the platform.
+    fn region(&self) -> Rect;
+
     /// Resize the platform by specific width and height.
     fn resize(&mut self, width: u32, height: u32);
 

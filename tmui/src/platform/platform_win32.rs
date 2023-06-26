@@ -111,6 +111,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
+    fn region(&self) -> Rect {
+        unreachable!()
+    }
+
+    #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;

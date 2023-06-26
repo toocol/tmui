@@ -1,10 +1,16 @@
 use crate::{
     ipc_event::IpcEvent,
-    mem::{master_context::MasterContext, mem_queue::MemQueueError, MemContext},
+    mem::{master_context::MasterContext, mem_queue::MemQueueError, MemContext, MAX_REGION_SIZE},
     IpcNode,
 };
-use core::slice;
-use std::{collections::HashMap, error::Error, ffi::c_void};
+use core::{panic, slice};
+use std::{
+    collections::hash_map::DefaultHasher,
+    error::Error,
+    ffi::c_void,
+    hash::{Hash, Hasher},
+    sync::atomic::Ordering,
+};
 use tlib::figure::Rect;
 
 pub struct IpcMaster<T: 'static + Copy, M: 'static + Copy> {
@@ -29,7 +35,24 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
     }
 
     pub fn add_rect(&self, id: &'static str, rect: Rect) {
-        self.master_context.shared_info().regions.insert(id, rect);
+        let mut hasher = DefaultHasher::default();
+        id.hash(&mut hasher);
+        let id = hasher.finish();
+
+        let shared_ifo = self.master_context.shared_info();
+        let idx = shared_ifo.region_idx.load(Ordering::Acquire);
+        for uninit in shared_ifo.regions[..idx].iter_mut() {
+            let (sid, r) = unsafe { uninit.assume_init_mut() };
+            if *sid == id {
+                *r = rect;
+                return;
+            }
+        }
+        if idx >= MAX_REGION_SIZE {
+            panic!("Only support {} `SharedWidget`", MAX_REGION_SIZE);
+        }
+        shared_ifo.regions[idx].write((id, rect));
+        shared_ifo.region_idx.fetch_add(1, Ordering::Release);
     }
 }
 
@@ -105,8 +128,20 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     }
 
     #[inline]
-    fn regions(&self) -> &HashMap<&'static str, Rect> {
-        &self.master_context.shared_info().regions
+    fn region(&self, id: &'static str) -> Option<Rect> {
+        let mut hasher = DefaultHasher::default();
+        id.hash(&mut hasher);
+        let id = hasher.finish();
+
+        let shared_info = self.master_context.shared_info();
+        let idx = shared_info.region_idx.load(Ordering::Acquire);
+        for uninit in shared_info.regions[..idx].iter() {
+            let (sid, r) = unsafe { uninit.assume_init_ref() };
+            if *sid == id {
+                return Some(*r);
+            }
+        }
+        None
     }
 
     #[inline]
@@ -117,15 +152,5 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     #[inline]
     fn height(&self) -> u32 {
         self.master_context.height()
-    }
-
-    #[inline]
-    fn size(&self, id: &'static str) -> tlib::figure::Size {
-        self.master_context
-            .shared_info()
-            .regions
-            .get(id)
-            .unwrap()
-            .size()
     }
 }

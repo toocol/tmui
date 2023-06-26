@@ -9,7 +9,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-#[repr(C, align(64))]
+#[repr(C)]
 struct _MemQueue<const QUEUE_SIZE: usize, T: 'static + Copy> {
     read_indicate: AtomicUsize,
     write_indicate: AtomicUsize,

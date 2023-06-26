@@ -60,7 +60,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 impl ParentType for #name {
                     #[inline]
                     fn parent_type(&self) -> Type {
-                        Widget::static_type()
+                        SharedWidget::static_type()
                     }
                 }
 
@@ -81,7 +81,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 impl PointEffective for #name {
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
-                        self.widget.point_effective(point)
+                        self.shared_widget.widget.point_effective(point)
                     }
                 }
             })
@@ -105,16 +105,6 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
     Ok(quote!(
         impl SharedWidgetExt for #name {
             #[inline]
-            fn shared_type(&self) -> SharedType {
-                self.#(#shared_widget_path).*.shared_type()
-            }
-
-            #[inline]
-            fn set_shared_type(&mut self, shared_type: SharedType) {
-                self.#(#shared_widget_path).*.set_shared_type(shared_type)
-            }
-
-            #[inline]
             fn shared_id(&self) -> &'static str {
                 self.#(#shared_widget_path).*.shared_id()
             }
@@ -124,5 +114,7 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
                 self.#(#shared_widget_path).*.set_shared_id(id)
             }
         }
+
+        impl IsA<SharedWidget> for #name {}
     ))
 }

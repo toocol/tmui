@@ -4,7 +4,7 @@ use crate::ipc_event::IpcEvent;
 use std::{
     error::Error,
     fmt::Display,
-    sync::atomic::{AtomicBool, AtomicU32}, collections::HashMap,
+    sync::atomic::{AtomicBool, AtomicU32, AtomicUsize}, mem::MaybeUninit,
 };
 
 pub mod master_context;
@@ -12,6 +12,7 @@ pub mod mem_queue;
 pub mod slave_context;
 
 pub(crate) const IPC_QUEUE_SIZE: usize = 10000;
+pub(crate) const MAX_REGION_SIZE: usize = 10;
 
 pub(crate) const IPC_KEY_EVT_SIZE: usize = 8;
 pub(crate) const IPC_TEXT_EVT_SIZE: usize = 4096;
@@ -63,7 +64,8 @@ pub(crate) struct SharedInfo<M: 'static + Copy> {
     pub(crate) height: AtomicU32,
 
     /// The clip region to renderer in slave.
-    pub(crate) regions: HashMap<&'static str, Rect>,
+    pub(crate) regions: [MaybeUninit<(u64, Rect)>; MAX_REGION_SIZE],
+    pub(crate) region_idx: AtomicUsize,
 
     pub(crate) occupied: AtomicBool,
     pub(crate) request_side: RequestSide,

@@ -193,6 +193,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let shared_mem_name = self.shared_mem_name.expect(
                     "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
                 );
+                let shared_widget_id = self.shared_widget_id.expect(
+                    "`PlatformType::Ipc` require non-None.`",
+                );
+                platform_context.set_shared_widget_id(shared_widget_id);
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
                 shared_channel = Some(platform_context.shared_channel());
