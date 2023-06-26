@@ -1,17 +1,17 @@
 use crate::{
-    graphics::{board::Board, painter::Painter},
+    application::PLATFORM_CONTEXT,
+    graphics::board::Board,
     layout::LayoutManager,
-    platform::{window_context::OutputSender, Message},
+    platform::{window_context::OutputSender, Message, PlatformType},
     prelude::*,
     widget::{WidgetImpl, WidgetSignals},
 };
-use log::debug;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     ptr::NonNull,
-    sync::Once,
+    sync::{atomic::Ordering, Once},
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -30,10 +30,13 @@ static INIT: Once = Once::new();
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    platform_type: PlatformType,
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
     widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
+    run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
+    base_offset: Point,
 
     activated: bool,
     focused_widget: u16,
@@ -44,35 +47,40 @@ impl ObjectSubclass for ApplicationWindow {
 }
 
 impl ObjectImpl for ApplicationWindow {
-    fn construct(&mut self) {
-        self.parent_construct();
-        debug!(
-            "`ApplicationWindow` construct: static_type: {}",
-            Self::static_type().name()
-        )
-    }
-
     fn initialize(&mut self) {
         connect!(self, size_changed(), self, when_size_change(Size));
         self.set_window_id(self.id());
         WINDOW_ID.with(|id| *id.borrow_mut() = self.id());
         child_initialize(self, self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
+
+        if self.platform_type == PlatformType::Ipc {
+            let platform_context =
+                unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
+            self.base_offset = platform_context.region().top_left();
+        }
     }
 }
 
 impl WidgetImpl for ApplicationWindow {
-    fn paint(&mut self, mut _painter: Painter) {}
+    #[inline]
+    fn run_after(&mut self) {
+        for widget in self.run_afters.iter_mut() {
+            nonnull_mut!(widget).run_after()
+        }
+        self.run_afters.clear();
+    }
 }
 
 type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);
 
 impl ApplicationWindow {
     #[inline]
-    pub fn new(width: i32, height: i32) -> Box<ApplicationWindow> {
+    pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =
             Object::new(&[("width", &width), ("height", &height)]);
+        window.platform_type = platform_type;
         Self::windows().insert(window.id(), (thread_id, NonNull::new(window.as_mut())));
         window
     }
@@ -97,6 +105,12 @@ impl ApplicationWindow {
     pub(crate) fn layout_of(id: u16) -> &'static mut LayoutManager {
         let window = Self::window_of(id);
         &mut window.layout_manager
+    }
+
+    #[inline]
+    pub fn run_afters_of(id: u16) -> &'static mut Vec<Option<NonNull<dyn WidgetImpl>>> {
+        let window = Self::window_of(id);
+        &mut window.run_afters
     }
 
     #[inline]
@@ -141,6 +155,11 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn base_offset(&self) -> Point {
+        self.base_offset
+    }
+
+    #[inline]
     pub(crate) fn set_focused_widget(&mut self, id: u16) {
         self.focused_widget = id
     }
@@ -148,6 +167,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn focused_widget(&self) -> u16 {
         self.focused_widget
+    }
+
+    #[inline]
+    pub fn platform_type(&self) -> PlatformType {
+        self.platform_type
     }
 
     #[inline]
@@ -443,6 +467,7 @@ fn child_initialize(
 
         child_ref.set_initialized(true);
         child_ref.initialize();
+        child_ref.inner_initialize();
 
         child = children.pop_front().take().map_or(None, |widget| widget);
     }

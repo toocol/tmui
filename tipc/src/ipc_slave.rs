@@ -4,7 +4,13 @@ use crate::{
     IpcNode,
 };
 use core::slice;
-use std::{error::Error, ffi::c_void};
+use std::{
+    collections::hash_map::DefaultHasher,
+    error::Error,
+    ffi::c_void,
+    hash::{Hash, Hasher},
+    sync::atomic::Ordering,
+};
 use tlib::figure::Rect;
 
 pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
@@ -98,7 +104,29 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     }
 
     #[inline]
-    fn region(&self) -> Rect {
-        self.slave_context.shared_info().region.as_rect()
+    fn region(&self, id: &'static str) -> Option<Rect> {
+        let mut hasher = DefaultHasher::default();
+        id.hash(&mut hasher);
+        let id = hasher.finish();
+
+        let shared_info = self.slave_context.shared_info();
+        let idx = shared_info.region_idx.load(Ordering::Acquire);
+        for uninit in shared_info.regions[..idx].iter() {
+            let (sid, r) = unsafe { uninit.assume_init_ref() };
+            if *sid == id {
+                return Some(*r);
+            }
+        }
+        None
+    }
+
+    #[inline]
+    fn width(&self) -> u32 {
+        self.slave_context.width()
+    }
+
+    #[inline]
+    fn height(&self) -> u32 {
+        self.slave_context.height()
     }
 }

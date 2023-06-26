@@ -15,6 +15,7 @@ pub(crate) use platform_ipc::*;
 pub(crate) use platform_macos::*;
 #[cfg(target_os = "windows")]
 pub(crate) use platform_win32::*;
+use tlib::figure::Rect;
 
 use self::window_context::WindowContext;
 
@@ -48,6 +49,9 @@ pub(crate) trait PlatformContext: 'static {
     /// Get the height of the platform.
     fn height(&self) -> u32;
 
+    /// Get the region of the platform.
+    fn region(&self) -> Rect;
+
     /// Resize the platform by specific width and height.
     fn resize(&mut self, width: u32, height: u32);
 
@@ -78,4 +82,7 @@ pub(crate) trait PlatformContext: 'static {
     ///
     /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
     fn signal(&self);
+
+    /// For shared-memory application, add shared region rect
+    fn add_shared_region(&self, id: &'static str, rect: Rect);
 }

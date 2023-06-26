@@ -7,6 +7,7 @@ pub(crate) fn expand(
     impl_children_construct: bool,
     has_content_alignment: bool,
     is_split_pane: bool,
+    is_stack: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
@@ -33,6 +34,11 @@ pub(crate) fn expand(
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>
+                        })?);
+                    }
+                    if is_stack {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            current_index: usize 
                         })?);
                     }
 
@@ -92,7 +98,7 @@ pub(crate) fn expand(
             )?;
 
             let widget_trait_impl_clause =
-                extend_widget::gen_widget_trait_impl_clause(name, vec!["container", "widget"])?;
+                extend_widget::gen_widget_trait_impl_clause(name, Some("container"), vec!["container", "widget"])?;
 
             let mut children_construct_clause = proc_macro2::TokenStream::new();
             if impl_children_construct {
@@ -109,6 +115,12 @@ pub(crate) fn expand(
 
             let reflect_split_infos_getter = if is_split_pane {
                 quote!(type_registry.register::<#name, ReflectSplitInfosGetter>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let reflect_stack_trait = if is_stack {
+                quote!(type_registry.register::<#name, ReflectStackTrait>();)
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -135,7 +147,7 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl InnerTypeRegister for #name {
+                impl InnerInitializer for #name {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
@@ -143,6 +155,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectObjectChildrenConstruct>();
                         #reflect_content_alignment
                         #reflect_split_infos_getter
+                        #reflect_stack_trait
                     }
                 }
 

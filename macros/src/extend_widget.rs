@@ -6,6 +6,26 @@ use syn::{parse::Parser, DeriveInput};
 
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+
+    let mut run_after = false;
+    for attr in ast.attrs.iter() {
+        if let Some(attr_ident) = attr.path.get_ident() {
+            if attr_ident.to_string() == "run_after" {
+                run_after = true;
+                break;
+            }
+        }
+    }
+    let run_after_clause = if run_after {
+        quote!(
+            ApplicationWindow::run_afters_of(self.window_id()).push(
+                std::ptr::NonNull::new(self)
+            );
+        )
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -32,7 +52,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             let element_trait_impl_clause =
                 extend_element::gen_element_trait_impl_clause(name, vec!["widget", "element"])?;
 
-            let widget_trait_impl_clause = gen_widget_trait_impl_clause(name, vec!["widget"])?;
+            let widget_trait_impl_clause =
+                gen_widget_trait_impl_clause(name, Some("widget"), vec!["widget"])?;
 
             Ok(quote! {
                 #[derive(Derivative)]
@@ -54,10 +75,15 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     }
                 }
 
-                impl InnerTypeRegister for #name {
+                impl InnerInitializer for #name {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
+                    }
+
+                    #[inline]
+                    fn inner_initialize(&mut self) {
+                        #run_after_clause
                     }
                 }
 
@@ -86,12 +112,23 @@ pub(crate) fn expand_with_layout(
 
 pub(crate) fn gen_widget_trait_impl_clause(
     name: &Ident,
+    super_field: Option<&'static str>,
     widget_path: Vec<&'static str>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let widget_path: Vec<_> = widget_path
         .iter()
         .map(|s| Ident::new(s, name.span()))
         .collect();
+
+    let parent_run_after = match super_field {
+        Some(super_field) => {
+            let super_field = Ident::new(super_field, name.span());
+            quote!(
+                self.#super_field.run_after()
+            )
+        }
+        None => proc_macro2::TokenStream::new(),
+    };
 
     Ok(quote!(
         impl WidgetExt for #name {
@@ -415,6 +452,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn set_mouse_tracking(&mut self, is_tracking: bool) {
                 self.#(#widget_path).*.set_mouse_tracking(is_tracking)
             }
+
+            #[inline]
+            fn parent_run_after(&mut self) {
+                #parent_run_after
+            }
         }
 
         impl WidgetImplExt for #name {
@@ -425,6 +467,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
                 }
                 self.#(#widget_path).*.child_internal(child)
             }
+
         }
 
         impl IsA<Widget> for #name {}

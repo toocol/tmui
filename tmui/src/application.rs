@@ -5,7 +5,7 @@ use crate::platform::PlatformMacos;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
 use crate::{
-    application_window::{ApplicationWindow},
+    application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
     graphics::{board::Board, cpu_balance::CpuBalance},
@@ -14,6 +14,7 @@ use crate::{
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
     },
+    widget::WidgetImpl,
 };
 use lazy_static::lazy_static;
 use log::debug;
@@ -79,6 +80,7 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
         RefCell<Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>>,
 
     shared_mem_name: Option<&'static str>,
+    shared_widget_id: Option<&'static str>,
     shared_channel: RefCell<Option<SharedChannel<T, M>>>,
 }
 
@@ -125,11 +127,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let on_user_event_receive = self.on_user_event_receive.borrow_mut().take();
         let on_request_receive = self.on_request_receive.borrow_mut().take();
 
+        let platform_type = self.platform_type;
+
         // Create the `UI` main thread.
         let join = thread::Builder::new()
             .name("tmui-main".to_string())
             .spawn(move || {
                 Self::ui_main(
+                    platform_type,
                     backend_type,
                     output_sender,
                     input_receiver,
@@ -188,6 +193,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let shared_mem_name = self.shared_mem_name.expect(
                     "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
                 );
+                let shared_widget_id = self.shared_widget_id.expect(
+                    "`PlatformType::Ipc` require non-None.`",
+                );
+                platform_context.set_shared_widget_id(shared_widget_id);
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
                 shared_channel = Some(platform_context.shared_channel());
@@ -237,6 +246,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     fn ui_main(
+        platform_type: PlatformType,
         backend_type: BackendType,
         output_sender: OutputSender,
         input_receiver: Receiver<Message>,
@@ -271,18 +281,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         // Create the [`Backend`] based on the backend type specified by the user.
         let backend: Box<dyn Backend>;
         match backend_type {
-            BackendType::Raster => {
-                backend = RasterBackend::new(platform.bitmap())
-            }
-            BackendType::OpenGL => {
-                backend = OpenGLBackend::new(platform.bitmap())
-            }
+            BackendType::Raster => backend = RasterBackend::new(platform.bitmap()),
+            BackendType::OpenGL => backend = OpenGLBackend::new(platform.bitmap()),
         }
 
         // Prepare ApplicationWindow env: Create the `Board`.
         let mut board = Box::new(Board::new(backend.surface()));
 
-        let mut window = ApplicationWindow::new(backend.width() as i32, backend.height() as i32);
+        let mut window = ApplicationWindow::new(
+            platform_type,
+            backend.width() as i32,
+            backend.height() as i32,
+        );
         window.set_board(board.as_mut());
 
         if let Some(on_activate) = on_activate {
@@ -295,6 +305,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         window.register_window(output_sender);
         window.initialize();
         window.activate();
+        window.run_after();
 
         let mut cpu_balance = CpuBalance::new();
         let mut last_frame = Instant::now();
@@ -473,6 +484,7 @@ pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy
     width: Option<u32>,
     height: Option<u32>,
     shared_mem_name: Option<&'static str>,
+    shared_widget_id: Option<&'static str>,
     _user_event: PhantomData<T>,
     _request: PhantomData<M>,
 }
@@ -487,6 +499,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             width: None,
             height: None,
             shared_mem_name,
+            shared_widget_id: None,
             _user_event: PhantomData::default(),
             _request: PhantomData::default(),
         }
@@ -503,6 +516,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             platform_context: Default::default(),
             on_activate: Default::default(),
             shared_mem_name: Default::default(),
+            shared_widget_id: Default::default(),
             shared_channel: Default::default(),
             on_user_event_receive: Default::default(),
             on_request_receive: Default::default(),
@@ -520,6 +534,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         if let Some(shared_mem_name) = self.shared_mem_name {
             app.shared_mem_name = Some(shared_mem_name)
         }
+        if let Some(shared_widget_id) = self.shared_widget_id {
+            app.shared_widget_id = Some(shared_widget_id)
+        }
 
         if let Some(platform) = self.platform {
             app.platform_type = platform
@@ -527,6 +544,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         if let Some(backend) = self.backend {
             app.backend_type = backend
         }
+
+        if app.platform_type == PlatformType::Ipc && app.shared_widget_id.is_none() {
+            panic!("Shared application with `PlatformIpc` should specified the `shared_widget_id`.")
+        }
+
         app.startup_initialize();
         app
     }
@@ -553,6 +575,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
     pub fn height(mut self, height: u32) -> Self {
         self.height = Some(height);
+        self
+    }
+
+    pub fn shared_widget_id(mut self, id: &'static str) -> Self {
+        self.shared_widget_id = Some(id);
         self
     }
 

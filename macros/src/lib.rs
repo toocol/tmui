@@ -5,16 +5,19 @@ mod extend_attr;
 mod extend_container;
 mod extend_element;
 mod extend_object;
+mod extend_shared_widget;
 mod extend_widget;
 mod layout;
 mod reflect_trait;
 mod split_pane;
+mod stack;
 mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use syn::{self, parse_macro_input, DeriveInput};
 use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
@@ -26,6 +29,7 @@ use trait_info::TraitInfo;
 ///     - Object
 ///     - Element
 ///     - Widget
+///     - SharedWidget
 ///     - Container
 /// ### Supported layouts:
 ///     - Stack
@@ -72,7 +76,11 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false) {
+        "SharedWidget" => match extend_shared_widget::expand(&mut ast) {
+            Ok(tkn) => tkn.into(),
+            Err(e) => e.to_compile_error().into(),
+        },
+        "Container" => match extend_container::expand(&mut ast, true, false, false, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -113,6 +121,13 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
+}
+
+/// The widget annotated `[run_after]` will execute the [`WidgetImpl::run_after()`] function 
+/// after the application was started.
+#[proc_macro_attribute]
+pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
 }
 
 /// Crate and run an async task in tokio worker threads. <br>
@@ -168,6 +183,24 @@ pub fn cast_mut(input: TokenStream) -> TokenStream {
 pub fn cast_boxed(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as CastInfo);
     match ast.expand_boxed() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn split_pane_impl(input: TokenStream) -> TokenStream {
+    let ident = parse_macro_input!(input as Ident);
+    match split_pane::generate_split_pane_impl(&ident, "crate") {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn stack_impl(input: TokenStream) -> TokenStream {
+    let ident = parse_macro_input!(input as Ident);
+    match stack::generate_stack_impl(&ident, "crate") {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }

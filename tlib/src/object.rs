@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{AsAny, FromType, InnerTypeRegister, Reflect, ReflectTrait, TypeRegistry},
+    prelude::{AsAny, FromType, InnerInitializer, Reflect, ReflectTrait, TypeRegistry},
     types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
@@ -179,7 +179,7 @@ impl ObjectImplExt for Object {
     fn parent_on_property_set(&mut self, _name: &str, _value: &Value) {}
 }
 
-impl InnerTypeRegister for Object {
+impl InnerInitializer for Object {
     fn inner_type_register(&self, _: &mut TypeRegistry) {}
 }
 
@@ -238,10 +238,8 @@ impl<T: ObjectType> TypeDowncast for T {}
 
 #[reflect_trait]
 #[allow(unused_variables)]
-pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
+pub trait ObjectImpl: ObjectImplExt + InnerInitializer + TypeName {
     /// Override this function should invoke `self.parent_construct()` manually. <br>
-    ///
-    /// UI components can build and add in this function.
     fn construct(&mut self) {
         self.parent_construct()
     }
@@ -252,7 +250,6 @@ pub trait ObjectImpl: ObjectImplExt + InnerTypeRegister + TypeName {
     }
 
     /// `initialize()` the widget as a `child` of another widget. <br>
-    /// UI components build and add in this function should be very careful.<br>
     ///
     /// ### All the signals/slots [`connect!()`] should be called in this function.
     fn initialize(&mut self) {}

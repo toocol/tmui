@@ -10,11 +10,11 @@ use std::sync::{
     Arc,
 };
 use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
+use tlib::figure::Rect;
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
-    width: u32,
-    height: u32,
+    region: Rect,
 
     bitmap: Option<Bitmap>,
 
@@ -23,19 +23,22 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
     /// Shared memory ipc slave
     slave: Option<Arc<IpcSlave<T, M>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
+
+    shared_widget_id: Option<&'static str>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformIpc<T, M> {
     #[inline]
     pub fn new(title: &str, width: u32, height: u32) -> Self {
+        let region = Rect::new(0, 0, width as i32, height as i32);
         Self {
             title: title.to_string(),
-            width,
-            height,
+            region,
             bitmap: None,
             input_sender: None,
             slave: None,
             user_ipc_event_sender: None,
+            shared_widget_id: None,
         }
     }
 
@@ -51,6 +54,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
         self.user_ipc_event_sender = Some(sender);
         shared_channel::slave_channel(self.slave.as_ref().unwrap().clone(), receiver)
     }
+
+    #[inline]
+    pub fn set_shared_widget_id(&mut self, id: &'static str) {
+        self.shared_widget_id = Some(id)
+    }
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
@@ -58,11 +66,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let region = slave.region();
-        let front_bitmap = Bitmap::new(
-            slave.buffer_raw_pointer(),
-            region.width() as u32,
-            region.height() as u32,
+        let front_bitmap = Bitmap::new(slave.buffer_raw_pointer(), slave.width(), slave.height());
+
+        self.region = slave.region(self.shared_widget_id.unwrap()).expect(
+            "The `SharedWidget` with id `{}` was not exist."
         );
 
         self.bitmap = Some(front_bitmap);
@@ -75,18 +82,23 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn width(&self) -> u32 {
-        self.width
+        self.region.width() as u32
     }
 
     #[inline]
     fn height(&self) -> u32 {
-        self.height
+        self.region.height() as u32
+    }
+
+    #[inline]
+    fn region(&self) -> Rect {
+        self.region
     }
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
+        self.region.set_width(width as i32);
+        self.region.set_height(height as i32);
         todo!()
     }
 
@@ -131,6 +143,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
     fn redraw(&mut self) {}
 
     #[inline]
@@ -146,6 +159,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             slave.signal()
         }
     }
+
+    #[inline]
+    fn add_shared_region(&self, _: &'static str, _: Rect) {}
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>

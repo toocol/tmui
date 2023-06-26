@@ -1,8 +1,11 @@
+mod shared_widget;
+
 use std::{time::Instant, sync::atomic::AtomicI32};
-use tmui::{application::Application, application_window::ApplicationWindow};
+use shared_widget::MasterSharedWidget;
+use tmui::{application::Application, application_window::ApplicationWindow, widget::{WidgetExt, WidgetImplExt}};
 use log::info;
 
-pub const IPC_NAME: &'static str = "shared_inf";
+pub const IPC_NAME: &'static str = "shmem_widgets";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]
@@ -37,7 +40,13 @@ fn main() {
     app.run();
 }
 
-fn build_ui(_window: &mut ApplicationWindow) {}
+fn build_ui(window: &mut ApplicationWindow) {
+    let mut shwidet = MasterSharedWidget::new();
+    let size = window.size();
+    shwidet.width_request(size.width());
+    shwidet.height_request(size.height());
+    window.child(shwidet);
+}
 
 fn user_events_receive(_: &mut ApplicationWindow, evt: UserEvent) {
     match evt {

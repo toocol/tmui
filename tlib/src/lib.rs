@@ -16,6 +16,7 @@ pub mod reflect;
 pub use object::Object;
 pub use values::Value;
 pub use types::Type;
+pub use macros::*;
 
 pub mod tokio {
     pub use tokio::*;

@@ -2,12 +2,12 @@ use std::time::Instant;
 use test_widget::TestWidget;
 use tmui::{
     application::Application, application_window::ApplicationWindow, label::Label,
-    platform::PlatformType, prelude::*,
+    platform::PlatformType, prelude::*, 
 };
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shared_inf";
+pub const IPC_NAME: &'static str = "shmem_widgets";
 
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
@@ -27,6 +27,7 @@ fn main() {
 
     let app = Application::<UserEvent, Request>::shared_builder(IPC_NAME)
         .platform(PlatformType::Ipc)
+        .shared_widget_id("shmem_widget")
         .build();
 
     app.connect_activate(build_ui);
