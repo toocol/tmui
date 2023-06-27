@@ -239,7 +239,10 @@ impl<T: ObjectType> TypeDowncast for T {}
 #[reflect_trait]
 #[allow(unused_variables)]
 pub trait ObjectImpl: ObjectImplExt + InnerInitializer + TypeName {
-    /// Override this function should invoke `self.parent_construct()` manually. <br>
+    /// Construct function when create the instance. <br>
+    /// 
+    /// ### Object should create by function [`Object::new`]
+    /// ### Override this function should invoke `self.parent_construct()` manually. 
     fn construct(&mut self) {
         self.parent_construct()
     }

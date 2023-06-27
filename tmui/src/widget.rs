@@ -970,9 +970,7 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn parent_run_after(&mut self) {
-        println!("Widget parent run after")
-    }
+    fn parent_run_after(&mut self) {}
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -1166,6 +1164,8 @@ pub trait WidgetImpl:
 
     /// `run_after()` will be invoked when application was started. <br>
     /// Should annotated macro `[run_after]` to enable this function.
+    /// 
+    /// ### Should call `self.parent_run_after()` mannually if override this function.
     fn run_after(&mut self) {
         self.parent_run_after();
     }

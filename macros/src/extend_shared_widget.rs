@@ -2,8 +2,15 @@ use crate::{extend_element, extend_object, extend_widget};
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Ident};
 
-pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+
+    let set_shared_id_clause = match id {
+        Some(id) => quote!(
+            self.set_shared_id(#id);
+        ),
+        None => proc_macro2::TokenStream::new(),
+    };
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -72,6 +79,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                     #[inline]
                     fn inner_initialize(&mut self) {
+                        #set_shared_id_clause
                         ApplicationWindow::run_afters_of(self.window_id()).push(
                             std::ptr::NonNull::new(self)
                         );
