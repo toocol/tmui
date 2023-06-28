@@ -123,6 +123,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.height
     }
 
+    fn region(&self) -> tlib::figure::Rect {
+        unreachable!()
+    }
+
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
@@ -243,6 +247,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn signal(&self) {
         if let Some(ref master) = self.master {
             master.signal()
+        }
+    }
+
+    #[inline]
+    fn add_shared_region(&self, id: &'static str, rect: tlib::figure::Rect) {
+        if let Some(ref master) = self.master {
+            master.add_rect(id, rect)
         }
     }
 }

@@ -294,6 +294,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             backend.height() as i32,
         );
         window.set_board(board.as_mut());
+        window.register_window(output_sender);
 
         if let Some(on_activate) = on_activate {
             on_activate(&mut window);
@@ -301,7 +302,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         }
 
         board.add_element(window.as_mut());
-        window.register_window(output_sender);
         window.initialize();
         window.activate();
         window.run_after();
