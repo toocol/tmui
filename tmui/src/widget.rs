@@ -293,12 +293,16 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
     fn resize(&mut self, width: i32, height: i32);
 
-    /// Request the widget's maximum width.
+    /// Request the widget's width. <br>
+    /// This function should be used in construct phase of the ui component, 
+    /// the function will not change the layout and will not trigger the signal `size_changed()`.
     ///
     /// Go to[`Function defination`](WidgetExt::width_request) (Defined in [`WidgetExt`])
     fn width_request(&mut self, width: i32);
 
-    /// Request the widget's maximum width.
+    /// Request the widget's width. <br>
+    /// This function should be used in construct phase of the ui component, 
+    /// the function will not change the layout and will not trigger the signal `size_changed()`.
     ///
     /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
     fn height_request(&mut self, width: i32);

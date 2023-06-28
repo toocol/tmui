@@ -155,6 +155,7 @@ impl Label {
     pub fn set_size(&mut self, size: i32) {
         let font = self.font_mut();
         font.set_size(size as f32);
+        self.font_changed();
         self.update();
     }
 }
