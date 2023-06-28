@@ -168,6 +168,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
+                self.#(#widget_path).*.get_child_ref()
+            }
+
+            #[inline]
+            fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+                self.#(#widget_path).*.get_child_mut()
+            }
+
+            #[inline]
             fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
                 self.#(#widget_path).*.get_raw_parent()
             }
@@ -175,6 +185,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
                 self.#(#widget_path).*.get_raw_parent_mut()
+            }
+
+            #[inline]
+            fn get_parent_ref(&self) -> Option<&dyn WidgetImpl> {
+                self.#(#widget_path).*.get_parent_ref()
+            }
+
+            #[inline]
+            fn get_parent_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+                self.#(#widget_path).*.get_parent_mut()
             }
 
             #[inline]

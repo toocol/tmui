@@ -42,7 +42,7 @@ impl ContainerImplExt for Stack {
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         if self.current_index == self.container.children.len() {
             child.show()
         } else {

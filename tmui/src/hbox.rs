@@ -39,7 +39,7 @@ impl ContainerImplExt for HBox {
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         child.set_parent(self);
         self.container.children.push(child);
         self.update();

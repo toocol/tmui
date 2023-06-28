@@ -4,7 +4,7 @@ use syn::Ident;
 pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         use tmui::application_window::ApplicationWindow;
-        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         if self.current_index == self.container.children.len() {
             child.show()
         } else {

@@ -386,12 +386,12 @@ impl ApplicationWindow {
         }
     }
 
-    pub fn initialize_dynamic_component(parent: &mut dyn WidgetImpl, widget: &mut dyn WidgetImpl) {
+    pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
         if widget.initialized() {
             return;
         }
 
-        let window_id = parent.window_id();
+        let window_id = widget.window_id();
         let window = Self::window_of(window_id);
         // There was no need to initialize the widget, it's created before ApplicationWindow's initialization,
         // widget will be initialized later in function `child_initialize()`.
