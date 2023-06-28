@@ -204,7 +204,10 @@ pub(crate) fn gen_widget_trait_impl_clause(
 
             #[inline]
             fn resize(&mut self, width: i32, height: i32) {
-                self.#(#widget_path).*.resize(width, height)
+                self.#(#widget_path).*.resize(width, height);
+                ApplicationWindow::window_of(self.window_id()).layout_change(self);
+                emit!(self.size_changed(), self.size());
+                self.update()
             }
 
             #[inline]

@@ -51,7 +51,7 @@ impl ObjectImpl for ApplicationWindow {
         connect!(self, size_changed(), self, when_size_change(Size));
         self.set_window_id(self.id());
         WINDOW_ID.with(|id| *id.borrow_mut() = self.id());
-        child_initialize(self, self.get_raw_child_mut(), self.id());
+        child_initialize(self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
 
         if self.platform_type == PlatformType::Ipc {
@@ -398,7 +398,7 @@ impl ApplicationWindow {
 
         let window = Self::window_of(window_id);
 
-        widget.set_parent(parent);
+        // widget.set_parent(parent);
         let board = window.board();
         board.add_element(widget.as_element());
         ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));
@@ -420,7 +420,6 @@ pub fn current_window_id() -> u16 {
 }
 
 fn child_initialize(
-    mut parent: *mut dyn WidgetImpl,
     mut child: Option<*mut dyn WidgetImpl>,
     window_id: u16,
 ) {
@@ -458,12 +457,6 @@ fn child_initialize(
         } else {
             children.push_back(child_ref.get_raw_child_mut());
         }
-
-        if child_ref.get_raw_parent().is_none() {
-            child_ref.set_parent(parent);
-        }
-
-        parent = child_ptr;
 
         child_ref.set_initialized(true);
         child_ref.initialize();

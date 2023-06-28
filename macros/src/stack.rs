@@ -10,6 +10,7 @@ pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream
         } else {
             child.hide()
         }
+        child.set_parent(self);
         self.container.children.push(child);
         self.update();
     })
