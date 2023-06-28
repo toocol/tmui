@@ -23,7 +23,7 @@ use tlib::{
 };
 
 thread_local! {
-    pub static WINDOW_ID: RefCell<u16> = RefCell::new(0);
+    pub(crate) static WINDOW_ID: RefCell<u16> = RefCell::new(0);
 }
 
 static INIT: Once = Once::new();
@@ -49,8 +49,6 @@ impl ObjectSubclass for ApplicationWindow {
 impl ObjectImpl for ApplicationWindow {
     fn initialize(&mut self) {
         connect!(self, size_changed(), self, when_size_change(Size));
-        self.set_window_id(self.id());
-        WINDOW_ID.with(|id| *id.borrow_mut() = self.id());
         child_initialize(self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
 
@@ -59,6 +57,7 @@ impl ObjectImpl for ApplicationWindow {
                 unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
             self.base_offset = platform_context.region().top_left();
         }
+        self.set_initialized(true);
     }
 }
 
@@ -81,6 +80,8 @@ impl ApplicationWindow {
         let mut window: Box<ApplicationWindow> =
             Object::new(&[("width", &width), ("height", &height)]);
         window.platform_type = platform_type;
+        window.set_window_id(window.id());
+        WINDOW_ID.with(|id| *id.borrow_mut() = window.id());
         Self::windows().insert(window.id(), (thread_id, NonNull::new(window.as_mut())));
         window
     }
@@ -386,17 +387,17 @@ impl ApplicationWindow {
     }
 
     pub fn initialize_dynamic_component(parent: &mut dyn WidgetImpl, widget: &mut dyn WidgetImpl) {
-        let window_id = parent.window_id();
-        // window_id was 0 means there was no need to initialize the widget, it's created before ApplicationWindow's initialization,
-        // widget will be initialized later in function `child_initialize()`.
-        if window_id == 0 {
-            return;
-        }
         if widget.initialized() {
             return;
         }
 
+        let window_id = parent.window_id();
         let window = Self::window_of(window_id);
+        // There was no need to initialize the widget, it's created before ApplicationWindow's initialization,
+        // widget will be initialized later in function `child_initialize()`.
+        if !window.initialized() {
+            return;
+        }
 
         // widget.set_parent(parent);
         let board = window.board();
@@ -406,7 +407,6 @@ impl ApplicationWindow {
         let type_registry = TypeRegistry::instance();
         widget.inner_type_register(type_registry);
         widget.type_register(type_registry);
-        widget.set_window_id(window_id);
 
         widget.set_initialized(true);
         widget.initialize();
@@ -434,7 +434,6 @@ fn child_initialize(
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
-        child_ref.set_window_id(window_id);
 
         // Determine whether the widget is a container.
         let is_container = child_ref.parent_type().is_a(Container::static_type());
