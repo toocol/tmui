@@ -23,6 +23,7 @@ impl ScrollArea {
     #[inline]
     pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
         ApplicationWindow::initialize_dynamic_component(self, area.as_mut());
+        area.set_parent(self);
         self.area = Some(area)
     }
 

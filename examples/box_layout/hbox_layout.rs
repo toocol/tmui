@@ -36,9 +36,7 @@ impl ObjectImpl for HBoxLayout {
         self.label_3.set_background(Color::YELLOW);
         self.label_3.set_margin_top(10);
         self.label_3.set_margin_left(5);
-    }
 
-    fn initialize(&mut self) {
         self.label_1.set_text("Label 1");
         self.label_2.set_text("Label 2");
         self.label_3.set_text("Label 3");

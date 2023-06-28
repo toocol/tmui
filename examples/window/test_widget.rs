@@ -26,13 +26,9 @@ impl ObjectImpl for TestWidget {
     fn construct(&mut self) {
         self.parent_construct();
         self.idx = 0;
-    }
 
-    fn initialize(&mut self) {
         connect!(self.timer, timeout(), self, timeout());
         self.timer.start(Duration::from_secs(1));
-
-        debug!("Initialize the `TestWidget`");
     }
 }
 

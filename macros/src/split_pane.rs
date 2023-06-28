@@ -8,6 +8,7 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        child.set_parent(self);
         let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),
@@ -137,6 +138,7 @@ pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::R
                     panic!("The widget with id {} is not exist in SplitPane.", id)
                 };
 
+                widget.set_parent(self);
                 ApplicationWindow::initialize_dynamic_component(self, widget.as_mut());
                 let mut split_info = Box::new(SplitInfo::new(
                     widget.id(),

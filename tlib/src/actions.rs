@@ -38,21 +38,19 @@
 //! }
 //! ```
 use crate::prelude::*;
-use log::{debug, error};
+use log::debug;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fmt::Display,
     sync::{
-        atomic::{AtomicBool, Ordering},
         mpsc::{channel, Receiver, Sender},
         Once,
     },
 };
 
 static INIT: Once = Once::new();
-pub static ACTIVATE: AtomicBool = AtomicBool::new(false);
 type ActionsMap = Box<
     HashMap<
         u16,
@@ -134,10 +132,6 @@ impl ActionHub {
                 panic!("`connect_action()` should only call in the `main` thread.")
             }
         });
-        if !ACTIVATE.load(Ordering::SeqCst) {
-            error!("Signal/Slot should connect in `ObjectImpl::initialize()`, or be connected after application was activated(after UI building).");
-            return;
-        }
 
         let map_ref = self.map.as_mut();
         let (target_set, signal_map) = map_ref
@@ -313,7 +307,6 @@ macro_rules! emit {
     }};
 }
 
-/// #### Signal/Slot should connect in `ObjectImpl::initialize()` function, or be connected after application was activated(after UI building).
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! connect {
@@ -390,7 +383,6 @@ macro_rules! signals {
     ( $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
         $(
             $(#[$($attrss)*])*
-            /// #### Signal/Slot should connect in `ObjectImpl::initialize()` function, or be connected after application was activated(after UI building).
             #[allow(dead_code)]
             fn $name(&self) -> Signal {
                 signal!(self, stringify!($name))
@@ -432,11 +424,10 @@ impl Action {
 mod tests {
     use super::ActionHub;
     use crate::{
-        actions::ACTIVATE,
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
     };
-    use std::{rc::Rc, sync::atomic::Ordering, thread, time::Duration};
+    use std::{rc::Rc, thread, time::Duration};
 
     #[extends(Object)]
     pub struct Widget {}
@@ -497,7 +488,6 @@ mod tests {
     fn test_actions() {
         let mut action_hub = ActionHub::new();
         action_hub.initialize();
-        ACTIVATE.store(true, Ordering::SeqCst);
 
         let mut widget = Widget::new();
         widget.reg_action();

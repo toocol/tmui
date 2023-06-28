@@ -48,6 +48,7 @@ impl ContainerImplExt for Stack {
         } else {
             child.hide()
         }
+        child.set_parent(self);
         self.container.children.push(child);
         self.update();
     }

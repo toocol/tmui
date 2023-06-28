@@ -1,13 +1,12 @@
 #![allow(dead_code)]
 use crate::{
-    actions::ACTIVATE,
     emit,
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
     signal, signals,
 };
 use lazy_static::lazy_static;
-use log::{error, warn};
+use log::warn;
 use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
@@ -143,11 +142,6 @@ impl Timer {
     }
 
     pub fn start(&mut self, duration: Duration) {
-        if !ACTIVATE.load(Ordering::SeqCst) {
-            error!("`Timer` should `start()` in `ObjectImpl::initialize()`, or after application was activated(after UI building).");
-            return;
-        }
-
         if !TimerHub::contains_timer(self.id()) && !self.once_timer {
             TimerHub::instance().add_timer(self);
         }
@@ -223,15 +217,11 @@ pub fn sleep(wait: Duration) {
 mod tests {
     use super::{Timer, TimerHub};
     use crate::{
-        actions::ACTIVATE,
         connect,
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
     };
-    use std::{
-        sync::atomic::Ordering,
-        time::{Duration, Instant},
-    };
+    use std::time::{Duration, Instant};
 
     #[extends(Object)]
     pub struct Widget {
@@ -258,8 +248,6 @@ mod tests {
 
         let mut timer_hub = TimerHub::new();
         timer_hub.initialize();
-
-        ACTIVATE.store(true, Ordering::SeqCst);
 
         let mut widget: Box<Widget> = Object::new(&[]);
         let mut timer = Timer::new();

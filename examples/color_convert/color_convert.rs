@@ -20,7 +20,9 @@ impl ObjectSubclass for ColorConvert {
 }
 
 impl ObjectImpl for ColorConvert {
-    fn initialize(&mut self) {
+    fn construct(&mut self) {
+        self.parent_construct();
+
         self.front = Box::new(vec![0u8; 2560 * 1440 * 4]);
         self.end = Box::new(vec![0u8; 2560 * 1440 * 4]);
         connect!(self.timer, timeout(), self, color_convert());

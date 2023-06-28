@@ -48,40 +48,59 @@ pub struct Widget {
 pub trait WidgetSignals: ActionExt {
     signals! {
         /// Emit when widget's size changed.
+        /// 
+        /// @param [`Size`]
         size_changed();
 
         /// Emit when widget's receive mouse pressed event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_pressed();
 
         /// Emit when widget's receive mouse released event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_released();
 
         /// Emit when widget's receive mouse double click event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_double_click();
 
         /// Emit when widget's receive mouse move event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_move();
 
         /// Emit when widget's receive mouse wheel event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_wheel();
 
         /// Emit when widget's receive mouse enter event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_enter();
 
         /// Emit when widget's receive mouse leave event.
+        /// 
+        /// @param [`MouseEvent`]
         mouse_leave();
 
         /// Emit when widget's receive key pressed event.
+        /// 
+        /// @param [`KeyEvent`]
         key_pressed();
 
         /// Emit when widget's receive key released event.
+        /// 
+        /// @param [`KeyEvent`]
         key_released();
 
         /// Emit when widget's receive character event.
+        /// 
+        /// @param [`ReceiveCharacterEvent`]
         receive_character();
-
-        /// Emit when widget's receive input method event.
-        input_method();
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
@@ -93,6 +112,7 @@ impl Widget {
         T: WidgetImpl,
     {
         ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        child.set_parent(self);
         self.child = Some(child);
     }
 
@@ -970,9 +990,7 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn parent_run_after(&mut self) {
-        println!("Widget parent run after")
-    }
+    fn parent_run_after(&mut self) {}
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -1166,6 +1184,8 @@ pub trait WidgetImpl:
 
     /// `run_after()` will be invoked when application was started. <br>
     /// Should annotated macro `[run_after]` to enable this function.
+    /// 
+    /// ### Should call `self.parent_run_after()` mannually if override this function.
     fn run_after(&mut self) {
         self.parent_run_after();
     }

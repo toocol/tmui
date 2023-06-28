@@ -59,9 +59,7 @@ impl ObjectImpl for LayoutWidget {
         self.set_valign(Align::Center);
         self.width_request(500);
         self.height_request(300);
-    }
 
-    fn initialize(&mut self) {
         connect!(self.label, text_changed(), self, text_changed(String:0, String:1));
         connect!(self.timer, timeout(), self, change_text());
         self.label.set_text("Hello World");

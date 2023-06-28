@@ -41,18 +41,12 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
     let mut ast = parse_macro_input!(input as DeriveInput);
 
-    let extend_str = extend_attr.extend.to_string();
-    if extend_str != "Widget" && extend_attr.layout_meta.is_some() {
-        return syn::Error::new_spanned(
-            extend_attr.layout_meta.unwrap(),
-            format!(
-                "`{}` was not supported layout, only `Widget` has layout.",
-                extend_str
-            ),
-        )
-        .to_compile_error()
-        .into();
+    match extend_attr.check() {
+        Err(e) => return e.to_compile_error().into(),
+        _ => {},
     }
+
+    let extend_str = extend_attr.extend.to_string();
     match extend_str.as_str() {
         "Object" => match extend_object::expand(&mut ast) {
             Ok(tkn) => tkn.into(),
@@ -76,7 +70,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "SharedWidget" => match extend_shared_widget::expand(&mut ast) {
+        "SharedWidget" => match extend_shared_widget::expand(&mut ast, extend_attr.id.as_ref()) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -123,8 +117,10 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-/// The widget annotated `[run_after]` will execute the [`WidgetImpl::run_after()`] function 
+/// The widget annotated `[run_after]` will execute the [`WidgetImpl::run_after()`] function
 /// after the application was started.
+/// 
+/// ### Only taing effect when struct annotated `#[extends(Widget)]`
 #[proc_macro_attribute]
 pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
     input

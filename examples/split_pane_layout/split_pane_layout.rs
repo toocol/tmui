@@ -1,5 +1,5 @@
 use std::ptr::NonNull;
-use tlib::{connect, events::MouseEvent, nonnull_ref};
+use tlib::{connect, events::MouseEvent};
 use tmui::{
     label::Label,
     prelude::*,
@@ -29,16 +29,13 @@ impl ObjectImpl for SplitPaneLayout {
         label.set_content_valign(Align::Center);
         label.set_mouse_tracking(true);
         self.left = label.id();
+
+        connect!(label, mouse_pressed(), self, split_off(MouseEvent));
         self.add_child(label);
 
         let mut children_mut = self.children_mut();
         let label = children_mut[0].downcast_mut::<Label>().unwrap();
         self.label = NonNull::new(label);
-    }
-
-    fn initialize(&mut self) {
-        let label = nonnull_ref!(self.label);
-        connect!(label, mouse_pressed(), self, split_off(MouseEvent));
     }
 }
 

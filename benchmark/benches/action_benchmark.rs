@@ -1,8 +1,6 @@
-use std::sync::atomic::Ordering;
-
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use tlib::{
-    actions::{ActionHub, ACTIVATE},
+    actions::ActionHub,
     connect, disconnect, emit,
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
@@ -67,7 +65,6 @@ fn test_disconnect(widget: &[Box<Widget>], idx: usize) {
 fn criterion_values(c: &mut Criterion) {
     let mut action_hub = ActionHub::new();
     action_hub.initialize();
-    ACTIVATE.store(true, Ordering::SeqCst);
 
     let widget: Box<Widget> = Object::new(&[]);
     widget.connect(

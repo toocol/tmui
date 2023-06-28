@@ -14,7 +14,7 @@ use crate::{
 #[extends(Widget)]
 #[run_after]
 pub struct SharedWidget {
-    shared_id: &'static str,
+    shared_id: Option<&'static str>,
 }
 
 impl ObjectSubclass for SharedWidget {
@@ -52,11 +52,11 @@ pub trait SharedWidgetExt {
 impl SharedWidgetExt for SharedWidget {
     #[inline]
     fn shared_id(&self) -> &'static str {
-        self.shared_id
+        self.shared_id.expect("`SharedWidget` should set the `shared_id`")
     }
 
     #[inline]
     fn set_shared_id(&mut self, id: &'static str) {
-        self.shared_id = id
+        self.shared_id = Some(id)
     }
 }
