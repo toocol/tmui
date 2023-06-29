@@ -14,7 +14,7 @@ impl RasterBackend {
     pub fn new(buffer: Bitmap) -> Box<Self> {
         #[cfg(target_os = "windows")]
         let color_type = ColorType::BGRA8888;
-        #[cfg(target_os = "macos")]
+        #[cfg(not(target_os = "windows"))]
         let color_type = ColorType::RGBA8888;
 
         Box::new(Self {

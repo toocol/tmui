@@ -1,5 +1,6 @@
 use super::{Message, PlatformContext};
 use crate::winit::{
+    self,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::Window,
@@ -22,7 +23,7 @@ use tlib::{
     figure::Point,
     namespace::{KeyCode, KeyboardModifier, MouseButton},
     prelude::SystemCursorShape,
-    winit::event::{ElementState, KeyboardInput, ModifiersState, MouseScrollDelta},
+    winit::{event::{ElementState, MouseScrollDelta}, keyboard::ModifiersState},
 };
 
 pub(crate) struct WindowProcess;
@@ -126,9 +127,9 @@ impl WindowProcess {
 
                 // Modifier change event.
                 Event::WindowEvent {
-                    event: WindowEvent::ModifiersChanged(modifier_state),
+                    event: WindowEvent::ModifiersChanged(modifier),
                     ..
-                } => change_modifer(modifer, modifier_state),
+                } => change_modifer(modifer, modifier.state()),
 
                 // Mouse enter window event.
                 Event::WindowEvent {
@@ -167,8 +168,12 @@ impl WindowProcess {
                     ..
                 } => {
                     let (point, delta_type) = match delta {
-                        MouseScrollDelta::PixelDelta(pos) => (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel),
-                        MouseScrollDelta::LineDelta(x, y) => (Point::new(x as i32, y as i32), DeltaType::Line),
+                        MouseScrollDelta::PixelDelta(pos) => {
+                            (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel)
+                        }
+                        MouseScrollDelta::LineDelta(x, y) => {
+                            (Point::new(x as i32, y as i32), DeltaType::Line)
+                        }
                     };
                     let evt = MouseEvent::new(
                         EventType::MouseWhell,
@@ -233,9 +238,9 @@ impl WindowProcess {
                 Event::WindowEvent {
                     event:
                         WindowEvent::KeyboardInput {
-                            input:
-                                KeyboardInput {
-                                    virtual_keycode,
+                            event:
+                                winit::event::KeyEvent {
+                                    physical_key,
                                     state: ElementState::Pressed,
                                     ..
                                 },
@@ -243,26 +248,24 @@ impl WindowProcess {
                         },
                     ..
                 } => {
-                    if let Some(vkeycode) = virtual_keycode {
-                        let key_code: KeyCode = vkeycode.into();
-                        let evt = KeyEvent::new(
-                            EventType::KeyPress,
-                            key_code,
-                            key_code.to_string(),
-                            *modifer,
-                        );
+                    let key_code: KeyCode = physical_key.into();
+                    let evt = KeyEvent::new(
+                        EventType::KeyPress,
+                        key_code,
+                        key_code.to_string(),
+                        *modifer,
+                    );
 
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                    }
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
 
                 // Key released event.
                 Event::WindowEvent {
                     event:
                         WindowEvent::KeyboardInput {
-                            input:
-                                KeyboardInput {
-                                    virtual_keycode,
+                            event:
+                                winit::event::KeyEvent {
+                                    physical_key,
                                     state: ElementState::Released,
                                     ..
                                 },
@@ -270,17 +273,15 @@ impl WindowProcess {
                         },
                     ..
                 } => {
-                    if let Some(vkeycode) = virtual_keycode {
-                        let key_code: KeyCode = vkeycode.into();
-                        let evt = KeyEvent::new(
-                            EventType::KeyRelease,
-                            key_code,
-                            key_code.to_string(),
-                            *modifer,
-                        );
+                    let key_code: KeyCode = physical_key.into();
+                    let evt = KeyEvent::new(
+                        EventType::KeyRelease,
+                        key_code,
+                        key_code.to_string(),
+                        *modifer,
+                    );
 
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                    }
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
 
                 // Cleared event.
@@ -367,16 +368,16 @@ impl WindowProcess {
 #[inline]
 fn change_modifer(modifer: &mut KeyboardModifier, modifier_state: ModifiersState) {
     let mut state = KeyboardModifier::NoModifier;
-    if modifier_state.shift() {
+    if modifier_state.shift_key() {
         state = state.or(KeyboardModifier::ShiftModifier);
     }
-    if modifier_state.ctrl() {
+    if modifier_state.control_key() {
         state = state.or(KeyboardModifier::ControlModifier);
     }
-    if modifier_state.alt() {
+    if modifier_state.alt_key() {
         state = state.or(KeyboardModifier::AltModifier);
     }
-    if modifier_state.logo() {
+    if modifier_state.super_key() {
         state = state.or(KeyboardModifier::MetaModifier);
     }
     *modifer = state;

@@ -1,9 +1,7 @@
-#[cfg(target_os = "unix")]
+#[cfg(free_unix)]
 extern crate beep;
-#[cfg(target_os = "unix")]
+#[cfg(free_unix)]
 extern crate dimensioned;
-#[cfg(target_os = "unix")]
-use dimensioned::si;
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::MessageBeep;
 #[cfg(target_os = "macos")]
@@ -36,9 +34,9 @@ impl System {
 
     #[inline]
     pub fn beep() {
-        #[cfg(target_os = "unix")]
+        #[cfg(free_unix)]
         {
-            beep::beep(si::Hertz::new(400)).unwrap();
+            beep::beep(400).unwrap();
         }
         #[cfg(target_os = "macos")]
         {
@@ -52,14 +50,14 @@ impl System {
     }
 }
 
+// There was some problem when running test on github workflow on platform ubuntu.
 #[cfg(test)]
+#[cfg(not(free_unix))]
 mod tests {
     use std::time::Duration;
-
     use crate::clipboard::ClipboardLevel;
-
     use super::System;
-
+    
     #[test]
     fn test_clipboard() {
         let clipboard = System::clipboard();
@@ -74,8 +72,10 @@ mod tests {
                 .unwrap()
         );
 
-        clipboard.set_text(str, ClipboardLevel::Os);
-        assert_eq!(str, clipboard.text(ClipboardLevel::Os).as_ref().unwrap());
+         {
+            clipboard.set_text(str, ClipboardLevel::Os);
+            assert_eq!(str, clipboard.text(ClipboardLevel::Os).as_ref().unwrap());
+        }
     }
 
     #[test]

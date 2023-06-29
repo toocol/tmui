@@ -1,10 +1,15 @@
 pub(crate) mod message;
 pub(crate) mod platform_ipc;
 pub(crate) mod platform_macos;
+pub(crate) mod platform_wayland;
 pub(crate) mod platform_win32;
+pub(crate) mod platform_x11;
 pub(crate) mod shared_channel;
 pub(crate) mod window_context;
 pub(crate) mod window_process;
+
+#[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
+compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
 use std::sync::mpsc::Sender;
 
@@ -13,8 +18,12 @@ pub use message::*;
 pub(crate) use platform_ipc::*;
 #[cfg(target_os = "macos")]
 pub(crate) use platform_macos::*;
+#[cfg(wayland_platform)]
+pub(crate) use platform_wayland::*;
 #[cfg(target_os = "windows")]
 pub(crate) use platform_win32::*;
+#[cfg(x11_platform)]
+pub(crate) use platform_x11::*;
 use tlib::figure::Rect;
 
 use self::window_context::WindowContext;
@@ -25,9 +34,11 @@ pub enum PlatformType {
     #[cfg(target_os = "windows")]
     #[default]
     Win32,
-    #[cfg(target_os = "linux")]
+    #[cfg(free_unix)]
     #[default]
-    Linux,
+    LinuxX11,
+    #[cfg(free_unix)]
+    LinuxWayland,
     #[cfg(target_os = "macos")]
     #[default]
     Macos,
