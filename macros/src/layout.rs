@@ -170,8 +170,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
 
             fn position_layout(
                 &mut self,
-                previous: &dyn WidgetImpl,
-                parent: &dyn WidgetImpl,
+                previous: Option<&dyn WidgetImpl>,
+                parent: Option<&dyn WidgetImpl>,
                 manage_by_container: bool,
             ) {
                 #layout::container_position_layout(self, previous, parent, manage_by_container)

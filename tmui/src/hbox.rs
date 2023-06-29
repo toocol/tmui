@@ -53,8 +53,8 @@ impl Layout for HBox {
 
     fn position_layout(
         &mut self,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         HBox::container_position_layout(self, previous, parent, manage_by_container)
@@ -68,8 +68,8 @@ impl ContainerLayout for HBox {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);

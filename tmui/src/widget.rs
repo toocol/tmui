@@ -1449,8 +1449,8 @@ impl<T: WidgetAcquire> Layout for T {
 
     fn position_layout(
         &mut self,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         LayoutManager::base_widget_position_layout(self, previous, parent, manage_by_container)
@@ -1462,7 +1462,7 @@ impl Layout for Widget {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl, _: bool) {}
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {}
 }
 
 #[cfg(test)]

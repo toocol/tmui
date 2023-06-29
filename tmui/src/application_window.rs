@@ -201,16 +201,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        // // If the given widget's layout has changed, need pass ref of widget's parent.
-        let parent = unsafe {
-            widget
-                .get_raw_parent_mut()
-                .as_mut()
-                .unwrap()
-                .as_mut()
-                .unwrap()
-        };
-        Self::layout_of(self.id()).layout_change(parent)
+        Self::layout_of(self.id()).layout_change(widget)
     }
 
     #[inline]
