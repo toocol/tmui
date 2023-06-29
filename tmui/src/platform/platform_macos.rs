@@ -10,7 +10,7 @@ use cocoa::{
         NSApp, NSApplication, NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular,
         NSImage, NSImageView, NSView, NSWindow,
     },
-    base::{id, nil, NO},
+    base::{id, nil},
     foundation::{NSAutoreleasePool, NSSize},
 };
 use core_graphics::{
@@ -214,7 +214,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 &self.color_space,
                 kCGImageAlphaLast,
                 &data_provider,
-                NO,
+                false,
                 kCGRenderingIntentDefault,
             );
             let cg_img_ref = cg_image.as_ref();
