@@ -2163,6 +2163,7 @@ name = "tmui"
 version = "0.1.0"
 dependencies = [
  "beep",
+ "cfg_aliases",
  "clipboard",
  "cocoa",
  "core-foundation",

@@ -1,9 +1,11 @@
-#[cfg(target_os = "linux")]
-use crate::platform::PlatformLinux;
 #[cfg(target_os = "macos")]
 use crate::platform::PlatformMacos;
+#[cfg(wayland_platform)]
+use crate::platform::PlatformWayland;
 #[cfg(target_os = "windows")]
 use crate::platform::PlatformWin32;
+#[cfg(x11_platform)]
+use crate::platform::PlatformX11;
 use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
@@ -32,12 +34,7 @@ use std::{
     time::Instant,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
-use tlib::{
-    actions::ActionHub,
-    object::ObjectImpl,
-    prelude::tokio_runtime,
-    timer::TimerHub,
-};
+use tlib::{actions::ActionHub, object::ObjectImpl, prelude::tokio_runtime, timer::TimerHub};
 
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -193,9 +190,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let shared_mem_name = self.shared_mem_name.expect(
                     "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
                 );
-                let shared_widget_id = self.shared_widget_id.expect(
-                    "`PlatformType::Ipc` require non-None.`",
-                );
+                let shared_widget_id = self
+                    .shared_widget_id
+                    .expect("`PlatformType::Ipc` require non-None.`");
                 platform_context.set_shared_widget_id(shared_widget_id);
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
@@ -217,9 +214,19 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.initialize();
                 platform_context.wrap()
             }
-            #[cfg(target_os = "linux")]
-            PlatformType::Linux => {
-                let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
+            #[cfg(free_unix)]
+            PlatformType::LinuxX11 => {
+                let mut platform_context = PlatformX11::<T, M>::new(&title, width, height);
+                if let Some(shared_mem_name) = self.shared_mem_name {
+                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    shared_channel = Some(platform_context.shared_channel());
+                }
+                platform_context.initialize();
+                platform_context.wrap()
+            }
+            #[cfg(free_unix)]
+            PlatformType::LinuxWayland => {
+                let mut platform_context = PlatformWayland::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, width, height);
                     shared_channel = Some(platform_context.shared_channel());

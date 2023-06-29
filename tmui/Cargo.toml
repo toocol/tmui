@@ -3,7 +3,16 @@ name = "tmui"
 version = "0.1.0"
 edition = "2021"
 
+build = "build.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build-dependencies]
+cfg_aliases = "0.1.1"
+
+[features]
+default = ["wayland", "x11"]
+wayland = []
+x11 = []
 
 [dependencies]
 tipc = { path = "../tipc/" }
