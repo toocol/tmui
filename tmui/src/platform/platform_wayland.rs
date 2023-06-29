@@ -1,3 +1,4 @@
+#![cfg(free_unix)]
 use std::sync::{mpsc::Sender, Arc};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
 use crate::graphics::bitmap::Bitmap;
