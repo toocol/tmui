@@ -25,13 +25,14 @@ use trait_info::TraitInfo;
 /// Let struct to extend specific type.<br>
 /// This macro will implement a large number of traits automatically,
 /// enable struct to obtain corresponding functions.<br>
-/// ### Supported extends type:
+///  
+/// - ### Supported extends type:
 ///     - Object
 ///     - Element
 ///     - Widget
 ///     - SharedWidget
 ///     - Container
-/// ### Supported layouts:
+/// - ### Supported layouts:
 ///     - Stack
 ///     - VBox
 ///     - HBox

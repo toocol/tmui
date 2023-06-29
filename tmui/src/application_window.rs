@@ -24,6 +24,7 @@ use tlib::{
 
 thread_local! {
     pub(crate) static WINDOW_ID: RefCell<u16> = RefCell::new(0);
+    pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
 }
 
 static INIT: Once = Once::new();
@@ -48,6 +49,8 @@ impl ObjectSubclass for ApplicationWindow {
 
 impl ObjectImpl for ApplicationWindow {
     fn initialize(&mut self) {
+        INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
+
         connect!(self, size_changed(), self, when_size_change(Size));
         child_initialize(self.get_raw_child_mut(), self.id());
         emit!(self.size_changed(), self.size());
@@ -57,7 +60,9 @@ impl ObjectImpl for ApplicationWindow {
                 unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
             self.base_offset = platform_context.region().top_left();
         }
+
         self.set_initialized(true);
+        INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
     }
 }
 
@@ -196,7 +201,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        // If the given widget's layout has changed, need pass ref of widget's parent.
+        // // If the given widget's layout has changed, need pass ref of widget's parent.
         let parent = unsafe {
             widget
                 .get_raw_parent_mut()
@@ -387,11 +392,20 @@ impl ApplicationWindow {
     }
 
     pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
+        INTIALIZE_PHASE.with(|p| {
+            if *p.borrow() {
+                panic!("`{}` Can not add ui component in function `ObjectImpl::initialize()`.", widget.name())
+            }
+        });
+
         if widget.initialized() {
             return;
         }
 
         let window_id = widget.window_id();
+        if window_id == 0 {
+            return;
+        }
         let window = Self::window_of(window_id);
         // There was no need to initialize the widget, it's created before ApplicationWindow's initialization,
         // widget will be initialized later in function `child_initialize()`.
@@ -399,7 +413,6 @@ impl ApplicationWindow {
             return;
         }
 
-        // widget.set_parent(parent);
         let board = window.board();
         board.add_element(widget.as_element());
         ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));
@@ -458,8 +471,8 @@ fn child_initialize(
         }
 
         child_ref.set_initialized(true);
-        child_ref.initialize();
         child_ref.inner_initialize();
+        child_ref.initialize();
 
         child = children.pop_front().take().map_or(None, |widget| widget);
     }

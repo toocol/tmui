@@ -480,6 +480,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn parent_run_after(&mut self) {
                 #parent_run_after
             }
+
+            #[inline]
+            fn hexpand(&self) -> bool {
+                self.#(#widget_path).*.hexpand()
+            }
+
+            #[inline]
+            fn set_hexpand(&mut self, hexpand: bool) {
+                self.#(#widget_path).*.set_hexpand(hexpand)
+            }
+
+            #[inline]
+            fn vexpand(&self) -> bool {
+                self.#(#widget_path).*.vexpand()
+            }
+
+            #[inline]
+            fn set_vexpand(&mut self, vexpand: bool) {
+                self.#(#widget_path).*.set_vexpand(vexpand)
+            }
         }
 
         impl WidgetImplExt for #name {

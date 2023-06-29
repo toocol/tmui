@@ -40,6 +40,13 @@ pub struct Widget {
     #[derivative(Default(value = "Color::BLACK"))]
     border_color: Color,
 
+    /// Horizontal scalability, if `true` can cause child widget to expand horizontally 
+    /// with changes in the width of the parent widget. 
+    hexpand: bool,
+    /// Vertical scalability, if `true` can cause child widget to expand vertically
+    /// height changes in the height of the parent widget. 
+    vexpand: bool,
+
     /// Let the widget track the `MouseMoveEvent`, the default value was false.
     mouse_tracking: bool,
 }
@@ -561,7 +568,42 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_mouse_tracking(&mut self, is_tracking: bool);
 
+    /// Parent run after function.
+    ///
+    /// Go to[`Function defination`](WidgetExt::parent_run_after) (Defined in [`WidgetExt`])
     fn parent_run_after(&mut self);
+
+    /// Get `hexpand` of widget.
+    /// 
+    /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally 
+    /// with changes in the width of the parent widget. 
+    ///
+    /// Go to[`Function defination`](WidgetExt::hexpand) (Defined in [`WidgetExt`])
+    fn hexpand(&self) -> bool;
+
+    /// Set `hexpand` of widget.
+    /// 
+    /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally 
+    /// with changes in the width of the parent widget. 
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_hexpand) (Defined in [`WidgetExt`])
+    fn set_hexpand(&mut self, hexpand: bool);
+
+    /// Get `vexpand` of widget.
+    /// 
+    /// `vexpand`: Vertical scalability, if `true` can cause child widget to expand vertically
+    /// height changes in the height of the parent widget. 
+    ///
+    /// Go to[`Function defination`](WidgetExt::vexpand) (Defined in [`WidgetExt`])
+    fn vexpand(&self) -> bool;
+
+    /// Set `vexpand` of widget.
+    /// 
+    /// `vexpand`: Vertical scalability, if `true` can cause child widget to expand vertically
+    /// height changes in the height of the parent widget. 
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_vexpand) (Defined in [`WidgetExt`])
+    fn set_vexpand(&mut self, vexpand: bool);
 }
 
 impl WidgetExt for Widget {
@@ -1043,6 +1085,26 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn parent_run_after(&mut self) {}
+
+    #[inline]
+    fn hexpand(&self) -> bool {
+        self.hexpand
+    }
+
+    #[inline]
+    fn set_hexpand(&mut self, hexpand: bool) {
+        self.hexpand = hexpand
+    }
+
+    #[inline]
+    fn vexpand(&self) -> bool {
+        self.vexpand
+    }
+
+    #[inline]
+    fn set_vexpand(&mut self, vexpand: bool) {
+        self.vexpand = vexpand
+    }
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -1320,6 +1382,7 @@ pub trait WidgetImpl:
     /// Invoke when widget's receive input method event.
     fn on_input_method(&mut self, input_method: &InputMethodEvent) {}
 }
+
 
 impl dyn WidgetImpl {
     #[inline]

@@ -81,11 +81,10 @@ impl ObjectSubclass for ScrollArea {
 }
 
 impl ObjectImpl for ScrollArea {
-    fn initialize(&mut self) {
-        let scroll_bar_ptr = self.scroll_bar.as_mut() as *mut dyn WidgetImpl;
-        ApplicationWindow::initialize_dynamic_component(unsafe {
-            scroll_bar_ptr.as_mut().unwrap()
-        });
+    fn construct(&mut self) {
+        self.parent_construct();
+
+        ApplicationWindow::initialize_dynamic_component(self.scroll_bar.as_mut());
     }
 }
 
