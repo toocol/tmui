@@ -95,14 +95,6 @@ pub struct TypeRegistration {
     data: HashMap<TypeId, Box<dyn ReflectTrait>>,
 }
 
-pub trait InnerInitializer {
-    /// Register the reflect type info to [`TypeRegistry`] in this function.
-    fn inner_type_register(&self, type_registry: &mut TypeRegistry);
-
-    /// Inner initialize function for widget.
-    fn inner_initialize(&mut self) {}
-}
-
 /// Auto implemented by defined [`extends`](macros::extends) on struct. <br>
 ///
 /// [`Any`] trait bound was needed, because of the [`type_id()`](Any::type_id) function. <br>

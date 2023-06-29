@@ -8,10 +8,10 @@ pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{
     Object, ObjectAcquire, ObjectChildrenConstruct, ObjectExt, ObjectImpl, ObjectImplExt,
     ObjectOperation, ParentType, ReflectObjectChildrenConstruct, ReflectObjectImpl,
-    ReflectObjectImplExt, ReflectObjectOperation,
+    ReflectObjectImplExt, ReflectObjectOperation, InnerInitializer
 };
 pub use crate::r#async::{async_tasks, tokio_runtime, AsyncTask};
-pub use crate::reflect::{FromType, InnerInitializer, Reflect, ReflectTrait, TypeRegistry};
+pub use crate::reflect::{FromType, Reflect, ReflectTrait, TypeRegistry};
 pub use crate::timer::TimerSignal;
 pub use crate::types::{IsA, ObjectType, StaticType, Type, TypeDowncast};
 pub use crate::values::{FromBytes, ToBytes, ToValue, Value};

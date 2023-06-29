@@ -11,11 +11,19 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        os: [windows-latest]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v3
+    # - name: Set up build environment
+    #   run: |
+    #        if [ ${{ matrix.os }} == 'ubuntu-latest' ]; then
+    #         sudo apt-get update
+    #         sudo apt-get install -y libxkbcommon-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests

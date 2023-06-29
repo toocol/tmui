@@ -61,8 +61,8 @@ impl Layout for Stack {
 
     fn position_layout(
         &mut self,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         Stack::container_position_layout(self, previous, parent, manage_by_container)
@@ -76,15 +76,15 @@ impl ContainerLayout for Stack {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
 
         // deal with the children's position
         let widget_ptr = widget as *const dyn WidgetImpl;
-        let previous = unsafe { widget_ptr.as_ref().unwrap() };
+        let previous = unsafe { Some(widget_ptr.as_ref().unwrap()) };
 
         let stack_trait_obj = cast!(widget as StackTrait).unwrap();
         let index = stack_trait_obj.current_index();

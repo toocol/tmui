@@ -49,7 +49,7 @@ impl Layout for TestContainer {
         tmui::layout::Composition::HorizontalArrange
     }
 
-    fn position_layout(&mut self, _: &dyn WidgetImpl, _: &dyn WidgetImpl, _: bool) {}
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {}
 }
 
 #[test]

@@ -23,8 +23,8 @@ pub trait Layout {
 
     fn position_layout(
         &mut self,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     );
 }
@@ -34,8 +34,8 @@ pub trait ContainerLayout {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     );
 }
@@ -70,13 +70,10 @@ impl LayoutManager {
 
     pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl) {
         // Deal with the size first
-        let child: Option<*mut dyn WidgetImpl> = widget.get_raw_child_mut();
-        if let Some(child) = child {
-            Self::child_size_probe(self.window_size, widget.size(), child);
-        }
+        Self::child_size_probe(self.window_size, widget.size(), widget);
 
         // Deal with the position
-        Self::child_position_probe(Some(widget), Some(widget), child)
+        Self::child_position_probe(None, None, Some(widget))
     }
 
     pub(crate) fn child_size_probe(
@@ -104,11 +101,11 @@ impl LayoutManager {
 
         let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
         if raw_child.is_none() && container_no_children {
-            let _size_hint = widget_ref.size_hint();
             if parent_size.width() != 0 && parent_size.height() != 0 {
                 if size.width() == 0 {
                     widget_ref.width_request(parent_size.width());
                 }
+
                 if size.height() == 0 {
                     widget_ref.height_request(parent_size.height());
                 }
@@ -183,8 +180,8 @@ impl LayoutManager {
         while let Some(widget_ptr) = widget {
             let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
             debug!("Widget position probe: {}", widget_ref.name());
-            let previous_ref = unsafe { previous.as_ref().unwrap().as_ref().unwrap() };
-            let parent_ref = unsafe { parent.as_ref().unwrap().as_ref().unwrap() };
+            let previous_ref = unsafe { previous.as_ref().and_then(|p| p.as_ref()) };
+            let parent_ref = unsafe { parent.as_ref().and_then(|p| p.as_ref()) };
 
             // Deal with the widget's postion.
             widget_ref.position_layout(previous_ref, parent_ref, false);
@@ -222,10 +219,14 @@ impl LayoutManager {
 
     pub(crate) fn base_widget_position_layout(
         widget: &mut dyn WidgetImpl,
-        _: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        _: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
+        if parent.is_none() {
+            return;
+        }
+        let parent = parent.unwrap();
         if parent.parent_type().is_a(Container::static_type()) && !manage_by_container {
             return;
         }

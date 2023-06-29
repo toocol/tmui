@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::{
-    prelude::{AsAny, FromType, InnerInitializer, Reflect, ReflectTrait, TypeRegistry},
+    prelude::{AsAny, FromType, Reflect, ReflectTrait, TypeRegistry},
     types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
@@ -178,6 +178,15 @@ impl ObjectImplExt for Object {
     /// Go to[`Function defination`](ObjectImplExt::parent_on_property_set) (Defined in [`ObjectImplExt`])
     fn parent_on_property_set(&mut self, _name: &str, _value: &Value) {}
 }
+
+pub trait InnerInitializer {
+    /// Register the reflect type info to [`TypeRegistry`] in this function.
+    fn inner_type_register(&self, type_registry: &mut TypeRegistry);
+
+    /// Inner initialize function for widget.
+    fn inner_initialize(&mut self) {}
+}
+
 
 impl InnerInitializer for Object {
     fn inner_type_register(&self, _: &mut TypeRegistry) {}

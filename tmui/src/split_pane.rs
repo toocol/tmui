@@ -80,8 +80,8 @@ impl Layout for SplitPane {
 
     fn position_layout(
         &mut self,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         SplitPane::container_position_layout(self, previous, parent, manage_by_container)
@@ -95,8 +95,8 @@ impl ContainerLayout for SplitPane {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: &dyn WidgetImpl,
-        parent: &dyn WidgetImpl,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
         LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
