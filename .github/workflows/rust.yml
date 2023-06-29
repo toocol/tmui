@@ -20,12 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Set up build environment
+      if: matrix.os == 'ubuntu-latest'
       run: |
-           if [ ${{ matrix.os }} == 'ubuntu-latest' ]; then
             sudo apt-get update
             sudo apt-get install -y libxkbcommon-dev
             sudo apt-get install libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libfontconfig1-dev libfreetype6-dev
-           fi
     - name: Build
       run: cargo build --verbose
     - name: Run tests
