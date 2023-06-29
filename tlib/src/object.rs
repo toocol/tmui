@@ -252,7 +252,8 @@ pub trait ObjectImpl: ObjectImplExt + InnerInitializer + TypeName {
         self.parent_on_property_set(name, value)
     }
 
-    /// `initialize()` the widget as a `child` of another widget. <br>
+    /// `initialize()` the widget. <br>
+    /// Widget's parent or child can be acquired in this function.
     fn initialize(&mut self) {}
 
     /// Override to register the reflect type info to [`TypeRegistry`] in this function.

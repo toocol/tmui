@@ -48,57 +48,57 @@ pub struct Widget {
 pub trait WidgetSignals: ActionExt {
     signals! {
         /// Emit when widget's size changed.
-        /// 
+        ///
         /// @param [`Size`]
         size_changed();
 
         /// Emit when widget's receive mouse pressed event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_pressed();
 
         /// Emit when widget's receive mouse released event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_released();
 
         /// Emit when widget's receive mouse double click event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_double_click();
 
         /// Emit when widget's receive mouse move event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_move();
 
         /// Emit when widget's receive mouse wheel event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_wheel();
 
         /// Emit when widget's receive mouse enter event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_enter();
 
         /// Emit when widget's receive mouse leave event.
-        /// 
+        ///
         /// @param [`MouseEvent`]
         mouse_leave();
 
         /// Emit when widget's receive key pressed event.
-        /// 
+        ///
         /// @param [`KeyEvent`]
         key_pressed();
 
         /// Emit when widget's receive key released event.
-        /// 
+        ///
         /// @param [`KeyEvent`]
         key_released();
 
         /// Emit when widget's receive character event.
-        /// 
+        ///
         /// @param [`ReceiveCharacterEvent`]
         receive_character();
     }
@@ -111,7 +111,7 @@ impl Widget {
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         child.set_parent(self);
         self.child = Some(child);
     }
@@ -240,28 +240,44 @@ pub trait WidgetExt {
     fn set_parent(&mut self, parent: *mut dyn WidgetImpl);
 
     /// Get the raw pointer of child.
-    /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
     ///
     /// Go to[`Function defination`](WidgetExt::get_raw_child) (Defined in [`WidgetExt`])
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl>;
 
     /// Get the raw mut pointer of child.
-    /// Use [`WidgetGenericExt::get_child()`](WidgetGenericExt::get_child) instead.
     ///
     /// Go to[`Function defination`](WidgetExt::get_raw_child_mut) (Defined in [`WidgetExt`])
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl>;
 
+    /// Get the ref of child.
+    ///
+    /// Go to[`Function defination`](WidgetExt::get_child_ref) (Defined in [`WidgetExt`])
+    fn get_child_ref(&self) -> Option<&dyn WidgetImpl>;
+
+    /// Get the ref mut of child.
+    ///
+    /// Go to[`Function defination`](WidgetExt::get_child_mut) (Defined in [`WidgetExt`])
+    fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
+
     /// Get the raw pointer of parent.
-    /// Use [`get_parent()`](WidgetGenericExt::get_parent) instead.
     ///
     /// Go to[`Function defination`](WidgetExt::get_raw_parent) (Defined in [`WidgetExt`])
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl>;
 
     /// Get the raw mut pointer of parent.
-    /// Use [`get_parent()`](WidgetGenericExt::get_parent) instead.
     ///
     /// Go to[`Function defination`](WidgetExt::get_raw_parent) (Defined in [`WidgetExt`])
     fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl>;
+
+    /// Get the ref of parent.
+    ///
+    /// Go to[`Function defination`](WidgetExt::get_child_ref) (Defined in [`WidgetExt`])
+    fn get_parent_ref(&self) -> Option<&dyn WidgetImpl>;
+
+    /// Get the ref mut of child.
+    ///
+    /// Go to[`Function defination`](WidgetExt::get_parent_mut) (Defined in [`WidgetExt`])
+    fn get_parent_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
 
     /// Hide the Widget.
     ///
@@ -293,12 +309,16 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
     fn resize(&mut self, width: i32, height: i32);
 
-    /// Request the widget's maximum width.
+    /// Request the widget's width. <br>
+    /// This function should be used in construct phase of the ui component,
+    /// the function will not change the layout and will not trigger the signal `size_changed()`.
     ///
     /// Go to[`Function defination`](WidgetExt::width_request) (Defined in [`WidgetExt`])
     fn width_request(&mut self, width: i32);
 
-    /// Request the widget's maximum width.
+    /// Request the widget's width. <br>
+    /// This function should be used in construct phase of the ui component,
+    /// the function will not change the layout and will not trigger the signal `size_changed()`.
     ///
     /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
     fn height_request(&mut self, width: i32);
@@ -587,6 +607,22 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
+    fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
+        match self.child {
+            Some(ref child) => Some(child.as_ref()),
+            None => None,
+        }
+    }
+
+    #[inline]
+    fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+        match self.child {
+            Some(ref mut child) => Some(child.as_mut()),
+            None => None,
+        }
+    }
+
+    #[inline]
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
         match self.parent.as_ref() {
             Some(parent) => Some(unsafe { parent.as_ref() }),
@@ -599,6 +635,22 @@ impl WidgetExt for Widget {
         match self.parent.as_mut() {
             Some(parent) => Some(unsafe { parent.as_mut() }),
             None => None,
+        }
+    }
+
+    #[inline]
+    fn get_parent_ref(&self) -> Option<&dyn WidgetImpl> {
+        match self.parent {
+            Some(ref parent) => unsafe { Some(parent.as_ref()) },
+            None => None
+        }
+    }
+
+    #[inline]
+    fn get_parent_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+        match self.parent {
+            Some(ref mut parent) => unsafe { Some(parent.as_mut()) },
+            None => None
         }
     }
 
@@ -997,14 +1049,20 @@ impl WidgetExt for Widget {
 /// The trait provide some functions include the generic types.
 pub trait WidgetGenericExt {
     /// Go to[`Function defination`](WidgetGenericExt::get_parent) (Defined in [`WidgetGenericExt`])
-    fn get_parent<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
+    fn parent_ref<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
 
     /// Go to[`Function defination`](WidgetGenericExt::get_child) (Defined in [`WidgetGenericExt`])
-    fn get_child<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
+    fn child_ref<T: IsA<Widget> + ObjectType>(&self) -> Option<&T>;
+
+    /// Go to[`Function defination`](WidgetGenericExt::get_parent) (Defined in [`WidgetGenericExt`])
+    fn parent_mut<T: IsA<Widget> + ObjectType>(&mut self) -> Option<&mut T>;
+
+    /// Go to[`Function defination`](WidgetGenericExt::get_child) (Defined in [`WidgetGenericExt`])
+    fn child_mut<T: IsA<Widget> + ObjectType>(&mut self) -> Option<&mut T>;
 }
 
 impl<T: WidgetImpl> WidgetGenericExt for T {
-    fn get_parent<R: IsA<Widget> + ObjectType>(&self) -> Option<&R> {
+    fn parent_ref<R: IsA<Widget> + ObjectType>(&self) -> Option<&R> {
         let raw_parent = self.get_raw_parent();
         match raw_parent {
             Some(parent) => unsafe {
@@ -1026,7 +1084,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         }
     }
 
-    fn get_child<R: IsA<Widget> + ObjectType>(&self) -> Option<&R> {
+    fn child_ref<R: IsA<Widget> + ObjectType>(&self) -> Option<&R> {
         let raw_child = self.get_raw_child();
         match raw_child {
             Some(child) => unsafe {
@@ -1035,6 +1093,45 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
                 }
                 if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
                     (child as *const R).as_ref()
+                } else {
+                    None
+                }
+            },
+            None => None,
+        }
+    }
+
+    fn parent_mut<R: IsA<Widget> + ObjectType>(&mut self) -> Option<&mut R> {
+        let raw_parent = self.get_raw_parent_mut();
+        match raw_parent {
+            Some(parent) => unsafe {
+                if parent.as_ref().is_none() {
+                    return None;
+                }
+                if parent
+                    .as_mut()
+                    .unwrap()
+                    .object_type()
+                    .is_a(R::static_type())
+                {
+                    (parent as *mut R).as_mut()
+                } else {
+                    None
+                }
+            },
+            None => None,
+        }
+    }
+
+    fn child_mut<R: IsA<Widget> + ObjectType>(&mut self) -> Option<&mut R> {
+        let raw_child = self.get_raw_child_mut();
+        match raw_child {
+            Some(child) => unsafe {
+                if child.as_ref().is_none() {
+                    return None;
+                }
+                if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                    (child as *mut R).as_mut()
                 } else {
                     None
                 }
@@ -1184,7 +1281,7 @@ pub trait WidgetImpl:
 
     /// `run_after()` will be invoked when application was started. <br>
     /// Should annotated macro `[run_after]` to enable this function.
-    /// 
+    ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
     fn run_after(&mut self) {
         self.parent_run_after();
@@ -1344,7 +1441,7 @@ mod tests {
 
         widget.child(child);
 
-        let child_ref = widget.get_child::<ChildWidget>().unwrap();
+        let child_ref = widget.child_ref::<ChildWidget>().unwrap();
         assert_eq!(child_ref.id(), child_id);
         assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());

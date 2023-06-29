@@ -112,7 +112,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         (false, false) => {
             quote! {
                 use tmui::application_window::ApplicationWindow;
-                ApplicationWindow::initialize_dynamic_component(self, child.as_mut());
+                ApplicationWindow::initialize_dynamic_component(child.as_mut());
                 child.set_parent(self);
                 self.container.children.push(child);
                 self.update();

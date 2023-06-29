@@ -20,6 +20,7 @@ impl ExtendAttr {
 
     pub fn check(&self) -> syn::Result<()> {
         let extend_str = self.extend.to_string();
+
         if extend_str != "Widget" && self.layout_meta.is_some() {
             return Err(syn::Error::new_spanned(
                 self.layout_meta.as_ref().unwrap(),
@@ -29,6 +30,7 @@ impl ExtendAttr {
                 ),
             ));
         }
+
         if extend_str != "SharedWidget" && self.id_meta.is_some() {
             return Err(syn::Error::new_spanned(
                 self.id_meta.as_ref().unwrap(),

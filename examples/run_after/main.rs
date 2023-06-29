@@ -1,3 +1,4 @@
+mod run_after_layout_widget;
 mod run_after_widget;
 
 use run_after_widget::RunAfterWidget;

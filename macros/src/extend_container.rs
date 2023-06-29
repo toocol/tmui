@@ -10,6 +10,26 @@ pub(crate) fn expand(
     is_stack: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+
+    let mut run_after = false;
+    for attr in ast.attrs.iter() {
+        if let Some(attr_ident) = attr.path.get_ident() {
+            if attr_ident.to_string() == "run_after" {
+                run_after = true;
+                break;
+            }
+        }
+    }
+    let run_after_clause = if run_after {
+        quote!(
+            ApplicationWindow::run_afters_of(self.window_id()).push(
+                std::ptr::NonNull::new(self)
+            );
+        )
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -156,6 +176,11 @@ pub(crate) fn expand(
                         #reflect_content_alignment
                         #reflect_split_infos_getter
                         #reflect_stack_trait
+                    }
+
+                    #[inline]
+                    fn inner_initialize(&mut self) {
+                        #run_after_clause
                     }
                 }
 
