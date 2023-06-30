@@ -2,9 +2,9 @@
 extern crate beep;
 #[cfg(free_unix)]
 extern crate dimensioned;
-#[cfg(target_os = "windows")]
+#[cfg(windows_platform)]
 use winapi::um::winuser::MessageBeep;
-#[cfg(target_os = "macos")]
+#[cfg(macos_platform)]
 use coreaudio_sys::{AudioServicesPlaySystemSound, kSystemSoundID_UserPreferredAlert};
 
 use crate::clipboard::Clipboard;
@@ -38,11 +38,11 @@ impl System {
         {
             beep::beep(400).unwrap();
         }
-        #[cfg(target_os = "macos")]
+        #[cfg(macos_platform)]
         {
             unsafe { AudioServicesPlaySystemSound(kSystemSoundID_UserPreferredAlert) };
         }
-        #[cfg(target_os = "windows")]
+        #[cfg(windows_platform)]
         {
             // Default windows system beep tone:
             unsafe { MessageBeep(0) };

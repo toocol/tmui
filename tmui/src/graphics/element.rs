@@ -191,11 +191,39 @@ impl ElementExt for Element {
 /// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>
 /// Each subclass which impl [`WidgetImpl`] will impl this trait automatically.
 #[reflect_trait]
-pub trait ElementImpl: ElementExt + ObjectImpl + ParentType + 'static {
+pub trait ElementImpl: ElementExt + ObjectImpl + ObjectOperation + ParentType + 'static {
     fn on_renderer(&mut self, cr: &DrawingContext);
 }
 
 pub trait ElementAcquire: ElementImpl + Default {}
+
+/// The hierarchy of widget on the z-axis, the higher the numerical value, 
+/// the higher the widget position
+pub(crate) trait HierachyZ {
+    fn z_index(&self) -> u32;
+
+    fn set_z_index(&mut self, z_index: u32);
+}
+macro_rules! hierarchy_z_impl {
+    () => {
+        fn z_index(&self) -> u32 {
+            match self.get_property("z_index") {
+                Some(val) => val.get(),
+                None => 0,
+            }
+        }
+
+        fn set_z_index(&mut self, z_index: u32) {
+            self.set_property("z_index", z_index.to_value())
+        }
+    };
+}
+impl<T: ElementImpl> HierachyZ for T {
+    hierarchy_z_impl!();
+}
+impl HierachyZ for dyn ElementImpl {
+    hierarchy_z_impl!();
+}
 
 #[cfg(test)]
 mod tests {

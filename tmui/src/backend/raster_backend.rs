@@ -12,9 +12,9 @@ pub struct RasterBackend {
 
 impl RasterBackend {
     pub fn new(buffer: Bitmap) -> Box<Self> {
-        #[cfg(target_os = "windows")]
+        #[cfg(windows_platform)]
         let color_type = ColorType::BGRA8888;
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(not(windows_platform))]
         let color_type = ColorType::RGBA8888;
 
         Box::new(Self {

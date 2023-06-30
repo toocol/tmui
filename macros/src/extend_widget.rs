@@ -246,6 +246,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn fixed_width(&self) -> bool {
+                self.#(#widget_path).*.fixed_width()
+            }
+
+            #[inline]
+            fn fixed_height(&self) -> bool {
+                self.#(#widget_path).*.fixed_height()
+            }
+
+            #[inline]
+            fn fixed_width_ration(&self) -> f32 {
+                self.#(#widget_path).*.fixed_width_ration()
+            }
+
+            #[inline]
+            fn fixed_height_ration(&self) -> f32 {
+                self.#(#widget_path).*.fixed_height_ration()
+            }
+
+            #[inline]
             fn set_halign(&mut self, halign: Align) {
                 self.set_property("halign", halign.to_value())
             }
@@ -499,6 +519,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn set_vexpand(&mut self, vexpand: bool) {
                 self.#(#widget_path).*.set_vexpand(vexpand)
+            }
+
+            #[inline]
+            fn hscale(&self) -> f32 {
+                self.#(#widget_path).*.hscale()
+            }
+
+            #[inline]
+            fn set_hscale(&mut self, hscale: f32) {
+                self.#(#widget_path).*.set_hscale(hscale)
+            }
+
+            #[inline]
+            fn vscale(&self) -> f32 {
+                self.#(#widget_path).*.vscale()
+            }
+
+            #[inline]
+            fn set_vscale(&mut self, vscale: f32) {
+                self.#(#widget_path).*.set_vscale(vscale)
             }
         }
 

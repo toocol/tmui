@@ -137,7 +137,10 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds<'a, T: StaticType + 'static>(id: u16) -> Vec<&'a T> {
+    pub fn finds<'a, T>(id: u16) -> Vec<&'a T>
+    where
+        T: StaticType + WidgetImpl + 'static,
+    {
         let mut finds = vec![];
         for (_, widget) in Self::widgets_of(id).iter() {
             let widget = nonnull_ref!(widget);
@@ -149,7 +152,10 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_mut<'a, T: StaticType + 'static>(id: u16) -> Vec<&'a mut T> {
+    pub fn finds_mut<'a, T>(id: u16) -> Vec<&'a mut T>
+    where
+        T: StaticType + WidgetImpl + 'static,
+    {
         let mut finds = vec![];
         for (_, widget) in Self::widgets_of(id).iter_mut() {
             let widget = nonnull_mut!(widget);
@@ -385,7 +391,10 @@ impl ApplicationWindow {
     pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
         INTIALIZE_PHASE.with(|p| {
             if *p.borrow() {
-                panic!("`{}` Can not add ui component in function `ObjectImpl::initialize()`.", widget.name())
+                panic!(
+                    "`{}` Can not add ui component in function `ObjectImpl::initialize()`.",
+                    widget.name()
+                )
             }
         });
 
@@ -423,10 +432,7 @@ pub fn current_window_id() -> u16 {
     WINDOW_ID.with(|id| *id.borrow())
 }
 
-fn child_initialize(
-    mut child: Option<*mut dyn WidgetImpl>,
-    window_id: u16,
-) {
+fn child_initialize(mut child: Option<*mut dyn WidgetImpl>, window_id: u16) {
     let board = ApplicationWindow::window_of(window_id).board();
     let type_registry = TypeRegistry::instance();
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();

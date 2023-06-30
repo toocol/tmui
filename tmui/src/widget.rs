@@ -21,7 +21,7 @@ use tlib::{
 /// 0: minimum size hint
 /// 1: normal size hint
 /// 2: maximum size hint
-pub type SizeHint = (Size, Size, Size);
+pub type SizeHint = (Option<Size>, Option<Size>, Option<Size>);
 
 #[extends(Element)]
 pub struct Widget {
@@ -40,12 +40,45 @@ pub struct Widget {
     #[derivative(Default(value = "Color::BLACK"))]
     border_color: Color,
 
-    /// Horizontal scalability, if `true` can cause child widget to expand horizontally 
-    /// with changes in the width of the parent widget. 
+    /// Widget's width was fixed or not,
+    /// `true` when user invoke [`width_request`] or [`resize`]
+    fixed_width: bool,
+    /// Widget's height was fixed or not,
+    /// `true` when user invoke [`height_request`] or [`resize`]
+    fixed_height: bool,
+    /// Used in conjunction with the function [`hexpand`],
+    /// if widget was width fixed and hexpanded, `the width ration = width / parent_width`
+    fixed_width_ration: f32,
+    /// Used in conjunction with the function [`vexpand`],
+    /// if widget was height fixed and vexpanded, `the height ration = height / parent_height`
+    fixed_height_ration: f32,
+
+    /// Horizontal scalability, if `true` can cause child widget to expand horizontally
+    /// with changes in the width of the parent widget.
     hexpand: bool,
+    /// The scale factor on horizontal, ratio of child width to parent component,
+    /// only effective when widget's `hexpand was true` and `fixed_width was false`.
+    ///
+    /// ### when parent was widget:
+    /// `width ration = hsclae`
+    ///
+    /// ### when parent was coontainer:
+    /// `width ration = hscale / parent_children_total_hscales`
+    #[derivative(Default(value = "1."))]
+    hscale: f32,
     /// Vertical scalability, if `true` can cause child widget to expand vertically
-    /// height changes in the height of the parent widget. 
+    /// height changes in the height of the parent widget.
     vexpand: bool,
+    /// The scale factor on vertical, ratio of child height to parent component,
+    /// only effective when widget's hexpand was true.
+    ///
+    /// ### when parent was widget:
+    /// `height ration = vsclae`
+    ///
+    /// ### when parent was coontainer:
+    /// `height ration = vscale / parent_children_total_vscales`
+    #[derivative(Default(value = "1."))]
+    vscale: f32,
 
     /// Let the widget track the `MouseMoveEvent`, the default value was false.
     mouse_tracking: bool,
@@ -111,6 +144,7 @@ pub trait WidgetSignals: ActionExt {
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
+impl WidgetSignals for dyn WidgetImpl {}
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl Widget {
@@ -334,6 +368,30 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::update_geometry) (Defined in [`WidgetExt`])
     fn update_geometry(&mut self);
+
+    /// Widget's width was fixed or not,
+    /// `true` when user invoke [`width_request`] or [`resize`]
+    ///
+    /// Go to[`Function defination`](WidgetExt::fixed_width) (Defined in [`WidgetExt`])
+    fn fixed_width(&self) -> bool;
+
+    /// Widget's height was fixed or not,
+    /// `true` when user invoke [`height_request`] or [`resize`]
+    ///
+    /// Go to[`Function defination`](WidgetExt::fixed_height) (Defined in [`WidgetExt`])
+    fn fixed_height(&self) -> bool;
+
+    /// Used in conjunction with the function [`hexpand`],
+    /// if widget was width fixed and hexpanded, `the width ration = width / parent_width`
+    ///
+    /// Go to[`Function defination`](WidgetExt::fixed_width_ration) (Defined in [`WidgetExt`])
+    fn fixed_width_ration(&self) -> f32;
+
+    /// Used in conjunction with the function [`vexpand`],
+    /// if widget was height fixed and vexpanded, `the height ration = height / parent_height`
+    ///
+    /// Go to[`Function defination`](WidgetExt::fixed_height_ration) (Defined in [`WidgetExt`])
+    fn fixed_height_ration(&self) -> f32;
 
     /// Set alignment on the horizontal direction.
     ///
@@ -574,36 +632,70 @@ pub trait WidgetExt {
     fn parent_run_after(&mut self);
 
     /// Get `hexpand` of widget.
-    /// 
-    /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally 
-    /// with changes in the width of the parent widget. 
+    ///
+    /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally
+    /// with changes in the width of the parent widget.
     ///
     /// Go to[`Function defination`](WidgetExt::hexpand) (Defined in [`WidgetExt`])
     fn hexpand(&self) -> bool;
 
     /// Set `hexpand` of widget.
-    /// 
-    /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally 
-    /// with changes in the width of the parent widget. 
+    ///
+    /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally
+    /// with changes in the width of the parent widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_hexpand) (Defined in [`WidgetExt`])
     fn set_hexpand(&mut self, hexpand: bool);
 
     /// Get `vexpand` of widget.
-    /// 
+    ///
     /// `vexpand`: Vertical scalability, if `true` can cause child widget to expand vertically
-    /// height changes in the height of the parent widget. 
+    /// height changes in the height of the parent widget.
     ///
     /// Go to[`Function defination`](WidgetExt::vexpand) (Defined in [`WidgetExt`])
     fn vexpand(&self) -> bool;
 
     /// Set `vexpand` of widget.
-    /// 
+    ///
     /// `vexpand`: Vertical scalability, if `true` can cause child widget to expand vertically
-    /// height changes in the height of the parent widget. 
+    /// height changes in the height of the parent widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_vexpand) (Defined in [`WidgetExt`])
     fn set_vexpand(&mut self, vexpand: bool);
+
+    /// The scale factor on horizontal, ratio of child width to parent component,
+    /// only effective when widget's `hexpand was true` and `fixed_width was false`.
+    ///
+    /// ### when parent was widget:
+    /// `width ration = hsclae`
+    ///
+    /// ### when parent was coontainer:
+    /// `width ration = hscale / parent_children_total_hscales`
+    ///
+    /// Go to[`Function defination`](WidgetExt::hscale) (Defined in [`WidgetExt`])
+    fn hscale(&self) -> f32;
+
+    /// See [`hscale`](WidgetExt::hscale)
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_hscale) (Defined in [`WidgetExt`])
+    fn set_hscale(&mut self, hscale: f32);
+
+    /// The scale factor on vertical, ratio of child height to parent component,
+    /// only effective when widget's hexpand was true.
+    ///
+    /// ### when parent was widget:
+    /// `height ration = vsclae`
+    ///
+    /// ### when parent was coontainer:
+    /// `height ration = vscale / parent_children_total_vscales`
+    ///
+    /// Go to[`Function defination`](WidgetExt::vscale) (Defined in [`WidgetExt`])
+    fn vscale(&self) -> f32;
+
+    /// See [`vscale`](WidgetExt::vscale)
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_vscale) (Defined in [`WidgetExt`])
+    fn set_vscale(&mut self, vscale: f32);
 }
 
 impl WidgetExt for Widget {
@@ -684,7 +776,7 @@ impl WidgetExt for Widget {
     fn get_parent_ref(&self) -> Option<&dyn WidgetImpl> {
         match self.parent {
             Some(ref parent) => unsafe { Some(parent.as_ref()) },
-            None => None
+            None => None,
         }
     }
 
@@ -692,7 +784,7 @@ impl WidgetExt for Widget {
     fn get_parent_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
         match self.parent {
             Some(ref mut parent) => unsafe { Some(parent.as_mut()) },
-            None => None
+            None => None,
         }
     }
 
@@ -746,6 +838,26 @@ impl WidgetExt for Widget {
     fn update_geometry(&mut self) {
         ApplicationWindow::window_of(self.window_id()).layout_change(self);
         self.update();
+    }
+
+    #[inline]
+    fn fixed_width(&self) -> bool {
+        self.fixed_width
+    }
+
+    #[inline]
+    fn fixed_height(&self) -> bool {
+        self.fixed_height
+    }
+
+    #[inline]
+    fn fixed_width_ration(&self) -> f32 {
+        self.fixed_width_ration
+    }
+
+    #[inline]
+    fn fixed_height_ration(&self) -> f32 {
+        self.fixed_height_ration
     }
 
     #[inline]
@@ -1105,6 +1217,26 @@ impl WidgetExt for Widget {
     fn set_vexpand(&mut self, vexpand: bool) {
         self.vexpand = vexpand
     }
+
+    #[inline]
+    fn hscale(&self) -> f32 {
+        self.hscale
+    }
+
+    #[inline]
+    fn set_hscale(&mut self, hscale: f32) {
+        self.hscale = hscale
+    }
+
+    #[inline]
+    fn vscale(&self) -> f32 {
+        self.vscale
+    }
+
+    #[inline]
+    fn set_vscale(&mut self, vscale: f32) {
+        self.vscale = vscale
+    }
 }
 
 ////////////////////////////////////// WidgetGenericExt //////////////////////////////////////
@@ -1324,10 +1456,11 @@ pub trait WidgetImpl:
     + Layout
     + InnerEventProcess
     + PointEffective
+    + ActionExt
 {
     /// Invoke this function when widget's size change.
-    fn size_hint(&mut self) -> Option<SizeHint> {
-        None
+    fn size_hint(&mut self) -> SizeHint {
+        (None, None, None)
     }
 
     /// The widget can be focused or not, default value was false.
@@ -1342,7 +1475,8 @@ pub trait WidgetImpl:
     fn font_changed(&mut self) {}
 
     /// `run_after()` will be invoked when application was started. <br>
-    /// Should annotated macro `[run_after]` to enable this function.
+    /// 
+    /// ### Should annotated macro `[run_after]` to enable this function.
     ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
     fn run_after(&mut self) {
@@ -1382,7 +1516,6 @@ pub trait WidgetImpl:
     /// Invoke when widget's receive input method event.
     fn on_input_method(&mut self, input_method: &InputMethodEvent) {}
 }
-
 
 impl dyn WidgetImpl {
     #[inline]
@@ -1462,7 +1595,8 @@ impl Layout for Widget {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {}
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {
+    }
 }
 
 #[cfg(test)]

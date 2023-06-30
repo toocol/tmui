@@ -1,7 +1,7 @@
 use crate::{
     container::{Container, ContainerImpl},
     prelude::*,
-    widget::WidgetImpl,
+    widget::{WidgetImpl, WidgetSignals},
 };
 use log::debug;
 use std::collections::VecDeque;
@@ -101,23 +101,31 @@ impl LayoutManager {
 
         let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
         if raw_child.is_none() && container_no_children {
+            let mut resized = false;
             if parent_size.width() != 0 && parent_size.height() != 0 {
                 if size.width() == 0 {
                     widget_ref.width_request(parent_size.width());
+                    resized = true;
                 }
 
                 if size.height() == 0 {
                     widget_ref.height_request(parent_size.height());
+                    resized = true;
                 }
             } else {
                 if size.width() == 0 {
                     widget_ref.width_request(window_size.width());
+                    resized = true;
                 }
                 if size.height() == 0 {
                     widget_ref.height_request(window_size.height());
+                    resized = true;
                 }
             }
 
+            if resized {
+                emit!(widget_ref.size_changed(), widget_ref.rect().size())
+            }
             widget_ref.image_rect().size()
         } else {
             let child_size = if is_container {
@@ -160,13 +168,19 @@ impl LayoutManager {
             } else {
                 Self::child_size_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
             };
+            let mut resized = false;
             if size.width() == 0 {
                 widget_ref.width_request(child_size.width());
+                resized = true;
             }
             if size.height() == 0 {
                 widget_ref.height_request(child_size.height());
+                resized = true;
             }
 
+            if resized {
+                emit!(widget_ref.size_changed(), widget_ref.rect().size())
+            }
             widget_ref.image_rect().size()
         }
     }

@@ -1,11 +1,11 @@
-#[cfg(target_os = "macos")]
+#[cfg(macos_platform)]
 use crate::platform::PlatformMacos;
 #[cfg(wayland_platform)]
 use crate::platform::PlatformWayland;
-#[cfg(target_os = "windows")]
-use crate::platform::PlatformWin32;
 #[cfg(x11_platform)]
 use crate::platform::PlatformX11;
+#[cfg(windows_platform)]
+use crate::platform::PlatformWin32;
 use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
@@ -204,7 +204,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
                 platform_context.wrap()
             }
-            #[cfg(target_os = "windows")]
+            #[cfg(windows_platform)]
             PlatformType::Win32 => {
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
@@ -234,7 +234,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.initialize();
                 platform_context.wrap()
             }
-            #[cfg(target_os = "macos")]
+            #[cfg(macos_platform)]
             PlatformType::Macos => {
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {

@@ -9,10 +9,12 @@ use tlib::{
     events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
-    prelude::extends,
+    prelude::extends, run_after, connect,
 };
+use log::warn;
 
 #[extends(Container)]
+#[run_after]
 pub struct ScrollArea {
     #[derivative(Default(value = "Object::new(&[])"))]
     scroll_bar: Box<ScrollBar>,
@@ -74,6 +76,22 @@ impl ScrollArea {
         self.scroll_bar
             .scroll_by_delta(KeyboardModifier::NoModifier, delta, delta_type);
     }
+
+    #[inline]
+    pub(crate) fn adjust_area_layout(&mut self, size: Size) {
+        if size.width() == 0 || size.height() == 0 {
+            warn!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
+            return
+        }
+
+        if let Some(area) = self.get_area_mut() {
+            area.set_vexpand(true);
+            area.set_hexpand(true);
+            area.set_hscale(size.width() as f32 - 10.);
+
+            ApplicationWindow::window_of(self.window_id()).layout_change(self);
+        }
+    }
 }
 
 impl ObjectSubclass for ScrollArea {
@@ -84,13 +102,22 @@ impl ObjectImpl for ScrollArea {
     fn construct(&mut self) {
         self.parent_construct();
 
-        ApplicationWindow::initialize_dynamic_component(self.scroll_bar.as_mut());
+        self.scroll_bar.set_vexpand(true);
+        self.scroll_bar.set_hscale(10.);
+
+        connect!(self, size_changed(), self, adjust_area_layout(Size));
     }
 }
 
 impl WidgetImpl for ScrollArea {
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
         self.scroll_bar.on_mouse_wheel(event)
+    }
+
+    fn run_after(&mut self) {
+        self.parent_run_after();
+
+        self.adjust_area_layout(self.size());
     }
 }
 
