@@ -66,6 +66,11 @@ pub fn to_static<T>(t: T) -> &'static T {
     Box::leak(Box::new(t))
 }
 
+#[inline]
+pub fn same_second(a: u64, b: u64) -> bool {
+    a / 1000 == b / 1000
+}
+
 pub trait AsAny {
     fn as_any(&self) -> &dyn Any;
 

@@ -88,8 +88,6 @@ impl ScrollArea {
             area.set_vexpand(true);
             area.set_hexpand(true);
             area.set_hscale(size.width() as f32 - 10.);
-
-            ApplicationWindow::window_of(self.window_id()).layout_change(self);
         }
     }
 }

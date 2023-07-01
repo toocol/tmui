@@ -10,7 +10,7 @@ use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
-    graphics::{board::Board, cpu_balance::CpuBalance},
+    graphics::{board::Board, cpu_balance::CpuBalance, frame::Frame},
     platform::{
         shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
@@ -314,6 +314,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         window.run_after();
 
         let mut cpu_balance = CpuBalance::new();
+        let mut frame = Frame::empty_frame();
         let mut last_frame = Instant::now();
         let mut update = true;
         let mut frame_cnt = 0;
@@ -343,6 +344,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     );
                     log_instant = Instant::now();
                 }
+                frame = frame.next();
                 let update = board.invalidate_visual();
                 if update {
                     window.send_message(Message::VSync(Instant::now()));

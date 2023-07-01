@@ -7,12 +7,15 @@ use log::debug;
 use std::collections::VecDeque;
 use tlib::figure::Size;
 
+pub const ZINDEX_STEP: u32 = 1000;
+
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Composition {
     #[default]
     Default,
     Overlay,
+    Stack,
     VerticalArrange,
     HorizontalArrange,
     FixedContainer,
@@ -57,6 +60,57 @@ pub trait ContentAlignment {
     fn set_content_valign(&mut self, valign: Align);
 }
 
+pub(crate) trait SizeCalculation {
+    fn calc_size(&mut self, window_size: Size, parent_size: Size, child_size: Option<Size>);
+}
+impl SizeCalculation for dyn WidgetImpl {
+    fn calc_size(&mut self, window_size: Size, parent_size: Size, child_size: Option<Size>) {
+        let size = self.size();
+        let mut resized = false;
+
+        match child_size {
+            Some(child_size) => {
+                if size.width() == 0 {
+                    self.width_request(child_size.width());
+                    resized = true;
+                }
+                if size.height() == 0 {
+                    self.height_request(child_size.height());
+                    resized = true;
+                }
+            }
+
+            // Widget has no child:
+            None => {
+                if parent_size.width() != 0 && parent_size.height() != 0 {
+                    if size.width() == 0 {
+                        self.width_request(parent_size.width());
+                        resized = true;
+                    }
+
+                    if size.height() == 0 {
+                        self.height_request(parent_size.height());
+                        resized = true;
+                    }
+                } else {
+                    if size.width() == 0 {
+                        self.width_request(window_size.width());
+                        resized = true;
+                    }
+                    if size.height() == 0 {
+                        self.height_request(window_size.height());
+                        resized = true;
+                    }
+                }
+            }
+        }
+
+        if resized {
+            emit!(self.size_changed(), self.size())
+        }
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct LayoutManager {
     window_size: Size,
@@ -79,17 +133,16 @@ impl LayoutManager {
     pub(crate) fn child_size_probe(
         window_size: Size,
         parent_size: Size,
-        widget: *mut dyn WidgetImpl,
+        widget: &mut dyn WidgetImpl,
     ) -> Size {
-        let widget_ref = unsafe { widget.as_mut().unwrap() };
-        let raw_child = widget_ref.get_raw_child();
-        let size = widget_ref.size();
-        let composition = widget_ref.composition();
+        let raw_child = widget.get_raw_child();
+        let size = widget.size();
+        let composition = widget.composition();
 
         // Determine whether the widget is a container.
-        let is_container = widget_ref.parent_type().is_a(Container::static_type());
+        let is_container = widget.parent_type().is_a(Container::static_type());
         let container_ref = if is_container {
-            cast_mut!(widget_ref as ContainerImpl)
+            cast_mut!(widget as ContainerImpl)
         } else {
             None
         };
@@ -101,37 +154,14 @@ impl LayoutManager {
 
         let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
         if raw_child.is_none() && container_no_children {
-            let mut resized = false;
-            if parent_size.width() != 0 && parent_size.height() != 0 {
-                if size.width() == 0 {
-                    widget_ref.width_request(parent_size.width());
-                    resized = true;
-                }
+            widget.calc_size(window_size, parent_size, None);
 
-                if size.height() == 0 {
-                    widget_ref.height_request(parent_size.height());
-                    resized = true;
-                }
-            } else {
-                if size.width() == 0 {
-                    widget_ref.width_request(window_size.width());
-                    resized = true;
-                }
-                if size.height() == 0 {
-                    widget_ref.height_request(window_size.height());
-                    resized = true;
-                }
-            }
-
-            if resized {
-                emit!(widget_ref.size_changed(), widget_ref.rect().size())
-            }
-            widget_ref.image_rect().size()
+            widget.image_rect().size()
         } else {
             let child_size = if is_container {
                 let mut child_size = Size::default();
                 match composition {
-                    Composition::Overlay => {
+                    Composition::Stack => {
                         children.unwrap().iter_mut().for_each(|child| {
                             child_size.max(Self::child_size_probe(window_size, size, *child));
                         });
@@ -154,11 +184,11 @@ impl LayoutManager {
                         children.unwrap().iter_mut().for_each(|child| {
                             Self::child_size_probe(window_size, size, *child);
                         });
-                        child_size = widget_ref.size();
+                        child_size = widget.size();
                         if child_size.width() == 0 || child_size.height() == 0 {
                             panic!(
                                 "`{}` FixedContainer should specified the size, the width or height can't be 0.",
-                                widget_ref.type_name()
+                                widget.type_name()
                             );
                         }
                     }
@@ -166,22 +196,11 @@ impl LayoutManager {
                 }
                 child_size
             } else {
-                Self::child_size_probe(window_size, size, widget_ref.get_raw_child_mut().unwrap())
+                Self::child_size_probe(window_size, size, widget.get_child_mut().unwrap())
             };
-            let mut resized = false;
-            if size.width() == 0 {
-                widget_ref.width_request(child_size.width());
-                resized = true;
-            }
-            if size.height() == 0 {
-                widget_ref.height_request(child_size.height());
-                resized = true;
-            }
 
-            if resized {
-                emit!(widget_ref.size_changed(), widget_ref.rect().size())
-            }
-            widget_ref.image_rect().size()
+            widget.calc_size(window_size, parent_size, Some(child_size));
+            widget.image_rect().size()
         }
     }
 

@@ -41,10 +41,10 @@ pub struct Widget {
     border_color: Color,
 
     /// Widget's width was fixed or not,
-    /// `true` when user invoke [`width_request`] or [`resize`]
+    /// `true` when user invoke [`width_request`](WidgetExt::width_request)
     fixed_width: bool,
     /// Widget's height was fixed or not,
-    /// `true` when user invoke [`height_request`] or [`resize`]
+    /// `true` when user invoke [`height_request`](WidgetExt::height_request)
     fixed_height: bool,
     /// Used in conjunction with the function [`hexpand`],
     /// if widget was width fixed and hexpanded, `the width ration = width / parent_width`
@@ -345,7 +345,8 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::is_focus) (Defined in [`WidgetExt`])
     fn is_focus(&self) -> bool;
 
-    /// Resize the widget.
+    /// Resize the widget. <br>
+    /// `resize() will set fixed_width and fixed_height to false`, make widget flexible.
     ///
     /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
     fn resize(&mut self, width: i32, height: i32);
@@ -370,13 +371,13 @@ pub trait WidgetExt {
     fn update_geometry(&mut self);
 
     /// Widget's width was fixed or not,
-    /// `true` when user invoke [`width_request`] or [`resize`]
+    /// `true` when user invoke [`width_request`](WidgetExt::width_request)
     ///
     /// Go to[`Function defination`](WidgetExt::fixed_width) (Defined in [`WidgetExt`])
     fn fixed_width(&self) -> bool;
 
     /// Widget's height was fixed or not,
-    /// `true` when user invoke [`height_request`] or [`resize`]
+    /// `true` when user invoke [`height_request`](WidgetExt::height_request)
     ///
     /// Go to[`Function defination`](WidgetExt::fixed_height) (Defined in [`WidgetExt`])
     fn fixed_height(&self) -> bool;
@@ -820,18 +821,22 @@ impl WidgetExt for Widget {
     fn resize(&mut self, width: i32, height: i32) {
         self.set_property("width", width.to_value());
         self.set_property("height", height.to_value());
+        self.fixed_width = false;
+        self.fixed_height = false;
     }
 
     #[inline]
     fn width_request(&mut self, width: i32) {
         self.set_property("width", width.to_value());
         self.set_property("width-request", width.to_value());
+        self.fixed_width = true;
     }
 
     #[inline]
     fn height_request(&mut self, height: i32) {
         self.set_property("height", height.to_value());
         self.set_property("height-request", height.to_value());
+        self.fixed_height = true;
     }
 
     #[inline]

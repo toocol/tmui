@@ -4,7 +4,10 @@ use crate::{
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
 };
-use tlib::{object::{ObjectImpl, ObjectSubclass}, stack_impl};
+use tlib::{
+    object::{ObjectImpl, ObjectSubclass},
+    stack_impl,
+};
 
 #[extends(Container)]
 pub struct Stack {
@@ -71,7 +74,7 @@ impl Layout for Stack {
 
 impl ContainerLayout for Stack {
     fn static_composition() -> Composition {
-        Composition::Overlay
+        Composition::Stack
     }
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
