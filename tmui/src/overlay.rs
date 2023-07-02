@@ -1,6 +1,5 @@
 use crate::{
-    graphics::element::HierachyZ,
-    layout::{LayoutManager, ZINDEX_STEP},
+    layout::LayoutManager,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
@@ -13,15 +12,14 @@ impl Overlay {
     pub fn add_overlay<T, P>(&mut self, mut child: Box<T>, point: P)
     where
         T: WidgetImpl,
-        P: Into<Point>
+        P: Into<Point>,
     {
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
-
         child.set_parent(self);
-        child.set_z_index(self.container.children.len() as u32 + self.z_index() + ZINDEX_STEP);
         let point = self.map_to_global(&point.into());
         child.set_fixed_x(point.x());
         child.set_fixed_y(point.y());
+
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
 
         self.container.children.push(child);
         self.update();

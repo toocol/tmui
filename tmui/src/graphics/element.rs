@@ -1,4 +1,4 @@
-use crate::application_window::current_window_id;
+use crate::{application_window::current_window_id, widget::WidgetImpl};
 
 use super::{drawing_context::DrawingContext, board::Board};
 use tlib::{
@@ -206,6 +206,7 @@ pub(crate) trait HierachyZ {
 }
 macro_rules! hierarchy_z_impl {
     () => {
+        #[inline]
         fn z_index(&self) -> u32 {
             match self.get_property("z_index") {
                 Some(val) => val.get(),
@@ -213,6 +214,7 @@ macro_rules! hierarchy_z_impl {
             }
         }
 
+        #[inline]
         fn set_z_index(&mut self, z_index: u32) {
             self.set_property("z_index", z_index.to_value())
         }
@@ -222,6 +224,9 @@ impl<T: ElementImpl> HierachyZ for T {
     hierarchy_z_impl!();
 }
 impl HierachyZ for dyn ElementImpl {
+    hierarchy_z_impl!();
+}
+impl HierachyZ for dyn WidgetImpl {
     hierarchy_z_impl!();
 }
 

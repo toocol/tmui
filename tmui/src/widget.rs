@@ -1,6 +1,10 @@
 use crate::{
     application_window::ApplicationWindow,
-    graphics::{drawing_context::DrawingContext, element::ElementImpl, painter::Painter},
+    graphics::{
+        drawing_context::DrawingContext,
+        element::{ElementImpl, HierachyZ},
+        painter::Painter,
+    },
     layout::LayoutManager,
     platform::Message,
     prelude::*,
@@ -148,31 +152,43 @@ impl WidgetSignals for dyn WidgetImpl {}
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl Widget {
+    #[inline]
     pub fn child_internal<T>(&mut self, mut child: Box<T>)
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         child.set_parent(self);
+
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+
         self.child = Some(child);
     }
 
     /// Notify all the child widget to invalidate.
+    #[inline]
     fn notify_invalidate(&mut self) {
-        if let Some(child) = self.get_raw_child_mut() {
-            unsafe { child.as_mut().unwrap().update() }
+        if let Some(child) = self.get_child_mut() {
+            child.update()
         }
     }
 
     /// Notify the child to change the visibility.
+    #[inline]
     fn notify_visible(&mut self, visible: bool) {
-        if let Some(child) = self.get_raw_child_mut() {
-            let child = unsafe { child.as_mut().unwrap() };
+        if let Some(child) = self.get_child_mut() {
             if visible {
                 child.show()
             } else {
                 child.hide()
             }
+        }
+    }
+
+    /// Notify the child to change the zindex.
+    #[inline]
+    fn notify_zindex(&mut self, offset: u32) {
+        if let Some(child) = self.get_child_mut() {
+            child.set_z_index(child.z_index() + offset);
         }
     }
 }
@@ -213,6 +229,13 @@ impl ObjectImpl for Widget {
             "visible" => {
                 let visible = value.get::<bool>();
                 self.notify_visible(visible)
+            }
+            "z_index" => {
+                if !ApplicationWindow::window_of(self.window_id()).is_activate() {
+                    return;
+                }
+                let new_z_index = value.get::<u32>();
+                self.notify_zindex(new_z_index - self.z_index());
             }
             _ => {}
         }
@@ -1480,7 +1503,7 @@ pub trait WidgetImpl:
     fn font_changed(&mut self) {}
 
     /// `run_after()` will be invoked when application was started. <br>
-    /// 
+    ///
     /// ### Should annotated macro `[run_after]` to enable this function.
     ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
@@ -1602,6 +1625,31 @@ impl Layout for Widget {
 
     fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {
     }
+}
+
+////////////////////////////////////// ZInddexStep //////////////////////////////////////
+pub(crate) trait ZIndexStep {
+    /// For container, get current widget's z-index step, starts from 1.
+    fn z_index_step(&mut self) -> u32;
+}
+macro_rules! z_index_step_impl {
+    () => {
+        #[inline]
+        fn z_index_step(&mut self) -> u32 {
+            let step = match self.get_property("z_index_step") {
+                Some(val) => val.get(),
+                None => 1,
+            };
+            self.set_property("z_index_step", (step + 1).to_value());
+            step
+        }
+    };
+}
+impl<T: WidgetImpl> ZIndexStep for T {
+    z_index_step_impl!();
+}
+impl ZIndexStep for dyn WidgetImpl {
+    z_index_step_impl!();
 }
 
 #[cfg(test)]

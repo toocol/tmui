@@ -4,13 +4,13 @@ use syn::Ident;
 pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         use tmui::application_window::ApplicationWindow;
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        child.set_parent(self);
         if self.current_index == self.container.children.len() {
             child.show()
         } else {
             child.hide()
         }
-        child.set_parent(self);
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         self.container.children.push(child);
         self.update();
     })

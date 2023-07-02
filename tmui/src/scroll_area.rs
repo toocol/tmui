@@ -2,7 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, graphics::element::HierachyZ, widget::ZIndexStep,
 };
 use derivative::Derivative;
 use tlib::{
@@ -24,8 +24,8 @@ pub struct ScrollArea {
 impl ScrollArea {
     #[inline]
     pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
-        ApplicationWindow::initialize_dynamic_component(area.as_mut());
         area.set_parent(self);
+        ApplicationWindow::initialize_dynamic_component(area.as_mut());
         self.area = Some(area)
     }
 
@@ -102,6 +102,9 @@ impl ObjectImpl for ScrollArea {
 
         self.scroll_bar.set_vexpand(true);
         self.scroll_bar.set_hscale(10.);
+
+        let z_index_step = self.z_index_step();
+        self.scroll_bar.set_z_index(self.z_index() + z_index_step);
 
         connect!(self, size_changed(), self, adjust_area_layout(Size));
     }

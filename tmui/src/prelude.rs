@@ -10,7 +10,7 @@ pub use crate::container::{
 pub use crate::graphics::board::Board;
 pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{
-    Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl,
+    Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl
 };
 pub use crate::hbox::HBox;
 pub use crate::label::LabelSignal;
@@ -22,7 +22,7 @@ pub use crate::stack::{Stack, ReflectStackTrait, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
     PointEffective, ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt,
-    WidgetSignals,
+    WidgetSignals
 };
 pub use crate::shared_widget::{SharedWidget, SharedWidgetExt};
 pub use crate::split_pane::{SplitPane, SplitInfosGetter, ReflectSplitInfosGetter, SplitPaneExt, SplitInfo, SplitType};

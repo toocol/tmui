@@ -1,10 +1,10 @@
 use crate::{
     application::PLATFORM_CONTEXT,
-    graphics::board::Board,
+    graphics::{board::Board, element::HierachyZ},
     layout::LayoutManager,
     platform::{window_context::OutputSender, Message, PlatformType},
     prelude::*,
-    widget::{WidgetImpl, WidgetSignals},
+    widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
 use once_cell::sync::Lazy;
 use std::{
@@ -388,6 +388,7 @@ impl ApplicationWindow {
         }
     }
 
+    /// Should set the parent of widget before use this function.
     pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
         INTIALIZE_PHASE.with(|p| {
             if *p.borrow() {
@@ -412,6 +413,9 @@ impl ApplicationWindow {
         if !window.initialized() {
             return;
         }
+
+        let parent = unsafe { widget.get_raw_parent_mut().unwrap().as_mut().unwrap() };
+        widget.set_z_index(parent.z_index() + parent.z_index_step());
 
         let board = window.board();
         board.add_element(widget.as_element());
@@ -438,6 +442,9 @@ fn child_initialize(mut child: Option<*mut dyn WidgetImpl>, window_id: u16) {
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
     while let Some(child_ptr) = child {
         let child_ref = unsafe { child_ptr.as_mut().unwrap() };
+
+        let parent = unsafe { child_ref.get_raw_parent_mut().unwrap().as_mut().unwrap() };
+        child_ref.set_z_index(parent.z_index() + parent.z_index_step());
 
         board.add_element(child_ref.as_element());
         ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ptr));

@@ -1,4 +1,4 @@
-use crate::{prelude::*, widget::WidgetImpl};
+use crate::{graphics::element::HierachyZ, prelude::*, widget::WidgetImpl};
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
 #[extends(Widget)]
@@ -18,6 +18,25 @@ impl ObjectImpl for Container {
             "invalidate" => {
                 for child in self.children.iter_mut() {
                     child.update()
+                }
+            }
+            "visible" => {
+                let visible = value.get::<bool>();
+                for child in self.children.iter_mut() {
+                    if visible {
+                        child.show()
+                    } else {
+                        child.hide()
+                    }
+                }
+            }
+            "z_index" => {
+                if !ApplicationWindow::window_of(self.window_id()).is_activate() {
+                    return;
+                }
+                let offset = value.get::<u32>() - self.z_index();
+                for child in self.children.iter_mut() {
+                    child.set_z_index(child.z_index() + offset);
                 }
             }
             _ => {}
