@@ -2,7 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, graphics::element::HierachyZ, widget::ZIndexStep,
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
 use tlib::{
@@ -102,9 +102,6 @@ impl ObjectImpl for ScrollArea {
 
         self.scroll_bar.set_vexpand(true);
         self.scroll_bar.set_hscale(10.);
-
-        let z_index_step = self.z_index_step();
-        self.scroll_bar.set_z_index(self.z_index() + z_index_step);
 
         connect!(self, size_changed(), self, adjust_area_layout(Size));
     }
