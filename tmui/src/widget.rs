@@ -231,7 +231,7 @@ impl ObjectImpl for Widget {
                 self.notify_visible(visible)
             }
             "z_index" => {
-                if !ApplicationWindow::window_of(self.window_id()).is_activate() {
+                if !ApplicationWindow::window_of(self.window_id()).initialized() {
                     return;
                 }
                 let new_z_index = value.get::<u32>();
@@ -1629,7 +1629,7 @@ impl Layout for Widget {
 
 ////////////////////////////////////// ZInddexStep //////////////////////////////////////
 pub(crate) trait ZIndexStep {
-    /// For container, get current widget's z-index step, starts from 1.
+    /// Get current widget's z-index step, starts from 1, `auto-increacement`.
     fn z_index_step(&mut self) -> u32;
 }
 macro_rules! z_index_step_impl {

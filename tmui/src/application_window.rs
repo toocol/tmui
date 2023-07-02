@@ -39,7 +39,6 @@ pub struct ApplicationWindow {
     run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
     base_offset: Point,
 
-    activated: bool,
     focused_widget: u16,
 }
 
@@ -196,11 +195,6 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn is_activate(&self) -> bool {
-        self.activated
-    }
-
-    #[inline]
     pub fn window_layout_change(&mut self) {
         Self::layout_of(self.id()).layout_change(self)
     }
@@ -214,11 +208,6 @@ impl ApplicationWindow {
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
-    }
-
-    #[inline]
-    pub(crate) fn activate(&mut self) {
-        self.activated = true;
     }
 
     #[inline]

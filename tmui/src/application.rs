@@ -310,7 +310,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         board.add_element(window.as_mut());
         window.initialize();
-        window.activate();
         window.run_after();
 
         let mut cpu_balance = CpuBalance::new();

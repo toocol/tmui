@@ -31,7 +31,7 @@ impl ObjectImpl for Container {
                 }
             }
             "z_index" => {
-                if !ApplicationWindow::window_of(self.window_id()).is_activate() {
+                if !ApplicationWindow::window_of(self.window_id()).initialized() {
                     return;
                 }
                 let offset = value.get::<u32>() - self.z_index();
