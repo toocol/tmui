@@ -82,24 +82,45 @@ impl SizeCalculation for dyn WidgetImpl {
 
             // Widget has no child:
             None => {
-                if parent_size.width() != 0 && parent_size.height() != 0 {
-                    if size.width() == 0 {
-                        self.width_request(parent_size.width());
-                        resized = true;
-                    }
-
-                    if size.height() == 0 {
-                        self.height_request(parent_size.height());
-                        resized = true;
+                if self.fixed_width() {
+                    if self.hexpand() {
+                        self.width_request(
+                            (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
+                        );
                     }
                 } else {
-                    if size.width() == 0 {
-                        self.width_request(window_size.width());
-                        resized = true;
+                    // Use `hscale` to determine widget's width:
+                    if self.hexpand() {
+                    } else {
+                        if parent_size.width() != 0 {
+                            if size.width() == 0 {
+                                self.width_request(parent_size.width());
+                                resized = true;
+                            }
+                        } else {
+                            if size.width() == 0 {
+                                self.width_request(window_size.width());
+                                resized = true;
+                            }
+                        }
                     }
-                    if size.height() == 0 {
-                        self.height_request(window_size.height());
-                        resized = true;
+                }
+
+                if self.fixed_height() {
+                } else {
+                    if self.vexpand() {
+                    } else {
+                        if parent_size.height() != 0 {
+                            if size.height() == 0 {
+                                self.height_request(parent_size.height());
+                                resized = true;
+                            }
+                        } else {
+                            if size.height() == 0 {
+                                self.height_request(window_size.height());
+                                resized = true;
+                            }
+                        }
                     }
                 }
             }
