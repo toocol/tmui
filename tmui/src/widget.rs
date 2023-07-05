@@ -1547,6 +1547,16 @@ pub trait WidgetImpl:
 
 impl dyn WidgetImpl {
     #[inline]
+    pub fn as_ptr(&self) -> *const Self {
+        self
+    }
+
+    #[inline]
+    pub fn as_ptr_mut(&mut self) -> *mut Self {
+        self
+    }
+
+    #[inline]
     pub fn is<T: StaticType + 'static>(&self) -> bool {
         self.object_type().is_a(T::static_type()) && self.as_any().is::<T>()
     }

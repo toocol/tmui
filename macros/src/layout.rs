@@ -184,6 +184,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
                     if !self.#children_fields.constructed() {
                         self.#children_fields.construct();
                     }
+                    let self_ptr = self as *mut dyn WidgetImpl;
+                    self.#children_fields.set_parent(self_ptr);
                 )*
             }
         }

@@ -51,7 +51,8 @@ impl ObjectImpl for ApplicationWindow {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
 
         connect!(self, size_changed(), self, when_size_change(Size));
-        child_initialize(self.get_raw_child_mut(), self.id());
+        let window_id = self.id();
+        child_initialize(self.get_child_mut(), window_id);
         emit!(self.size_changed(), self.size());
 
         if self.platform_type == PlatformType::Ipc {
@@ -237,7 +238,7 @@ impl ApplicationWindow {
                 let pos = evt.position().into();
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.point_effective(&pos) {
                         let widget_point = widget.map_to_widget(&pos);
@@ -256,7 +257,7 @@ impl ApplicationWindow {
                 let pos = evt.position().into();
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.point_effective(&pos) {
                         let widget_point = widget.map_to_widget(&pos);
@@ -275,7 +276,7 @@ impl ApplicationWindow {
                 let pos = evt.position().into();
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.point_effective(&pos) {
                         let widget_point = widget.map_to_widget(&pos);
@@ -294,7 +295,7 @@ impl ApplicationWindow {
                 let pos = evt.position().into();
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.point_effective(&evt.position().into()) {
                         if !widget.mouse_tracking() {
@@ -316,7 +317,7 @@ impl ApplicationWindow {
                 let pos = evt.position().into();
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.point_effective(&evt.position().into()) {
                         let widget_point = widget.map_to_widget(&pos);
@@ -338,7 +339,7 @@ impl ApplicationWindow {
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.id() == self.focused_widget {
                         widget.inner_key_pressed(&evt);
@@ -354,7 +355,7 @@ impl ApplicationWindow {
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = unsafe { widget_opt.as_mut().unwrap().as_mut() };
+                    let widget = nonnull_mut!(widget_opt);
 
                     if widget.id() == self.focused_widget {
                         widget.inner_key_released(&evt);
@@ -403,8 +404,9 @@ impl ApplicationWindow {
             return;
         }
 
-        let parent = unsafe { widget.get_raw_parent_mut().unwrap().as_mut().unwrap() };
-        widget.set_z_index(parent.z_index() + parent.z_index_step());
+        let parent = widget.get_parent_mut().unwrap();
+        let zindex = parent.z_index() + parent.z_index_step();
+        widget.set_z_index(zindex);
 
         let board = window.board();
         board.add_element(widget.as_element());
@@ -425,18 +427,17 @@ pub fn current_window_id() -> u16 {
     WINDOW_ID.with(|id| *id.borrow())
 }
 
-fn child_initialize(mut child: Option<*mut dyn WidgetImpl>, window_id: u16) {
+fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: u16) {
     let board = ApplicationWindow::window_of(window_id).board();
     let type_registry = TypeRegistry::instance();
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
-    while let Some(child_ptr) = child {
-        let child_ref = unsafe { child_ptr.as_mut().unwrap() };
-
-        let parent = unsafe { child_ref.get_raw_parent_mut().unwrap().as_mut().unwrap() };
-        child_ref.set_z_index(parent.z_index() + parent.z_index_step());
+    while let Some(child_ref) = child {
+        let parent = child_ref.get_parent_mut().unwrap();
+        let zindex = parent.z_index() + parent.z_index_step();
+        child_ref.set_z_index(zindex);
 
         board.add_element(child_ref.as_element());
-        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ptr));
+        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ref));
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
@@ -455,10 +456,10 @@ fn child_initialize(mut child: Option<*mut dyn WidgetImpl>, window_id: u16) {
         };
 
         if is_container {
-            container_children.unwrap().iter_mut().for_each(|c| {
-                c.set_parent(child_ptr);
-                children.push_back(Some(*c))
-            });
+            container_children
+                .unwrap()
+                .iter_mut()
+                .for_each(|c| children.push_back(Some(*c)));
         } else {
             children.push_back(child_ref.get_raw_child_mut());
         }
@@ -467,6 +468,11 @@ fn child_initialize(mut child: Option<*mut dyn WidgetImpl>, window_id: u16) {
         child_ref.inner_initialize();
         child_ref.initialize();
 
-        child = children.pop_front().take().map_or(None, |widget| widget);
+        child = children.pop_front().take().map_or(None, |widget| unsafe {
+            match widget {
+                None => None,
+                Some(w) => w.as_mut(),
+            }
+        });
     }
 }

@@ -119,3 +119,23 @@ macro_rules! nonnull_mut {
         unsafe { $st.as_mut().unwrap().as_mut() }
     };
 }
+
+#[macro_export]
+macro_rules! ptr_ref {
+    ( $st:ident ) => {
+        unsafe { $st.as_ref().unwrap() }
+    };
+    ( $st:expr ) => {
+        unsafe { $st.as_ref().unwrap() }
+    };
+}
+
+#[macro_export]
+macro_rules! ptr_mut {
+    ( $st:ident ) => {
+        unsafe { $st.as_mut().unwrap() }
+    };
+    ( $st:expr ) => {
+        unsafe { $st.as_mut().unwrap() }
+    };
+}

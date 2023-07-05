@@ -5,7 +5,7 @@ use crate::{
 };
 use log::debug;
 use std::collections::VecDeque;
-use tlib::figure::Size;
+use tlib::{figure::Size, ptr_mut};
 
 pub const ZINDEX_STEP: u32 = 1000;
 
@@ -61,66 +61,76 @@ pub trait ContentAlignment {
 }
 
 pub(crate) trait SizeCalculation {
-    fn calc_size(&mut self, window_size: Size, parent_size: Size, child_size: Option<Size>);
+    /// Widget has child.
+    /// Determine widget's size before calc child's size based on `expand`,`fixed`...
+    fn pre_calc_size(&mut self, parent_size: Size);
+
+    /// Widget has child.
+    fn calc_node_size(&mut self, child_size: Size);
+
+    /// Widget has no child.
+    fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size);
 }
 impl SizeCalculation for dyn WidgetImpl {
-    fn calc_size(&mut self, window_size: Size, parent_size: Size, child_size: Option<Size>) {
+    fn pre_calc_size(&mut self, _parent_size: Size) {}
+
+    fn calc_node_size(&mut self, child_size: Size) {
         let size = self.size();
         let mut resized = false;
 
-        match child_size {
-            Some(child_size) => {
-                if size.width() == 0 {
-                    self.width_request(child_size.width());
-                    resized = true;
-                }
-                if size.height() == 0 {
-                    self.height_request(child_size.height());
-                    resized = true;
+        if size.width() == 0 {
+            self.width_request(child_size.width());
+            resized = true;
+        }
+        if size.height() == 0 {
+            self.height_request(child_size.height());
+            resized = true;
+        }
+
+        if resized {
+            emit!(self.size_changed(), self.size())
+        }
+    }
+
+    fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size) {
+        let size = self.size();
+        let mut resized = false;
+
+        if self.fixed_width() {
+            if self.hexpand() {
+                self.width_request((parent_size.width() as f32 * self.fixed_width_ration()) as i32);
+            }
+        } else {
+            // Use `hscale` to determine widget's width:
+            if self.hexpand() {
+            } else {
+                if parent_size.width() != 0 {
+                    if size.width() == 0 {
+                        self.width_request(parent_size.width());
+                        resized = true;
+                    }
+                } else {
+                    if size.width() == 0 {
+                        self.width_request(window_size.width());
+                        resized = true;
+                    }
                 }
             }
+        }
 
-            // Widget has no child:
-            None => {
-                if self.fixed_width() {
-                    if self.hexpand() {
-                        self.width_request(
-                            (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
-                        );
+        if self.fixed_height() {
+        } else {
+            if self.vexpand() {
+            } else {
+                if parent_size.height() != 0 {
+                    if size.height() == 0 {
+                        self.height_request(parent_size.height());
+                        resized = true;
                     }
                 } else {
-                    // Use `hscale` to determine widget's width:
-                    if self.hexpand() {
-                    } else {
-                        if parent_size.width() != 0 {
-                            if size.width() == 0 {
-                                self.width_request(parent_size.width());
-                                resized = true;
-                            }
-                        } else {
-                            if size.width() == 0 {
-                                self.width_request(window_size.width());
-                                resized = true;
-                            }
-                        }
-                    }
-                }
-
-                if self.fixed_height() {
-                } else {
-                    if self.vexpand() {
-                    } else {
-                        if parent_size.height() != 0 {
-                            if size.height() == 0 {
-                                self.height_request(parent_size.height());
-                                resized = true;
-                            }
-                        } else {
-                            if size.height() == 0 {
-                                self.height_request(window_size.height());
-                                resized = true;
-                            }
-                        }
+                    if size.height() == 0 {
+                        self.height_request(window_size.height());
+                        resized = true;
                     }
                 }
             }
@@ -157,6 +167,7 @@ impl LayoutManager {
         widget: &mut dyn WidgetImpl,
     ) -> Size {
         let raw_child = widget.get_raw_child();
+        let widget_ptr = widget.as_ptr_mut();
         let size = widget.size();
         let composition = widget.composition();
 
@@ -175,10 +186,12 @@ impl LayoutManager {
 
         let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
         if raw_child.is_none() && container_no_children {
-            widget.calc_size(window_size, parent_size, None);
+            widget.calc_leaf_size(window_size, parent_size);
 
             widget.image_rect().size()
         } else {
+            ptr_mut!(widget_ptr).pre_calc_size(parent_size);
+
             let child_size = if is_container {
                 let mut child_size = Size::default();
                 match composition {
@@ -220,7 +233,7 @@ impl LayoutManager {
                 Self::child_size_probe(window_size, size, widget.get_child_mut().unwrap())
             };
 
-            widget.calc_size(window_size, parent_size, Some(child_size));
+            widget.calc_node_size(child_size);
             widget.image_rect().size()
         }
     }
