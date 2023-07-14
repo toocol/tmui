@@ -98,7 +98,9 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_width() {
             if self.hexpand() {
-                self.width_request((parent_size.width() as f32 * self.fixed_width_ration()) as i32);
+                self.set_fixed_width(
+                    (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
+                );
             }
         } else {
             // Use `hscale` to determine widget's width:
@@ -106,12 +108,12 @@ impl SizeCalculation for dyn WidgetImpl {
             } else {
                 if parent_size.width() != 0 {
                     if size.width() == 0 {
-                        self.width_request(parent_size.width());
+                        self.set_fixed_width(parent_size.width());
                         resized = true;
                     }
                 } else {
                     if size.width() == 0 {
-                        self.width_request(window_size.width());
+                        self.set_fixed_width(window_size.width());
                         resized = true;
                     }
                 }
@@ -119,17 +121,22 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if self.fixed_height() {
+            if self.vexpand() {
+                self.set_fixed_height(
+                    (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
+                );
+            }
         } else {
             if self.vexpand() {
             } else {
                 if parent_size.height() != 0 {
                     if size.height() == 0 {
-                        self.height_request(parent_size.height());
+                        self.set_fixed_height(parent_size.height());
                         resized = true;
                     }
                 } else {
                     if size.height() == 0 {
-                        self.height_request(window_size.height());
+                        self.set_fixed_height(window_size.height());
                         resized = true;
                     }
                 }
