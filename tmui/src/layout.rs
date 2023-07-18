@@ -103,8 +103,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 );
             }
         } else {
-            // Use `hscale` to determine widget's width:
             if self.hexpand() {
+                // Use `hscale` to determine widget's width:
             } else {
                 if parent_size.width() != 0 {
                     if size.width() == 0 {
@@ -128,6 +128,7 @@ impl SizeCalculation for dyn WidgetImpl {
             }
         } else {
             if self.vexpand() {
+                // Use `vscale` to determine widget's height:
             } else {
                 if parent_size.height() != 0 {
                     if size.height() == 0 {

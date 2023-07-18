@@ -38,6 +38,10 @@ name = "scrolled"
 path = "scrolled/main.rs"
 
 [[bin]]
+name = "self_adaption_layout"
+path = "self_adaption_layout/main.rs"
+
+[[bin]]
 name = "shared_window_master"
 path = "shared_window_master/main.rs"
 
