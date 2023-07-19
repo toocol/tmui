@@ -1,4 +1,7 @@
-use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*};
+use crate::{
+    application_window::ApplicationWindow, container::ContainerScaleCalculate,
+    layout::LayoutManager, prelude::*,
+};
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
@@ -228,5 +231,17 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     for child in end_childs {
         child.set_fixed_x(offset);
         offset += child.image_rect().height();
+    }
+}
+
+impl ContainerScaleCalculate for HBox {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        self.children().iter().map(|c| c.hscale()).sum()
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        f32::MAX
     }
 }

@@ -2,14 +2,14 @@ use crate::{
     application_window::ApplicationWindow,
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, container::ContainerScaleCalculate,
 };
 use derivative::Derivative;
 use tlib::{
     events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
-    prelude::extends, run_after, connect,
+    prelude::extends, run_after, connect, ptr_mut,
 };
 use log::warn;
 
@@ -102,6 +102,9 @@ impl ObjectImpl for ScrollArea {
 
         self.scroll_bar.set_vexpand(true);
         self.scroll_bar.set_hscale(10.);
+
+        let parent = self as *mut dyn WidgetImpl;
+        self.scroll_bar.set_parent(ptr_mut!(parent));
 
         connect!(self, size_changed(), self, adjust_area_layout(Size));
     }
@@ -199,5 +202,17 @@ impl Layout for ScrollArea {
                 }
             }
         }
+    }
+}
+
+impl ContainerScaleCalculate for ScrollArea {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        self.children().iter().map(|c| c.hscale()).sum()
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        f32::MAX
     }
 }

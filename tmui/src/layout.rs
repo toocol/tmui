@@ -1,7 +1,7 @@
 use crate::{
     container::{Container, ContainerImpl},
     prelude::*,
-    widget::{WidgetImpl, WidgetSignals},
+    widget::{ScaleCalculate, WidgetImpl, WidgetSignals},
 };
 use log::debug;
 use std::collections::VecDeque;
@@ -105,6 +105,14 @@ impl SizeCalculation for dyn WidgetImpl {
         } else {
             if self.hexpand() {
                 // Use `hscale` to determine widget's width:
+                let parent = self.get_parent_ref().unwrap();
+                let parent_hscale = if parent.super_type().is_a(Container::static_type()) {
+                    cast!(parent as ContainerImpl).unwrap().hscale_calculate()
+                } else {
+                    parent.hscale_calculate()
+                };
+                let ration = self.hscale() / parent_hscale;
+                self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
             } else {
                 if parent_size.width() != 0 {
                     if size.width() == 0 {
@@ -129,6 +137,14 @@ impl SizeCalculation for dyn WidgetImpl {
         } else {
             if self.vexpand() {
                 // Use `vscale` to determine widget's height:
+                let parent = self.get_parent_ref().unwrap();
+                let parent_vscale = if parent.super_type().is_a(Container::static_type()) {
+                    cast!(parent as ContainerImpl).unwrap().vscale_calculate()
+                } else {
+                    parent.vscale_calculate()
+                };
+                let ration = self.vscale() / parent_vscale;
+                self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
             } else {
                 if parent_size.height() != 0 {
                     if size.height() == 0 {
@@ -180,7 +196,7 @@ impl LayoutManager {
         let composition = widget.composition();
 
         // Determine whether the widget is a container.
-        let is_container = widget.parent_type().is_a(Container::static_type());
+        let is_container = widget.super_type().is_a(Container::static_type());
         let container_ref = if is_container {
             cast_mut!(widget as ContainerImpl)
         } else {
@@ -262,7 +278,7 @@ impl LayoutManager {
             widget_ref.position_layout(previous_ref, parent_ref, false);
 
             // Determine whether the widget is a container.
-            let is_container = widget_ref.parent_type().is_a(Container::static_type());
+            let is_container = widget_ref.super_type().is_a(Container::static_type());
             let container_ref = if is_container {
                 cast_mut!(widget_ref as ContainerImpl)
             } else {
@@ -302,7 +318,7 @@ impl LayoutManager {
             return;
         }
         let parent = parent.unwrap();
-        if parent.parent_type().is_a(Container::static_type()) && !manage_by_container {
+        if parent.super_type().is_a(Container::static_type()) && !manage_by_container {
             return;
         }
         let widget_rect = widget.rect();

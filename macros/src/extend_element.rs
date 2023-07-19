@@ -41,9 +41,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 impl ElementAcquire for #name {}
 
-                impl ParentType for #name {
+                impl SuperType for #name {
                     #[inline]
-                    fn parent_type(&self) -> Type {
+                    fn super_type(&self) -> Type {
                         Element::static_type()
                     }
                 }

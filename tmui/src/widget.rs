@@ -1486,7 +1486,7 @@ pub trait WidgetImpl:
     + ObjectOperation
     + ObjectType
     + ObjectImpl
-    + ParentType
+    + SuperType
     + Layout
     + InnerEventProcess
     + PointEffective
@@ -1666,6 +1666,42 @@ impl<T: WidgetImpl> ZIndexStep for T {
 }
 impl ZIndexStep for dyn WidgetImpl {
     z_index_step_impl!();
+}
+
+////////////////////////////////////// ScaleCalculate //////////////////////////////////////
+pub(crate) trait ScaleCalculate {
+    fn hscale_calculate(&self) -> f32;
+
+    fn vscale_calculate(&self) -> f32;
+}
+
+impl ScaleCalculate for dyn WidgetImpl {
+    #[inline]
+    fn hscale_calculate(&self) -> f32 {
+        self.get_child_ref().unwrap().hscale()
+    }
+
+    #[inline]
+    fn vscale_calculate(&self) -> f32 {
+        self.get_child_ref().unwrap().vscale()
+    }
+}
+
+////////////////////////////////////// WindowAcquire //////////////////////////////////////
+pub trait WindowAcquire {
+    fn window(&self) -> &'static mut ApplicationWindow;
+}
+impl<T: WidgetImpl> WindowAcquire for T {
+    #[inline]
+    fn window(&self) -> &'static mut ApplicationWindow {
+        ApplicationWindow::window_of(self.window_id())
+    }
+}
+impl WindowAcquire for dyn WidgetImpl {
+    #[inline]
+    fn window(&self) -> &'static mut ApplicationWindow {
+        ApplicationWindow::window_of(self.window_id())
+    }
 }
 
 #[cfg(test)]

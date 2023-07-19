@@ -6,7 +6,7 @@ use crate::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl,
+    widget::WidgetImpl, container::ContainerScaleCalculate,
 };
 use std::{
     collections::HashMap,
@@ -330,3 +330,15 @@ impl From<u8> for SplitType {
     }
 }
 implements_enum_value!(SplitType, u8);
+
+impl ContainerScaleCalculate for SplitPane {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        f32::MIN
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        f32::MIN
+    }
+}

@@ -443,7 +443,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: u16) {
         child_ref.type_register(type_registry);
 
         // Determine whether the widget is a container.
-        let is_container = child_ref.parent_type().is_a(Container::static_type());
+        let is_container = child_ref.super_type().is_a(Container::static_type());
         let container_ref = if is_container {
             cast_mut!(child_ref as ContainerImpl)
         } else {

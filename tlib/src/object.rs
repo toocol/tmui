@@ -187,7 +187,6 @@ pub trait InnerInitializer {
     fn inner_initialize(&mut self) {}
 }
 
-
 impl InnerInitializer for Object {
     fn inner_type_register(&self, _: &mut TypeRegistry) {}
 }
@@ -215,8 +214,8 @@ impl<T: StaticType> ObjectExt for T {
 }
 
 pub trait ObjectAcquire: ObjectImpl + Default {}
-pub trait ParentType {
-    fn parent_type(&self) -> Type;
+pub trait SuperType {
+    fn super_type(&self) -> Type;
 }
 
 pub trait ObjectSubclass: 'static {
@@ -249,9 +248,9 @@ impl<T: ObjectType> TypeDowncast for T {}
 #[allow(unused_variables)]
 pub trait ObjectImpl: ObjectImplExt + InnerInitializer + TypeName {
     /// Construct function when create the instance. <br>
-    /// 
+    ///
     /// ### Object should create by function [`Object::new`]
-    /// ### Override this function should invoke `self.parent_construct()` manually. 
+    /// ### Override this function should invoke `self.parent_construct()` manually.
     fn construct(&mut self) {
         self.parent_construct()
     }

@@ -64,9 +64,9 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
 
                 impl WidgetAcquire for #name {}
 
-                impl ParentType for #name {
+                impl SuperType for #name {
                     #[inline]
-                    fn parent_type(&self) -> Type {
+                    fn super_type(&self) -> Type {
                         SharedWidget::static_type()
                     }
                 }

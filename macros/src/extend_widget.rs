@@ -68,9 +68,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 impl WidgetAcquire for #name {}
 
-                impl ParentType for #name {
+                impl SuperType for #name {
                     #[inline]
-                    fn parent_type(&self) -> Type {
+                    fn super_type(&self) -> Type {
                         Widget::static_type()
                     }
                 }
@@ -545,7 +545,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
         impl WidgetImplExt for #name {
             #[inline]
             fn child<T: WidgetImpl>(&mut self, child: Box<T>) {
-                if self.parent_type().is_a(Container::static_type()) {
+                if self.super_type().is_a(Container::static_type()) {
                     panic!("function `child()` was invalid in `Container`")
                 }
                 self.#(#widget_path).*.child_internal(child)

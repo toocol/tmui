@@ -15,7 +15,6 @@ pub mod scroll_area;
 pub mod scroll_bar;
 pub mod shared_widget;
 pub mod split_pane;
-pub mod util;
 pub mod system;
 pub mod stack;
 pub mod vbox;

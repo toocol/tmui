@@ -1,4 +1,4 @@
-use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*};
+use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*, container::ContainerScaleCalculate};
 use derivative::Derivative;
 use log::debug;
 use tlib::object::ObjectSubclass;
@@ -230,5 +230,17 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     for child in end_childs {
         child.set_fixed_y(offset);
         offset += child.image_rect().height();
+    }
+}
+
+impl ContainerScaleCalculate for VBox {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        f32::MAX
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        self.children().iter().map(|c| c.vscale()).sum()
     }
 }

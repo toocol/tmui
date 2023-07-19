@@ -1,6 +1,6 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerImpl, ContainerImplExt},
+    container::{ContainerImpl, ContainerImplExt, ContainerScaleCalculate},
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
 };
@@ -109,6 +109,10 @@ impl Stack {
 
 #[reflect_trait]
 pub trait StackTrait {
+    fn current_child(&self) -> Option<&dyn WidgetImpl>;
+
+    fn current_child_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
+
     fn current_index(&self) -> usize;
 
     fn switch(&mut self);
@@ -116,3 +120,23 @@ pub trait StackTrait {
     fn switch_index(&mut self, index: usize);
 }
 stack_impl!(Stack);
+
+impl ContainerScaleCalculate for Stack {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        if let Some(child) = self.current_child() {
+            child.hscale()
+        } else {
+            f32::MIN
+        }
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        if let Some(child) = self.current_child() {
+            child.vscale()
+        } else {
+            f32::MIN
+        }
+    }
+}

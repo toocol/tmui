@@ -23,6 +23,23 @@ pub(crate) fn generate_stack_impl(
     let use_prefix = Ident::new(use_prefix, name.span());
     Ok(quote! {
         impl StackTrait for #name {
+            fn current_child(&self) -> Option<&dyn WidgetImpl> {
+                if self.children().len() < self.current_index() + 1 {
+                    None
+                } else {
+                    Some(self.children().remove(self.current_index()))
+                }
+            }
+
+            fn current_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+                if self.children().len() < self.current_index() + 1 {
+                    None
+                } else {
+                    let idx = self.current_index();
+                    Some(self.children_mut().remove(idx))
+                }
+            }
+
             #[inline]
             fn current_index(&self) -> usize {
                 self.current_index
