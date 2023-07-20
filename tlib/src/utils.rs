@@ -41,10 +41,12 @@ impl SnowflakeGuidGenerator {
         Ok((timestamp << TIMESTAMP_SHIFT_BITS) | (UNIQUE_ID << UNIQUE_ID_SHIFT_BITS) | *sequence)
     }
 
+    #[inline]
     fn time_gen() -> u64 {
         TimeStamp::timestamp()
     }
 
+    #[inline]
     fn til_next_millis(last_timestamp: u64) -> u64 {
         let mut timestamp: u64 = SnowflakeGuidGenerator::time_gen();
         while timestamp <= last_timestamp {
@@ -66,12 +68,14 @@ pub struct TimeRecorder {
 }
 
 impl TimeRecorder {
+    #[inline]
     pub fn new() -> TimeRecorder {
         TimeRecorder {
             start: TimeStamp::timestamp(),
         }
     }
 
+    #[inline]
     pub fn end(&self) -> u64 {
         let end = TimeStamp::timestamp();
         end - self.start
@@ -81,6 +85,7 @@ impl TimeRecorder {
 pub struct TimeStamp {}
 
 impl TimeStamp {
+    #[inline]
     pub fn timestamp() -> u64 {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -88,6 +93,7 @@ impl TimeStamp {
             .as_millis() as u64
     }
 
+    #[inline]
     pub fn timestamp_micros() -> u128 {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -95,6 +101,7 @@ impl TimeStamp {
             .as_micros()
     }
 
+    #[inline]
     pub fn timestamp_16() -> u16 {
         let mut ts = (TimeStamp::timestamp() % 65536) as u16;
         if ts == u16::MAX {

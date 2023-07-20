@@ -1,4 +1,8 @@
-use crate::{prelude::*, widget::WidgetImpl};
+use crate::{
+    graphics::element::HierachyZ,
+    prelude::*,
+    widget::{ScaleCalculate, WidgetImpl, WindowAcquire},
+};
 use tlib::object::{ObjectImpl, ObjectSubclass};
 
 #[extends(Widget)]
@@ -20,6 +24,25 @@ impl ObjectImpl for Container {
                     child.update()
                 }
             }
+            "visible" => {
+                let visible = value.get::<bool>();
+                for child in self.children.iter_mut() {
+                    if visible {
+                        child.show()
+                    } else {
+                        child.hide()
+                    }
+                }
+            }
+            "z_index" => {
+                if !ApplicationWindow::window_of(self.window_id()).initialized() {
+                    return;
+                }
+                let offset = value.get::<u32>() - self.z_index();
+                for child in self.children.iter_mut() {
+                    child.set_z_index(child.z_index() + offset);
+                }
+            }
             _ => {}
         }
     }
@@ -30,7 +53,7 @@ impl WidgetImpl for Container {}
 pub trait ContainerAcquire: ContainerImpl + ContainerImplExt + Default {}
 
 #[reflect_trait]
-pub trait ContainerImpl: WidgetImpl + ContainerPointEffective {
+pub trait ContainerImpl: WidgetImpl + ContainerPointEffective + ContainerScaleCalculate {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`
     fn children(&self) -> Vec<&dyn WidgetImpl>;
@@ -65,5 +88,54 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
         }
 
         true
+    }
+}
+
+impl ScaleCalculate for dyn ContainerImpl {
+    #[inline]
+    fn hscale_calculate(&self) -> f32 {
+        self.container_hscale_calculate()
+    }
+
+    #[inline]
+    fn vscale_calculate(&self) -> f32 {
+        self.container_vscale_calculate()
+    }
+}
+
+pub trait ContainerScaleCalculate {
+    fn container_hscale_calculate(&self) -> f32;
+
+    fn container_vscale_calculate(&self) -> f32;
+}
+pub trait StaticContainerScaleCalculate {
+    fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32;
+
+    fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32;
+}
+
+pub const SCALE_ADAPTION: f32 = f32::MAX;
+pub const SCALE_DISMISS: f32 = f32::MIN;
+pub trait ScaleMeasure {
+    fn is_adaption(&self) -> bool;
+
+    fn is_dismiss(&self) -> bool;
+}
+impl ScaleMeasure for f32 {
+    #[inline]
+    fn is_adaption(&self) -> bool {
+        *self == SCALE_ADAPTION
+    }
+
+    #[inline]
+    fn is_dismiss(&self) -> bool {
+        *self == SCALE_DISMISS
+    }
+}
+
+impl WindowAcquire for dyn ContainerImpl {
+    #[inline]
+    fn window(&self) -> &'static mut ApplicationWindow {
+        ApplicationWindow::window_of(self.window_id())
     }
 }

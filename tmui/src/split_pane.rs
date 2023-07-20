@@ -6,7 +6,7 @@ use crate::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl,
+    widget::WidgetImpl, container::{ContainerScaleCalculate, SCALE_DISMISS, StaticContainerScaleCalculate},
 };
 use std::{
     collections::HashMap,
@@ -57,8 +57,8 @@ impl ContainerImplExt for SplitPane {
         if self.container.children.len() != 0 {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         child.set_parent(self);
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         let widget_ptr: Option<NonNull<dyn WidgetImpl>> = NonNull::new(child.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),
@@ -88,6 +88,19 @@ impl Layout for SplitPane {
     }
 }
 
+#[macro_export]
+macro_rules! split_widget {
+    ( $st:ident ) => {
+        unsafe { $st.widget.as_mut().unwrap().as_mut() }
+    };
+}
+#[macro_export]
+macro_rules! split_from {
+    ( $st:ident ) => {
+        unsafe { $st.split_from.as_mut().unwrap().as_mut() }
+    };
+}
+
 impl ContainerLayout for SplitPane {
     fn static_composition() -> Composition {
         Composition::FixedContainer
@@ -106,20 +119,12 @@ impl ContainerLayout for SplitPane {
         for split_info in split_infos_getter.split_infos_vec() {
             nonnull_mut!(split_info).calculate_layout(parent_rect)
         }
+        for split_info in split_infos_getter.split_infos_vec() {
+            let split_info = nonnull_mut!(split_info);
+            let widget = split_widget!(split_info);
+            emit!(widget.size_changed(), widget.size());
+        }
     }
-}
-
-#[macro_export]
-macro_rules! split_widget {
-    ( $st:ident ) => {
-        unsafe { $st.widget.as_mut().unwrap().as_mut() }
-    };
-}
-#[macro_export]
-macro_rules! split_from {
-    ( $st:ident ) => {
-        unsafe { $st.split_from.as_mut().unwrap().as_mut() }
-    };
 }
 
 #[reflect_trait]
@@ -212,6 +217,7 @@ impl SplitInfo {
             SplitType::SplitNone => {
                 widget.width_request(parent_rect.width());
                 widget.height_request(parent_rect.height());
+                widget.resize(Some(parent_rect.width()), Some(parent_rect.height()));
                 widget.set_fixed_x(parent_rect.x());
                 widget.set_fixed_y(parent_rect.y());
             }
@@ -324,3 +330,26 @@ impl From<u8> for SplitType {
     }
 }
 implements_enum_value!(SplitType, u8);
+
+impl ContainerScaleCalculate for SplitPane {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        Self::static_container_hscale_calculate(self)
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for SplitPane {
+    #[inline]
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_DISMISS
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_DISMISS
+    }
+}

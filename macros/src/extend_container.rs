@@ -160,9 +160,9 @@ pub(crate) fn expand(
 
                 impl ContainerAcquire for #name {}
 
-                impl ParentType for #name {
+                impl SuperType for #name {
                     #[inline]
-                    fn parent_type(&self) -> Type {
+                    fn super_type(&self) -> Type {
                         Container::static_type()
                     }
                 }

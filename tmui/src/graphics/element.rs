@@ -1,9 +1,10 @@
-use crate::application_window::current_window_id;
+use crate::{application_window::current_window_id, widget::WidgetImpl};
 
-use super::{drawing_context::DrawingContext, board::Board};
+use super::{board::Board, drawing_context::DrawingContext};
 use tlib::{
+    figure::{Rect, Region},
     object::{ObjectImpl, ObjectSubclass},
-    prelude::*, figure::{Rect, Region},
+    prelude::*,
 };
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
@@ -36,38 +37,38 @@ impl ObjectImpl for Element {
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt: 'static {
     /// Set the application window id which the element belongs to.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
     fn set_window_id(&mut self, id: u16);
-    
+
     /// Get the application window id which the element belongs to.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
     fn window_id(&self) -> u16;
 
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::update) (Defined in [`ElementExt`])
     fn update(&mut self);
 
     /// Mark element's invalidate field to true, and element will be redrawed immediately.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
     fn force_update(&mut self);
 
     /// Specified the region to redraw.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
     fn update_region(&mut self, rect: Rect);
 
     /// Cleaer the region.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::clear_region) (Defined in [`ElementExt`])
     fn clear_region(&mut self);
 
     /// Get the redraw region. <br>
     /// The region rect of element's coordinate was `Widget`.
-    /// 
+    ///
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn redraw_region(&self) -> &Region;
 
@@ -191,11 +192,44 @@ impl ElementExt for Element {
 /// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>
 /// Each subclass which impl [`WidgetImpl`] will impl this trait automatically.
 #[reflect_trait]
-pub trait ElementImpl: ElementExt + ObjectImpl + ParentType + 'static {
+pub trait ElementImpl: ElementExt + ObjectImpl + ObjectOperation + SuperType + 'static {
     fn on_renderer(&mut self, cr: &DrawingContext);
 }
 
 pub trait ElementAcquire: ElementImpl + Default {}
+
+/// The hierarchy of widget on the z-axis, the higher the numerical value,
+/// the higher the widget position
+pub(crate) trait HierachyZ {
+    fn z_index(&self) -> u32;
+
+    fn set_z_index(&mut self, z_index: u32);
+}
+macro_rules! hierarchy_z_impl {
+    () => {
+        #[inline]
+        fn z_index(&self) -> u32 {
+            match self.get_property("z_index") {
+                Some(val) => val.get(),
+                None => 0,
+            }
+        }
+
+        #[inline]
+        fn set_z_index(&mut self, z_index: u32) {
+            self.set_property("z_index", z_index.to_value())
+        }
+    };
+}
+impl<T: ElementImpl> HierachyZ for T {
+    hierarchy_z_impl!();
+}
+impl HierachyZ for dyn ElementImpl {
+    hierarchy_z_impl!();
+}
+impl HierachyZ for dyn WidgetImpl {
+    hierarchy_z_impl!();
+}
 
 #[cfg(test)]
 mod tests {

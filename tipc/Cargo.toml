@@ -20,9 +20,6 @@ libc = "0.2.144"
 
 [[example]]
 name = "ipc_basic"
-dependencies = [
-    "ctrlc", "libc"
-]
 
 [[example]]
 name = "mem_queue"

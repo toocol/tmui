@@ -1,10 +1,15 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerImpl, ContainerImplExt},
+    container::{
+        ContainerImpl, ContainerImplExt, ContainerScaleCalculate, StaticContainerScaleCalculate,
+    },
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
 };
-use tlib::{object::{ObjectImpl, ObjectSubclass}, stack_impl};
+use tlib::{
+    object::{ObjectImpl, ObjectSubclass},
+    stack_impl,
+};
 
 #[extends(Container)]
 pub struct Stack {
@@ -42,13 +47,15 @@ impl ContainerImplExt for Stack {
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        child.set_parent(self);
         if self.current_index == self.container.children.len() {
             child.show()
         } else {
             child.hide()
         }
-        child.set_parent(self);
+
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+
         self.container.children.push(child);
         self.update();
     }
@@ -71,7 +78,7 @@ impl Layout for Stack {
 
 impl ContainerLayout for Stack {
     fn static_composition() -> Composition {
-        Composition::Overlay
+        Composition::Stack
     }
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
@@ -95,15 +102,12 @@ impl ContainerLayout for Stack {
     }
 }
 
-impl Stack {
-    #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
-    }
-}
-
 #[reflect_trait]
 pub trait StackTrait {
+    fn current_child(&self) -> Option<&dyn WidgetImpl>;
+
+    fn current_child_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
+
     fn current_index(&self) -> usize;
 
     fn switch(&mut self);
@@ -111,3 +115,33 @@ pub trait StackTrait {
     fn switch_index(&mut self, index: usize);
 }
 stack_impl!(Stack);
+
+impl ContainerScaleCalculate for Stack {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        Self::static_container_hscale_calculate(self)
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for Stack {
+    #[inline]
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        1.
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        1.
+    }
+}
+
+impl Stack {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
+    }
+}

@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 use crate::{
+    application_window::ApplicationWindow,
     skia_safe::{self, Canvas, Font, Matrix, Paint, Path, Point},
-    util::skia_font_clone,
-    widget::WidgetImpl, application_window::ApplicationWindow,
+    widget::WidgetImpl,
 };
 use log::error;
 use std::cell::RefMut;
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect, Region},
+    global::skia_font_clone,
     skia_safe::canvas::SrcRectConstraint,
 };
 

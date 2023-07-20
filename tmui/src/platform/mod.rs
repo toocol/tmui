@@ -16,14 +16,14 @@ use std::sync::mpsc::Sender;
 use crate::graphics::bitmap::Bitmap;
 pub use message::*;
 pub(crate) use platform_ipc::*;
-#[cfg(target_os = "macos")]
+#[cfg(macos_platform)]
 pub(crate) use platform_macos::*;
 #[cfg(wayland_platform)]
 pub(crate) use platform_wayland::*;
-#[cfg(target_os = "windows")]
-pub(crate) use platform_win32::*;
 #[cfg(x11_platform)]
 pub(crate) use platform_x11::*;
+#[cfg(windows_platform)]
+pub(crate) use platform_win32::*;
 use tlib::figure::Rect;
 
 use self::window_context::WindowContext;
@@ -31,7 +31,7 @@ use self::window_context::WindowContext;
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum PlatformType {
-    #[cfg(target_os = "windows")]
+    #[cfg(windows_platform)]
     #[default]
     Win32,
     #[cfg(free_unix)]
@@ -39,7 +39,7 @@ pub enum PlatformType {
     LinuxX11,
     #[cfg(free_unix)]
     LinuxWayland,
-    #[cfg(target_os = "macos")]
+    #[cfg(macos_platform)]
     #[default]
     Macos,
     Ipc,

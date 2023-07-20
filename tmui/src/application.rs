@@ -1,16 +1,16 @@
-#[cfg(target_os = "macos")]
+#[cfg(macos_platform)]
 use crate::platform::PlatformMacos;
 #[cfg(wayland_platform)]
 use crate::platform::PlatformWayland;
-#[cfg(target_os = "windows")]
-use crate::platform::PlatformWin32;
 #[cfg(x11_platform)]
 use crate::platform::PlatformX11;
+#[cfg(windows_platform)]
+use crate::platform::PlatformWin32;
 use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
-    graphics::{board::Board, cpu_balance::CpuBalance},
+    graphics::{board::Board, cpu_balance::CpuBalance, frame::Frame},
     platform::{
         shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
@@ -204,7 +204,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
                 platform_context.wrap()
             }
-            #[cfg(target_os = "windows")]
+            #[cfg(windows_platform)]
             PlatformType::Win32 => {
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
@@ -234,7 +234,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.initialize();
                 platform_context.wrap()
             }
-            #[cfg(target_os = "macos")]
+            #[cfg(macos_platform)]
             PlatformType::Macos => {
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
@@ -310,10 +310,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         board.add_element(window.as_mut());
         window.initialize();
-        window.activate();
         window.run_after();
 
         let mut cpu_balance = CpuBalance::new();
+        let mut frame = Frame::empty_frame();
         let mut last_frame = Instant::now();
         let mut update = true;
         let mut frame_cnt = 0;
@@ -343,6 +343,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     );
                     log_instant = Instant::now();
                 }
+                frame = frame.next();
                 let update = board.invalidate_visual();
                 if update {
                     window.send_message(Message::VSync(Instant::now()));

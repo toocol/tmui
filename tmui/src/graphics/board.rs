@@ -1,3 +1,5 @@
+use tlib::nonnull_mut;
+
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::skia_safe::Surface;
 use std::{
@@ -15,7 +17,7 @@ thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
 /// (All elements call it's `update()` method can set it's `invalidate` field to true, or call `force_update()` to invoke `invalidate_visual` directly)
 pub struct Board {
     surface: RefCell<Surface>,
-    element_list: Vec<RefCell<Option<NonNull<dyn ElementImpl>>>>,
+    element_list: RefCell<Vec<Option<NonNull<dyn ElementImpl>>>>,
 }
 
 impl Board {
@@ -23,7 +25,7 @@ impl Board {
     pub fn new(surface: Surface) -> Self {
         Self {
             surface: RefCell::new(surface),
-            element_list: vec![],
+            element_list: RefCell::new(vec![]),
         }
     }
 
@@ -33,8 +35,8 @@ impl Board {
     }
 
     #[inline]
-    pub fn add_element(&mut self, element: *mut dyn ElementImpl) {
-        self.element_list.push(RefCell::new(NonNull::new(element)))
+    pub fn add_element(&self, element: *mut dyn ElementImpl) {
+        self.element_list.borrow_mut().push(NonNull::new(element))
     }
 
     #[inline]
@@ -49,8 +51,8 @@ impl Board {
             if *notify_update.borrow() {
                 // The parent elements always at the end of `element_list`.
                 // We should renderer the parent elements first.
-                for element in self.element_list.iter() {
-                    let element = unsafe { element.borrow_mut().as_mut().unwrap().as_mut() };
+                for element in self.element_list.borrow_mut().iter_mut() {
+                    let element = nonnull_mut!(element);
                     if element.invalidate() {
                         let cr = DrawingContext::new(self);
                         element.on_renderer(&cr);

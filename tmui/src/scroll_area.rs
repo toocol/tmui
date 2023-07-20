@@ -1,18 +1,23 @@
 use crate::{
     application_window::ApplicationWindow,
+    container::{ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutManager,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
+use log::warn;
 use tlib::{
+    connect,
     events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
     prelude::extends,
+    run_after,
 };
 
 #[extends(Container)]
+#[run_after]
 pub struct ScrollArea {
     #[derivative(Default(value = "Object::new(&[])"))]
     scroll_bar: Box<ScrollBar>,
@@ -22,8 +27,8 @@ pub struct ScrollArea {
 impl ScrollArea {
     #[inline]
     pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
-        ApplicationWindow::initialize_dynamic_component(area.as_mut());
         area.set_parent(self);
+        ApplicationWindow::initialize_dynamic_component(area.as_mut());
         self.area = Some(area)
     }
 
@@ -74,6 +79,20 @@ impl ScrollArea {
         self.scroll_bar
             .scroll_by_delta(KeyboardModifier::NoModifier, delta, delta_type);
     }
+
+    #[inline]
+    pub(crate) fn adjust_area_layout(&mut self, size: Size) {
+        if size.width() == 0 || size.height() == 0 {
+            warn!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
+            return;
+        }
+
+        if let Some(area) = self.get_area_mut() {
+            area.set_vexpand(true);
+            area.set_hexpand(true);
+            area.set_hscale(size.width() as f32 - 10.);
+        }
+    }
 }
 
 impl ObjectSubclass for ScrollArea {
@@ -84,13 +103,25 @@ impl ObjectImpl for ScrollArea {
     fn construct(&mut self) {
         self.parent_construct();
 
-        ApplicationWindow::initialize_dynamic_component(self.scroll_bar.as_mut());
+        self.scroll_bar.set_vexpand(true);
+        self.scroll_bar.set_hscale(10.);
+
+        let parent = self as *mut dyn WidgetImpl;
+        self.scroll_bar.set_parent(parent);
+
+        connect!(self, size_changed(), self, adjust_area_layout(Size));
     }
 }
 
 impl WidgetImpl for ScrollArea {
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
         self.scroll_bar.on_mouse_wheel(event)
+    }
+
+    fn run_after(&mut self) {
+        self.parent_run_after();
+
+        self.adjust_area_layout(self.size());
     }
 }
 
@@ -174,5 +205,28 @@ impl Layout for ScrollArea {
                 }
             }
         }
+    }
+}
+
+impl ContainerScaleCalculate for ScrollArea {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        Self::static_container_hscale_calculate(self)
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for ScrollArea {
+    #[inline]
+    fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
+        c.children().iter().map(|c| c.hscale()).sum()
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_ADAPTION
     }
 }

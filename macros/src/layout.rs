@@ -112,8 +112,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         (false, false) => {
             quote! {
                 use tmui::application_window::ApplicationWindow;
-                ApplicationWindow::initialize_dynamic_component(child.as_mut());
                 child.set_parent(self);
+                ApplicationWindow::initialize_dynamic_component(child.as_mut());
                 self.container.children.push(child);
                 self.update();
             }
@@ -184,7 +184,21 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
                     if !self.#children_fields.constructed() {
                         self.#children_fields.construct();
                     }
+                    let self_ptr = self as *mut dyn WidgetImpl;
+                    self.#children_fields.set_parent(self_ptr);
                 )*
+            }
+        }
+
+        impl ContainerScaleCalculate for #name {
+            #[inline]
+            fn container_hscale_calculate(&self) -> f32 {
+                #layout::static_container_hscale_calculate(self)
+            }
+
+            #[inline]
+            fn container_vscale_calculate(&self) -> f32 {
+                #layout::static_container_vscale_calculate(self)
             }
         }
 

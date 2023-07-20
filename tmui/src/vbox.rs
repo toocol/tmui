@@ -1,4 +1,9 @@
-use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*};
+use crate::{
+    application_window::ApplicationWindow,
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
+    layout::LayoutManager,
+    prelude::*,
+};
 use derivative::Derivative;
 use log::debug;
 use tlib::object::ObjectSubclass;
@@ -42,8 +47,8 @@ impl ContainerImplExt for VBox {
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         child.set_parent(self);
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
         self.container.children.push(child);
         self.update();
     }
@@ -230,5 +235,28 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     for child in end_childs {
         child.set_fixed_y(offset);
         offset += child.image_rect().height();
+    }
+}
+
+impl ContainerScaleCalculate for VBox {
+    #[inline]
+    fn container_hscale_calculate(&self) -> f32 {
+        Self::static_container_hscale_calculate(self)
+    }
+
+    #[inline]
+    fn container_vscale_calculate(&self) -> f32 {
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for VBox {
+    #[inline]
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_ADAPTION
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32 {
+        c.children().iter().map(|c| c.vscale()).sum()
     }
 }

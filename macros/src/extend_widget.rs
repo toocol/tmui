@@ -68,9 +68,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 impl WidgetAcquire for #name {}
 
-                impl ParentType for #name {
+                impl SuperType for #name {
                     #[inline]
-                    fn parent_type(&self) -> Type {
+                    fn super_type(&self) -> Type {
                         Widget::static_type()
                     }
                 }
@@ -223,10 +223,10 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn resize(&mut self, width: i32, height: i32) {
+            fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
                 self.#(#widget_path).*.resize(width, height);
-                ApplicationWindow::window_of(self.window_id()).layout_change(self);
                 emit!(self.size_changed(), self.size());
+                self.update_geometry();
                 self.update()
             }
 
@@ -243,6 +243,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn update_geometry(&mut self) {
                 self.#(#widget_path).*.update_geometry()
+            }
+
+            #[inline]
+            fn fixed_width(&self) -> bool {
+                self.#(#widget_path).*.fixed_width()
+            }
+
+            #[inline]
+            fn fixed_height(&self) -> bool {
+                self.#(#widget_path).*.fixed_height()
+            }
+
+            #[inline]
+            fn fixed_width_ration(&self) -> f32 {
+                self.#(#widget_path).*.fixed_width_ration()
+            }
+
+            #[inline]
+            fn fixed_height_ration(&self) -> f32 {
+                self.#(#widget_path).*.fixed_height_ration()
             }
 
             #[inline]
@@ -500,12 +520,32 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn set_vexpand(&mut self, vexpand: bool) {
                 self.#(#widget_path).*.set_vexpand(vexpand)
             }
+
+            #[inline]
+            fn hscale(&self) -> f32 {
+                self.#(#widget_path).*.hscale()
+            }
+
+            #[inline]
+            fn set_hscale(&mut self, hscale: f32) {
+                self.#(#widget_path).*.set_hscale(hscale)
+            }
+
+            #[inline]
+            fn vscale(&self) -> f32 {
+                self.#(#widget_path).*.vscale()
+            }
+
+            #[inline]
+            fn set_vscale(&mut self, vscale: f32) {
+                self.#(#widget_path).*.set_vscale(vscale)
+            }
         }
 
         impl WidgetImplExt for #name {
             #[inline]
             fn child<T: WidgetImpl>(&mut self, child: Box<T>) {
-                if self.parent_type().is_a(Container::static_type()) {
+                if self.super_type().is_a(Container::static_type()) {
                     panic!("function `child()` was invalid in `Container`")
                 }
                 self.#(#widget_path).*.child_internal(child)
