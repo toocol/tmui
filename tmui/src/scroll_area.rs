@@ -1,17 +1,20 @@
 use crate::{
     application_window::ApplicationWindow,
+    container::{ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, container::ContainerScaleCalculate,
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
+use log::warn;
 use tlib::{
+    connect,
     events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
-    prelude::extends, run_after, connect, ptr_mut,
+    prelude::extends,
+    run_after,
 };
-use log::warn;
 
 #[extends(Container)]
 #[run_after]
@@ -81,7 +84,7 @@ impl ScrollArea {
     pub(crate) fn adjust_area_layout(&mut self, size: Size) {
         if size.width() == 0 || size.height() == 0 {
             warn!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
-            return
+            return;
         }
 
         if let Some(area) = self.get_area_mut() {
@@ -104,7 +107,7 @@ impl ObjectImpl for ScrollArea {
         self.scroll_bar.set_hscale(10.);
 
         let parent = self as *mut dyn WidgetImpl;
-        self.scroll_bar.set_parent(ptr_mut!(parent));
+        self.scroll_bar.set_parent(parent);
 
         connect!(self, size_changed(), self, adjust_area_layout(Size));
     }
@@ -208,11 +211,22 @@ impl Layout for ScrollArea {
 impl ContainerScaleCalculate for ScrollArea {
     #[inline]
     fn container_hscale_calculate(&self) -> f32 {
-        self.children().iter().map(|c| c.hscale()).sum()
+        Self::static_container_hscale_calculate(self)
     }
 
     #[inline]
     fn container_vscale_calculate(&self) -> f32 {
-        f32::MAX
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for ScrollArea {
+    #[inline]
+    fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
+        c.children().iter().map(|c| c.hscale()).sum()
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_ADAPTION
     }
 }

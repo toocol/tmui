@@ -13,7 +13,7 @@ fn main() {
    let app = Application::builder()
        .width(1280)
        .height(800)
-       .title("")
+       .title("Self adaption")
        .build();
 
    app.connect_activate(build_ui);

@@ -6,7 +6,7 @@ use crate::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl, container::ContainerScaleCalculate,
+    widget::WidgetImpl, container::{ContainerScaleCalculate, SCALE_DISMISS, StaticContainerScaleCalculate},
 };
 use std::{
     collections::HashMap,
@@ -217,7 +217,7 @@ impl SplitInfo {
             SplitType::SplitNone => {
                 widget.width_request(parent_rect.width());
                 widget.height_request(parent_rect.height());
-                widget.resize(parent_rect.width(), parent_rect.height());
+                widget.resize(Some(parent_rect.width()), Some(parent_rect.height()));
                 widget.set_fixed_x(parent_rect.x());
                 widget.set_fixed_y(parent_rect.y());
             }
@@ -334,11 +334,22 @@ implements_enum_value!(SplitType, u8);
 impl ContainerScaleCalculate for SplitPane {
     #[inline]
     fn container_hscale_calculate(&self) -> f32 {
-        f32::MIN
+        Self::static_container_hscale_calculate(self)
     }
 
     #[inline]
     fn container_vscale_calculate(&self) -> f32 {
-        f32::MIN
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for SplitPane {
+    #[inline]
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_DISMISS
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_DISMISS
     }
 }

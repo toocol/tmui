@@ -64,7 +64,7 @@ pub struct Widget {
     /// only effective when widget's `hexpand was true` and `fixed_width was false`.
     ///
     /// ### when parent was widget:
-    /// `width ration = hsclae`
+    /// `width ration = hscale / 1`
     ///
     /// ### when parent was coontainer:
     /// `width ration = hscale / parent_children_total_hscales`
@@ -77,7 +77,7 @@ pub struct Widget {
     /// only effective when widget's hexpand was true.
     ///
     /// ### when parent was widget:
-    /// `height ration = vsclae`
+    /// `height ration = vsclae / 1`
     ///
     /// ### when parent was coontainer:
     /// `height ration = vscale / parent_children_total_vscales`
@@ -255,10 +255,10 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         let mut painter = Painter::new(cr.canvas(), self);
 
-        let origin_rect = self.origin_rect(Some(Coordinate::Widget));
+        let contents_rect = self.contents_rect(Some(Coordinate::Widget));
 
         // Draw the background color of the Widget.
-        painter.fill_rect(origin_rect, self.background());
+        painter.fill_rect(contents_rect, self.background());
 
         // Draw the border of the Widget.
         let borders = self.borders();
@@ -372,7 +372,7 @@ pub trait WidgetExt {
     /// `resize() will set fixed_width and fixed_height to false`, make widget flexible.
     ///
     /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
-    fn resize(&mut self, width: i32, height: i32);
+    fn resize(&mut self, width: Option<i32>, height: Option<i32>);
 
     /// Request the widget's width. <br>
     /// This function should be used in construct phase of the ui component,
@@ -841,11 +841,15 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn resize(&mut self, width: i32, height: i32) {
-        self.set_property("width", width.to_value());
-        self.set_property("height", height.to_value());
-        self.fixed_width = false;
-        self.fixed_height = false;
+    fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
+        if let Some(width) = width {
+            self.set_property("width", width.to_value());
+            self.fixed_width = false;
+        }
+        if let Some(height) = height {
+            self.set_property("height", height.to_value());
+            self.fixed_height = false;
+        }
     }
 
     #[inline]
@@ -1123,8 +1127,6 @@ impl WidgetExt for Widget {
             val = 0;
         }
         self.paddings[0] = val;
-        let size = self.size();
-        self.height_request(size.height() as i32 + val);
     }
 
     #[inline]
@@ -1133,8 +1135,6 @@ impl WidgetExt for Widget {
             val = 0;
         }
         self.paddings[1] = val;
-        let size = self.size();
-        self.width_request(size.width() as i32 + val);
     }
 
     #[inline]
@@ -1143,8 +1143,6 @@ impl WidgetExt for Widget {
             val = 0;
         }
         self.paddings[2] = val;
-        let size = self.size();
-        self.height_request(size.height() as i32 + val);
     }
 
     #[inline]
@@ -1153,8 +1151,6 @@ impl WidgetExt for Widget {
             val = 0;
         }
         self.paddings[3] = val;
-        let size = self.size();
-        self.width_request(size.width() as i32 + val);
     }
 
     #[inline]
@@ -1670,22 +1666,18 @@ impl ZIndexStep for dyn WidgetImpl {
 
 ////////////////////////////////////// ScaleCalculate //////////////////////////////////////
 pub(crate) trait ScaleCalculate {
-    fn hscale_calculate(&self) -> f32;
-
-    fn vscale_calculate(&self) -> f32;
-}
-
-impl ScaleCalculate for dyn WidgetImpl {
     #[inline]
     fn hscale_calculate(&self) -> f32 {
-        self.get_child_ref().unwrap().hscale()
+        1.
     }
 
     #[inline]
     fn vscale_calculate(&self) -> f32 {
-        self.get_child_ref().unwrap().vscale()
+        1.
     }
 }
+
+impl ScaleCalculate for dyn WidgetImpl {}
 
 ////////////////////////////////////// WindowAcquire //////////////////////////////////////
 pub trait WindowAcquire {

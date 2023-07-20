@@ -45,6 +45,9 @@ impl LabelSignal for Label {}
 impl WidgetImpl for Label {
     fn paint(&mut self, mut painter: Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
+        if content_rect.width() <= 0 || content_rect.height() <= 0 {
+            return
+        }
 
         let font: skia_safe::Font = self.font().to_skia_font();
         let metrics = font.metrics().1;
@@ -116,8 +119,8 @@ impl WidgetImpl for Label {
         let size = self.size();
 
         if width > size.width() as f32 || height > size.height() as f32 {
-            self.width_request(width as i32 + 10);
-            self.height_request(height as i32 + 4);
+            self.set_fixed_width(width as i32 + 10);
+            self.set_fixed_height(height as i32 + 4);
         }
     }
 }

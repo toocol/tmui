@@ -1,6 +1,8 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerImpl, ContainerImplExt, ContainerScaleCalculate},
+    container::{
+        ContainerImpl, ContainerImplExt, ContainerScaleCalculate, StaticContainerScaleCalculate,
+    },
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
 };
@@ -100,13 +102,6 @@ impl ContainerLayout for Stack {
     }
 }
 
-impl Stack {
-    #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
-    }
-}
-
 #[reflect_trait]
 pub trait StackTrait {
     fn current_child(&self) -> Option<&dyn WidgetImpl>;
@@ -124,19 +119,29 @@ stack_impl!(Stack);
 impl ContainerScaleCalculate for Stack {
     #[inline]
     fn container_hscale_calculate(&self) -> f32 {
-        if let Some(child) = self.current_child() {
-            child.hscale()
-        } else {
-            f32::MIN
-        }
+        Self::static_container_hscale_calculate(self)
     }
 
     #[inline]
     fn container_vscale_calculate(&self) -> f32 {
-        if let Some(child) = self.current_child() {
-            child.vscale()
-        } else {
-            f32::MIN
-        }
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for Stack {
+    #[inline]
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        1.
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        1.
+    }
+}
+
+impl Stack {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
     }
 }

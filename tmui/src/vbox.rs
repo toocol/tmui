@@ -1,4 +1,9 @@
-use crate::{application_window::ApplicationWindow, layout::LayoutManager, prelude::*, container::ContainerScaleCalculate};
+use crate::{
+    application_window::ApplicationWindow,
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
+    layout::LayoutManager,
+    prelude::*,
+};
 use derivative::Derivative;
 use log::debug;
 use tlib::object::ObjectSubclass;
@@ -236,11 +241,22 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
 impl ContainerScaleCalculate for VBox {
     #[inline]
     fn container_hscale_calculate(&self) -> f32 {
-        f32::MAX
+        Self::static_container_hscale_calculate(self)
     }
 
     #[inline]
     fn container_vscale_calculate(&self) -> f32 {
-        self.children().iter().map(|c| c.vscale()).sum()
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for VBox {
+    #[inline]
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_ADAPTION
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32 {
+        c.children().iter().map(|c| c.vscale()).sum()
     }
 }

@@ -1,6 +1,8 @@
 use crate::{
-    application_window::ApplicationWindow, container::ContainerScaleCalculate,
-    layout::LayoutManager, prelude::*,
+    application_window::ApplicationWindow,
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
+    layout::LayoutManager,
+    prelude::*,
 };
 use tlib::object::ObjectSubclass;
 
@@ -237,11 +239,22 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
 impl ContainerScaleCalculate for HBox {
     #[inline]
     fn container_hscale_calculate(&self) -> f32 {
-        self.children().iter().map(|c| c.hscale()).sum()
+        Self::static_container_hscale_calculate(self)
     }
 
     #[inline]
     fn container_vscale_calculate(&self) -> f32 {
-        f32::MAX
+        Self::static_container_vscale_calculate(self)
+    }
+}
+impl StaticContainerScaleCalculate for HBox {
+    #[inline]
+    fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
+        c.children().iter().map(|c| c.hscale()).sum()
+    }
+
+    #[inline]
+    fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_ADAPTION
     }
 }

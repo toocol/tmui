@@ -91,12 +91,6 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
     }
 }
 
-pub trait ContainerScaleCalculate {
-    fn container_hscale_calculate(&self) -> f32;
-
-    fn container_vscale_calculate(&self) -> f32;
-}
-
 impl ScaleCalculate for dyn ContainerImpl {
     #[inline]
     fn hscale_calculate(&self) -> f32 {
@@ -106,6 +100,36 @@ impl ScaleCalculate for dyn ContainerImpl {
     #[inline]
     fn vscale_calculate(&self) -> f32 {
         self.container_vscale_calculate()
+    }
+}
+
+pub trait ContainerScaleCalculate {
+    fn container_hscale_calculate(&self) -> f32;
+
+    fn container_vscale_calculate(&self) -> f32;
+}
+pub trait StaticContainerScaleCalculate {
+    fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32;
+
+    fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32;
+}
+
+pub const SCALE_ADAPTION: f32 = f32::MAX;
+pub const SCALE_DISMISS: f32 = f32::MIN;
+pub trait ScaleMeasure {
+    fn is_adaption(&self) -> bool;
+
+    fn is_dismiss(&self) -> bool;
+}
+impl ScaleMeasure for f32 {
+    #[inline]
+    fn is_adaption(&self) -> bool {
+        *self == SCALE_ADAPTION
+    }
+
+    #[inline]
+    fn is_dismiss(&self) -> bool {
+        *self == SCALE_DISMISS
     }
 }
 

@@ -190,6 +190,18 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
             }
         }
 
+        impl ContainerScaleCalculate for #name {
+            #[inline]
+            fn container_hscale_calculate(&self) -> f32 {
+                #layout::static_container_hscale_calculate(self)
+            }
+
+            #[inline]
+            fn container_vscale_calculate(&self) -> f32 {
+                #layout::static_container_vscale_calculate(self)
+            }
+        }
+
         #impl_content_alignment
 
         #impl_split_pane

@@ -1,8 +1,10 @@
 use tlib::object::{ObjectImpl, ObjectSubclass};
-use tmui::container::{ContainerImpl, ContainerImplExt};
-use tmui::label::Label;
-use tmui::prelude::*;
-use tmui::widget::{Widget, WidgetImpl};
+use tmui::{
+    container::{ContainerImpl, ContainerImplExt, ContainerScaleCalculate, SCALE_ADAPTION},
+    label::Label,
+    prelude::*,
+    widget::{Widget, WidgetImpl},
+};
 
 #[extends(Container)]
 #[derive(Childrenable)]
@@ -49,7 +51,18 @@ impl Layout for TestContainer {
         tmui::layout::Composition::HorizontalArrange
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {}
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {
+    }
+}
+
+impl ContainerScaleCalculate for TestContainer {
+    fn container_hscale_calculate(&self) -> f32 {
+        SCALE_ADAPTION
+    }
+
+    fn container_vscale_calculate(&self) -> f32 {
+        SCALE_ADAPTION
+    }
 }
 
 #[test]
