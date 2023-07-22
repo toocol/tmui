@@ -874,7 +874,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn update_geometry(&mut self) {
-        ApplicationWindow::window_of(self.window_id()).layout_change(self);
+        self.window().layout_change(self);
         self.update();
     }
 

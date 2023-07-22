@@ -215,9 +215,8 @@ impl SplitInfo {
 
         match self.ty {
             SplitType::SplitNone => {
-                widget.width_request(parent_rect.width());
-                widget.height_request(parent_rect.height());
-                widget.resize(Some(parent_rect.width()), Some(parent_rect.height()));
+                widget.set_fixed_width(parent_rect.width());
+                widget.set_fixed_height(parent_rect.height());
                 widget.set_fixed_x(parent_rect.x());
                 widget.set_fixed_y(parent_rect.y());
             }
@@ -228,13 +227,13 @@ impl SplitInfo {
                 let from_rect = split_from_widget.rect();
                 let new_width = from_rect.width() / 2;
 
-                widget.width_request(new_width);
-                widget.height_request(from_rect.height());
+                widget.set_fixed_width(new_width);
+                widget.set_fixed_height(from_rect.height());
                 widget.set_fixed_x(from_rect.x());
                 widget.set_fixed_y(from_rect.y());
 
-                split_from_widget.width_request(new_width);
-                split_from_widget.height_request(from_rect.height());
+                split_from_widget.set_fixed_width(new_width);
+                split_from_widget.set_fixed_height(from_rect.height());
                 split_from_widget.set_fixed_x(from_rect.x() + new_width);
                 split_from_widget.set_fixed_y(from_rect.y());
             }
@@ -245,13 +244,13 @@ impl SplitInfo {
                 let from_rect = split_from_widget.rect();
                 let new_height = from_rect.height() / 2;
 
-                widget.width_request(from_rect.width());
-                widget.height_request(new_height);
+                widget.set_fixed_width(from_rect.width());
+                widget.set_fixed_height(new_height);
                 widget.set_fixed_x(from_rect.x());
                 widget.set_fixed_y(from_rect.y());
 
-                split_from_widget.width_request(from_rect.width());
-                split_from_widget.height_request(new_height);
+                split_from_widget.set_fixed_width(from_rect.width());
+                split_from_widget.set_fixed_height(new_height);
                 split_from_widget.set_fixed_x(from_rect.x());
                 split_from_widget.set_fixed_y(from_rect.y() + new_height);
             }
@@ -262,13 +261,13 @@ impl SplitInfo {
                 let from_rect = split_from_widget.rect();
                 let new_width = from_rect.width() / 2;
 
-                split_from_widget.width_request(new_width);
-                split_from_widget.height_request(from_rect.height());
+                split_from_widget.set_fixed_width(new_width);
+                split_from_widget.set_fixed_height(from_rect.height());
                 split_from_widget.set_fixed_x(from_rect.x());
                 split_from_widget.set_fixed_y(from_rect.y());
 
-                widget.width_request(new_width);
-                widget.height_request(from_rect.height());
+                widget.set_fixed_width(new_width);
+                widget.set_fixed_height(from_rect.height());
                 widget.set_fixed_x(from_rect.x() + new_width);
                 widget.set_fixed_y(from_rect.y());
             }
@@ -279,13 +278,13 @@ impl SplitInfo {
                 let from_rect = split_from_widget.rect();
                 let new_height = from_rect.height() / 2;
 
-                split_from_widget.width_request(from_rect.width());
-                split_from_widget.height_request(new_height);
+                split_from_widget.set_fixed_width(from_rect.width());
+                split_from_widget.set_fixed_height(new_height);
                 split_from_widget.set_fixed_x(from_rect.x());
                 split_from_widget.set_fixed_y(from_rect.y());
 
-                widget.width_request(from_rect.width());
-                widget.height_request(new_height);
+                widget.set_fixed_width(from_rect.width());
+                widget.set_fixed_height(new_height);
                 widget.set_fixed_x(from_rect.x());
                 widget.set_fixed_y(from_rect.y() + new_height);
             }
