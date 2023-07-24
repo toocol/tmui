@@ -691,7 +691,7 @@ pub trait WidgetExt {
     /// only effective when widget's `hexpand was true` and `fixed_width was false`.
     ///
     /// ### when parent was widget:
-    /// `width ration = hsclae`
+    /// `width ration = hsclae / 1`
     ///
     /// ### when parent was coontainer:
     /// `width ration = hscale / parent_children_total_hscales`
@@ -708,7 +708,7 @@ pub trait WidgetExt {
     /// only effective when widget's hexpand was true.
     ///
     /// ### when parent was widget:
-    /// `height ration = vsclae`
+    /// `height ration = vsclae / 1`
     ///
     /// ### when parent was coontainer:
     /// `height ration = vscale / parent_children_total_vscales`

@@ -76,6 +76,8 @@ pub(crate) trait SizeCalculation {
 }
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, parent_size: Size) -> Size {
+        let mut resized = false;
+
         if self.hexpand() && !self.fixed_width() {
             // Use `hscale` to determine widget's width:
             let parent = self.get_parent_ref().unwrap();
@@ -87,9 +89,11 @@ impl SizeCalculation for dyn WidgetImpl {
 
             if parent_hscale.is_adaption() {
                 self.set_fixed_width(parent_size.width());
+                resized = true;
             } else if !parent_hscale.is_dismiss() {
                 let ration = self.hscale() / parent_hscale;
                 self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                resized = true;
             }
         }
 
@@ -104,12 +108,17 @@ impl SizeCalculation for dyn WidgetImpl {
 
             if parent_vscale.is_adaption() {
                 self.set_fixed_height(parent_size.height());
+                resized = true;
             } else if !parent_vscale.is_dismiss() {
                 let ration = self.vscale() / parent_vscale;
                 self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                resized = true;
             }
         }
 
+        if resized {
+            emit!(self.size_changed(), self.size())
+        }
         self.size()
     }
 
@@ -118,11 +127,11 @@ impl SizeCalculation for dyn WidgetImpl {
         let mut resized = false;
 
         if size.width() == 0 {
-            self.width_request(child_size.width());
+            self.set_fixed_width(child_size.width());
             resized = true;
         }
         if size.height() == 0 {
-            self.height_request(child_size.height());
+            self.set_fixed_height(child_size.height());
             resized = true;
         }
 
@@ -140,6 +149,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_width(
                     (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
                 );
+                resized = true;
             }
         } else {
             if self.hexpand() {
@@ -153,9 +163,11 @@ impl SizeCalculation for dyn WidgetImpl {
 
                 if parent_hscale.is_adaption() {
                     self.set_fixed_width(parent_size.width());
+                    resized = true;
                 } else if !parent_hscale.is_dismiss() {
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                    resized = true;
                 }
             } else {
                 if parent_size.width() != 0 {
@@ -177,6 +189,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_height(
                     (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
                 );
+                resized = true;
             }
         } else {
             if self.vexpand() {
@@ -190,9 +203,11 @@ impl SizeCalculation for dyn WidgetImpl {
 
                 if parent_vscale.is_adaption() {
                     self.set_fixed_height(parent_size.height());
+                    resized = true;
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                    resized = true;
                 }
             } else {
                 if parent_size.height() != 0 {
