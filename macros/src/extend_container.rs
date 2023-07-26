@@ -1,6 +1,9 @@
 use crate::{extend_element, extend_object, extend_widget};
 use quote::quote;
-use syn::{parse::Parser, DeriveInput, punctuated::Punctuated, Token, spanned::Spanned, Attribute, token::Pound, Path};
+use syn::{
+    parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Pound, Attribute, DeriveInput,
+    Path, Token,
+};
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
@@ -58,7 +61,7 @@ pub(crate) fn expand(
                     }
                     if is_stack {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            current_index: usize 
+                            current_index: usize
                         })?);
                     }
 
@@ -117,8 +120,11 @@ pub(crate) fn expand(
                 vec!["container", "widget", "element"],
             )?;
 
-            let widget_trait_impl_clause =
-                extend_widget::gen_widget_trait_impl_clause(name, Some("container"), vec!["container", "widget"])?;
+            let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
+                name,
+                Some("container"),
+                vec!["container", "widget"],
+            )?;
 
             let mut children_construct_clause = proc_macro2::TokenStream::new();
             if impl_children_construct {

@@ -1,8 +1,10 @@
 use crate::{extend_element, extend_object, layout};
 use proc_macro2::Ident;
 use quote::quote;
-use syn::Meta;
-use syn::{parse::Parser, DeriveInput};
+use syn::{
+    parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Pound, Attribute, DeriveInput,
+    Meta, Path, Token,
+};
 
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
@@ -28,11 +30,55 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
+            let mut child_field = None;
             match &mut struct_data.fields {
                 syn::Fields::Named(fields) => {
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub widget: Widget
                     })?);
+
+                    // If field with attribute `#[child]`,
+                    // add attribute `#[derivative(Default(value = "Object::new(&[])"))]` to it,
+                    for field in fields.named.iter_mut() {
+                        let mut childable = false;
+                        for attr in field.attrs.iter() {
+                            if let Some(attr_ident) = attr.path.get_ident() {
+                                if attr_ident.to_string() == "child" {
+                                    if child_field.is_some() {
+                                        return Err(syn::Error::new_spanned(
+                                            field,
+                                            "Widget can only has one child.",
+                                        ));
+                                    }
+                                    childable = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if childable {
+                            child_field = Some(field.ident.clone().unwrap());
+
+                            let mut segments = Punctuated::<syn::PathSegment, Token![::]>::new();
+                            segments.push(syn::PathSegment {
+                                ident: syn::Ident::new("derivative", field.span()),
+                                arguments: syn::PathArguments::None,
+                            });
+                            let attr = Attribute {
+                                pound_token: Pound {
+                                    spans: [field.span()],
+                                },
+                                style: syn::AttrStyle::Outer,
+                                bracket_token: syn::token::Bracket { span: field.span() },
+                                path: Path {
+                                    leading_colon: None,
+                                    segments,
+                                },
+                                tokens: quote! {(Default(value = "Object::new(&[])"))},
+                            };
+                            field.attrs.push(attr);
+                        }
+                    }
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -54,6 +100,16 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
             let widget_trait_impl_clause =
                 gen_widget_trait_impl_clause(name, Some("widget"), vec!["widget"])?;
+
+            let child_ref_clause = match child_field {
+                Some(field) => {
+                    quote! {
+                        let child = self.#field.as_mut() as *mut dyn WidgetImpl;
+                        self._child_ref(child);
+                    }
+                }
+                None => proc_macro2::TokenStream::new(),
+            };
 
             Ok(quote! {
                 #[derive(Derivative)]
@@ -84,6 +140,11 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
+                    }
+
+                    #[inline]
+                    fn pretreat_construct(&mut self) {
+                        #child_ref_clause
                     }
                 }
 
@@ -551,6 +612,13 @@ pub(crate) fn gen_widget_trait_impl_clause(
                 self.#(#widget_path).*.child_internal(child)
             }
 
+            #[inline]
+            fn _child_ref(&mut self, child: *mut dyn WidgetImpl) {
+                if self.super_type().is_a(Container::static_type()) {
+                    panic!("function `child()` was invalid in `Container`")
+                }
+                self.#(#widget_path).*.child_ref_internal(child)
+            }
         }
 
         impl IsA<Widget> for #name {}

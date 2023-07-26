@@ -442,6 +442,10 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: u16) {
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
 
+        child_ref.set_initialized(true);
+        child_ref.inner_initialize();
+        child_ref.initialize();
+
         // Determine whether the widget is a container.
         let is_container = child_ref.super_type().is_a(Container::static_type());
         let container_ref = if is_container {
@@ -463,10 +467,6 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: u16) {
         } else {
             children.push_back(child_ref.get_raw_child_mut());
         }
-
-        child_ref.set_initialized(true);
-        child_ref.inner_initialize();
-        child_ref.initialize();
 
         child = children.pop_front().take().map_or(None, |widget| unsafe {
             match widget {

@@ -1,4 +1,6 @@
-use crate::{graphics::painter::Painter, layout::ContentAlignment, prelude::*, widget::WidgetImpl, skia_safe};
+use crate::{
+    graphics::painter::Painter, layout::ContentAlignment, prelude::*, skia_safe, widget::WidgetImpl,
+};
 use log::debug;
 use tlib::{
     emit,
@@ -45,9 +47,6 @@ impl LabelSignal for Label {}
 impl WidgetImpl for Label {
     fn paint(&mut self, mut painter: Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
-        if content_rect.width() <= 0 || content_rect.height() <= 0 {
-            return
-        }
 
         let font: skia_safe::Font = self.font().to_skia_font();
         let metrics = font.metrics().1;

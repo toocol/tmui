@@ -74,6 +74,8 @@ impl Object {
         properties: &[(&str, &dyn ToValue)],
     ) -> Box<T> {
         let mut obj = Box::new(T::default());
+
+        obj.pretreat_construct();
         obj.construct();
 
         let default_name = format!("{}#{}", T::NAME, obj.id());
@@ -83,6 +85,7 @@ impl Object {
         for (name, value) in properties {
             obj.set_property(*name, value.to_value())
         }
+
         obj
     }
 
@@ -185,6 +188,9 @@ pub trait InnerInitializer {
 
     /// Inner initialize function for widget.
     fn inner_initialize(&mut self) {}
+
+    /// Pretreatment when constructing.
+    fn pretreat_construct(&mut self) {}
 }
 
 impl InnerInitializer for Object {

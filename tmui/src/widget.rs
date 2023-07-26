@@ -18,7 +18,7 @@ use tlib::{
     figure::{Color, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
-    signals,
+    ptr_mut, signals,
 };
 
 /// Size hint for widget:
@@ -31,6 +31,7 @@ pub type SizeHint = (Option<Size>, Option<Size>, Option<Size>);
 pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
     child: Option<Box<dyn WidgetImpl>>,
+    child_ref: Option<NonNull<dyn WidgetImpl>>,
     initialized: bool,
 
     #[derivative(Default(value = "Color::WHITE"))]
@@ -162,6 +163,18 @@ impl Widget {
         ApplicationWindow::initialize_dynamic_component(child.as_mut());
 
         self.child = Some(child);
+        self.child_ref = None;
+    }
+
+    #[inline]
+    pub fn child_ref_internal(&mut self, child: *mut dyn WidgetImpl) {
+        let child_mut = ptr_mut!(child);
+        child_mut.set_parent(self);
+
+        ApplicationWindow::initialize_dynamic_component(child_mut);
+
+        self.child = None;
+        self.child_ref = NonNull::new(child);
     }
 
     /// Notify all the child widget to invalidate.
@@ -256,6 +269,9 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         let mut painter = Painter::new(cr.canvas(), self);
 
         let contents_rect = self.contents_rect(Some(Coordinate::Widget));
+        if contents_rect.width() <= 0 || contents_rect.height() <= 0 {
+            return;
+        }
 
         // Draw the background color of the Widget.
         painter.fill_rect(contents_rect, self.background());
@@ -750,34 +766,78 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        match self.child.as_ref() {
-            Some(child) => Some(child.as_ref() as *const dyn WidgetImpl),
+        let mut child = match self.child {
+            Some(ref c) => Some(c.as_ref().as_ptr()),
             None => None,
+        };
+
+        if child.is_none() {
+            unsafe {
+                child = match self.child_ref {
+                    Some(ref c) => Some(c.as_ref().as_ptr()),
+                    None => None,
+                }
+            }
         }
+
+        child
     }
 
     #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        match self.child.as_mut() {
-            Some(child) => Some(child.as_mut() as *mut dyn WidgetImpl),
+        let mut child = match self.child {
+            Some(ref mut c) => Some(c.as_mut().as_ptr_mut()),
             None => None,
+        };
+
+        if child.is_none() {
+            unsafe {
+                child = match self.child_ref {
+                    Some(ref mut c) => Some(c.as_mut().as_ptr_mut()),
+                    None => None,
+                }
+            }
         }
+
+        child
     }
 
     #[inline]
     fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
-        match self.child {
-            Some(ref child) => Some(child.as_ref()),
+        let mut child = match self.child {
+            Some(ref c) => Some(c.as_ref()),
             None => None,
+        };
+
+        if child.is_none() {
+            unsafe {
+                child = match self.child_ref {
+                    Some(ref c) => Some(c.as_ref()),
+                    None => None,
+                }
+            }
         }
+
+        child
     }
 
     #[inline]
     fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
-        match self.child {
-            Some(ref mut child) => Some(child.as_mut()),
+        let mut child = match self.child {
+            Some(ref mut c) => Some(c.as_mut()),
             None => None,
+        };
+
+        if child.is_none() {
+            unsafe {
+                child = match self.child_ref {
+                    Some(ref mut c) => Some(c.as_mut()),
+                    None => None,
+                }
+            }
         }
+
+        child
     }
 
     #[inline]
@@ -1612,6 +1672,10 @@ pub trait WidgetImplExt: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
     fn child<T: WidgetImpl>(&mut self, child: Box<T>);
+
+    /// @see [`Widget::child_ref_internal`](Widget) <br>
+    /// Go to[`Function defination`](WidgetImplExt::child_ref) (Defined in [`WidgetImplExt`])
+    fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
