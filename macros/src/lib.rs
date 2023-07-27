@@ -93,6 +93,11 @@ pub fn childrenable_derive(_: TokenStream) -> TokenStream {
     TokenStream::new()
 }
 
+#[proc_macro_derive(Childable, attributes(child))]
+pub fn childable_derive(_: TokenStream) -> TokenStream {
+    TokenStream::new()
+}
+
 /// Enable the trait has the ability of reflect, create the trait reflect struct.<br>
 /// The struct implemented the reflected trait should defined [`extends`](crate::extends),
 /// and register the reflect info to [`TypeRegistry`] in function [`ObjectImpl::type_register()`], like: <br>

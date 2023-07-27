@@ -1,5 +1,6 @@
 pub mod application_window;
 pub mod application;
+pub mod button;
 pub mod clipboard;
 pub mod backend;
 pub mod platform;

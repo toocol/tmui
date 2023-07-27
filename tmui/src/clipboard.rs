@@ -1,8 +1,6 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
 use log::error;
-use std::{
-    sync::Mutex,
-};
+use std::sync::Mutex;
 
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

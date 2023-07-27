@@ -1,4 +1,4 @@
-pub use macros::{cast, cast_boxed, cast_mut, extends, reflect_trait, tasync, Childrenable};
+pub use macros::{cast, cast_boxed, cast_mut, extends, reflect_trait, tasync, Childrenable, Childable};
 
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
 pub use crate::emit;
