@@ -141,6 +141,7 @@ impl SizeCalculation for dyn WidgetImpl {
     }
 
     fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size) {
+        debug!("Calc leaf node {} size, parent_size: {:?}", self.name(), parent_size);
         let size = self.size();
         let mut resized = false;
 
