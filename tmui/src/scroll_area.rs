@@ -1,6 +1,6 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, SCALE_ADAPTION},
+    container::{ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS},
     layout::LayoutManager,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
@@ -24,22 +24,51 @@ pub struct ScrollArea {
     area: Option<Box<dyn WidgetImpl>>,
 }
 
-impl ScrollArea {
-    #[inline]
-    pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
-        area.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(area.as_mut());
-        self.area = Some(area)
-    }
+/////////////////////////////////////////// Start: ScrollArea self implementations ///////////////////////////////////////////
+#[reflect_trait]
+pub trait ScrollAreaExt {
+    fn get_area(&self) -> Option<&dyn WidgetImpl>;
 
+    fn get_area_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
+
+    fn get_scroll_bar(&self) -> &ScrollBar;
+
+    fn get_scroll_bar_mut(&mut self) -> &mut ScrollBar;
+}
+
+impl ScrollAreaExt for ScrollArea {
     #[inline]
-    pub fn get_area(&self) -> Option<&dyn WidgetImpl> {
+    fn get_area(&self) -> Option<&dyn WidgetImpl> {
         self.area.as_ref().and_then(|w| Some(w.as_ref()))
     }
 
     #[inline]
-    pub fn get_area_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
+    fn get_area_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
         self.area.as_mut().and_then(|w| Some(w.as_mut()))
+    }
+
+    #[inline]
+    fn get_scroll_bar(&self) -> &ScrollBar {
+        &self.scroll_bar
+    }
+
+    #[inline]
+    fn get_scroll_bar_mut(&mut self) -> &mut ScrollBar {
+        &mut self.scroll_bar
+    }
+}
+
+impl ScrollArea {
+    #[inline]
+    pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
+        area.set_parent(self);
+        area.set_vexpand(true);
+        area.set_hexpand(true);
+
+        ApplicationWindow::initialize_dynamic_component(area.as_mut());
+        self.area = Some(area);
+
+        self.adjust_area_layout(self.size());
     }
 
     #[inline]
@@ -50,16 +79,6 @@ impl ScrollArea {
     #[inline]
     pub fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T> {
         self.area.as_mut().and_then(|w| w.downcast_mut::<T>())
-    }
-
-    #[inline]
-    pub fn get_scroll_bar(&self) -> &ScrollBar {
-        &self.scroll_bar
-    }
-
-    #[inline]
-    pub fn get_scroll_bar_mut(&mut self) -> &mut ScrollBar {
-        &mut self.scroll_bar
     }
 
     #[inline]
@@ -92,8 +111,11 @@ impl ScrollArea {
             area.set_hexpand(true);
             area.set_hscale(size.width() as f32 - 10.);
         }
+
+        self.update_geometry();
     }
 }
+/////////////////////////////////////////// End: ScrollArea self implementations ///////////////////////////////////////////
 
 impl ObjectSubclass for ScrollArea {
     const NAME: &'static str = "ScrollArea";
@@ -110,6 +132,10 @@ impl ObjectImpl for ScrollArea {
         self.scroll_bar.set_parent(parent);
 
         connect!(self, size_changed(), self, adjust_area_layout(Size));
+    }
+
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<ScrollArea, ReflectScrollAreaExt>();
     }
 }
 
@@ -222,7 +248,17 @@ impl ContainerScaleCalculate for ScrollArea {
 impl StaticContainerScaleCalculate for ScrollArea {
     #[inline]
     fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
-        c.children().iter().map(|c| c.hscale()).sum()
+        let scroll = cast!(c as ScrollAreaExt).unwrap();
+        match scroll.get_area() {
+            Some(area) => {
+                let size = c.size();
+
+                // width * area_hscale / container_hscale = width - 10
+                // => container_hscale = (area_hscale * width) / (width - 10)
+                (area.hscale() * size.width() as f32) / (size.width() as f32 - 10.)
+            }
+            None => SCALE_DISMISS
+        }
     }
 
     #[inline]
