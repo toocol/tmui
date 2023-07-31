@@ -934,8 +934,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn update_geometry(&mut self) {
-        self.window().layout_change(self);
-        self.update();
+        // implemented in proc-macro
     }
 
     #[inline]

@@ -1,18 +1,16 @@
 use crate::{
     application_window::ApplicationWindow,
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS},
     layout::LayoutManager,
     prelude::*,
     tlib::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl, container::{ContainerScaleCalculate, SCALE_DISMISS, StaticContainerScaleCalculate},
+    widget::WidgetImpl,
 };
-use std::{
-    collections::HashMap,
-    mem::size_of,
-    ptr::NonNull,
-};
+use log::debug;
+use std::{collections::HashMap, mem::size_of, ptr::NonNull};
 use tlib::{implements_enum_value, namespace::AsNumeric, nonnull_mut, split_pane_impl};
 
 #[extends(Container)]
@@ -212,6 +210,11 @@ impl SplitInfo {
 
     pub(crate) fn calculate_layout(&mut self, parent_rect: Rect) {
         let widget = split_widget!(self);
+        debug!(
+            "Split-widget {} calcualte_layout, parent_rect {:?}",
+            widget.name(),
+            parent_rect
+        );
 
         match self.ty {
             SplitType::SplitNone => {

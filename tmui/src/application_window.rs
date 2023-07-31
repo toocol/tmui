@@ -6,6 +6,7 @@ use crate::{
     prelude::*,
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
+use log::debug;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
@@ -49,6 +50,7 @@ impl ObjectSubclass for ApplicationWindow {
 impl ObjectImpl for ApplicationWindow {
     fn initialize(&mut self) {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
+        debug!("Initialize-phase start.");
 
         connect!(self, size_changed(), self, when_size_change(Size));
         let window_id = self.id();
@@ -63,6 +65,7 @@ impl ObjectImpl for ApplicationWindow {
 
         self.set_initialized(true);
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
+        debug!("Initialize-phase end.");
     }
 }
 
@@ -164,6 +167,11 @@ impl ApplicationWindow {
             }
         }
         finds
+    }
+
+    #[inline]
+    pub(crate) fn is_initialize_phase() -> bool {
+        INTIALIZE_PHASE.with(|p| *p.borrow())
     }
 
     #[inline]
