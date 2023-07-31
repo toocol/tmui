@@ -13,11 +13,9 @@ use tlib::{
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
     prelude::extends,
-    run_after,
 };
 
 #[extends(Container)]
-#[run_after]
 pub struct ScrollArea {
     #[derivative(Default(value = "Object::new(&[])"))]
     scroll_bar: Box<ScrollBar>,
@@ -112,7 +110,9 @@ impl ScrollArea {
             area.set_hscale(size.width() as f32 - 10.);
         }
 
-        self.update_geometry();
+        if !ApplicationWindow::is_initialize_phase() {
+            self.update_geometry();
+        }
     }
 }
 /////////////////////////////////////////// End: ScrollArea self implementations ///////////////////////////////////////////
@@ -142,12 +142,6 @@ impl ObjectImpl for ScrollArea {
 impl WidgetImpl for ScrollArea {
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
         self.scroll_bar.on_mouse_wheel(event)
-    }
-
-    fn run_after(&mut self) {
-        self.parent_run_after();
-
-        self.adjust_area_layout(self.size());
     }
 }
 

@@ -26,7 +26,7 @@ pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
     PointEffective, ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt,
-    WidgetSignals,
+    WidgetSignals, WindowAcquire
 };
 pub use tlib::figure::{Color, Point, Rect, Region, Size};
 pub use tlib::tokio;
