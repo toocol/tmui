@@ -267,6 +267,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         }
 
         let mut painter = Painter::new(cr.canvas(), self);
+        painter.set_font(self.font().to_skia_font());
 
         let contents_rect = self.contents_rect(Some(Coordinate::Widget));
         if contents_rect.width() <= 0 || contents_rect.height() <= 0 {
