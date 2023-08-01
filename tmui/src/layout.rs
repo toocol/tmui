@@ -141,7 +141,6 @@ impl SizeCalculation for dyn WidgetImpl {
     }
 
     fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size) {
-        debug!("Calc leaf node {} size, parent_size: {:?}", self.name(), parent_size);
         let size = self.size();
         let mut resized = false;
 
@@ -255,6 +254,11 @@ impl LayoutManager {
         parent_size: Size,
         widget: &mut dyn WidgetImpl,
     ) -> Size {
+        debug!(
+            "Widget {} size probe, parent_size: {:?}",
+            widget.name(),
+            parent_size
+        );
         let raw_child = widget.get_raw_child();
         let widget_ptr = widget.as_ptr_mut();
         let composition = widget.composition();
