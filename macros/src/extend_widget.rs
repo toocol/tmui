@@ -269,7 +269,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn visible(&mut self) -> bool {
+            fn visible(&self) -> bool {
                 self.#(#widget_path).*.visible()
             }
 
