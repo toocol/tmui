@@ -373,7 +373,7 @@ pub trait WidgetExt {
     /// Return true if widget is visble, otherwise, false is returned.
     ///
     /// Go to[`Function defination`](WidgetExt::visible) (Defined in [`WidgetExt`])
-    fn visible(&mut self) -> bool;
+    fn visible(&self) -> bool;
 
     /// Setter of property `focus`.
     ///
@@ -886,7 +886,7 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn visible(&mut self) -> bool {
+    fn visible(&self) -> bool {
         self.get_property("visible").unwrap().get::<bool>()
     }
 
