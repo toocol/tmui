@@ -117,6 +117,7 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if resized {
+            debug!("Widget {} resized in `pre_calc_size`, size: {:?}", self.name(), self.size());
             emit!(self.size_changed(), self.size())
         }
         self.size()
@@ -136,6 +137,7 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if resized {
+            debug!("Widget {} resized in `calc_node_size`, size: {:?}", self.name(), self.size());
             emit!(self.size_changed(), self.size())
         }
     }
@@ -225,6 +227,7 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if resized {
+            debug!("Widget {} resized in `calc_leaf_size`, size: {:?}", self.name(), self.size());
             emit!(self.size_changed(), self.size())
         }
     }

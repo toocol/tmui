@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use skia_safe::Font;
-use std::any::Any;
+use std::{any::Any, cell::{RefCell, Cell}, rc::Rc, sync::Arc};
 
 #[inline]
 pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
@@ -159,4 +159,46 @@ macro_rules! ptr_mut {
     ( $st:expr ) => {
         unsafe { $st.as_mut().unwrap() }
     };
+}
+
+pub trait SemanticExt: Sized {
+    #[inline]
+    fn boxed(self) -> Box<Self> {
+        Box::new(self)
+    }
+
+    #[inline]
+    fn ref_cell(self) -> RefCell<Self> {
+        RefCell::new(self)
+    }
+
+    #[inline]
+    fn cell(self) -> Cell<Self> {
+        Cell::new(self)
+    }
+
+    #[inline]
+    fn rc(self) -> Rc<Self> {
+        Rc::new(self)
+    }
+
+    #[inline]
+    fn arc(self) -> Arc<Self> {
+        Arc::new(self)
+    }
+}
+impl<T: Sized> SemanticExt for T {}
+
+#[cfg(test)]
+mod tests {
+    use super::SemanticExt;
+
+    #[test]
+    fn test_semantic_ext() {
+        let p = 1.boxed();
+        let p = p.ref_cell();
+        let p = p.cell();
+        let p = p.rc();
+        let _ = p.arc();
+    }
 }
