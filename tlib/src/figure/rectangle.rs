@@ -204,6 +204,14 @@ impl Rect {
     }
 
     #[inline]
+    pub fn set_coords(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
+        self.set_left(x1);
+        self.set_top(y1);
+        self.set_right(x2);
+        self.set_bottom(y2);
+    }
+
+    #[inline]
     pub fn is_intersects(&self, rect: &Rect) -> bool {
         self.x.max(rect.x) < (self.x + self.width).min(rect.x + rect.width)
             && self.y.max(rect.y) < (self.y + self.height).min(rect.y + rect.height)
@@ -629,6 +637,14 @@ impl FRect {
     #[inline]
     pub fn set_bottom(&mut self, pos: f32) {
         self.height = pos - self.y;
+    }
+
+    #[inline]
+    pub fn set_coords(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
+        self.set_left(x1);
+        self.set_top(y1);
+        self.set_right(x2);
+        self.set_bottom(y2);
     }
 
     #[inline]
