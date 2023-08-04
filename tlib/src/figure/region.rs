@@ -1,7 +1,7 @@
 use std::{vec::IntoIter, slice::{Iter, IterMut}};
 use skia_safe::region::RegionOp;
 
-use super::Rect;
+use super::{Rect, Point};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Region
@@ -35,6 +35,16 @@ impl Region {
     #[inline]
     pub fn len(&self) -> usize {
         self.regions.len()
+    }
+
+    #[inline]
+    pub fn contains_point(&self, point: &Point) -> bool {
+        for rect in self.regions.iter() {
+            if rect.contains(point) {
+                return true
+            }
+        }
+        false
     }
 
     #[inline]
