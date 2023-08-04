@@ -10,6 +10,7 @@ pub mod widget;
 pub mod label;
 pub mod layout;
 pub mod container;
+pub mod cursor;
 pub mod event_hints;
 pub mod overlay;
 pub mod scroll_area;

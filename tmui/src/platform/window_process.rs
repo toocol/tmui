@@ -1,10 +1,10 @@
 use super::{Message, PlatformContext};
-use crate::winit::{
+use crate::{winit::{
     self,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::Window,
-};
+}, cursor::Cursor};
 use log::debug;
 use once_cell::sync::Lazy;
 use std::{
@@ -159,6 +159,7 @@ impl WindowProcess {
                     );
                     let pos = evt.position();
                     *mouse_position = (pos.0, pos.1);
+                    Cursor::set_position(pos);
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
 
