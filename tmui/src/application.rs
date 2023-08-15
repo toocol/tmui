@@ -622,3 +622,12 @@ pub fn wheel_scroll_lines() -> i32 {
 pub fn set_wheel_scroll_lines(scroll_lines: i32) {
     event_hints().set_wheel_scroll_lines(scroll_lines)
 }
+
+#[inline]
+pub fn cursor_blinking_time() -> u32 {
+    event_hints().cursor_blinking_time()
+}
+#[inline]
+pub fn set_cursor_blinking_time(blinking_time_ms: u32) {
+    event_hints().set_cursor_blinking_time(blinking_time_ms)
+}

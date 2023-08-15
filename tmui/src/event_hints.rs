@@ -8,6 +8,8 @@ pub struct EventHints {
     double_click_interval: i32,
     #[derivative(Default(value = "3"))]
     wheel_scroll_lines: i32,
+    #[derivative(Default(value = "500"))]
+    cursor_blinking_time: u32,
 }
 
 #[inline]
@@ -35,5 +37,15 @@ impl EventHints {
     #[inline]
     pub fn wheel_scroll_lines(&self) -> i32 {
         self.wheel_scroll_lines
+    }
+
+    #[inline]
+    pub fn set_cursor_blinking_time(&mut self, blinking_time_ms: u32) {
+        self.cursor_blinking_time = blinking_time_ms;
+    }
+
+    #[inline]
+    pub fn cursor_blinking_time(&self) -> u32 {
+        self.cursor_blinking_time
     }
 }
