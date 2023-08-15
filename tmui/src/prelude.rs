@@ -5,7 +5,7 @@ pub use tlib::signal;
 pub use crate::application_window::{current_window_id, ApplicationWindow};
 pub use crate::container::{
     Container, ContainerAcquire, ContainerImpl, ContainerImplExt, ContainerPointEffective,
-    ContainerScaleCalculate, ReflectContainerImpl, StaticContainerScaleCalculate,
+    ContainerScaleCalculate, ReflectContainerImpl, StaticContainerScaleCalculate, SizeUnifiedAdjust, ReflectSizeUnifiedAdjust
 };
 pub use crate::graphics::board::Board;
 pub use crate::graphics::drawing_context::DrawingContext;

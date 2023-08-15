@@ -140,7 +140,10 @@ pub(crate) fn expand(
             };
 
             let reflect_split_infos_getter = if is_split_pane {
-                quote!(type_registry.register::<#name, ReflectSplitInfosGetter>();)
+                quote!(
+                    type_registry.register::<#name, ReflectSplitInfosGetter>();
+                    type_registry.register::<#name, ReflectSizeUnifiedAdjust>();
+                )
             } else {
                 proc_macro2::TokenStream::new()
             };
