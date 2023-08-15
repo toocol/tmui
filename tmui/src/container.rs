@@ -139,3 +139,8 @@ impl WindowAcquire for dyn ContainerImpl {
         ApplicationWindow::window_of(self.window_id())
     }
 }
+
+#[reflect_trait]
+pub trait SizeUnifiedAdjust {
+    fn size_unified_adjust(&mut self);
+}

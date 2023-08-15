@@ -27,6 +27,24 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
 pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::Result<proc_macro2::TokenStream> {
     let use_prefix = Ident::new(use_prefix, name.span());
     Ok(quote! {
+        impl SizeUnifiedAdjust for #name {
+            fn size_unified_adjust(&mut self) {
+                use #use_prefix::tlib::nonnull_mut;
+                use #use_prefix::split_widget;
+                let widget = self;
+                let parent_rect = widget.contents_rect(None);
+                let split_infos_getter = cast_mut!(widget as SplitInfosGetter).unwrap();
+                for split_info in split_infos_getter.split_infos_vec() {
+                    nonnull_mut!(split_info).calculate_layout(parent_rect, false)
+                }
+                for split_info in split_infos_getter.split_infos_vec() {
+                    let split_info = nonnull_mut!(split_info);
+                    let widget = split_widget!(split_info);
+                    emit!(widget.size_changed(), widget.size());
+                }
+            }
+        }
+
         impl SplitInfosGetter for #name {
             fn split_infos(&mut self) -> &mut std::collections::HashMap<u16, Box<SplitInfo>> {
                 &mut self.split_infos

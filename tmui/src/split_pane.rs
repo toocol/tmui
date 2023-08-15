@@ -1,6 +1,9 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS},
+    container::{
+        ContainerScaleCalculate, ReflectSizeUnifiedAdjust, StaticContainerScaleCalculate,
+        SCALE_DISMISS,
+    },
     layout::LayoutManager,
     prelude::*,
     tlib::{
@@ -27,7 +30,8 @@ impl ObjectSubclass for SplitPane {
 
 impl ObjectImpl for SplitPane {
     fn type_register(&self, type_registry: &mut TypeRegistry) {
-        type_registry.register::<SplitPane, ReflectSplitInfosGetter>()
+        type_registry.register::<SplitPane, ReflectSplitInfosGetter>();
+        type_registry.register::<SplitPane, ReflectSizeUnifiedAdjust>();
     }
 }
 
@@ -115,7 +119,7 @@ impl ContainerLayout for SplitPane {
         let parent_rect = widget.contents_rect(None);
         let split_infos_getter = cast_mut!(widget as SplitInfosGetter).unwrap();
         for split_info in split_infos_getter.split_infos_vec() {
-            nonnull_mut!(split_info).calculate_layout(parent_rect)
+            nonnull_mut!(split_info).calculate_layout(parent_rect, true)
         }
         for split_info in split_infos_getter.split_infos_vec() {
             let split_info = nonnull_mut!(split_info);
@@ -208,7 +212,7 @@ impl SplitInfo {
         }
     }
 
-    pub(crate) fn calculate_layout(&mut self, parent_rect: Rect) {
+    pub fn calculate_layout(&mut self, parent_rect: Rect, calc_position: bool) {
         let widget = split_widget!(self);
         debug!(
             "Split-widget {} calcualte_layout, parent_rect {:?}",
@@ -220,8 +224,10 @@ impl SplitInfo {
             SplitType::SplitNone => {
                 widget.set_fixed_width(parent_rect.width());
                 widget.set_fixed_height(parent_rect.height());
-                widget.set_fixed_x(parent_rect.x());
-                widget.set_fixed_y(parent_rect.y());
+                if calc_position {
+                    widget.set_fixed_x(parent_rect.x());
+                    widget.set_fixed_y(parent_rect.y());
+                }
             }
 
             SplitType::SplitLeft => {
@@ -232,13 +238,17 @@ impl SplitInfo {
 
                 widget.set_fixed_width(new_width);
                 widget.set_fixed_height(from_rect.height());
-                widget.set_fixed_x(from_rect.x());
-                widget.set_fixed_y(from_rect.y());
+                if calc_position {
+                    widget.set_fixed_x(from_rect.x());
+                    widget.set_fixed_y(from_rect.y());
+                }
 
                 split_from_widget.set_fixed_width(new_width);
                 split_from_widget.set_fixed_height(from_rect.height());
-                split_from_widget.set_fixed_x(from_rect.x() + new_width);
-                split_from_widget.set_fixed_y(from_rect.y());
+                if calc_position {
+                    split_from_widget.set_fixed_x(from_rect.x() + new_width);
+                    split_from_widget.set_fixed_y(from_rect.y());
+                }
             }
 
             SplitType::SplitUp => {
@@ -249,13 +259,17 @@ impl SplitInfo {
 
                 widget.set_fixed_width(from_rect.width());
                 widget.set_fixed_height(new_height);
-                widget.set_fixed_x(from_rect.x());
-                widget.set_fixed_y(from_rect.y());
+                if calc_position {
+                    widget.set_fixed_x(from_rect.x());
+                    widget.set_fixed_y(from_rect.y());
+                }
 
                 split_from_widget.set_fixed_width(from_rect.width());
                 split_from_widget.set_fixed_height(new_height);
-                split_from_widget.set_fixed_x(from_rect.x());
-                split_from_widget.set_fixed_y(from_rect.y() + new_height);
+                if calc_position {
+                    split_from_widget.set_fixed_x(from_rect.x());
+                    split_from_widget.set_fixed_y(from_rect.y() + new_height);
+                }
             }
 
             SplitType::SplitRight => {
@@ -266,13 +280,17 @@ impl SplitInfo {
 
                 split_from_widget.set_fixed_width(new_width);
                 split_from_widget.set_fixed_height(from_rect.height());
-                split_from_widget.set_fixed_x(from_rect.x());
-                split_from_widget.set_fixed_y(from_rect.y());
+                if calc_position {
+                    split_from_widget.set_fixed_x(from_rect.x());
+                    split_from_widget.set_fixed_y(from_rect.y());
+                }
 
                 widget.set_fixed_width(new_width);
                 widget.set_fixed_height(from_rect.height());
-                widget.set_fixed_x(from_rect.x() + new_width);
-                widget.set_fixed_y(from_rect.y());
+                if calc_position {
+                    widget.set_fixed_x(from_rect.x() + new_width);
+                    widget.set_fixed_y(from_rect.y());
+                }
             }
 
             SplitType::SplitDown => {
@@ -283,13 +301,17 @@ impl SplitInfo {
 
                 split_from_widget.set_fixed_width(from_rect.width());
                 split_from_widget.set_fixed_height(new_height);
-                split_from_widget.set_fixed_x(from_rect.x());
-                split_from_widget.set_fixed_y(from_rect.y());
+                if calc_position {
+                    split_from_widget.set_fixed_x(from_rect.x());
+                    split_from_widget.set_fixed_y(from_rect.y());
+                }
 
                 widget.set_fixed_width(from_rect.width());
                 widget.set_fixed_height(new_height);
-                widget.set_fixed_x(from_rect.x());
-                widget.set_fixed_y(from_rect.y() + new_height);
+                if calc_position {
+                    widget.set_fixed_x(from_rect.x());
+                    widget.set_fixed_y(from_rect.y() + new_height);
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 use crate::{
-    container::{Container, ContainerImpl, ScaleMeasure},
+    container::{Container, ContainerImpl, ReflectSizeUnifiedAdjust, ScaleMeasure},
     prelude::*,
     widget::{ScaleCalculate, WidgetImpl, WidgetSignals},
 };
@@ -117,7 +117,11 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if resized {
-            debug!("Widget {} resized in `pre_calc_size`, size: {:?}", self.name(), self.size());
+            debug!(
+                "Widget {} resized in `pre_calc_size`, size: {:?}",
+                self.name(),
+                self.size()
+            );
             emit!(self.size_changed(), self.size())
         }
         self.size()
@@ -137,7 +141,11 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if resized {
-            debug!("Widget {} resized in `calc_node_size`, size: {:?}", self.name(), self.size());
+            debug!(
+                "Widget {} resized in `calc_node_size`, size: {:?}",
+                self.name(),
+                self.size()
+            );
             emit!(self.size_changed(), self.size())
         }
     }
@@ -227,7 +235,11 @@ impl SizeCalculation for dyn WidgetImpl {
         }
 
         if resized {
-            debug!("Widget {} resized in `calc_leaf_size`, size: {:?}", self.name(), self.size());
+            debug!(
+                "Widget {} resized in `calc_leaf_size`, size: {:?}",
+                self.name(),
+                self.size()
+            );
             emit!(self.size_changed(), self.size())
         }
     }
@@ -310,6 +322,10 @@ impl LayoutManager {
                         });
                     }
                     Composition::FixedContainer => {
+                        let widget = ptr_mut!(widget_ptr);
+                        if let Some(unified) = cast_mut!(widget as SizeUnifiedAdjust) {
+                            unified.size_unified_adjust();
+                        }
                         children.unwrap().iter_mut().for_each(|child| {
                             Self::child_size_probe(window_size, size, *child);
                         });
