@@ -59,6 +59,8 @@ impl ObjectImpl for ScrollBar {
             Orientation::Horizontal => self.height_request(DEFAULT_SCROLL_BAR_HEIGHT),
             Orientation::Vertical => self.width_request(DEFAULT_SCROLL_BAR_WIDTH),
         }
+
+        self.set_mouse_tracking(true);
     }
 }
 
