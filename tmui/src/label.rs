@@ -36,6 +36,8 @@ impl ObjectImpl for Label {
 
 pub trait LabelSignal: ActionExt {
     signals! {
+        LabelSignal: 
+
         /// Emitted when text was changed.
         /// @param old(String)
         /// @param new(String)
@@ -144,7 +146,7 @@ impl Label {
             .to_string()
             .expect("`Label` encode u16 string to utf-8 string failed.");
         self.label = U16String::from_str(text).as_slice().to_vec();
-        emit!(self.text_changed(), old, text);
+        emit!(Label::set_text => self.text_changed(), old, text);
         self.font_changed();
         self.update()
     }

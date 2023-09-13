@@ -55,7 +55,7 @@ impl ObjectImpl for ApplicationWindow {
         connect!(self, size_changed(), self, when_size_change(Size));
         let window_id = self.id();
         child_initialize(self.get_child_mut(), window_id);
-        emit!(self.size_changed(), self.size());
+        emit!(ApplicationWindow::initialize => self.size_changed(), self.size());
 
         if self.platform_type == PlatformType::Ipc {
             let platform_context =

@@ -124,7 +124,7 @@ impl ContainerLayout for SplitPane {
         for split_info in split_infos_getter.split_infos_vec() {
             let split_info = nonnull_mut!(split_info);
             let widget = split_widget!(split_info);
-            emit!(widget.size_changed(), widget.size());
+            emit!(SplitPane::container_position_layout => widget.size_changed(), widget.size());
         }
     }
 }

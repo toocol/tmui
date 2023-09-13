@@ -165,7 +165,7 @@ impl Timer {
     pub fn check_timer(&mut self) -> bool {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike) {
             if duration > self.duration {
-                emit!(self.timeout());
+                emit!(Timer::check_timer => self.timeout());
                 self.last_strike = SystemTime::now();
 
                 if self.single_shoot {
@@ -180,6 +180,8 @@ impl Timer {
 
 pub trait TimerSignal: ActionExt {
     signals! {
+        TimerSignal: 
+
         /// Triggered when timer reaches the time interval.
         timeout();
     }
