@@ -20,6 +20,8 @@
 //!
 //! impl Widget {
 //!     signals! {
+//!         Widget:
+//! 
 //!         action_test();
 //!     }
 //!
@@ -213,6 +215,8 @@ impl ActionHub {
     pub fn activate_action(&self, signal: Signal, param: Option<Value>) {
         IS_MAIN_THREAD.with(|is_main| {
             let name = signal.signal();
+            let from_type = signal.from_type();
+            let emit_type = signal.emit_type();
             if *is_main.borrow() {
                 if let Some((_, emiter_map)) = self.map.get(&signal.emiter_id) {
                     if let Some(actions) = emiter_map.get(name) {
@@ -220,10 +224,16 @@ impl ActionHub {
                             .iter()
                             .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
                     } else {
-                        debug!("Unconnected action: {}", name);
+                        debug!(
+                            "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
+                            name, from_type, emit_type
+                        );
                     }
                 } else {
-                    debug!("Unconnected action: {}", name);
+                    debug!(
+                        "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
+                        name, from_type, emit_type
+                    );
                 }
             } else {
                 self.sender
@@ -266,18 +276,48 @@ impl<T: ActionExt> AsMutPtr for T {}
 pub struct Signal {
     emiter_id: u16,
     signal: String,
+    from_type: Option<String>,
+    emit_type: Option<String>,
 }
 impl Signal {
+    #[inline]
     pub fn new(emiter_id: u16, signal: String) -> Self {
-        Self { emiter_id, signal }
+        Self {
+            emiter_id,
+            signal,
+            from_type: None,
+            emit_type: None,
+        }
     }
 
+    #[inline]
     pub fn emiter_id(&self) -> u16 {
         self.emiter_id
     }
 
+    #[inline]
     pub fn signal(&self) -> &String {
         &self.signal
+    }
+
+    #[inline]
+    pub fn set_from_type(&mut self, from_type: String) {
+        self.from_type = Some(from_type)
+    }
+
+    #[inline]
+    pub fn from_type(&self) -> Option<&str> {
+        self.from_type.as_deref()
+    }
+
+    #[inline]
+    pub fn set_emit_type(&mut self, emit_type: String) {
+        self.emit_type = Some(emit_type)
+    }
+
+    #[inline]
+    pub fn emit_type(&self) -> Option<&str> {
+        self.emit_type.as_deref()
     }
 }
 impl Display for Signal {
@@ -297,6 +337,18 @@ pub fn ptr_address<T>(obj: &T) -> usize {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! emit {
+    ( $emit_type:expr => $signal:expr ) => {{
+        let mut signal = $signal;
+        signal.set_emit_type(stringify!($emit_type).to_string());
+        ActionHub::instance().activate_action(signal, None);
+    }};
+    ( $emit_type:expr => $signal:expr, $($x:expr),+ ) => {{
+        let tuple = ($($x),+);
+        let value = tuple.to_value();
+        let mut signal = $signal;
+        signal.set_emit_type(stringify!($emit_type).to_string());
+        ActionHub::instance().activate_action(signal, Some(value));
+    }};
     ( $signal:expr ) => {{
         ActionHub::instance().activate_action($signal, None);
     }};
@@ -375,17 +427,22 @@ macro_rules! signal {
     ( $object:expr, $name:expr ) => {{
         Signal::new($object.id(), $name.to_string())
     }};
+    ( $object:expr, $name:expr, $from_type:expr ) => {{
+        let mut signal = Signal::new($object.id(), $name.to_string());
+        signal.set_from_type($from_type.to_string());
+        signal
+    }};
 }
 
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! signals {
-    ( $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
+    ( $from_type:ident : $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
         $(
             $(#[$($attrss)*])*
             #[allow(dead_code)]
             fn $name(&self) -> Signal {
-                signal!(self, stringify!($name))
+                signal!(self, stringify!($name), stringify!($from_type))
             }
         )*
     };
@@ -440,6 +497,8 @@ mod tests {
 
     impl Widget {
         signals! {
+            Widget:
+
             /// Signal: action to test.
             action_test();
 

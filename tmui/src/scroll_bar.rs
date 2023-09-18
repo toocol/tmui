@@ -119,6 +119,8 @@ impl WidgetImpl for ScrollBar {
 
 pub trait ScrollBarSignal: ActionExt {
     signals! {
+        ScrollBarSignal: 
+
         /// Emitted when ScrollBar's value has changed.
         /// @param value(i32)
         value_changed();
@@ -173,9 +175,9 @@ impl ScrollBar {
             self.position = value;
         }
         if self.pressed {
-            emit!(self.slider_moved(), self.position)
+            emit!(ScrollBar::set_value => self.slider_moved(), self.position)
         }
-        emit!(self.value_changed(), value);
+        emit!(ScrollBar::set_value => self.value_changed(), value);
         self.update();
     }
     /// Getter of property `value`.
@@ -215,7 +217,7 @@ impl ScrollBar {
 
         if old_min != self.minimum || old_max != self.maximum {
             self.update();
-            emit!(self.range_changed(), self.minimum, self.maximum);
+            emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
             self.set_value(self.value);
         }
     }
@@ -272,7 +274,7 @@ impl ScrollBar {
         self.position = position;
         self.update();
         if self.pressed {
-            emit!(self.slider_moved(), self.position)
+            emit!(ScrollBar::set_slider_position => self.slider_moved(), self.position)
         }
         self.trigger_action(SliderAction::SliderMove);
     }
@@ -303,7 +305,7 @@ impl ScrollBar {
             SliderAction::SliderMove | SliderAction::SliderNoAction => {}
         }
         self.set_value(self.position);
-        emit!(self.action_triggered(), action);
+        emit!(ScrollBar::trigger_action => self.action_triggered(), action);
     }
 
     /// Scroll the ScrollBar. </br>

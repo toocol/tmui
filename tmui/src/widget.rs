@@ -92,6 +92,8 @@ pub struct Widget {
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
 pub trait WidgetSignals: ActionExt {
     signals! {
+        WidgetSignals: 
+
         /// Emit when widget's size changed.
         ///
         /// @param [`Size`]
@@ -1480,52 +1482,52 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
         if self.enable_focus() {
             self.set_focus(true)
         }
-        emit!(self.mouse_pressed(), event);
+        emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
     }
 
     #[inline]
     fn inner_mouse_released(&mut self, event: &MouseEvent) {
-        emit!(self.mouse_released(), event);
+        emit!(Widget::inner_mouse_released => self.mouse_released(), event);
     }
 
     #[inline]
     fn inner_mouse_double_click(&mut self, event: &MouseEvent) {
-        emit!(self.mouse_double_click(), event);
+        emit!(Widget::inner_mouse_double_click => self.mouse_double_click(), event);
     }
 
     #[inline]
     fn inner_mouse_move(&mut self, event: &MouseEvent) {
-        emit!(self.mouse_move(), event);
+        emit!(Widget::inner_mouse_move => self.mouse_move(), event);
     }
 
     #[inline]
     fn inner_mouse_wheel(&mut self, event: &MouseEvent) {
-        emit!(self.mouse_wheel(), event);
+        emit!(Widget::inner_mouse_wheel => self.mouse_wheel(), event);
     }
 
     #[inline]
     fn inner_mouse_enter(&mut self, event: &MouseEvent) {
-        emit!(self.mouse_enter(), event);
+        emit!(Widget::inner_mouse_enter => self.mouse_enter(), event);
     }
 
     #[inline]
     fn inner_mouse_leave(&mut self, event: &MouseEvent) {
-        emit!(self.mouse_leave(), event);
+        emit!(Widget::inner_mouse_leave => self.mouse_leave(), event);
     }
 
     #[inline]
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
-        emit!(self.key_pressed(), event);
+        emit!(Widget::inner_key_pressed => self.key_pressed(), event);
     }
 
     #[inline]
     fn inner_key_released(&mut self, event: &KeyEvent) {
-        emit!(self.key_released(), event);
+        emit!(Widget::inner_key_released => self.key_released(), event);
     }
 
     #[inline]
     fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent) {
-        emit!(self.receive_character(), event);
+        emit!(Widget::inner_receive_character => self.receive_character(), event);
     }
 }
 

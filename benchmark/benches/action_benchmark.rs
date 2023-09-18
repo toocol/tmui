@@ -24,6 +24,8 @@ impl ObjectImpl for Widget {}
 
 impl Widget {
     signals! {
+        Widget: 
+
         /// Sginal to action benchmark tuple test.
         action_benchmark_tuple();
         /// Signal to action benchmark string test.
