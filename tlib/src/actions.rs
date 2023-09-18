@@ -20,6 +20,8 @@
 //!
 //! impl Widget {
 //!     signals! {
+//!         Widget:
+//! 
 //!         action_test();
 //!     }
 //!
