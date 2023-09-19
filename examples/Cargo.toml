@@ -30,6 +30,10 @@ name = "image_draw"
 path = "image_draw/main.rs"
 
 [[bin]]
+name = "key_event"
+path = "key_event/main.rs"
+
+[[bin]]
 name = "layout_widget"
 path = "layout_widget/main.rs"
 
