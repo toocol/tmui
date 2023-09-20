@@ -1,4 +1,3 @@
-use derivative::Derivative;
 use hex_color::HexColor;
 use crate::{
     types::StaticType,
@@ -9,15 +8,12 @@ use crate::{
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Color
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Derivative)]
-#[derivative(Default)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
     pub b: u8,
-    #[derivative(Default(value = "255"))]
     pub a: u8,
-    #[derivative(Default(value = "true"))]
     pub valid: bool,
 }
 

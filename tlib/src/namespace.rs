@@ -634,6 +634,13 @@ impl KeyboardModifier {
     }
 
     #[inline]
+    pub fn and(&self, other: KeyboardModifier) -> KeyboardModifier {
+        let one = self.as_u32();
+        let other = other.as_u32();
+        Self::Combination(one & other)
+    }
+
+    #[inline]
     pub fn has(&self, has: KeyboardModifier) -> bool {
         match self {
             Self::Combination(mask) => {
