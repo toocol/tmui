@@ -596,6 +596,16 @@ impl Into<KeyCode> for winit::keyboard::KeyCode {
         }
     }
 }
+impl PartialOrd for KeyCode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for KeyCode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_numeric().cmp(&other.as_numeric())
+    }
+}
 implements_enum_value!(KeyCode, u32);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1154,5 +1164,11 @@ mod tests {
     fn test_image_option() {
         let val = ImageOption::Stretch.to_value();
         assert_eq!(ImageOption::Stretch, val.get::<ImageOption>())
+    }
+
+    #[test]
+    fn test_key_code_ord() {
+        let code = KeyCode::KeyC;
+        assert!(code >= KeyCode::KeyA && code <= KeyCode::KeyZ);
     }
 }
