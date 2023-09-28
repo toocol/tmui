@@ -313,7 +313,7 @@ impl ToString for KeyCode {
     fn to_string(&self) -> String {
         match self {
             Self::Unknown => "Unknown".to_string(),
-            Self::KeySpace => " ".to_string(),
+            Self::KeySpace => "Space".to_string(),
             Self::KeyExclam => "!".to_string(),
             Self::KeyQuoteDbl => "@".to_string(),
             Self::KeyNumberSign => "#".to_string(),
