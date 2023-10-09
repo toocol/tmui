@@ -253,7 +253,6 @@ impl WindowProcess {
                     let evt = KeyEvent::new(
                         EventType::KeyPress,
                         key_code,
-                        key_code.to_string(),
                         *modifer,
                     );
 
@@ -278,7 +277,6 @@ impl WindowProcess {
                     let evt = KeyEvent::new(
                         EventType::KeyRelease,
                         key_code,
-                        key_code.to_string(),
                         *modifer,
                     );
 

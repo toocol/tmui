@@ -141,7 +141,6 @@ implements_enum_value!(DeltaType, u8);
 pub struct KeyEvent {
     type_: EventType,
     key_code: KeyCode,
-    text: String,
     modifier: KeyboardModifier,
 }
 impl_as_any!(KeyEvent);
@@ -149,7 +148,6 @@ impl KeyEvent {
     pub fn new(
         type_: EventType,
         key_code: KeyCode,
-        text: String,
         modifier: KeyboardModifier,
     ) -> Self {
         let type_ = match type_ {
@@ -160,7 +158,6 @@ impl KeyEvent {
         Self {
             type_,
             key_code,
-            text,
             modifier,
         }
     }
@@ -171,8 +168,13 @@ impl KeyEvent {
     }
 
     #[inline]
+    pub fn name(&self) -> &str {
+        self.key_code.name()
+    }
+
+    #[inline]
     pub fn text(&self) -> &str {
-        &self.text
+        self.key_code.text()
     }
 
     #[inline]
@@ -199,7 +201,6 @@ impl StaticType for KeyEvent {
         EventType::bytes_len()
             + KeyCode::bytes_len()
             + KeyboardModifier::bytes_len()
-            + self.text.dyn_bytes_len()
     }
 }
 impl ToBytes for KeyEvent {
@@ -221,9 +222,6 @@ impl ToBytes for KeyEvent {
         let modifier = self.modifier.to_bytes();
         bytes[idx..idx + modifier_len].copy_from_slice(&modifier);
 
-        let mut text = self.text.as_bytes().to_vec();
-        bytes.append(&mut text);
-        bytes.push(0);
         bytes
     }
 }
@@ -253,15 +251,10 @@ impl FromBytes for KeyEvent {
 
         let modifier_bytes = &data[idx..idx + modifier_len];
         let modifier = KeyboardModifier::from_bytes(modifier_bytes, modifier_len);
-        idx += modifier_len;
-
-        let text_bytes = &data[idx..];
-        let text = String::from_bytes(text_bytes, 0);
 
         Self {
             type_,
             key_code,
-            text,
             modifier,
         }
     }
@@ -937,13 +930,13 @@ mod tests {
         let evt: Event = Box::new(KeyEvent::new(
             EventType::KeyPress,
             KeyCode::KeyA,
-            KeyCode::KeyA.to_string(),
             KeyboardModifier::AltModifier,
         ));
         let key_event = to_key_event(evt).unwrap();
         assert_eq!(key_event.type_, EventType::KeyPress);
         assert_eq!(key_event.key_code, KeyCode::KeyA);
-        assert_eq!(key_event.text, KeyCode::KeyA.to_string());
+        assert_eq!(key_event.name(), KeyCode::KeyA.name());
+        assert_eq!(key_event.text(), KeyCode::KeyA.text());
         assert_eq!(key_event.modifier, KeyboardModifier::AltModifier);
 
         let evt: Event = Box::new(MouseEvent::new(
@@ -1006,7 +999,6 @@ mod tests {
         let key_event = KeyEvent::new(
             EventType::KeyPress,
             KeyCode::KeyA,
-            KeyCode::KeyA.to_string(),
             KeyboardModifier::AltModifier,
         );
         let val = key_event.to_value();
@@ -1073,7 +1065,6 @@ mod tests {
         let key_event = KeyEvent::new(
             EventType::KeyPress,
             KeyCode::KeyA,
-            KeyCode::KeyA.to_string(),
             KeyboardModifier::AltModifier,
         );
         let mouse_event = MouseEvent::new(

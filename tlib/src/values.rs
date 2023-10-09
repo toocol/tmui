@@ -792,9 +792,9 @@ mod tests {
 
     #[test]
     fn test_value() {
-        let tuple = (12, 64., "Hello".to_string(), 1024);
+        let tuple = (12, 64., "Hello".to_string(), "World".to_string(), 1024);
         let value = tuple.to_value();
-        assert_eq!(tuple, value.get::<(i32, f64, String, i32)>())
+        assert_eq!(tuple, value.get::<(i32, f64, String, String, i32)>())
     }
 
     #[test]
