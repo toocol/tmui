@@ -32,8 +32,8 @@ impl Rect {
         Self {
             x: point.x(),
             y: point.y(),
-            width: point.x() + size.width(),
-            height: point.y() + size.height(),
+            width: size.width(),
+            height: size.height(),
         }
     }
 
@@ -474,8 +474,8 @@ impl FRect {
         Self {
             x: point.x(),
             y: point.y(),
-            width: point.x() + size.width(),
-            height: point.y() + size.height(),
+            width: size.width(),
+            height: size.height(),
         }
     }
 
