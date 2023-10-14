@@ -87,8 +87,7 @@ impl CpuBalance {
         } else if update {
             tlib::timer::sleep(FRAME_DURATION - cost);
         } else {
-            let start_time = Instant::now();
-            std::thread::sleep(MILLIS_1_DURATION - start_time.elapsed());
+            std::thread::sleep(MILLIS_1_DURATION);
         }
     }
 }

@@ -26,14 +26,17 @@ impl ObjectImpl for HBoxLayout {
         self.set_homogeneous(true);
 
         self.label_1.set_background(Color::RED);
+        self.label_1.set_content_halign(Align::End);
         self.label_1.set_margin_top(10);
         self.label_1.set_margin_left(5);
 
         self.label_2.set_background(Color::BLUE);
+        self.label_2.set_content_halign(Align::End);
         self.label_2.set_margin_top(10);
         self.label_2.set_margin_left(5);
 
         self.label_3.set_background(Color::YELLOW);
+        self.label_3.set_content_halign(Align::End);
         self.label_3.set_margin_top(10);
         self.label_3.set_margin_left(5);
 
