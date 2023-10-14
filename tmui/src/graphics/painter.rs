@@ -66,6 +66,16 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
+    pub fn paint_ref(&self) -> &Paint {
+        &self.paint
+    }
+
+    #[inline]
+    pub fn path_ref(&self) -> &Path {
+        &self.path
+    }
+
+    #[inline]
     pub fn set_transform(&mut self, transform: Matrix, combined: bool) {
         if combined {
             self.transform = self.transform * transform;

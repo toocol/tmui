@@ -36,7 +36,7 @@ impl ObjectImpl for Label {
 
 pub trait LabelSignal: ActionExt {
     signals! {
-        LabelSignal: 
+        LabelSignal:
 
         /// Emitted when text was changed.
         /// @param old(String)
@@ -51,7 +51,6 @@ impl WidgetImpl for Label {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
         let font: skia_safe::Font = self.font().to_skia_font();
-        let metrics = font.metrics().1;
         let mut widths = vec![0f32; self.label.len()];
         font.get_widths(&self.label, &mut widths);
         let mut text_width = 0;
@@ -77,6 +76,8 @@ impl WidgetImpl for Label {
         painter.reset();
         painter.set_antialiasing();
         painter.set_color(self.color);
+
+        let measure = font.measure_str(&text, Some(painter.paint_ref())).1;
         painter.set_font(font);
 
         let mut draw_point = content_rect.bottom_left();
@@ -93,11 +94,11 @@ impl WidgetImpl for Label {
         };
         match self.content_valign {
             Align::Start => {
-                let offset = content_rect.height() - metrics.cap_height as i32 - 2;
+                let offset = content_rect.height() - measure.height() as i32 - 2;
                 draw_point.set_y(draw_point.y() - offset);
             }
             Align::Center => {
-                let offset = (content_rect.height() - metrics.cap_height as i32) / 2;
+                let offset = (content_rect.height() - measure.height() as i32) / 2;
                 draw_point.set_y(draw_point.y() - offset);
             }
             Align::End => {}
@@ -115,7 +116,14 @@ impl WidgetImpl for Label {
         let mut widths = vec![0f32; self.label.len()];
         font.get_widths(&self.label, &mut widths);
         let width: f32 = widths.into_iter().sum();
-        let height = font.metrics().1.cap_height;
+        let height = if self.label.len() == 0 {
+            font.metrics().1.cap_height
+        } else {
+            let text = U16String::from_vec(&self.label[..])
+                .to_string()
+                .expect("`Label` encode u16 string to utf-8 string failed.");
+            font.measure_str(&text, None).1.height()
+        };
 
         let size = self.size();
 

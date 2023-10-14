@@ -567,6 +567,8 @@ impl Into<FontHinting> for skia_safe::FontHinting {
 
 #[cfg(test)]
 mod tests {
+    use widestring::U16String;
+
     use super::{Font, FontTypeface};
 
     #[test]
@@ -585,6 +587,53 @@ mod tests {
 
     #[test]
     fn test_font() {
-        let _font = Font::default();
+        const REPCHAR: &'static str = concat!(
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "abcdefgjijklmnopqrstuvwxyz",
+            "0123456789./+@"
+        );
+
+        let font = Font::with_family("Courier New");
+        let skia_font: skia_safe::Font = font.into();
+
+        let measure = skia_font.measure_str(REPCHAR, None);
+
+        let metrics = skia_font.metrics();
+        let wstring = U16String::from_str(REPCHAR);
+        let wchar_t_repchar = wstring.as_slice();
+        let mut widths = vec![0f32; wchar_t_repchar.len()];
+        skia_font.get_widths(wchar_t_repchar, &mut widths);
+        let sum_width: f32 = widths.iter().sum();
+        let font_width = sum_width as f64 / wchar_t_repchar.len() as f64;
+
+        println!("metrics > height: {}, width: {}", metrics.1.cap_height, font_width);
+        println!(
+            "measure > height: {}, width: {}",
+            measure.1.height(),
+            measure.1.width() / REPCHAR.len() as f32
+        );
+
+        let _typeface = font.typeface().unwrap();
+        let _skia_typeface = skia_font.typeface().unwrap();
+
+        assert_eq!(
+            font.is_force_auto_hinting(),
+            skia_font.is_force_auto_hinting()
+        );
+        assert_eq!(font.is_embedded_bitmaps(), skia_font.is_embedded_bitmaps());
+        assert_eq!(font.is_subpixel(), skia_font.is_subpixel());
+        assert_eq!(font.is_linear_metrics(), skia_font.is_linear_metrics());
+        assert_eq!(font.is_embolden(), skia_font.is_embolden());
+        assert_eq!(font.is_baseline_snap(), skia_font.is_baseline_snap());
+
+        let skia_edging = skia_font.edging().into();
+        assert_eq!(font.edging(), skia_edging);
+
+        let skia_hiting = skia_font.hinting().into();
+        assert_eq!(font.hinting, skia_hiting);
+
+        assert_eq!(font.size(), skia_font.size());
+        assert_eq!(font.scale_x(), skia_font.scale_x());
+        assert_eq!(font.skew_x(), skia_font.skew_x());
     }
 }
