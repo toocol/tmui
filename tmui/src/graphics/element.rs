@@ -125,6 +125,9 @@ impl ElementExt for Element {
 
     #[inline]
     fn update_region(&mut self, rect: Rect) {
+        if rect.width() == 0 || rect.height() == 0 {
+            return;
+        }
         self.redraw_region.add_rect(rect)
     }
 
