@@ -43,6 +43,14 @@ impl ObjectImpl for Container {
                     child.set_z_index(child.z_index() + offset);
                 }
             }
+            "rerender_styles" => {
+                let rerender = value.get::<bool>();
+                if rerender {
+                    for child in self.children.iter_mut() {
+                        child.set_rerender_styles(true)
+                    }
+                }
+            }
             _ => {}
         }
     }

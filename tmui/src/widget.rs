@@ -33,6 +33,7 @@ pub struct Widget {
     child: Option<Box<dyn WidgetImpl>>,
     child_ref: Option<NonNull<dyn WidgetImpl>>,
     initialized: bool,
+    first_rendered: bool,
 
     #[derivative(Default(value = "Color::WHITE"))]
     background: Color,
@@ -92,7 +93,7 @@ pub struct Widget {
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
 pub trait WidgetSignals: ActionExt {
     signals! {
-        WidgetSignals: 
+        WidgetSignals:
 
         /// Emit when widget's size changed.
         ///
@@ -206,6 +207,14 @@ impl Widget {
             child.set_z_index(child.z_index() + offset);
         }
     }
+
+    /// Notify the child to rerender styles.
+    #[inline]
+    fn notify_rerender_styles(&mut self) {
+        if let Some(child) = self.get_child_mut() {
+            child.set_rerender_styles(true)
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -252,6 +261,12 @@ impl ObjectImpl for Widget {
                 let new_z_index = value.get::<u32>();
                 self.notify_zindex(new_z_index - self.z_index());
             }
+            "rerender_styles" => {
+                let rerender = value.get::<bool>();
+                if rerender {
+                    self.notify_rerender_styles()
+                }
+            }
             _ => {}
         }
     }
@@ -269,33 +284,39 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         }
 
         let mut painter = Painter::new(cr.canvas(), self);
-        painter.set_font(self.font().to_skia_font());
 
         let contents_rect = self.contents_rect(Some(Coordinate::Widget));
         if contents_rect.width() <= 0 || contents_rect.height() <= 0 {
             return;
         }
 
-        // Draw the background color of the Widget.
-        painter.fill_rect(contents_rect, self.background());
+        if !self.first_rendered() || self.rerender_styles() {
+            // Draw the background color of the Widget.
+            painter.fill_rect(contents_rect, self.background());
 
-        // Draw the border of the Widget.
-        let borders = self.borders();
-        let _style = self.border_style();
-        painter.set_color(self.border_color());
-        if borders[0] > 0. {
-            painter.set_line_width(borders[0]);
-        }
-        if borders[1] > 0. {
-            painter.set_line_width(borders[1]);
-        }
-        if borders[2] > 0. {
-            painter.set_line_width(borders[2]);
-        }
-        if borders[3] > 0. {
-            painter.set_line_width(borders[3]);
+            // Draw the border of the Widget.
+            let borders = self.borders();
+            let _style = self.border_style();
+            painter.set_color(self.border_color());
+            if borders[0] > 0. {
+                painter.set_line_width(borders[0]);
+            }
+            if borders[1] > 0. {
+                painter.set_line_width(borders[1]);
+            }
+            if borders[2] > 0. {
+                painter.set_line_width(borders[2]);
+            }
+            if borders[3] > 0. {
+                painter.set_line_width(borders[3]);
+            }
+
+            self.set_first_rendered();
+            self.set_rerender_styles(false);
         }
 
+        painter.reset();
+        painter.set_font(self.font().to_skia_font());
         self.paint(painter)
     }
 }
@@ -316,6 +337,18 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
     fn as_element(&mut self) -> *mut dyn ElementImpl;
+
+    /// Go to[`Function defination`](WidgetExt::first_rendered) (Defined in [`WidgetExt`])
+    fn first_rendered(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_first_rendered) (Defined in [`WidgetExt`])
+    fn set_first_rendered(&mut self);
+
+    /// Go to[`Function defination`](WidgetExt::rerender_styles) (Defined in [`WidgetExt`])
+    fn rerender_styles(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_rerender_styles) (Defined in [`WidgetExt`])
+    fn set_rerender_styles(&mut self, rerender: bool);
 
     /// ## Do not invoke this function directly.
     ///
@@ -763,6 +796,29 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
+    fn first_rendered(&self) -> bool {
+        self.first_rendered
+    }
+
+    #[inline]
+    fn set_first_rendered(&mut self) {
+        self.first_rendered = true
+    }
+
+    #[inline]
+    fn rerender_styles(&self) -> bool {
+        match self.get_property("rerender_styles") {
+            Some(val) => val.get::<bool>(),
+            None => false,
+        }
+    }
+
+    #[inline]
+    fn set_rerender_styles(&mut self, rerender: bool) {
+        self.set_property("rerender_styles", rerender.to_value())
+    }
+
+    #[inline]
     fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
         self.parent = NonNull::new(parent)
     }
@@ -1071,6 +1127,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_background(&mut self, color: Color) {
+        self.set_rerender_styles(true);
         self.background = color
     }
 
