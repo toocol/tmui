@@ -214,6 +214,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn first_rendered(&self) -> bool {
+                self.#(#widget_path).*.first_rendered()
+            }
+
+            #[inline]
+            fn set_first_rendered(&mut self) {
+                self.#(#widget_path).*.set_first_rendered()
+            }
+
+            #[inline]
+            fn rerender_styles(&self) -> bool {
+                self.#(#widget_path).*.rerender_styles()
+            }
+
+            #[inline]
+            fn set_rerender_styles(&mut self, rerender: bool) {
+                self.#(#widget_path).*.set_rerender_styles(rerender)
+            }
+
+            #[inline]
             fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
                 self.#(#widget_path).*.set_parent(parent)
             }

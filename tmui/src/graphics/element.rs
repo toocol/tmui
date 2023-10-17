@@ -61,7 +61,7 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
     fn update_region(&mut self, rect: Rect);
 
-    /// Cleaer the region.
+    /// Cleaer the redraw region.
     ///
     /// Go to[`Function defination`](ElementExt::clear_region) (Defined in [`ElementExt`])
     fn clear_region(&mut self);

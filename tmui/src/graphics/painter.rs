@@ -196,6 +196,9 @@ impl<'a> Painter<'a> {
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        if let Some(color) = self.color {
+            self.paint.set_color(color);
+        }
     }
 
     /// Stroke the specified Rect with offset. <br>
