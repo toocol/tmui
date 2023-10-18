@@ -68,7 +68,7 @@ impl WidgetImpl for ScrollBar {
     fn paint(&mut self, mut painter: Painter) {
         let size = self.size();
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
-        painter.draw_rect(content_rect);
+        painter.set_antialiasing(false);
         painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
 
         let val = self.value();
@@ -82,14 +82,12 @@ impl WidgetImpl for ScrollBar {
                 let start_y = ((size.height() - slider_len) as f32 * percentage) as i32;
 
                 let rect = Rect::new(content_rect.x(), start_y, size.width(), slider_len);
-                painter.draw_rect(rect);
                 painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
             }
             Orientation::Horizontal => {
                 let start_x = ((size.width() - slider_len) as f32 * percentage) as i32;
 
                 let rect = Rect::new(start_x, content_rect.y(), slider_len, size.height());
-                painter.draw_rect(rect);
                 painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
             }
         }

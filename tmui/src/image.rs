@@ -7,7 +7,7 @@ use std::path::Path;
 use tlib::{
     figure::ImageBuf,
     namespace::ImageOption,
-    skia_safe::{self, matrix::ScaleToFit, Matrix, SamplingOptions, TileMode},
+    skia_safe::{self, matrix::ScaleToFit, Matrix, SamplingOptions, TileMode, Paint},
 };
 
 #[extends(Widget)]
@@ -67,7 +67,7 @@ impl WidgetImpl for Image {
                 painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
             }
             ImageOption::Tile => {
-                let mut paint = painter.paint();
+                let mut paint = Paint::default();
                 let shader = image_buf.image_ref().to_shader(
                     Some((TileMode::Repeat, TileMode::Repeat)),
                     SamplingOptions::default(),

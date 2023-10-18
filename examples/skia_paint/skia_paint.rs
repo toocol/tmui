@@ -1,6 +1,8 @@
+use skia_safe::textlayout::{FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle};
+use tlib::skia_safe::textlayout::TypefaceFontProvider;
 use tmui::{
     prelude::*,
-    skia_safe::{self, Path},
+    skia_safe::{self},
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };
@@ -16,65 +18,74 @@ impl ObjectImpl for SkiaPaint {}
 
 impl WidgetImpl for SkiaPaint {
     fn paint(&mut self, mut painter: tmui::graphics::painter::Painter) {
-        let rect = self.contents_rect(Some(Coordinate::Widget));
-        painter.set_color(Color::RED);
-        painter.set_antialiasing();
+        const TEXT: &'static str = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
+        const REP: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
+        const FAMILY: &'static str = "Courier New";
+        const FONT_SIZE: f32 = 12.;
 
-        let half_width = rect.width() as f32 / 2.0;
-        let half_height = rect.height() as f32 / 2.0;
-        let radius = half_width.min(half_height) * 0.8;
+        let mut font = Font::with_family(FAMILY).to_skia_font();
+        font.set_size(FONT_SIZE);
 
-        let mut path = painter.path();
+        painter.set_color(Color::BLACK);
 
-        path.add_circle(
-            skia_safe::Point::new(half_width - radius * 0.35, half_height - radius * 0.35),
-            radius * 0.7,
-            None,
-        );
+        // create font manager
+        let typeface = font.typeface().unwrap();
+        let mut typeface_provider = TypefaceFontProvider::new();
+        typeface_provider.register_typeface(typeface.into(), Some(FAMILY));
+        let mut font_collection = FontCollection::new();
+        font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
 
-        let mut right_heart = Path::new();
-        right_heart.move_to(skia_safe::Point::new(
-            half_width + radius * 0.35,
-            half_height - radius * 0.35,
-        ));
-        right_heart.cubic_to(
-            skia_safe::Point::new(half_width + radius * 0.5, half_height - radius * 0.7),
-            skia_safe::Point::new(half_width + radius * 0.7, half_height - radius * 0.5),
-            skia_safe::Point::new(half_width + radius * 0.35, half_height + radius * 0.35),
-        );
-        right_heart.close();
-        path.add_path(&right_heart, skia_safe::Point::new(1., 1.), None);
+        // define text style
+        let mut style = ParagraphStyle::new();
+        let mut text_style = TextStyle::new();
+        text_style.set_color(Color::BLACK);
+        text_style.set_font_size(FONT_SIZE);
+        text_style.set_font_families(&vec![FAMILY]);
+        text_style.set_letter_spacing(0.);
+        style.set_text_style(&text_style);
 
-        let mut left_heart = Path::new();
-        left_heart.move_to(skia_safe::Point::new(
-            half_width - radius * 0.35,
-            half_height - radius * 0.35,
-        ));
-        left_heart.cubic_to(
-            skia_safe::Point::new(half_width - radius * 0.5, half_height - radius * 0.7),
-            skia_safe::Point::new(half_width - radius * 0.7, half_height - radius * 0.5),
-            skia_safe::Point::new(half_width - radius * 0.35, half_height + radius * 0.35),
-        );
-        left_heart.close();
-        path.add_path(&left_heart, skia_safe::Point::new(1., 1.), None);
+        // layout the paragraph
+        let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection.clone());
+        paragraph_builder.add_text(TEXT);
+        let mut paragraph = paragraph_builder.build();
+        paragraph.layout(1024.0);
 
-        painter.draw_path(&mut path);
+        // Calculate the width base on font:
+        let glyphs: Vec<u16> = TEXT.encode_utf16().collect();
+        let mut widths = vec![0.; TEXT.len()];
+        font.get_widths(&glyphs, &mut widths);
 
-        painter.set_color((0, 0, 0, 50).into());
-        painter.set_style(skia_safe::paint::Style::Stroke);
-        painter.set_line_width(radius * 0.05);
-        painter.set_stroke_cap(skia_safe::PaintCap::Round);
+        let measure = font.measure_str(REP, None);
+        let cal_width: f32 = widths.iter().sum();
+        let cal_height: f32 = measure.1.height();
 
-        let mut shadow_path = painter.path();
-        shadow_path.add_circle(
-            skia_safe::Point::new(half_width, half_height),
-            radius * 0.7,
-            None,
-        );
-        shadow_path.add_path(&right_heart, skia_safe::Point::new(1., 1.), None);
-        shadow_path.add_path(&left_heart, skia_safe::Point::new(1., 1.), None);
-        shadow_path.close();
+        let width = paragraph.min_intrinsic_width();
+        let height = paragraph.height();
+        let metrics = &paragraph.get_line_metrics()[0];
+        println!("{}, {}, {}", metrics.ascent, metrics.descent, metrics.baseline);
 
-        painter.draw_path(&mut shadow_path);
+        painter.draw_rect(Rect::new(0, 0, cal_width as i32, metrics.baseline as i32));
+        painter.draw_rect(Rect::new(0, 0, width as i32, height as i32));
+        painter.draw_rect(Rect::new(0, 100 - cal_height as i32, cal_width as i32, cal_height as i32));
+
+        // draw text
+        let canvas = painter.canvas_mut();
+        let point = skia_safe::Point::new(0.0, 0.0);
+        paragraph.paint(canvas, point);
+
+        // draw another text
+        let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
+        paragraph_builder.add_text(REP);
+        let mut paragraph = paragraph_builder.build();
+        paragraph.layout(1024.0);
+        let point = skia_safe::Point::new(0.0, 40.0);
+        paragraph.paint(canvas, point);
+
+        painter.set_antialiasing(true);
+        painter.set_font(font);
+        painter.draw_text(TEXT, (0., 100.));
+
+        painter.set_font(Font::with_family(FAMILY).to_skia_font());
+        painter.draw_text(TEXT, (0., 200.));
     }
 }

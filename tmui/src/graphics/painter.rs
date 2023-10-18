@@ -4,12 +4,17 @@ use crate::{
     skia_safe::{self, Canvas, Font, Matrix, Paint, Path, Point},
     widget::WidgetImpl,
 };
-use log::error;
+use log::{error, warn};
 use std::cell::RefMut;
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect, Region},
     global::skia_font_clone,
-    skia_safe::canvas::SrcRectConstraint,
+    skia_safe::{
+        canvas::SrcRectConstraint,
+        textlayout::{
+            FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+        },
+    },
 };
 
 pub struct Painter<'a> {
@@ -56,23 +61,33 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn path(&self) -> Path {
-        Path::default()
-    }
-
-    #[inline]
-    pub fn paint(&self) -> Paint {
-        Paint::default()
-    }
-
-    #[inline]
     pub fn paint_ref(&self) -> &Paint {
         &self.paint
     }
 
     #[inline]
+    pub fn paint_mut(&mut self) -> &mut Paint {
+        &mut self.paint
+    }
+
+    #[inline]
     pub fn path_ref(&self) -> &Path {
         &self.path
+    }
+
+    #[inline]
+    pub fn path_mut(&mut self) -> &mut Path {
+        &mut self.path
+    }
+
+    #[inline]
+    pub fn canvas_ref(&self) -> &Canvas {
+        &self.canvas
+    }
+
+    #[inline]
+    pub fn canvas_mut(&mut self) -> &mut Canvas {
+        &mut self.canvas
     }
 
     #[inline]
@@ -131,8 +146,8 @@ impl<'a> Painter<'a> {
 
     /// Set the antialiasing to true.
     #[inline]
-    pub fn set_antialiasing(&mut self) {
-        self.paint.set_anti_alias(true);
+    pub fn set_antialiasing(&mut self, anti_alias: bool) {
+        self.paint.set_anti_alias(anti_alias);
     }
 
     /// Set the global transform of this painter.
@@ -211,9 +226,60 @@ impl<'a> Painter<'a> {
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 
-    /// Draw text at specified position `origin` with offset. <br>
+    /// Draw text paragraph at specified position `origin` with offset. <br>
+    /// 
+    /// letter_spacing: The spacing betweeen characters.
+    /// width_layout: The specified width of a text paragraph.
+    ///
+    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_paragraph<T: Into<Point>>(&mut self, text: &str, origin: T, letter_spacing: f32, width_layout: f32) {
+        if let Some(font) = self.font.as_ref() {
+            // create font manager
+            let mut typeface_provider = TypefaceFontProvider::new();
+            if let Some(typeface) = font.typeface() {
+                let family = typeface.family_name();
+                typeface_provider.register_typeface(typeface, Some(family));
+            } else {
+                warn!("The typeface of font not specified.");
+                return;
+            }
+            let mut font_collection = FontCollection::new();
+            font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
+
+            // define text style
+            let mut style = ParagraphStyle::new();
+            let mut text_style = TextStyle::new();
+            let color = match self.color {
+                Some(color) => color,
+                None => Color::BLACK,
+            };
+            text_style.set_color(color);
+            text_style.set_font_size(font.size());
+            if let Some(typeface) = font.typeface() {
+                text_style.set_font_families(&vec![typeface.family_name()]);
+            }
+            text_style.set_letter_spacing(letter_spacing);
+            style.set_text_style(&text_style);
+
+            // layout the paragraph
+            let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
+            paragraph_builder.add_text(text);
+            let mut paragraph = paragraph_builder.build();
+            paragraph.layout(width_layout);
+
+            let mut origin: Point = origin.into();
+            origin.offset((self.x_offset, self.y_offset));
+            paragraph.paint(&mut self.canvas, origin)
+        } else {
+            error!("The `font` of `Painter` is None.")
+        }
+    }
+
+    /// Draw simple text at specified position `origin` with offset. <br>
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
@@ -223,6 +289,30 @@ impl<'a> Painter<'a> {
             origin.offset((self.x_offset, self.y_offset));
 
             self.canvas.draw_str(text, origin, &font, &self.paint);
+        } else {
+            error!("The `font` of `Painter` is None.")
+        }
+    }
+
+    #[inline]
+    pub fn draw_glyphs<T: Into<Point>>(
+        &mut self,
+        glyphs: &[u16],
+        positions: &[Point],
+        clusters: &[u32],
+        origin: T,
+        utf8_text: &str,
+    ) {
+        if let Some(font) = self.font.as_ref() {
+            self.canvas.draw_glyphs_utf8(
+                glyphs,
+                positions,
+                clusters,
+                utf8_text,
+                origin,
+                font,
+                &self.paint,
+            )
         } else {
             error!("The `font` of `Painter` is None.")
         }

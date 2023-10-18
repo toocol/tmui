@@ -74,7 +74,7 @@ impl WidgetImpl for Label {
             .expect("`Label` encode u16 string to utf-8 string failed.");
 
         painter.reset();
-        painter.set_antialiasing();
+        painter.set_antialiasing(true);
         painter.set_color(self.color);
 
         let measure = font.measure_str(&text, Some(painter.paint_ref())).1;
