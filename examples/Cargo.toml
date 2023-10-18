@@ -8,6 +8,7 @@ tipc = { path = "../tipc/" }
 tlib = { path = "../tlib/" }
 tmui = { path = "../tmui/" }
 
+widestring = "1.0.2"
 log = "0.4"
 log4rs = "1.1.1"
 lazy_static = "1.4.0"
@@ -32,6 +33,10 @@ path = "image_draw/main.rs"
 [[bin]]
 name = "key_event"
 path = "key_event/main.rs"
+
+[[bin]]
+name = "label_window"
+path = "label_window/main.rs"
 
 [[bin]]
 name = "layout_widget"
