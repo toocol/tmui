@@ -1,7 +1,7 @@
 use std::{vec::IntoIter, slice::{Iter, IterMut}};
 use skia_safe::region::RegionOp;
 
-use super::{Rect, Point};
+use super::{Rect, Point, FRect, FPoint};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Region
@@ -105,15 +105,127 @@ impl Into<skia_safe::Region> for Region {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// FRegion
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct FRegion {
+    regions: Vec<FRect>,
+}
+
+impl FRegion {
+    #[inline]
+    pub fn new() -> Self {
+        Self { regions: vec![] }
+    }
+
+    #[inline]
+    pub fn add_rect(&mut self, rect: FRect) {
+        self.regions.push(rect)
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.regions.clear()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.regions.is_empty()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.regions.len()
+    }
+
+    #[inline]
+    pub fn contains_point(&self, point: &FPoint) -> bool {
+        for rect in self.regions.iter() {
+            if rect.contains(point) {
+                return true
+            }
+        }
+        false
+    }
+
+    #[inline]
+    pub fn intersects_rect(&self, other: &FRect) -> FRegion {
+        let mut region = FRegion::new();
+
+        for rect in self.regions.iter() {
+            if let Some(rect) = rect.intersects(other) {
+                region.add_rect(rect)
+            }
+        }
+
+        region
+    }
+
+    #[inline]
+    pub fn regions(&self) -> &Vec<FRect> {
+        &self.regions
+    }
+
+    #[inline]
+    pub fn iter(&self) -> Iter<FRect> {
+        self.regions.iter()
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<FRect> {
+        self.regions.iter_mut()
+    }
+
+    #[inline]
+    pub fn offset(&mut self, offset: (f32, f32)) {
+        for rect in self.iter_mut() {
+            rect.offset(offset.0, offset.1);
+        }
+    }
+}
+
+impl IntoIterator for FRegion {
+    type Item = FRect;
+
+    type IntoIter = IntoIter<Self::Item>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.regions.into_iter()
+    }
+}
+
+impl Into<skia_safe::Region> for FRegion {
+    fn into(self) -> skia_safe::Region {
+        let mut region = skia_safe::Region::new();
+        for rect in self.into_iter() {
+            let rect: skia_safe::IRect = rect.into();
+            region.op_rect(rect, RegionOp::Union);
+        }
+        region
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::figure::Rect;
-    use super::Region;
+    use crate::figure::{Rect, FRect};
+    use super::{Region, FRegion};
 
     #[test]
     fn test_region() {
         let mut region = Region::new();
         let origin = Rect::new(0, 5, 120, 300);
+        region.add_rect(origin);
+        for rect in region.iter() {
+            assert_eq!(*rect, origin);
+        }
+    }
+
+    #[test]
+    fn test_fregion() {
+        let mut region = FRegion::new();
+        let origin = FRect::new(0., 5., 120., 300.);
         region.add_rect(origin);
         for rect in region.iter() {
             assert_eq!(*rect, origin);
