@@ -480,6 +480,12 @@ impl FRect {
     }
 
     #[inline]
+    pub fn offset(&mut self, x: f32, y: f32) {
+        self.x += x;
+        self.y += y;
+    }
+
+    #[inline]
     pub fn size(&self) -> FSize {
         FSize::new(self.width, self.height)
     }
@@ -812,6 +818,12 @@ impl Into<skia_safe::Rect> for FRect {
             self.width as f32,
             self.height as f32,
         )
+    }
+}
+
+impl Into<skia_safe::IRect> for FRect {
+    fn into(self) -> skia_safe::IRect {
+        skia_safe::IRect::from_xywh(self.x as i32, self.y as i32, self.width as i32, self.height as i32)
     }
 }
 
