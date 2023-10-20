@@ -9,6 +9,18 @@ pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
 }
 
 #[inline]
+pub fn bound64(min: f64, val: f64, max: f64) -> f64 {
+    assert!(max >= min);
+    min.max(max.min(val))
+}
+
+#[inline]
+pub fn bound32(min: f32, val: f32, max: f32) -> f32 {
+    assert!(max >= min);
+    min.max(max.min(val))
+}
+
+#[inline]
 pub fn round64(d: f64) -> i32 {
     if d >= 0.0 {
         (d + 0.5) as i32
