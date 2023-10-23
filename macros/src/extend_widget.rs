@@ -406,13 +406,28 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn image_rect_f(&self) -> FRect {
+                self.#(#widget_path).*.image_rect_f()
+            }
+
+            #[inline]
             fn origin_rect(&self, coord: Option<Coordinate>) -> Rect {
                 self.#(#widget_path).*.origin_rect(coord)
             }
 
             #[inline]
+            fn origin_rect_f(&self, coord: Option<Coordinate>) -> FRect {
+                self.#(#widget_path).*.origin_rect_f(coord)
+            }
+
+            #[inline]
             fn contents_rect(&self, coord: Option<Coordinate>) -> Rect {
                 self.#(#widget_path).*.contents_rect(coord)
+            }
+
+            #[inline]
+            fn contents_rect_f(&self, coord: Option<Coordinate>) -> FRect {
+                self.#(#widget_path).*.contents_rect_f(coord)
             }
 
             #[inline]
@@ -568,6 +583,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn map_to_widget(&self, point: &Point) -> Point {
                 self.#(#widget_path).*.map_to_widget(point)
+            }
+
+            #[inline]
+            fn map_to_global_f(&self, point: &FPoint) -> FPoint {
+                self.#(#widget_path).*.map_to_global_f(point)
+            }
+
+            #[inline]
+            fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
+                self.#(#widget_path).*.map_to_widget_f(point)
             }
 
             #[inline]

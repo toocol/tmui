@@ -28,5 +28,5 @@ pub use crate::widget::{
     PointEffective, ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt, WidgetImpl, WidgetImplExt,
     WidgetSignals, WindowAcquire
 };
-pub use tlib::figure::{Color, Point, Rect, Region, Size};
+pub use tlib::figure::{Color, Point, FPoint, Rect, FRect, Region, Size};
 pub use tlib::tokio;
