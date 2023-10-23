@@ -103,13 +103,30 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
+            fn update_region_f(&mut self, rect: FRect) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_region_f(rect);
+            }
+
+            #[inline]
             fn clear_region(&mut self) {
                 self.#(#element_path).*.clear_region();
             }
 
             #[inline]
+            fn clear_region_f(&mut self) {
+                self.#(#element_path).*.clear_region_f();
+            }
+
+            #[inline]
             fn redraw_region(&self) -> &Region {
                 self.#(#element_path).*.redraw_region()
+            }
+
+            #[inline]
+            fn redraw_region_f(&self) -> &FRegion {
+                self.#(#element_path).*.redraw_region_f()
             }
 
             #[inline]

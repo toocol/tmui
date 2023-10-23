@@ -58,6 +58,7 @@ impl Board {
                         element.on_renderer(&cr);
                         element.validate();
                         element.clear_region();
+                        element.clear_region_f();
                         update = true;
                     }
                 }

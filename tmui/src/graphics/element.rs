@@ -2,7 +2,7 @@ use crate::{application_window::current_window_id, widget::WidgetImpl};
 
 use super::{board::Board, drawing_context::DrawingContext};
 use tlib::{
-    figure::{Rect, Region},
+    figure::{Rect, Region, FRect, FRegion},
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
 };
@@ -15,6 +15,7 @@ pub struct Element {
     fixed_size: bool,
     /// The region rect of element's coordinate was `Widget`.
     redraw_region: Region,
+    redraw_region_f: FRegion,
 }
 
 impl ObjectSubclass for Element {
@@ -61,16 +62,32 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
     fn update_region(&mut self, rect: Rect);
 
+    /// Specified the region to redraw.
+    ///
+    /// Go to[`Function defination`](ElementExt::update_region_f) (Defined in [`ElementExt`])
+    fn update_region_f(&mut self, rect: FRect);
+
     /// Cleaer the redraw region.
     ///
     /// Go to[`Function defination`](ElementExt::clear_region) (Defined in [`ElementExt`])
     fn clear_region(&mut self);
+
+    /// Cleaer the redraw region.
+    ///
+    /// Go to[`Function defination`](ElementExt::clear_region_f) (Defined in [`ElementExt`])
+    fn clear_region_f(&mut self);
 
     /// Get the redraw region. <br>
     /// The region rect of element's coordinate was `Widget`.
     ///
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn redraw_region(&self) -> &Region;
+
+    /// Get the redraw region. <br>
+    /// The region rect of element's coordinate was `Widget`.
+    ///
+    /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
+    fn redraw_region_f(&self) -> &FRegion;
 
     /// Go to[`Function defination`](ElementExt::rect) (Defined in [`ElementExt`])
     fn rect(&self) -> Rect;
@@ -132,13 +149,31 @@ impl ElementExt for Element {
     }
 
     #[inline]
+    fn update_region_f(&mut self, rect: FRect) {
+        if rect.width() == 0. || rect.height() == 0. {
+            return;
+        }
+        self.redraw_region_f.add_rect(rect)
+    }
+
+    #[inline]
     fn clear_region(&mut self) {
         self.redraw_region.clear()
     }
 
     #[inline]
+    fn clear_region_f(&mut self) {
+        self.redraw_region_f.clear()
+    }
+
+    #[inline]
     fn redraw_region(&self) -> &Region {
         &self.redraw_region
+    }
+
+    #[inline]
+    fn redraw_region_f(&self) -> &FRegion {
+        &self.redraw_region_f
     }
 
     #[inline]
