@@ -15,7 +15,7 @@ use std::ptr::NonNull;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
-    figure::{Color, FontTypeface, Size},
+    figure::{Color, FontTypeface, Size, FPoint},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
@@ -525,17 +525,35 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::image_rect) (Defined in [`WidgetExt`])
     fn image_rect(&self) -> Rect;
 
+    /// Get the area of widget's total image Rect with the margins. <br>
+    /// The [`Coordinate`] was `World`.
+    ///
+    /// Go to[`Function defination`](WidgetExt::image_rect_f) (Defined in [`WidgetExt`])
+    fn image_rect_f(&self) -> FRect;
+
     /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
     ///
     /// Go to[`Function defination`](WidgetExt::origin_rect) (Defined in [`WidgetExt`])
     fn origin_rect(&self, coord: Option<Coordinate>) -> Rect;
 
+    /// Get the area of widget's origin Rect. <br>
+    /// The default [`Coordinate`] was `World`.
+    ///
+    /// Go to[`Function defination`](WidgetExt::origin_rect_f) (Defined in [`WidgetExt`])
+    fn origin_rect_f(&self, coord: Option<Coordinate>) -> FRect;
+
     /// Get the area inside the widget's paddings. <br>
     /// The default [`Coordinate`] was `World`.
     ///
     /// Go to[`Function defination`](WidgetExt::contents_rect) (Defined in [`WidgetExt`])
     fn contents_rect(&self, coord: Option<Coordinate>) -> Rect;
+
+    /// Get the area inside the widget's paddings. <br>
+    /// The default [`Coordinate`] was `World`.
+    ///
+    /// Go to[`Function defination`](WidgetExt::contents_rect) (Defined in [`WidgetExt`])
+    fn contents_rect_f(&self, coord: Option<Coordinate>) -> FRect;
 
     /// Get the widget's background color.
     ///
@@ -691,6 +709,16 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::map_to_widget) (Defined in [`WidgetExt`])
     fn map_to_widget(&self, point: &Point) -> Point;
+
+    /// Map the given point to global coordinate.
+    ///
+    /// Go to[`Function defination`](WidgetExt::map_to_global_f) (Defined in [`WidgetExt`])
+    fn map_to_global_f(&self, point: &FPoint) -> FPoint;
+
+    /// Map the given point to widget coordinate.
+    ///
+    /// Go to[`Function defination`](WidgetExt::map_to_widget_f) (Defined in [`WidgetExt`])
+    fn map_to_widget_f(&self, point: &FPoint) -> FPoint;
 
     /// The widget tracking the `MouseMoveEvent` or not.
     ///
@@ -1086,6 +1114,11 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
+    fn image_rect_f(&self) -> FRect {
+        self.image_rect().into()
+    }
+
+    #[inline]
     fn origin_rect(&self, coord: Option<Coordinate>) -> Rect {
         let mut rect = self.rect();
 
@@ -1097,6 +1130,11 @@ impl WidgetExt for Widget {
         }
 
         rect
+    }
+
+    #[inline]
+    fn origin_rect_f(&self, coord: Option<Coordinate>) -> FRect {
+        self.origin_rect(coord).into()
     }
 
     #[inline]
@@ -1118,6 +1156,11 @@ impl WidgetExt for Widget {
         }
 
         rect
+    }
+
+    #[inline]
+    fn contents_rect_f(&self, coord: Option<Coordinate>) -> FRect {
+        self.contents_rect(coord).into()
     }
 
     #[inline]
@@ -1332,6 +1375,18 @@ impl WidgetExt for Widget {
     fn map_to_widget(&self, point: &Point) -> Point {
         let contents_rect = self.contents_rect(None);
         Point::new(point.x() - contents_rect.x(), point.y() - contents_rect.y())
+    }
+
+    #[inline]
+    fn map_to_global_f(&self, point: &FPoint) -> FPoint {
+        let contents_rect = self.contents_rect(None);
+        FPoint::new(point.x() + contents_rect.x() as f32, point.y() + contents_rect.y() as f32)
+    }
+
+    #[inline]
+    fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
+        let contents_rect = self.contents_rect(None);
+        FPoint::new(point.x() - contents_rect.x() as f32, point.y() - contents_rect.y() as f32)
     }
 
     #[inline]
