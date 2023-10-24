@@ -336,6 +336,13 @@ impl Rect {
 
     #[inline]
     pub fn and(&mut self, other: &Rect) {
+        if self.width == 0 || self.height == 0 {
+            self.x = other.x;
+            self.y = other.y;
+            self.width = other.width;
+            self.height = other.height;
+            return;
+        }
         self.x = self.x.max(other.x);
         self.y = self.y.max(other.y);
         self.width = self.width.min(other.width);
@@ -344,6 +351,13 @@ impl Rect {
 
     #[inline]
     pub fn or(&mut self, other: &Rect) {
+        if self.width == 0 || self.height == 0 {
+            self.x = other.x;
+            self.y = other.y;
+            self.width = other.width;
+            self.height = other.height;
+            return;
+        }
         self.x = self.x.min(other.x);
         self.y = self.y.min(other.y);
         self.width = self.width.max(other.width);
@@ -778,6 +792,13 @@ impl FRect {
 
     #[inline]
     pub fn and(&mut self, other: &FRect) {
+        if self.width == 0. || self.height == 0. {
+            self.x = other.x;
+            self.y = other.y;
+            self.width = other.width;
+            self.height = other.height;
+            return;
+        }
         self.x = self.x.max(other.x);
         self.y = self.y.max(other.y);
         self.width = self.width.min(other.width);
@@ -786,6 +807,13 @@ impl FRect {
 
     #[inline]
     pub fn or(&mut self, other: &FRect) {
+        if self.width == 0. || self.height == 0. {
+            self.x = other.x;
+            self.y = other.y;
+            self.width = other.width;
+            self.height = other.height;
+            return;
+        }
         self.x = self.x.min(other.x);
         self.y = self.y.min(other.y);
         self.width = self.width.max(other.width);
@@ -1129,6 +1157,14 @@ impl AtomicRect {
         let owidth = other.width.load(Ordering::SeqCst);
         let oheight = other.height.load(Ordering::SeqCst);
 
+        if width == 0 || height == 0 {
+            self.x.store(ox, Ordering::SeqCst);
+            self.y.store(oy, Ordering::SeqCst);
+            self.width.store(owidth, Ordering::SeqCst);
+            self.height.store(oheight, Ordering::SeqCst);
+            return;
+        }
+
         self.x.store(x.max(ox), Ordering::SeqCst);
         self.y.store(y.max(oy), Ordering::SeqCst);
         self.width.store(width.min(owidth), Ordering::SeqCst);
@@ -1146,6 +1182,14 @@ impl AtomicRect {
         let oy = other.y.load(Ordering::SeqCst);
         let owidth = other.width.load(Ordering::SeqCst);
         let oheight = other.height.load(Ordering::SeqCst);
+
+        if width == 0 || height == 0 {
+            self.x.store(ox, Ordering::SeqCst);
+            self.y.store(oy, Ordering::SeqCst);
+            self.width.store(owidth, Ordering::SeqCst);
+            self.height.store(oheight, Ordering::SeqCst);
+            return;
+        }
 
         self.x.store(x.min(ox), Ordering::SeqCst);
         self.y.store(y.min(oy), Ordering::SeqCst);
@@ -1226,7 +1270,7 @@ mod tests {
     }
 
     #[test]
-    fn test_or() {
+    fn test_or_and() {
         ////// Test for `Rect`
         let mut rect = Rect::new(0, 0, 50, 50);
         let other = Rect::new(30, 30, 70, 70);
