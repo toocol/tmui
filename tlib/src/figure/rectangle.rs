@@ -28,6 +28,7 @@ impl Rect {
         }
     }
 
+    #[inline]
     pub fn from_point_size(point: Point, size: Size) -> Self {
         Self {
             x: point.x(),
@@ -335,6 +336,14 @@ impl Rect {
     }
 
     #[inline]
+    pub fn invalidate(&mut self) {
+        self.x = 0;
+        self.y = 0;
+        self.width = 0;
+        self.height = 0;
+    }
+
+    #[inline]
     pub fn and(&mut self, other: &Rect) {
         if self.width == 0 || self.height == 0 {
             self.x = other.x;
@@ -343,10 +352,10 @@ impl Rect {
             self.height = other.height;
             return;
         }
-        self.x = self.x.max(other.x);
-        self.y = self.y.max(other.y);
-        self.width = self.width.min(other.width);
-        self.height = self.height.min(other.height);
+        match self.intersects(other) {
+            Some(intersect) => *self = intersect,
+            None => self.invalidate(),
+        }
     }
 
     #[inline]
@@ -358,10 +367,7 @@ impl Rect {
             self.height = other.height;
             return;
         }
-        self.x = self.x.min(other.x);
-        self.y = self.y.min(other.y);
-        self.width = self.width.max(other.width);
-        self.height = self.height.max(other.height);
+        *self = self.union(other);
     }
 }
 
@@ -791,6 +797,14 @@ impl FRect {
     }
 
     #[inline]
+    pub fn invalidate(&mut self) {
+        self.x = 0.;
+        self.y = 0.;
+        self.width = 0.;
+        self.height = 0.;
+    }
+
+    #[inline]
     pub fn and(&mut self, other: &FRect) {
         if self.width == 0. || self.height == 0. {
             self.x = other.x;
@@ -799,10 +813,10 @@ impl FRect {
             self.height = other.height;
             return;
         }
-        self.x = self.x.max(other.x);
-        self.y = self.y.max(other.y);
-        self.width = self.width.min(other.width);
-        self.height = self.height.min(other.height);
+        match self.intersects(other) {
+            Some(intersect) => *self = intersect,
+            None => self.invalidate(),
+        }
     }
 
     #[inline]
@@ -814,10 +828,7 @@ impl FRect {
             self.height = other.height;
             return;
         }
-        self.x = self.x.min(other.x);
-        self.y = self.y.min(other.y);
-        self.width = self.width.max(other.width);
-        self.height = self.height.max(other.height);
+        *self = self.union(other);
     }
 }
 
@@ -851,7 +862,12 @@ impl Into<skia_safe::Rect> for FRect {
 
 impl Into<skia_safe::IRect> for FRect {
     fn into(self) -> skia_safe::IRect {
-        skia_safe::IRect::from_xywh(self.x as i32, self.y as i32, self.width as i32, self.height as i32)
+        skia_safe::IRect::from_xywh(
+            self.x as i32,
+            self.y as i32,
+            self.width as i32,
+            self.height as i32,
+        )
     }
 }
 
@@ -1146,9 +1162,129 @@ impl AtomicRect {
     }
 
     #[inline]
-    pub fn and(&mut self, other: &AtomicRect) {
+    pub fn is_valid(&self) -> bool {
+        self.width.load(Ordering::SeqCst) >= 0 && self.height.load(Ordering::SeqCst) >= 0
+    }
+
+    #[inline]
+    pub fn invalidate(&mut self) {
+        self.x.store(0, Ordering::SeqCst);
+        self.y.store(0, Ordering::SeqCst);
+        self.width.store(0, Ordering::SeqCst);
+        self.height.store(0, Ordering::SeqCst);
+    }
+
+    #[inline]
+    pub fn is_intersects(&self, rect: &AtomicRect) -> bool {
         let x = self.x.load(Ordering::SeqCst);
         let y = self.y.load(Ordering::SeqCst);
+        let width = self.width.load(Ordering::SeqCst);
+        let height = self.height.load(Ordering::SeqCst);
+
+        let rx = rect.x.load(Ordering::SeqCst);
+        let ry = rect.y.load(Ordering::SeqCst);
+        let rwidth = rect.width.load(Ordering::SeqCst);
+        let rheight = rect.height.load(Ordering::SeqCst);
+
+        x.max(rx) < (x + width).min(rx + rwidth) && y.max(ry) < (y + height).min(ry + rheight)
+    }
+
+    #[inline]
+    pub fn intersects(&self, rect: &AtomicRect) -> Option<AtomicRect> {
+        if !self.is_intersects(rect) {
+            None
+        } else {
+            let x = self.x.load(Ordering::SeqCst);
+            let y = self.y.load(Ordering::SeqCst);
+            let width = self.width.load(Ordering::SeqCst);
+            let height = self.height.load(Ordering::SeqCst);
+
+            let rx = rect.x.load(Ordering::SeqCst);
+            let ry = rect.y.load(Ordering::SeqCst);
+            let rwidth = rect.width.load(Ordering::SeqCst);
+            let rheight = rect.height.load(Ordering::SeqCst);
+
+            let left = x.max(rx);
+            let top = y.max(ry);
+            let right = (x + width).min(rx + rwidth);
+            let bottom = (y + height).min(ry + rheight);
+
+            let x = left;
+            let y = top;
+            let width = right - left;
+            let height = bottom - top;
+
+            Some(AtomicRect::new(x, y, width, height))
+        }
+    }
+
+    #[inline]
+    pub fn union(&self, rect: &AtomicRect) -> AtomicRect {
+        let x = self.x.load(Ordering::SeqCst);
+        let y = self.y.load(Ordering::SeqCst);
+        let width = self.width.load(Ordering::SeqCst);
+        let height = self.height.load(Ordering::SeqCst);
+
+        let rx = rect.x.load(Ordering::SeqCst);
+        let ry = rect.y.load(Ordering::SeqCst);
+        let rwidth = rect.width.load(Ordering::SeqCst);
+        let rheight = rect.height.load(Ordering::SeqCst);
+
+        let left = x.min(rx);
+        let right = (x + width).max(rx + rwidth);
+        let top = y.min(ry);
+        let bottom = (y + height).max(ry + rheight);
+
+        AtomicRect::new(left, top, right - left, bottom - top)
+    }
+
+    #[inline]
+    pub fn subtracted(&self, other: &AtomicRect) -> Option<Vec<AtomicRect>> {
+        let x = self.x.load(Ordering::SeqCst);
+        let y = self.y.load(Ordering::SeqCst);
+        let width = self.width.load(Ordering::SeqCst);
+        let height = self.height.load(Ordering::SeqCst);
+
+        let ox = other.x.load(Ordering::SeqCst);
+        let oy = other.y.load(Ordering::SeqCst);
+        let owidth = other.width.load(Ordering::SeqCst);
+        let oheight = other.height.load(Ordering::SeqCst);
+
+        let left = x.max(ox);
+        let top = y.max(oy);
+        let right = (x + width).min(ox + owidth);
+        let bottom = (y + height).min(oy + oheight);
+
+        if left >= right || top >= bottom {
+            return None;
+        }
+        let mut result = vec![];
+
+        if x < left {
+            result.push(AtomicRect::new(x, y, left - x, height));
+        }
+
+        if y < top {
+            result.push(AtomicRect::new(x, y, width, top - y));
+        }
+
+        if x + width > right {
+            result.push(AtomicRect::new(right, y, x + width - right, height));
+        }
+
+        if y + height > bottom {
+            result.push(AtomicRect::new(x, bottom, width, y + height - bottom));
+        }
+
+        if result.is_empty() {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    #[inline]
+    pub fn and(&mut self, other: &AtomicRect) {
         let width = self.width.load(Ordering::SeqCst);
         let height = self.height.load(Ordering::SeqCst);
 
@@ -1165,16 +1301,14 @@ impl AtomicRect {
             return;
         }
 
-        self.x.store(x.max(ox), Ordering::SeqCst);
-        self.y.store(y.max(oy), Ordering::SeqCst);
-        self.width.store(width.min(owidth), Ordering::SeqCst);
-        self.height.store(height.min(oheight), Ordering::SeqCst);
+        match self.intersects(other) {
+            Some(intersect) => *self = intersect,
+            None => self.invalidate(),
+        }
     }
 
     #[inline]
     pub fn or(&mut self, other: &AtomicRect) {
-        let x = self.x.load(Ordering::SeqCst);
-        let y = self.y.load(Ordering::SeqCst);
         let width = self.width.load(Ordering::SeqCst);
         let height = self.height.load(Ordering::SeqCst);
 
@@ -1191,10 +1325,7 @@ impl AtomicRect {
             return;
         }
 
-        self.x.store(x.min(ox), Ordering::SeqCst);
-        self.y.store(y.min(oy), Ordering::SeqCst);
-        self.width.store(width.max(owidth), Ordering::SeqCst);
-        self.height.store(height.max(oheight), Ordering::SeqCst);
+        *self = self.union(other)
     }
 }
 
@@ -1277,15 +1408,15 @@ mod tests {
         rect.or(&other);
         assert_eq!(rect.x, 0);
         assert_eq!(rect.y, 0);
-        assert_eq!(rect.width, 70);
-        assert_eq!(rect.height, 70);
+        assert_eq!(rect.width, 100);
+        assert_eq!(rect.height, 100);
 
         let mut rect = Rect::new(0, 0, 50, 50);
         rect.and(&other);
         assert_eq!(rect.x, 30);
         assert_eq!(rect.y, 30);
-        assert_eq!(rect.width, 50);
-        assert_eq!(rect.height, 50);
+        assert_eq!(rect.width, 20);
+        assert_eq!(rect.height, 20);
 
         ////// Test for `FRect`
         let mut rect = FRect::new(0., 0., 50., 50.);
@@ -1293,15 +1424,15 @@ mod tests {
         rect.or(&other);
         assert_eq!(rect.x, 0.);
         assert_eq!(rect.y, 0.);
-        assert_eq!(rect.width, 70.);
-        assert_eq!(rect.height, 70.);
+        assert_eq!(rect.width, 100.);
+        assert_eq!(rect.height, 100.);
 
         let mut rect = FRect::new(0., 0., 50., 50.);
         rect.and(&other);
         assert_eq!(rect.x, 30.);
         assert_eq!(rect.y, 30.);
-        assert_eq!(rect.width, 50.);
-        assert_eq!(rect.height, 50.);
+        assert_eq!(rect.width, 20.);
+        assert_eq!(rect.height, 20.);
 
         ////// Test for `AtomicRect`
         let mut rect = AtomicRect::new(0, 0, 50, 50);
@@ -1309,14 +1440,14 @@ mod tests {
         rect.or(&other);
         assert_eq!(rect.x(), 0);
         assert_eq!(rect.y(), 0);
-        assert_eq!(rect.width(), 70);
-        assert_eq!(rect.height(), 70);
+        assert_eq!(rect.width(), 100);
+        assert_eq!(rect.height(), 100);
 
         let mut rect = AtomicRect::new(0, 0, 50, 50);
         rect.and(&other);
         assert_eq!(rect.x(), 30);
         assert_eq!(rect.y(), 30);
-        assert_eq!(rect.width(), 50);
-        assert_eq!(rect.height(), 50);
+        assert_eq!(rect.width(), 20);
+        assert_eq!(rect.height(), 20);
     }
 }
