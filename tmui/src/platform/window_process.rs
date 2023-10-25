@@ -1,10 +1,13 @@
 use super::{Message, PlatformContext};
-use crate::{winit::{
-    self,
-    event::{Event, WindowEvent},
-    event_loop::EventLoop,
-    window::Window,
-}, cursor::Cursor};
+use crate::{
+    cursor::Cursor,
+    winit::{
+        self,
+        event::{Event, WindowEvent},
+        event_loop::EventLoop,
+        window::Window,
+    },
+};
 use log::debug;
 use once_cell::sync::Lazy;
 use std::{
@@ -21,9 +24,13 @@ use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcN
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent},
     figure::Point,
+    global::to_static,
     namespace::{KeyCode, KeyboardModifier, MouseButton},
     prelude::SystemCursorShape,
-    winit::{event::{ElementState, MouseScrollDelta}, keyboard::ModifiersState},
+    winit::{
+        event::{ElementState, MouseScrollDelta},
+        keyboard::{Key, ModifiersState},
+    },
 };
 
 pub(crate) struct WindowProcess;
@@ -242,6 +249,7 @@ impl WindowProcess {
                             event:
                                 winit::event::KeyEvent {
                                     physical_key,
+                                    logical_key,
                                     state: ElementState::Pressed,
                                     ..
                                 },
@@ -250,11 +258,11 @@ impl WindowProcess {
                     ..
                 } => {
                     let key_code: KeyCode = physical_key.into();
-                    let evt = KeyEvent::new(
-                        EventType::KeyPress,
-                        key_code,
-                        *modifer,
-                    );
+                    let text = match logical_key {
+                        Key::Character(str) => to_static(str.to_string()),
+                        _ => "",
+                    };
+                    let evt = KeyEvent::new(EventType::KeyPress, key_code, *modifer, text);
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
@@ -266,6 +274,7 @@ impl WindowProcess {
                             event:
                                 winit::event::KeyEvent {
                                     physical_key,
+                                    logical_key,
                                     state: ElementState::Released,
                                     ..
                                 },
@@ -274,11 +283,11 @@ impl WindowProcess {
                     ..
                 } => {
                     let key_code: KeyCode = physical_key.into();
-                    let evt = KeyEvent::new(
-                        EventType::KeyRelease,
-                        key_code,
-                        *modifer,
-                    );
+                    let text = match logical_key {
+                        Key::Character(str) => to_static(str.to_string()),
+                        _ => "",
+                    };
+                    let evt = KeyEvent::new(EventType::KeyRelease, key_code, *modifer, text);
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
