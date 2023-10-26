@@ -35,6 +35,9 @@ pub struct Painter<'a> {
     y_offset: i32,
 
     transform: Matrix,
+
+    text_style: TextStyle,
+    paragraph_style: ParagraphStyle,
 }
 
 impl<'a> Painter<'a> {
@@ -57,6 +60,8 @@ impl<'a> Painter<'a> {
             x_offset: rect.x() + base_offset.x(),
             y_offset: rect.y() + base_offset.y(),
             transform: Matrix::new_identity(),
+            text_style: TextStyle::new(),
+            paragraph_style: ParagraphStyle::new(),
         }
     }
 
@@ -164,6 +169,12 @@ impl<'a> Painter<'a> {
     /// Set the font of painter.
     #[inline]
     pub fn set_font(&mut self, font: Font) {
+        self.text_style.set_font_size(font.size());
+        if let Some(typeface) = font.typeface() {
+            self.text_style.set_font_families(&vec![typeface.family_name()]);
+        } else {
+            warn!("typeface of font was None.");
+        }
         self.font = Some(font);
     }
 
@@ -172,6 +183,7 @@ impl<'a> Painter<'a> {
     pub fn set_color(&mut self, color: Color) {
         self.color = Some(color);
         self.paint.set_color(color);
+        self.text_style.set_color(color);
     }
 
     #[inline]
@@ -248,25 +260,14 @@ impl<'a> Painter<'a> {
                 return;
             }
             let mut font_collection = FontCollection::new();
-            font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
+            font_collection.set_asset_font_manager(Some(typeface_provider.into()));
 
-            // define text style
-            let mut style = ParagraphStyle::new();
-            let mut text_style = TextStyle::new();
-            let color = match self.color {
-                Some(color) => color,
-                None => Color::BLACK,
-            };
-            text_style.set_color(color);
-            text_style.set_font_size(font.size());
-            if let Some(typeface) = font.typeface() {
-                text_style.set_font_families(&vec![typeface.family_name()]);
-            }
-            text_style.set_letter_spacing(letter_spacing);
-            style.set_text_style(&text_style);
+            // set text style
+            self.text_style.set_letter_spacing(letter_spacing);
+            self.paragraph_style.set_text_style(&self.text_style);
 
             // layout the paragraph
-            let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
+            let mut paragraph_builder = ParagraphBuilder::new(&self.paragraph_style, font_collection);
             paragraph_builder.add_text(text);
             let mut paragraph = paragraph_builder.build();
             paragraph.layout(width_layout);
@@ -304,6 +305,9 @@ impl<'a> Painter<'a> {
         utf8_text: &str,
     ) {
         if let Some(font) = self.font.as_ref() {
+            let mut origin: Point = origin.into();
+            origin.offset((self.x_offset, self.y_offset));
+
             self.canvas.draw_glyphs_utf8(
                 glyphs,
                 positions,

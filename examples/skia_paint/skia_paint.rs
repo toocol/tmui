@@ -23,10 +23,13 @@ impl WidgetImpl for SkiaPaint {
         const FAMILY: &'static str = "Courier New";
         const FONT_SIZE: f32 = 12.;
 
-        let mut font = Font::with_family(FAMILY).to_skia_font();
+        let mut font = Font::with_family(FAMILY);
         font.set_size(FONT_SIZE);
 
+        painter.set_font(font.to_skia_font());
         painter.set_color(Color::BLACK);
+
+        let font = font.to_skia_font();
 
         // create font manager
         let typeface = font.typeface().unwrap();
@@ -87,5 +90,9 @@ impl WidgetImpl for SkiaPaint {
 
         painter.set_font(Font::with_family(FAMILY).to_skia_font());
         painter.draw_text(TEXT, (0., 200.));
+
+        painter.draw_paragraph(REP, (0., 300.), 0., 1024.);
+        painter.set_color(Color::RED);
+        painter.draw_paragraph(REP, (0., 350.), 5., 1024.);
     }
 }
