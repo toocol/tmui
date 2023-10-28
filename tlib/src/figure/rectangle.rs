@@ -332,7 +332,7 @@ impl Rect {
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        self.width >= 0 && self.height >= 0
+        self.width > 0 && self.height > 0
     }
 
     #[inline]
@@ -793,7 +793,7 @@ impl FRect {
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        self.width >= 0. && self.height >= 0.
+        self.width > 0. && self.height > 0.
     }
 
     #[inline]
@@ -1163,7 +1163,7 @@ impl AtomicRect {
 
     #[inline]
     pub fn is_valid(&self) -> bool {
-        self.width.load(Ordering::SeqCst) >= 0 && self.height.load(Ordering::SeqCst) >= 0
+        self.width.load(Ordering::SeqCst) > 0 && self.height.load(Ordering::SeqCst) > 0
     }
 
     #[inline]

@@ -65,6 +65,7 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
     width: u32,
     height: u32,
     title: String,
+    ui_stack_size: usize,
 
     platform_type: PlatformType,
     backend_type: BackendType,
@@ -129,6 +130,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         // Create the `UI` main thread.
         let join = thread::Builder::new()
             .name("tmui-main".to_string())
+            .stack_size(self.ui_stack_size)
             .spawn(move || {
                 Self::ui_main(
                     platform_type,
@@ -490,6 +492,7 @@ pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy
     title: Option<String>,
     width: Option<u32>,
     height: Option<u32>,
+    ui_stack_size: usize,
     shared_mem_name: Option<&'static str>,
     shared_widget_id: Option<&'static str>,
     _user_event: PhantomData<T>,
@@ -505,6 +508,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             title: None,
             width: None,
             height: None,
+            ui_stack_size: 8 * 1024 * 1024,
             shared_mem_name,
             shared_widget_id: None,
             _user_event: PhantomData::default(),
@@ -518,6 +522,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             width: Default::default(),
             height: Default::default(),
             title: Default::default(),
+            ui_stack_size: self.ui_stack_size,
             platform_type: Default::default(),
             backend_type: Default::default(),
             platform_context: Default::default(),
@@ -582,6 +587,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
     pub fn height(mut self, height: u32) -> Self {
         self.height = Some(height);
+        self
+    }
+
+    pub fn ui_stack_size(mut self, size: usize) -> Self {
+        self.ui_stack_size = size;
         self
     }
 

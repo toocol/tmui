@@ -172,8 +172,6 @@ impl<'a> Painter<'a> {
         self.text_style.set_font_size(font.size());
         if let Some(typeface) = font.typeface() {
             self.text_style.set_font_families(&vec![typeface.family_name()]);
-        } else {
-            warn!("typeface of font was None.");
         }
         self.font = Some(font);
     }
