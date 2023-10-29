@@ -345,7 +345,10 @@ impl Rect {
 
     #[inline]
     pub fn and(&mut self, other: &Rect) {
-        if self.width == 0 || self.height == 0 {
+        if !other.is_valid() {
+            return;
+        }
+        if !self.is_valid() {
             self.x = other.x;
             self.y = other.y;
             self.width = other.width;
@@ -360,7 +363,10 @@ impl Rect {
 
     #[inline]
     pub fn or(&mut self, other: &Rect) {
-        if self.width == 0 || self.height == 0 {
+        if !other.is_valid() {
+            return;
+        }
+        if !self.is_valid() {
             self.x = other.x;
             self.y = other.y;
             self.width = other.width;
@@ -806,7 +812,10 @@ impl FRect {
 
     #[inline]
     pub fn and(&mut self, other: &FRect) {
-        if self.width == 0. || self.height == 0. {
+        if !other.is_valid() {
+            return
+        }
+        if !self.is_valid() {
             self.x = other.x;
             self.y = other.y;
             self.width = other.width;
@@ -821,7 +830,10 @@ impl FRect {
 
     #[inline]
     pub fn or(&mut self, other: &FRect) {
-        if self.width == 0. || self.height == 0. {
+        if !other.is_valid() {
+            return
+        }
+        if !self.is_valid() {
             self.x = other.x;
             self.y = other.y;
             self.width = other.width;
@@ -1285,15 +1297,15 @@ impl AtomicRect {
 
     #[inline]
     pub fn and(&mut self, other: &AtomicRect) {
-        let width = self.width.load(Ordering::SeqCst);
-        let height = self.height.load(Ordering::SeqCst);
-
+        if !other.is_valid() {
+            return;
+        }
         let ox = other.x.load(Ordering::SeqCst);
         let oy = other.y.load(Ordering::SeqCst);
         let owidth = other.width.load(Ordering::SeqCst);
         let oheight = other.height.load(Ordering::SeqCst);
 
-        if width == 0 || height == 0 {
+        if !self.is_valid() {
             self.x.store(ox, Ordering::SeqCst);
             self.y.store(oy, Ordering::SeqCst);
             self.width.store(owidth, Ordering::SeqCst);
@@ -1309,15 +1321,15 @@ impl AtomicRect {
 
     #[inline]
     pub fn or(&mut self, other: &AtomicRect) {
-        let width = self.width.load(Ordering::SeqCst);
-        let height = self.height.load(Ordering::SeqCst);
-
+        if !other.is_valid() {
+            return;
+        }
         let ox = other.x.load(Ordering::SeqCst);
         let oy = other.y.load(Ordering::SeqCst);
         let owidth = other.width.load(Ordering::SeqCst);
         let oheight = other.height.load(Ordering::SeqCst);
 
-        if width == 0 || height == 0 {
+        if !self.is_valid() {
             self.x.store(ox, Ordering::SeqCst);
             self.y.store(oy, Ordering::SeqCst);
             self.width.store(owidth, Ordering::SeqCst);
@@ -1380,6 +1392,21 @@ impl FromValue for AtomicRect {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
 }
+impl Into<AtomicRect> for (i32, i32, i32, i32) {
+    fn into(self) -> AtomicRect {
+        AtomicRect::new(self.0, self.1, self.2, self.3)
+    }
+}
+impl Into<AtomicRect> for Rect {
+    fn into(self) -> AtomicRect {
+        AtomicRect::new(self.x, self.y, self.width, self.height)
+    }
+}
+impl Into<Rect> for AtomicRect {
+    fn into(self) -> Rect {
+        Rect::new(self.x(), self.y(), self.width(), self.height())
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -1403,48 +1430,54 @@ mod tests {
     #[test]
     fn test_or_and() {
         ////// Test for `Rect`
-        let mut rect = Rect::new(0, 0, 50, 50);
+        let mut rect = Rect::new(10, 10, 50, 50);
         let other = Rect::new(30, 30, 70, 70);
         rect.or(&other);
-        assert_eq!(rect.x, 0);
-        assert_eq!(rect.y, 0);
-        assert_eq!(rect.width, 100);
-        assert_eq!(rect.height, 100);
+        rect.or(&(0, 0, 0, 0).into());
+        assert_eq!(rect.x, 10);
+        assert_eq!(rect.y, 10);
+        assert_eq!(rect.width, 90);
+        assert_eq!(rect.height, 90);
 
         let mut rect = Rect::new(0, 0, 50, 50);
         rect.and(&other);
+        rect.and(&(0, 0, 0, 0).into());
         assert_eq!(rect.x, 30);
         assert_eq!(rect.y, 30);
         assert_eq!(rect.width, 20);
         assert_eq!(rect.height, 20);
 
         ////// Test for `FRect`
-        let mut rect = FRect::new(0., 0., 50., 50.);
+        let mut rect = FRect::new(10., 10., 50., 50.);
         let other = FRect::new(30., 30., 70., 70.);
         rect.or(&other);
-        assert_eq!(rect.x, 0.);
-        assert_eq!(rect.y, 0.);
-        assert_eq!(rect.width, 100.);
-        assert_eq!(rect.height, 100.);
+        rect.or(&(0., 0., 0., 0.).into());
+        assert_eq!(rect.x, 10.);
+        assert_eq!(rect.y, 10.);
+        assert_eq!(rect.width, 90.);
+        assert_eq!(rect.height, 90.);
 
         let mut rect = FRect::new(0., 0., 50., 50.);
         rect.and(&other);
+        rect.and(&(0., 0., 0., 0.).into());
         assert_eq!(rect.x, 30.);
         assert_eq!(rect.y, 30.);
         assert_eq!(rect.width, 20.);
         assert_eq!(rect.height, 20.);
 
         ////// Test for `AtomicRect`
-        let mut rect = AtomicRect::new(0, 0, 50, 50);
+        let mut rect = AtomicRect::new(10, 10, 50, 50);
         let other = AtomicRect::new(30, 30, 70, 70);
         rect.or(&other);
-        assert_eq!(rect.x(), 0);
-        assert_eq!(rect.y(), 0);
-        assert_eq!(rect.width(), 100);
-        assert_eq!(rect.height(), 100);
+        rect.or(&(0, 0, 0, 0).into());
+        assert_eq!(rect.x(), 10);
+        assert_eq!(rect.y(), 10);
+        assert_eq!(rect.width(), 90);
+        assert_eq!(rect.height(), 90);
 
         let mut rect = AtomicRect::new(0, 0, 50, 50);
         rect.and(&other);
+        rect.and(&(0, 0, 0, 0).into());
         assert_eq!(rect.x(), 30);
         assert_eq!(rect.y(), 30);
         assert_eq!(rect.width(), 20);
