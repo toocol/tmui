@@ -4,10 +4,11 @@ use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::skia_safe::Surface;
 use std::{
     cell::{RefCell, RefMut},
-    ptr::NonNull,
+    ptr::NonNull, sync::Once,
 };
 
 thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
+static ONCE: Once = Once::new();
 
 /// Basic drawing Board with Skia surface.
 ///
@@ -23,6 +24,10 @@ pub struct Board {
 impl Board {
     #[inline]
     pub fn new(surface: Surface) -> Self {
+        if ONCE.is_completed() {
+            panic!("`Board can only construct once.`")
+        }
+        ONCE.call_once(|| {});
         Self {
             surface: RefCell::new(surface),
             element_list: RefCell::new(vec![]),
@@ -32,6 +37,11 @@ impl Board {
     #[inline]
     pub fn notify_update() {
         NOTIFY_UPDATE.with(|notify_update| *notify_update.borrow_mut() = true)
+    }
+
+    #[inline]
+    pub fn set_surface(&mut self, surface: Surface) {
+        self.surface = RefCell::new(surface);
     }
 
     #[inline]

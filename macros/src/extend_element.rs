@@ -91,11 +91,6 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn force_update(&mut self) {
-                self.set_property("invalidate", true.to_value());
-            }
-
-            #[inline]
             fn update_region(&mut self, rect: Rect) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
@@ -162,16 +157,6 @@ pub(crate) fn gen_element_trait_impl_clause(
             #[inline]
             fn validate(&mut self) {
                 self.#(#element_path).*.validate()
-            }
-
-            #[inline]
-            fn is_fixed_size(&self) -> bool {
-                self.#(#element_path).*.is_fixed_size()
-            }
-
-            #[inline]
-            fn unfixed_size(&mut self) {
-                self.#(#element_path).*.unfixed_size()
             }
         }
 

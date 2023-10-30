@@ -2,10 +2,10 @@
 use crate::platform::PlatformMacos;
 #[cfg(wayland_platform)]
 use crate::platform::PlatformWayland;
-#[cfg(x11_platform)]
-use crate::platform::PlatformX11;
 #[cfg(windows_platform)]
 use crate::platform::PlatformWin32;
+#[cfg(x11_platform)]
+use crate::platform::PlatformX11;
 use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
@@ -34,7 +34,13 @@ use std::{
     time::Instant,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
-use tlib::{actions::ActionHub, object::ObjectImpl, prelude::tokio_runtime, timer::TimerHub};
+use tlib::{
+    actions::ActionHub,
+    events::{downcast_event, EventType, ResizeEvent},
+    object::ObjectImpl,
+    prelude::tokio_runtime,
+    timer::TimerHub,
+};
 
 lazy_static! {
     pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
@@ -359,7 +365,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             timer_hub.check_timers();
             action_hub.process_multi_thread_actions();
             tlib::r#async::async_callbacks();
-            if let Ok(Message::Event(evt)) = input_receiver.try_recv() {
+            if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
+                if evt.type_() == EventType::Resize {
+                    evt = downcast_event::<ResizeEvent>(evt).unwrap();
+                }
                 window.dispatch_event(evt);
                 cpu_balance.add_payload();
             }

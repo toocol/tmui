@@ -12,7 +12,6 @@ use tlib::{
 pub struct Element {
     window_id: u16,
     rect: Rect,
-    fixed_size: bool,
     /// The region rect of element's coordinate was `Widget`.
     redraw_region: Region,
     redraw_region_f: FRegion,
@@ -51,11 +50,6 @@ pub trait ElementExt: 'static {
     ///
     /// Go to[`Function defination`](ElementExt::update) (Defined in [`ElementExt`])
     fn update(&mut self);
-
-    /// Mark element's invalidate field to true, and element will be redrawed immediately.
-    ///
-    /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
-    fn force_update(&mut self);
 
     /// Specified the region to redraw.
     ///
@@ -109,12 +103,6 @@ pub trait ElementExt: 'static {
 
     /// Go to[`Function defination`](ElementExt::validate) (Defined in [`ElementExt`])
     fn validate(&mut self);
-
-    /// Go to[`Function defination`](ElementExt::is_fixed_size) (Defined in [`ElementExt`])
-    fn is_fixed_size(&self) -> bool;
-
-    /// Go to[`Function defination`](ElementExt::unfixed_size) (Defined in [`ElementExt`])
-    fn unfixed_size(&mut self);
 }
 
 impl ElementExt for Element {
@@ -132,12 +120,6 @@ impl ElementExt for Element {
     fn update(&mut self) {
         self.set_property("invalidate", true.to_value());
         Board::notify_update()
-    }
-
-    #[inline]
-    fn force_update(&mut self) {
-        self.set_property("invalidate", true.to_value());
-        // TODO: invoke `Board`'s `invalidate_visual` obligatory.
     }
 
     #[inline]
@@ -183,13 +165,11 @@ impl ElementExt for Element {
 
     #[inline]
     fn set_fixed_width(&mut self, width: i32) {
-        self.fixed_size = true;
         self.rect.set_width(width)
     }
 
     #[inline]
     fn set_fixed_height(&mut self, height: i32) {
-        self.fixed_size = true;
         self.rect.set_height(height)
     }
 
@@ -214,16 +194,6 @@ impl ElementExt for Element {
     #[inline]
     fn validate(&mut self) {
         self.set_property("invalidate", false.to_value())
-    }
-
-    #[inline]
-    fn is_fixed_size(&self) -> bool {
-        self.fixed_size
-    }
-
-    #[inline]
-    fn unfixed_size(&mut self) {
-        self.fixed_size = false
     }
 }
 

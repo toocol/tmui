@@ -307,16 +307,12 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
                 self.#(#widget_path).*.resize(width, height);
                 emit!(#name::resize => self.size_changed(), self.size());
-                self.update_geometry();
-                self.update()
             }
 
             #[inline]
             fn width_request(&mut self, width: i32) {
                 self.#(#widget_path).*.width_request(width)
             }
-
-
 
             #[inline]
             fn height_request(&mut self, height: i32) {
@@ -325,8 +321,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
 
             #[inline]
             fn update_geometry(&mut self) {
-                self.window().layout_change(self);
-                self.update();
+                self.#(#widget_path).*.update_geometry()
             }
 
             #[inline]
