@@ -10,12 +10,13 @@ use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
-    graphics::{board::Board, cpu_balance::CpuBalance, frame::Frame},
+    graphics::board::Board,
     platform::{
         shared_channel::SharedChannel,
         window_context::{OutputSender, WindowContext},
         Message, PlatformContext, PlatformIpc, PlatformType,
     },
+    primitive::{cpu_balance::CpuBalance, frame::Frame},
     widget::WidgetImpl,
 };
 use lazy_static::lazy_static;
@@ -283,7 +284,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         // Setup the async runtime
         let _guard = tokio_runtime().enter();
 
-        let platform = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_ref().unwrap() };
+        let platform = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
 
         // Create and initialize the `ActionHub`.
         let mut action_hub = ActionHub::new();
@@ -295,19 +296,19 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         // Create the [`Backend`] based on the backend type specified by the user.
         let backend: Box<dyn Backend>;
+        let bitmap = platform.bitmap();
         match backend_type {
-            BackendType::Raster => backend = RasterBackend::new(platform.bitmap()),
+            BackendType::Raster => {
+                backend = RasterBackend::new(bitmap.width() as i32, bitmap.height() as i32)
+            }
             BackendType::OpenGL => backend = OpenGLBackend::new(platform.bitmap()),
         }
 
         // Prepare ApplicationWindow env: Create the `Board`.
-        let mut board = Box::new(Board::new(backend.surface()));
+        let mut board = Box::new(Board::new(platform.bitmap(), backend));
 
-        let mut window = ApplicationWindow::new(
-            platform_type,
-            backend.width() as i32,
-            backend.height() as i32,
-        );
+        let mut window =
+            ApplicationWindow::new(platform_type, board.width() as i32, board.height() as i32);
         window.set_board(board.as_mut());
         window.register_window(output_sender);
 
@@ -367,7 +368,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             tlib::r#async::async_callbacks();
             if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
                 if evt.type_() == EventType::Resize {
-                    evt = downcast_event::<ResizeEvent>(evt).unwrap();
+                    let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
+
+                    if resize_evt.width() > 0 && resize_evt.height() > 0 {
+                        platform.resize(resize_evt.width() as u32, resize_evt.height() as u32);
+                        board.resize(platform.bitmap())
+                    }
+
+                    evt = resize_evt;
                 }
                 window.dispatch_event(evt);
                 cpu_balance.add_payload();

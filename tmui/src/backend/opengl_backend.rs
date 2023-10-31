@@ -1,5 +1,5 @@
 use super::Backend;
-use crate::graphics::bitmap::Bitmap;
+use crate::primitive::bitmap::Bitmap;
 use crate::skia_safe::Surface;
 
 /// Backend for OpenGL,
@@ -12,22 +12,20 @@ pub struct OpenGLBackend {
 
 impl OpenGLBackend {
     pub fn new(buffer: Bitmap) -> Box<Self> {
-        Box::new(Self {
-            buffer,
-        })
+        Box::new(Self { buffer })
     }
 }
 
 impl Backend for OpenGLBackend {
+    fn resize(&mut self, _width: i32, _height: i32) {
+        todo!()
+    }
+
     fn surface(&self) -> Surface {
         todo!()
     }
 
-    fn width(&self) -> u32 {
-        self.buffer.width()
-    }
-
-    fn height(&self) -> u32 {
-        self.buffer.height()
+    fn image_info(&self) -> &tlib::skia_safe::ImageInfo {
+        todo!()
     }
 }

@@ -3,7 +3,7 @@ use super::{
     window_context::{OutputSender, WindowContext},
     window_process, Message, PlatformContext,
 };
-use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
+use crate::{application::PLATFORM_CONTEXT, primitive::bitmap::Bitmap};
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
@@ -142,6 +142,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             panic!("Invalid window context.")
         }
     }
+
+    #[inline]
+    fn redraw_suspend(&mut self) {
+    }
+
+    #[inline]
+    fn request_redraw(&mut self, _window: &tlib::winit::window::Window) {}
 
     #[inline]
     fn redraw(&mut self) {}

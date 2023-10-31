@@ -1,10 +1,11 @@
 use tlib::nonnull_mut;
 
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use crate::skia_safe::Surface;
+use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
 use std::{
     cell::{RefCell, RefMut},
-    ptr::NonNull, sync::Once,
+    ptr::NonNull,
+    sync::Once,
 };
 
 thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
@@ -17,18 +18,25 @@ static ONCE: Once = Once::new();
 /// Board contains a renderer method `invalidate_visual`, every frame will call this function automaticly and redraw the invalidated element.
 /// (All elements call it's `update()` method can set it's `invalidate` field to true, or call `force_update()` to invoke `invalidate_visual` directly)
 pub struct Board {
+    bitmap: Bitmap,
+    backend: Box<dyn Backend>,
     surface: RefCell<Surface>,
     element_list: RefCell<Vec<Option<NonNull<dyn ElementImpl>>>>,
 }
 
 impl Board {
     #[inline]
-    pub fn new(surface: Surface) -> Self {
+    pub fn new(bitmap: Bitmap, backend: Box<dyn Backend>) -> Self {
         if ONCE.is_completed() {
             panic!("`Board can only construct once.`")
         }
         ONCE.call_once(|| {});
+
+        let surface = backend.surface();
+
         Self {
+            bitmap,
+            backend,
             surface: RefCell::new(surface),
             element_list: RefCell::new(vec![]),
         }
@@ -40,8 +48,23 @@ impl Board {
     }
 
     #[inline]
-    pub fn set_surface(&mut self, surface: Surface) {
-        self.surface = RefCell::new(surface);
+    pub fn width(&self) -> u32 {
+        self.bitmap.width()
+    }
+
+    #[inline]
+    pub fn height(&self) -> u32 {
+        self.bitmap.height()
+    }
+
+    #[inline]
+    pub fn resize(&mut self, bitmap: Bitmap) {
+        self.surface().flush_submit_and_sync_cpu();
+        self.backend
+            .resize(bitmap.width() as i32, bitmap.height() as i32);
+
+        self.surface = RefCell::new(self.backend.surface());
+        self.bitmap = bitmap;
     }
 
     #[inline]
@@ -52,6 +75,11 @@ impl Board {
     #[inline]
     pub(crate) fn surface(&self) -> RefMut<Surface> {
         self.surface.borrow_mut()
+    }
+
+    #[inline]
+    pub fn set_surface(&mut self, surface: Surface) {
+        self.surface = RefCell::new(surface);
     }
 
     #[inline]
@@ -72,6 +100,14 @@ impl Board {
                         update = true;
                     }
                 }
+
+                self.surface().read_pixels(
+                    self.backend.image_info(),
+                    self.bitmap.get_pixels(),
+                    self.bitmap.row_bytes(),
+                    (0, 0),
+                );
+
                 *notify_update.borrow_mut() = false
             }
             update

@@ -91,6 +91,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
+    fn request_redraw(&mut self, window: &tlib::winit::window::Window) {}
+
     fn redraw(&mut self) {
         todo!()
     }

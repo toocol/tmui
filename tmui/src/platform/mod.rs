@@ -13,7 +13,7 @@ compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
 use std::sync::mpsc::Sender;
 
-use crate::graphics::bitmap::Bitmap;
+use crate::primitive::bitmap::Bitmap;
 pub use message::*;
 pub(crate) use platform_ipc::*;
 #[cfg(macos_platform)]
@@ -24,7 +24,7 @@ pub(crate) use platform_wayland::*;
 pub(crate) use platform_x11::*;
 #[cfg(windows_platform)]
 pub(crate) use platform_win32::*;
-use tlib::figure::Rect;
+use tlib::{figure::Rect, winit::window::Window};
 
 use self::window_context::WindowContext;
 
@@ -80,6 +80,12 @@ pub(crate) trait PlatformContext: 'static {
 
     /// The platform main function.
     fn platform_main(&mut self, window_context: WindowContext);
+
+    /// Suspend the redraw function.
+    fn redraw_suspend(&mut self);
+
+    /// Request to redraw the window.
+    fn request_redraw(&mut self, window: &Window);
 
     /// Redraw the window.
     fn redraw(&mut self);

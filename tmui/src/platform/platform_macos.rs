@@ -195,6 +195,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
+    fn request_redraw(&mut self, window: &tlib::winit::window::Window) {
+        window.request_redraw();
+    }
+
     fn redraw(&mut self) {
         unsafe {
             // Create NSImage by CGImage

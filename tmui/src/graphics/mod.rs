@@ -1,9 +1,6 @@
-pub mod bitmap;
 pub mod board;
-pub mod cpu_balance;
 pub mod drawing_context;
 pub mod element;
-pub mod frame;
 pub mod painter;
 
 #[cfg(test)]

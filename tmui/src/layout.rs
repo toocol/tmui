@@ -80,14 +80,6 @@ impl SizeCalculation for dyn WidgetImpl {
             return self.size();
         }
         let mut resized = false;
-        println!(
-            "Widget name: {}, hexpand: {}, vexpand: {}, fixed_width: {}, fixed_height: {}",
-            self.name(),
-            self.hexpand(),
-            self.vexpand(),
-            self.fixed_width(),
-            self.fixed_height()
-        );
 
         if self.hexpand() && !self.fixed_width() {
             // Use `hscale` to determine widget's width:
@@ -278,7 +270,7 @@ impl LayoutManager {
         Self::child_size_probe(self.window_size, widget.size(), widget);
 
         // Deal with the position
-        Self::child_position_probe(None, None, Some(widget))
+        Self::child_position_probe(None, None, Some(widget));
     }
 
     pub(crate) fn child_size_probe(

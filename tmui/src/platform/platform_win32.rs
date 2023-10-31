@@ -10,7 +10,7 @@ use crate::winit::{
     platform::windows::WindowExtWindows,
     window::WindowBuilder,
 };
-use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
+use crate::{application::PLATFORM_CONTEXT, primitive::bitmap::Bitmap};
 use std::{
     mem::size_of,
     os::raw::c_void,
@@ -20,6 +20,7 @@ use std::{
         Arc,
     },
 };
+use log::info;
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
 use tlib::figure::Rect;
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
@@ -28,6 +29,7 @@ pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Co
     title: String,
     width: u32,
     height: u32,
+    redraw_suspend: bool,
 
     bitmap: Option<Bitmap>,
     // The memory area of pixels managed by `PlatformWin32`.
@@ -50,6 +52,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
             title: title.to_string(),
             width,
             height,
+            redraw_suspend: false,
             bitmap: None,
             _buffer: None,
             hwnd: None,
@@ -119,7 +122,19 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
-        todo!()
+
+        // Recreate the bitmap
+        match self.master {
+            Some(ref _master) => {}
+            None => {
+                let mut buffer = vec![0u8; (self.width * self.height * 4) as usize];
+                let bitmap =
+                    Bitmap::new(buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
+
+                self._buffer = Some(buffer);
+                self.bitmap = Some(bitmap);
+            }
+        }
     }
 
     #[inline]
@@ -177,13 +192,32 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
     }
 
+    #[inline]
+    fn redraw_suspend(&mut self) {
+        self.redraw_suspend = true;
+    }
+
+    #[inline]
+    fn request_redraw(&mut self, _window: &tlib::winit::window::Window) {
+        self.redraw_suspend = false;
+        let hwnd = self.hwnd.unwrap();
+
+        unsafe {
+            InvalidateRect(hwnd, None, false);
+        }
+    }
+
     fn redraw(&mut self) {
+        if self.redraw_suspend {
+            info!("Redraw suspend !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            return;
+        }
+        if self.width == 0 || self.height == 0 {
+            return;
+        } 
         unsafe {
             let hwnd = self.hwnd.unwrap();
 
-            InvalidateRect(hwnd, None, true);
-            let mut ps = PAINTSTRUCT::default();
-            let hdc = BeginPaint(hwnd, &mut ps);
             let width = self.width();
             let height = self.height();
 
@@ -195,6 +229,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             bmi.bmiHeader.biPlanes = 1;
             bmi.bmiHeader.biBitCount = 32;
             bmi.bmiHeader.biCompression = BI_RGB;
+
+            let mut ps = PAINTSTRUCT::default();
+            let hdc = BeginPaint(hwnd, &mut ps);
 
             StretchDIBits(
                 hdc,
@@ -213,6 +250,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             );
 
             EndPaint(self.hwnd, &ps);
+
+            ReleaseDC(hwnd, hdc);
         }
     }
 
