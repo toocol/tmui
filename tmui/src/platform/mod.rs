@@ -3,7 +3,6 @@ pub(crate) mod platform_macos;
 pub(crate) mod platform_wayland;
 pub(crate) mod platform_win32;
 pub(crate) mod platform_x11;
-pub(crate) mod shared_channel;
 
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");

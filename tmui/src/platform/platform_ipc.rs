@@ -1,8 +1,5 @@
-use super::{
-    shared_channel::{self, SharedChannel},
-    PlatformContext,
-};
-use crate::{application::PLATFORM_CONTEXT, primitive::{bitmap::Bitmap, Message}, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
+use super::PlatformContext;
+use crate::{application::PLATFORM_CONTEXT, primitive::{bitmap::Bitmap, Message, shared_channel::{SharedChannel, self}}, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},

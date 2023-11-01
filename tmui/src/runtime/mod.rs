@@ -10,9 +10,9 @@ use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::{shared_channel::SharedChannel, PlatformType},
+    platform::PlatformType,
     prelude::*,
-    primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
+    primitive::{cpu_balance::CpuBalance, frame::Frame, shared_channel::SharedChannel, Message},
 };
 use log::debug;
 use std::{

@@ -1,11 +1,11 @@
 #![cfg(target_os = "macos")]
-use super::{
-    shared_channel::{self, SharedChannel},
-    Message, PlatformContext,
-};
+use super::{Message, PlatformContext};
 use crate::{
     application::PLATFORM_CONTEXT,
-    primitive::bitmap::Bitmap,
+    primitive::{
+        bitmap::Bitmap,
+        shared_channel::{self, SharedChannel},
+    },
     runtime::{
         window_context::{OutputSender, WindowContext},
         window_process::WindowProcess,

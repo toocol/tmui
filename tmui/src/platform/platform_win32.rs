@@ -1,11 +1,11 @@
 #![cfg(target_os = "windows")]
-use super::{
-    shared_channel::{self, SharedChannel},
-    PlatformContext,
-};
+use super::PlatformContext;
 use crate::{
     application::PLATFORM_CONTEXT,
-    primitive::bitmap::Bitmap,
+    primitive::{
+        bitmap::Bitmap,
+        shared_channel::{self, SharedChannel},
+    },
     runtime::{
         window_context::{OutputSender, WindowContext},
         window_process,
@@ -125,9 +125,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         match self.master {
             Some(ref _master) => {}
-            None => {
-                bitmap_guard.resize(width, height)
-            }
+            None => bitmap_guard.resize(width, height),
         }
     }
 

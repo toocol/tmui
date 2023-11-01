@@ -1,11 +1,17 @@
 #![cfg(free_unix)]
+use super::PlatformContext;
+use crate::{
+    primitive::{
+        bitmap::Bitmap,
+        shared_channel::{self, SharedChannel},
+    },
+    runtime::window_context::WindowContext,
+};
 use std::sync::{mpsc::Sender, Arc, RwLock};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
-use crate::{primitive::bitmap::Bitmap, runtime::window_context::WindowContext};
 
-use super::{shared_channel::SharedChannel, PlatformContext};
-
-pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
+pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>
+{
     title: String,
     width: u32,
     height: u32,

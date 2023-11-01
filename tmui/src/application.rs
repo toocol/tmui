@@ -10,8 +10,8 @@ use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
     event_hints::event_hints,
-    platform::{shared_channel::SharedChannel, PlatformContext, PlatformIpc, PlatformType},
-    primitive::{cpu_balance::CpuBalance, Message},
+    platform::{PlatformContext, PlatformIpc, PlatformType},
+    primitive::{cpu_balance::CpuBalance, Message, shared_channel::SharedChannel},
     runtime::{ui_runtime, window_context::WindowContext},
 };
 use lazy_static::lazy_static;
