@@ -42,6 +42,7 @@ pub struct Painter<'a> {
 
 impl<'a> Painter<'a> {
     /// The constructer to build the Painter.
+    #[inline]
     pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
         let base_offset = ApplicationWindow::window_of(widget.window_id()).base_offset();
         let rect = widget.rect();

@@ -1,20 +1,19 @@
-pub(crate) mod message;
 pub(crate) mod platform_ipc;
 pub(crate) mod platform_macos;
 pub(crate) mod platform_wayland;
 pub(crate) mod platform_win32;
 pub(crate) mod platform_x11;
-pub(crate) mod shared_channel;
-pub(crate) mod window_context;
-pub(crate) mod window_process;
 
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
+use std::sync::{Arc, RwLock};
 use std::sync::mpsc::Sender;
 
-use crate::graphics::bitmap::Bitmap;
-pub use message::*;
+use crate::primitive::{bitmap::Bitmap, Message};
+use crate::runtime::window_context::WindowContext;
+use tlib::{figure::Rect, winit::window::Window};
+
 pub(crate) use platform_ipc::*;
 #[cfg(macos_platform)]
 pub(crate) use platform_macos::*;
@@ -24,9 +23,6 @@ pub(crate) use platform_wayland::*;
 pub(crate) use platform_x11::*;
 #[cfg(windows_platform)]
 pub(crate) use platform_win32::*;
-use tlib::figure::Rect;
-
-use self::window_context::WindowContext;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -67,7 +63,7 @@ pub(crate) trait PlatformContext: 'static {
     fn resize(&mut self, width: u32, height: u32);
 
     /// Get current effective `Bitmap` of platform context.
-    fn bitmap(&self) -> Bitmap;
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>>;
 
     /// Set the `input_sender` to transfer user input.
     fn set_input_sender(&mut self, input_sender: Sender<Message>);
@@ -80,6 +76,9 @@ pub(crate) trait PlatformContext: 'static {
 
     /// The platform main function.
     fn platform_main(&mut self, window_context: WindowContext);
+
+    /// Request to redraw the window.
+    fn request_redraw(&mut self, window: &Window);
 
     /// Redraw the window.
     fn redraw(&mut self);

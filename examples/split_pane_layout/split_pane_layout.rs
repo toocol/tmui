@@ -36,6 +36,9 @@ impl ObjectImpl for SplitPaneLayout {
         let mut children_mut = self.children_mut();
         let label = children_mut[0].downcast_mut::<Label>().unwrap();
         self.label = NonNull::new(label);
+
+        self.set_hexpand(true);
+        self.set_vexpand(true);
     }
 }
 

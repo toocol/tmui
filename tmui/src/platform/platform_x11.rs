@@ -1,18 +1,22 @@
 #![cfg(free_unix)]
-use std::sync::{mpsc::Sender, Arc};
+use super::PlatformContext;
+use crate::{
+    primitive::{
+        bitmap::Bitmap,
+        shared_channel::{self, SharedChannel},
+    },
+    runtime::window_context::WindowContext,
+};
+use std::sync::{mpsc::Sender, Arc, RwLock};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
-use crate::graphics::bitmap::Bitmap;
-use super::{shared_channel::SharedChannel, PlatformContext};
 
 pub(crate) struct PlatformX11<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
     width: u32,
     height: u32,
 
-    bitmap: Option<Bitmap>,
+    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
-    // The memory area of pixels managed by `PlatformWin32`.
-    _buffer: Option<Vec<u8>>,
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -26,7 +30,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformX
             width,
             height,
             bitmap: None,
-            _buffer: None,
             master: None,
             user_ipc_event_sender: None,
         }
@@ -71,7 +74,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn bitmap(&self) -> crate::graphics::bitmap::Bitmap {
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
         todo!()
     }
 
@@ -83,13 +86,15 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn create_window(&mut self) -> super::window_context::WindowContext {
+    fn create_window(&mut self) -> WindowContext {
         todo!()
     }
 
-    fn platform_main(&mut self, window_context: super::window_context::WindowContext) {
+    fn platform_main(&mut self, window_context: WindowContext) {
         todo!()
     }
+
+    fn request_redraw(&mut self, window: &tlib::winit::window::Window) {}
 
     fn redraw(&mut self) {
         todo!()

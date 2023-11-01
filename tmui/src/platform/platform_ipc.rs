@@ -1,13 +1,9 @@
-use super::{
-    shared_channel::{self, SharedChannel},
-    window_context::{OutputSender, WindowContext},
-    window_process, Message, PlatformContext,
-};
-use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
+use super::PlatformContext;
+use crate::{application::PLATFORM_CONTEXT, primitive::{bitmap::Bitmap, Message, shared_channel::{SharedChannel, self}}, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
-    Arc,
+    Arc, RwLock,
 };
 use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
 use tlib::figure::Rect;
@@ -16,7 +12,7 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
     title: String,
     region: Rect,
 
-    bitmap: Option<Bitmap>,
+    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     input_sender: Option<Sender<Message>>,
 
@@ -66,13 +62,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let front_bitmap = Bitmap::new(slave.buffer_raw_pointer(), slave.width(), slave.height());
+        let front_bitmap = Bitmap::from_raw_pointer(slave.buffer_raw_pointer(), slave.width(), slave.height());
 
-        self.region = slave.region(self.shared_widget_id.unwrap()).expect(
-            "The `SharedWidget` with id `{}` was not exist."
-        );
+        self.region = slave
+            .region(self.shared_widget_id.unwrap())
+            .expect("The `SharedWidget` with id `{}` was not exist.");
 
-        self.bitmap = Some(front_bitmap);
+        self.bitmap = Some(Arc::new(RwLock::new(front_bitmap)));
     }
 
     #[inline]
@@ -103,8 +99,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn bitmap(&self) -> Bitmap {
-        self.bitmap.unwrap()
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
+        self.bitmap.as_ref().unwrap().clone()
     }
 
     #[inline]
@@ -142,6 +138,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             panic!("Invalid window context.")
         }
     }
+
+    #[inline]
+    fn request_redraw(&mut self, _window: &tlib::winit::window::Window) {}
 
     #[inline]
     fn redraw(&mut self) {}

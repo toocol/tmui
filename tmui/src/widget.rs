@@ -6,7 +6,7 @@ use crate::{
         painter::Painter,
     },
     layout::LayoutManager,
-    platform::Message,
+    primitive::Message,
     prelude::*,
 };
 use derivative::Derivative;
@@ -997,12 +997,14 @@ impl WidgetExt for Widget {
             self.set_property("height", height.to_value());
             self.fixed_height = false;
         }
+        if self.id() != self.window_id() {
+            self.update_geometry();
+        }
     }
 
     #[inline]
     fn width_request(&mut self, width: i32) {
         self.set_property("width", width.to_value());
-        self.set_property("width-request", width.to_value());
         self.fixed_width = true;
         if let Some(parent) = self.get_parent_ref() {
             self.fixed_width_ration = width as f32 / parent.size().width() as f32;
@@ -1012,7 +1014,6 @@ impl WidgetExt for Widget {
     #[inline]
     fn height_request(&mut self, height: i32) {
         self.set_property("height", height.to_value());
-        self.set_property("height-request", height.to_value());
         self.fixed_height = true;
         if let Some(parent) = self.get_parent_ref() {
             self.fixed_height_ration = height as f32 / parent.size().height() as f32;
@@ -1021,7 +1022,8 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn update_geometry(&mut self) {
-        // implemented in proc-macro
+        self.window().layout_change(self);
+        self.update();
     }
 
     #[inline]

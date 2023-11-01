@@ -2,8 +2,10 @@ use crate::{
     application::PLATFORM_CONTEXT,
     graphics::{board::Board, element::HierachyZ},
     layout::LayoutManager,
-    platform::{window_context::OutputSender, Message, PlatformType},
+    platform::PlatformType,
     prelude::*,
+    runtime::window_context::OutputSender,
+    primitive::Message,
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
 use log::debug;
@@ -17,7 +19,7 @@ use std::{
 };
 use tlib::{
     connect, emit,
-    events::{to_key_event, to_mouse_event, Event, EventType},
+    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
@@ -237,11 +239,17 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn dispatch_event(&self, evt: Event) {
+    pub(crate) fn dispatch_event(&mut self, evt: Event) {
         match evt.type_() {
+            // Window Resize.
+            EventType::Resize => {
+                let evt = downcast_event::<ResizeEvent>(evt).unwrap();
+                self.resize(Some(evt.width()), Some(evt.height()));
+            }
+
             // Mouse pressed.
             EventType::MouseButtonPress => {
-                let mut evt = to_mouse_event(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -260,7 +268,7 @@ impl ApplicationWindow {
 
             // Mouse released.
             EventType::MouseButtonRelease => {
-                let mut evt = to_mouse_event(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -279,7 +287,7 @@ impl ApplicationWindow {
 
             // Mouse double clicked.
             EventType::MouseButtonDoubleClick => {
-                let mut evt = to_mouse_event(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -298,7 +306,7 @@ impl ApplicationWindow {
 
             // Mouse moved.
             EventType::MouseMove => {
-                let mut evt = to_mouse_event(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -320,7 +328,7 @@ impl ApplicationWindow {
 
             // Mouse wheeled.
             EventType::MouseWhell => {
-                let mut evt = to_mouse_event(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -343,7 +351,7 @@ impl ApplicationWindow {
 
             // Key pressed.
             EventType::KeyPress => {
-                let evt = to_key_event(evt).unwrap();
+                let evt = downcast_event::<KeyEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -359,7 +367,7 @@ impl ApplicationWindow {
 
             // Key released.
             EventType::KeyRelease => {
-                let evt = to_key_event(evt).unwrap();
+                let evt = downcast_event::<KeyEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -375,7 +383,6 @@ impl ApplicationWindow {
 
             EventType::FocusIn => {}
             EventType::FocusOut => {}
-            EventType::Resize => {}
             EventType::Moved => {}
             EventType::DroppedFile => {}
             EventType::HoveredFile => {}

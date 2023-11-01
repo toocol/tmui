@@ -5,7 +5,7 @@ use tlib::Object;
 use tmui::{
     application::Application,
     application_window::ApplicationWindow,
-    widget::{WidgetExt, WidgetImplExt},
+    widget::WidgetImplExt,
 };
 
 fn main() {
@@ -23,9 +23,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut split_pane: Box<SplitPaneLayout> = Object::new(&[]);
-    split_pane.width_request(window.size().width());
-    split_pane.height_request(window.size().height());
+    let split_pane: Box<SplitPaneLayout> = Object::new(&[]);
 
     window.child(split_pane);
 }

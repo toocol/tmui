@@ -1,4 +1,3 @@
-use super::{Message, PlatformContext};
 use crate::{
     cursor::Cursor,
     winit::{
@@ -6,7 +5,7 @@ use crate::{
         event::{Event, WindowEvent},
         event_loop::EventLoop,
         window::Window,
-    },
+    }, platform::PlatformContext, primitive::Message,
 };
 use log::debug;
 use once_cell::sync::Lazy;
@@ -22,7 +21,7 @@ use std::{
 };
 use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
 use tlib::{
-    events::{DeltaType, EventType, KeyEvent, MouseEvent},
+    events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
     global::to_static,
     namespace::{KeyCode, KeyboardModifier, MouseButton},
@@ -113,6 +112,15 @@ impl WindowProcess {
             }
 
             match event {
+                // Window resized event.
+                Event::WindowEvent {
+                    event: WindowEvent::Resized(size),
+                    ..
+                } => {
+                    let evt = ResizeEvent::new(size.width as i32, size.height as i32);
+                    input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                }
+
                 // Window close event.
                 Event::WindowEvent {
                     event: WindowEvent::CloseRequested,
@@ -301,7 +309,8 @@ impl WindowProcess {
                         "vscyn track: {}ms",
                         ins.elapsed().as_micros() as f64 / 1000.
                     );
-                    window.request_redraw();
+                    // window.request_redraw();
+                    platform_context.request_redraw(&window);
                 }
 
                 // SetCursorShape event.

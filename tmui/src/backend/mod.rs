@@ -1,6 +1,8 @@
 pub mod opengl_backend;
 pub mod raster_backend;
 
+use tlib::skia_safe::ImageInfo;
+
 use crate::skia_safe::Surface;
 
 #[repr(C)]
@@ -13,9 +15,9 @@ pub enum BackendType {
 
 /// Renderer backend, provide skia Surface
 pub trait Backend: 'static {
+    fn resize(&mut self, width: i32, height: i32);
+
     fn surface(&self) -> Surface;
 
-    fn width(&self) -> u32;
-
-    fn height(&self) -> u32;
+    fn image_info(&self) -> &ImageInfo;
 }

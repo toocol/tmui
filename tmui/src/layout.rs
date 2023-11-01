@@ -76,6 +76,9 @@ pub(crate) trait SizeCalculation {
 }
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, parent_size: Size) -> Size {
+        if self.id() == self.window_id() {
+            return self.size();
+        }
         let mut resized = false;
 
         if self.hexpand() && !self.fixed_width() {
@@ -128,6 +131,9 @@ impl SizeCalculation for dyn WidgetImpl {
     }
 
     fn calc_node_size(&mut self, child_size: Size) {
+        if self.id() == self.window_id() {
+            return;
+        }
         let size = self.size();
         let mut resized = false;
 
@@ -151,6 +157,9 @@ impl SizeCalculation for dyn WidgetImpl {
     }
 
     fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size) {
+        if self.id() == self.window_id() {
+            return;
+        }
         let size = self.size();
         let mut resized = false;
 
@@ -261,7 +270,7 @@ impl LayoutManager {
         Self::child_size_probe(self.window_size, widget.size(), widget);
 
         // Deal with the position
-        Self::child_position_probe(None, None, Some(widget))
+        Self::child_position_probe(None, None, Some(widget));
     }
 
     pub(crate) fn child_size_probe(
@@ -274,6 +283,9 @@ impl LayoutManager {
             widget.name(),
             parent_size
         );
+        widget.update();
+        widget.set_rerender_styles(true);
+
         let raw_child = widget.get_raw_child();
         let widget_ptr = widget.as_ptr_mut();
         let composition = widget.composition();
@@ -330,12 +342,6 @@ impl LayoutManager {
                             Self::child_size_probe(window_size, size, *child);
                         });
                         child_size = widget.size();
-                        if child_size.width() == 0 || child_size.height() == 0 {
-                            panic!(
-                                "`{}` FixedContainer should specified the size, the width or height can't be 0.",
-                                widget.type_name()
-                            );
-                        }
                     }
                     _ => unimplemented!(),
                 }

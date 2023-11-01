@@ -16,43 +16,8 @@ pub trait EventTrait: 'static + AsAny + Debug + Sync + Send {
 }
 
 #[inline]
-pub fn to_key_event(evt: Event) -> Result<Box<KeyEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<KeyEvent>()
-}
-
-#[inline]
-pub fn to_mouse_event(evt: Event) -> Result<Box<MouseEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<MouseEvent>()
-}
-
-#[inline]
-pub fn to_focus_event(evt: Event) -> Result<Box<FocusEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<FocusEvent>()
-}
-
-#[inline]
-pub fn to_resize_event(evt: Event) -> Result<Box<ResizeEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<ResizeEvent>()
-}
-
-#[inline]
-pub fn to_moved_event(evt: Event) -> Result<Box<MovedEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<MovedEvent>()
-}
-
-#[inline]
-pub fn to_file_event(evt: Event) -> Result<Box<FileEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<FileEvent>()
-}
-
-#[inline]
-pub fn to_receive_character_event(evt: Event) -> Result<Box<ReceiveCharacterEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<ReceiveCharacterEvent>()
-}
-
-#[inline]
-pub fn to_input_method_event(evt: Event) -> Result<Box<InputMethodEvent>, Box<dyn Any>> {
-    evt.as_any_boxed().downcast::<InputMethodEvent>()
+pub fn downcast_event<T: EventTrait>(evt: Event) -> Result<Box<T>, Box<dyn Any>> {
+    evt.as_any_boxed().downcast::<T>()
 }
 
 #[repr(u8)]
@@ -106,6 +71,7 @@ impl From<u8> for EventType {
     }
 }
 impl AsNumeric<u8> for EventType {
+    #[inline]
     fn as_numeric(&self) -> u8 {
         *self as u8
     }
@@ -120,6 +86,7 @@ pub enum DeltaType {
     Line,
 }
 impl From<u8> for DeltaType {
+    #[inline]
     fn from(value: u8) -> Self {
         match value {
             0 => Self::Pixel,
@@ -129,6 +96,7 @@ impl From<u8> for DeltaType {
     }
 }
 impl AsNumeric<u8> for DeltaType {
+    #[inline]
     fn as_numeric(&self) -> u8 {
         *self as u8
     }
@@ -147,6 +115,7 @@ pub struct KeyEvent {
 }
 impl_as_any!(KeyEvent);
 impl KeyEvent {
+    #[inline]
     pub fn new(
         type_: EventType,
         key_code: KeyCode,
@@ -193,14 +162,17 @@ impl EventTrait for KeyEvent {
     }
 }
 impl StaticType for KeyEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("KeyEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         0
     }
 
+    #[inline]
     fn dyn_bytes_len(&self) -> usize {
         EventType::bytes_len()
             + KeyCode::bytes_len()
@@ -235,10 +207,12 @@ impl ToBytes for KeyEvent {
     }
 }
 impl ToValue for KeyEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
@@ -274,6 +248,7 @@ impl FromBytes for KeyEvent {
     }
 }
 impl FromValue for KeyEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -296,6 +271,7 @@ pub struct MouseEvent {
 }
 impl_as_any!(MouseEvent);
 impl MouseEvent {
+    #[inline]
     pub fn new(
         type_: EventType,
         position: Position,
@@ -371,10 +347,12 @@ impl EventTrait for MouseEvent {
 }
 
 impl StaticType for MouseEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("MouseEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         EventType::bytes_len()
             + MouseButton::bytes_len()
@@ -418,10 +396,12 @@ impl ToBytes for MouseEvent {
     }
 }
 impl ToValue for MouseEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
@@ -472,6 +452,7 @@ impl FromBytes for MouseEvent {
     }
 }
 impl FromValue for MouseEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -486,6 +467,7 @@ pub struct FocusEvent {
 }
 impl_as_any!(FocusEvent);
 impl FocusEvent {
+    #[inline]
     pub fn new(focus_in: bool) -> Self {
         Self {
             type_: if focus_in {
@@ -504,15 +486,18 @@ impl EventTrait for FocusEvent {
 }
 
 impl StaticType for FocusEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("FocusEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         size_of::<bool>()
     }
 }
 impl ToBytes for FocusEvent {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         match self.type_ {
             EventType::FocusIn => true.to_bytes(),
@@ -522,21 +507,25 @@ impl ToBytes for FocusEvent {
     }
 }
 impl ToValue for FocusEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
 }
 impl FromBytes for FocusEvent {
+    #[inline]
     fn from_bytes(data: &[u8], len: usize) -> Self {
         let focus_in = bool::from_bytes(data, len);
         Self::new(focus_in)
     }
 }
 impl FromValue for FocusEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -552,6 +541,7 @@ pub struct ResizeEvent {
 }
 impl_as_any!(ResizeEvent);
 impl ResizeEvent {
+    #[inline]
     pub fn new(width: i32, height: i32) -> Self {
         Self {
             type_: EventType::Resize,
@@ -582,15 +572,18 @@ impl EventTrait for ResizeEvent {
 }
 
 impl StaticType for ResizeEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("ResizeEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         EventType::bytes_len() + Size::bytes_len()
     }
 }
 impl ToBytes for ResizeEvent {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = self.type_.to_bytes();
 
@@ -600,10 +593,12 @@ impl ToBytes for ResizeEvent {
     }
 }
 impl ToValue for ResizeEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
@@ -622,6 +617,7 @@ impl FromBytes for ResizeEvent {
     }
 }
 impl FromValue for ResizeEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -668,15 +664,18 @@ impl EventTrait for MovedEvent {
 }
 
 impl StaticType for MovedEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("MovedEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         EventType::bytes_len() + Point::bytes_len()
     }
 }
 impl ToBytes for MovedEvent {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = self.type_.to_bytes();
 
@@ -686,10 +685,12 @@ impl ToBytes for MovedEvent {
     }
 }
 impl ToValue for MovedEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
@@ -709,6 +710,7 @@ impl FromBytes for MovedEvent {
     }
 }
 impl FromValue for MovedEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -755,16 +757,19 @@ impl FileEvent {
     }
 }
 impl EventTrait for FileEvent {
+    #[inline]
     fn type_(&self) -> EventType {
         self.type_
     }
 }
 
 impl StaticType for FileEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("FileEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         EventType::bytes_len() + PathBuf::bytes_len()
     }
@@ -788,6 +793,7 @@ impl StaticType for FileEvent {
     }
 }
 impl ToBytes for FileEvent {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = self.type_.to_bytes();
 
@@ -799,10 +805,12 @@ impl ToBytes for FileEvent {
     }
 }
 impl ToValue for FileEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
@@ -824,6 +832,7 @@ impl FromBytes for FileEvent {
     }
 }
 impl FromValue for FileEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -853,21 +862,25 @@ impl ReceiveCharacterEvent {
     }
 }
 impl EventTrait for ReceiveCharacterEvent {
+    #[inline]
     fn type_(&self) -> EventType {
         self.type_
     }
 }
 
 impl StaticType for ReceiveCharacterEvent {
+    #[inline]
     fn static_type() -> Type {
         Type::from_name("ReceiveCharacterEvent")
     }
 
+    #[inline]
     fn bytes_len() -> usize {
         EventType::bytes_len() + char::bytes_len()
     }
 }
 impl ToBytes for ReceiveCharacterEvent {
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = self.type_.to_bytes();
 
@@ -877,10 +890,12 @@ impl ToBytes for ReceiveCharacterEvent {
     }
 }
 impl ToValue for ReceiveCharacterEvent {
+    #[inline]
     fn to_value(&self) -> Value {
         Value::new(self)
     }
 
+    #[inline]
     fn value_type(&self) -> Type {
         Self::static_type()
     }
@@ -900,6 +915,7 @@ impl FromBytes for ReceiveCharacterEvent {
     }
 }
 impl FromValue for ReceiveCharacterEvent {
+    #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
@@ -947,7 +963,7 @@ mod tests {
             KeyboardModifier::AltModifier,
             "a",
         ));
-        let key_event = to_key_event(evt).unwrap();
+        let key_event = downcast_event::<KeyEvent>(evt).unwrap();
         assert_eq!(key_event.type_, EventType::KeyPress);
         assert_eq!(key_event.key_code, KeyCode::KeyA);
         assert_eq!(key_event.name(), KeyCode::KeyA.name());
@@ -963,7 +979,7 @@ mod tests {
             Point::new(100, 0),
             DeltaType::Line,
         ));
-        let mouse_event = to_mouse_event(evt).unwrap();
+        let mouse_event = downcast_event::<MouseEvent>(evt).unwrap();
         assert_eq!(mouse_event.type_, EventType::MouseButtonPress);
         assert_eq!(mouse_event.position, (234, 12));
         assert_eq!(mouse_event.mouse_button, MouseButton::LeftButton);
@@ -975,36 +991,36 @@ mod tests {
         assert_eq!(mouse_event.delta, Point::new(100, 0));
 
         let evt: Event = Box::new(FocusEvent::new(true));
-        let focus_event = to_focus_event(evt).unwrap();
+        let focus_event = downcast_event::<FocusEvent>(evt).unwrap();
         assert_eq!(focus_event.type_, EventType::FocusIn);
 
         let evt: Event = Box::new(ResizeEvent::new(225, 150));
-        let resize_evt = to_resize_event(evt).unwrap();
+        let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
         assert_eq!(resize_evt.type_, EventType::Resize);
         assert_eq!(resize_evt.width(), 225);
         assert_eq!(resize_evt.height(), 150);
 
         let evt: Event = Box::new(MovedEvent::new(290, 15));
-        let moved_evt = to_moved_event(evt).unwrap();
+        let moved_evt = downcast_event::<MovedEvent>(evt).unwrap();
         assert_eq!(moved_evt.type_, EventType::Moved);
         assert_eq!(moved_evt.x(), 290);
         assert_eq!(moved_evt.y(), 15);
 
         let path = "C:\\Windows\\System".into();
         let evt: Event = Box::new(FileEvent::dropped(path));
-        let file_evt = to_file_event(evt).unwrap();
+        let file_evt = downcast_event::<FileEvent>(evt).unwrap();
         let path: Option<PathBuf> = Some("C:\\Windows\\System".into());
         assert_eq!(file_evt.type_, EventType::DroppedFile);
         assert_eq!(file_evt.path, path);
 
         let evt: Event = Box::new(ReceiveCharacterEvent::new('好'));
-        let receive_char_evt = to_receive_character_event(evt).unwrap();
+        let receive_char_evt = downcast_event::<ReceiveCharacterEvent>(evt).unwrap();
         assert_eq!(receive_char_evt.type_, EventType::ReceivedCharacter);
         assert_eq!(receive_char_evt.c, '好');
 
         let ime = Ime::Preedit("a b".to_string(), Some((3, 3)));
         let evt: Event = Box::new(InputMethodEvent::new(ime.clone()));
-        let ime_event = to_input_method_event(evt).unwrap();
+        let ime_event = downcast_event::<InputMethodEvent>(evt).unwrap();
         assert_eq!(ime_event.type_, EventType::InputMethod);
         assert_eq!(ime_event.ime, ime);
     }

@@ -5,7 +5,7 @@ pub struct Frame {
     /// Frames of the same second have the same id.
     id: u64,
     /// Nth frame in the same second, count from 1.
-    nth: u8,
+    nth: u16,
     /// The timestamp when the frame was created.
     timestamp: u64,
 }
@@ -43,7 +43,7 @@ impl Frame {
 
     /// Nth frame in the same second, count from 1.
     #[inline]
-    pub fn nth(&self) -> u8 {
+    pub fn nth(&self) -> u16 {
         self.nth
     }
 
