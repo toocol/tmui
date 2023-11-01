@@ -1,10 +1,16 @@
 #![cfg(target_os = "macos")]
 use super::{
     shared_channel::{self, SharedChannel},
-    window_context::{OutputSender, WindowContext},
-    window_process, Message, PlatformContext,
+    Message, PlatformContext,
 };
-use crate::{application::PLATFORM_CONTEXT, graphics::bitmap::Bitmap};
+use crate::{
+    application::PLATFORM_CONTEXT,
+    primitive::bitmap::Bitmap,
+    runtime::{
+        window_context::{OutputSender, WindowContext},
+        window_process::WindowProcess,
+    },
+};
 use cocoa::{
     appkit::{
         NSApp, NSApplication, NSApplicationActivationPolicy::NSApplicationActivationPolicyRegular,
@@ -20,13 +26,10 @@ use core_graphics::{
     image::CGImage,
 };
 use objc::*;
-use std::{
-    ffi::c_void,
-    sync::{
-        atomic::Ordering,
-        mpsc::{channel, Sender},
-        Arc, RwLock
-    },
+use std::sync::{
+    atomic::Ordering,
+    mpsc::{channel, Sender},
+    Arc, RwLock,
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
 use tlib::winit::{
@@ -40,6 +43,7 @@ pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Co
     title: String,
     width: u32,
     height: u32,
+    resized: bool,
 
     bitmap: Option<Arc<RwLock<Bitmap>>>,
     input_sender: Option<Sender<Message>>,
@@ -60,6 +64,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
             title: title.to_string(),
             width,
             height,
+            resized: false,
             bitmap: None,
             ns_window: None,
             ns_image_view: None,
@@ -126,18 +131,17 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let mut bitmap_guard = self.bitmap.as_ref().unwrap().write().unwrap();
         self.width = width;
         self.height = height;
+        self.resized = true;
 
         match self.master {
             Some(ref _master) => {}
-            None => {
-                bitmap_guard.resize(width, height)
-            }
+            None => bitmap_guard.resize(width, height),
         }
     }
 
     #[inline]
     fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
-        self.bitmap.unwrap()
+        self.bitmap.as_ref().unwrap().clone()
     }
 
     #[inline]
@@ -150,7 +154,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.input_sender.as_ref().unwrap()
     }
 
-    fn create_window(&mut self) -> super::window_context::WindowContext {
+    fn create_window(&mut self) -> WindowContext {
         let event_loop = EventLoopBuilder::<Message>::with_user_event().build();
 
         unsafe {
@@ -175,7 +179,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         )
     }
 
-    fn platform_main(&mut self, window_context: super::window_context::WindowContext) {
+    fn platform_main(&mut self, window_context: WindowContext) {
         unsafe {
             let platform = PLATFORM_CONTEXT
                 .load(Ordering::SeqCst)
@@ -183,7 +187,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 .expect("`PLATFORM_WIN32` is None.");
 
             if let WindowContext::Default(window, event_loop, _) = window_context {
-                window_process::WindowProcess::new().event_handle(
+                WindowProcess::new().event_handle(
                     platform.as_mut(),
                     window,
                     event_loop,
@@ -239,11 +243,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let ns_image: id = msg_send![ns_image, initWithCGImage:cg_img_ref size:image_size];
 
             // Set NSImage to NSImageView
-            if self.ns_image_view.is_none() {
+            if self.ns_image_view.is_none() || self.resized {
                 let ns_image_view =
                     NSImageView::initWithFrame_(NSImageView::alloc(nil), rect).autorelease();
+
+                let old_ns_img = self.ns_image_view.replace(ns_image_view);
+                if let Some(old_ns_img) = old_ns_img {
+                    old_ns_img.removeFromSuperview()
+                }
+
                 content_view.addSubview_(ns_image_view);
-                self.ns_image_view = Some(ns_image_view);
+
+                self.resized = false;
             }
             self.ns_image_view.as_mut().unwrap().setImage_(ns_image);
 
