@@ -25,7 +25,7 @@ use std::{
     sync::{
         atomic::Ordering,
         mpsc::{channel, Sender},
-        Arc,
+        Arc, RwLock
     },
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
@@ -41,9 +41,7 @@ pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Co
     width: u32,
     height: u32,
 
-    bitmap: Option<Bitmap>,
-    // The memory area of pixels managed by `PlatformMacos`.
-    _buffer: Option<Vec<u8>>,
+    bitmap: Option<Arc<RwLock<Bitmap>>>,
     input_sender: Option<Sender<Message>>,
 
     ns_window: Option<id>,
@@ -63,7 +61,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
             width,
             height,
             bitmap: None,
-            _buffer: None,
             ns_window: None,
             ns_image_view: None,
             color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
@@ -93,17 +90,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
-                let bitmap = Bitmap::new(master.buffer_raw_pointer(), self.width, self.height);
-
-                self.bitmap = Some(bitmap);
+                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
+                    master.buffer_raw_pointer(),
+                    self.width,
+                    self.height,
+                ))));
             }
             None => {
-                let mut buffer = vec![0u8; (self.width * self.height * 4) as usize];
-                let bitmap =
-                    Bitmap::new(buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
-
-                self._buffer = Some(buffer);
-                self.bitmap = Some(bitmap);
+                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::new(self.width, self.height))));
             }
         }
     }
@@ -129,13 +123,20 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
+        let mut bitmap_guard = self.bitmap.as_ref().unwrap().write().unwrap();
         self.width = width;
         self.height = height;
-        todo!()
+
+        match self.master {
+            Some(ref _master) => {}
+            None => {
+                bitmap_guard.resize(width, height)
+            }
+        }
     }
 
     #[inline]
-    fn bitmap(&self) -> Bitmap {
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
         self.bitmap.unwrap()
     }
 
@@ -201,6 +202,15 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     fn redraw(&mut self) {
+        if self.width == 0 || self.height == 0 {
+            return;
+        }
+
+        let bitmap_guard = self.bitmap.as_ref().unwrap().read().unwrap();
+        if !bitmap_guard.is_prepared() {
+            return;
+        }
+
         unsafe {
             // Create NSImage by CGImage
             let ns_window = self.ns_window.unwrap();
@@ -209,7 +219,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let rect = content_view.bounds();
 
             // Create the CGImage from memory pixels buffer.
-            let data_provider = CGDataProvider::from_slice(self.bitmap().get_pixels());
+            let data_provider = CGDataProvider::from_slice(bitmap_guard.get_pixels());
             let cg_image = CGImage::new(
                 self.width as usize,
                 self.height as usize,

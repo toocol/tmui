@@ -1,5 +1,6 @@
+use tlib::global::SemanticExt;
+
 use super::Backend;
-use crate::primitive::bitmap::Bitmap;
 use crate::skia_safe::Surface;
 
 /// Backend for OpenGL,
@@ -7,12 +8,11 @@ use crate::skia_safe::Surface;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct OpenGLBackend {
-    buffer: Bitmap,
 }
 
 impl OpenGLBackend {
-    pub fn new(buffer: Bitmap) -> Box<Self> {
-        Box::new(Self { buffer })
+    pub fn new(_width: i32, _height: i32) -> Box<Self> {
+        Self {}.boxed()
     }
 }
 

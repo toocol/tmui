@@ -24,14 +24,6 @@ impl RasterBackend {
         );
 
         let surface = Surface::new_raster_n32_premul((width, height)).unwrap();
-        // let surface = Surface::new_raster_direct(
-        //     &image_info,
-        //     buffer.get_pixels(),
-        //     buffer.row_bytes(),
-        //     None,
-        // )
-        // .expect("Create rawster skia surface failed.")
-        // .to_owned();
 
         Box::new(Self {
             image_info: image_info,

@@ -8,6 +8,7 @@ pub(crate) mod shared_channel;
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
+use std::sync::{Arc, RwLock};
 use std::sync::mpsc::Sender;
 
 use crate::primitive::{bitmap::Bitmap, Message};
@@ -63,7 +64,7 @@ pub(crate) trait PlatformContext: 'static {
     fn resize(&mut self, width: u32, height: u32);
 
     /// Get current effective `Bitmap` of platform context.
-    fn bitmap(&self) -> Bitmap;
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>>;
 
     /// Set the `input_sender` to transfer user input.
     fn set_input_sender(&mut self, input_sender: Sender<Message>);

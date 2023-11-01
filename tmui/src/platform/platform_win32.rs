@@ -3,20 +3,30 @@ use super::{
     shared_channel::{self, SharedChannel},
     PlatformContext,
 };
-use crate::{winit::{
-    dpi::{PhysicalSize, Size},
-    event_loop::EventLoopBuilder,
-    platform::windows::WindowExtWindows,
-    window::WindowBuilder,
-}, primitive::Message};
-use crate::{application::PLATFORM_CONTEXT, primitive::bitmap::Bitmap, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
+use crate::{
+    application::PLATFORM_CONTEXT,
+    primitive::bitmap::Bitmap,
+    runtime::{
+        window_context::{OutputSender, WindowContext},
+        window_process,
+    },
+};
+use crate::{
+    primitive::Message,
+    winit::{
+        dpi::{PhysicalSize, Size},
+        event_loop::EventLoopBuilder,
+        platform::windows::WindowExtWindows,
+        window::WindowBuilder,
+    },
+};
 use std::{
     mem::size_of,
     os::raw::c_void,
     sync::{
         atomic::Ordering,
         mpsc::{channel, Sender},
-        Arc,
+        Arc, RwLock,
     },
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
@@ -28,9 +38,7 @@ pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Co
     width: u32,
     height: u32,
 
-    bitmap: Option<Bitmap>,
-    // The memory area of pixels managed by `PlatformWin32`.
-    _buffer: Option<Vec<u8>>,
+    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     /// The fileds associated with win32
     // _hins: HINSTANCE,
@@ -50,7 +58,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
             width,
             height,
             bitmap: None,
-            _buffer: None,
             hwnd: None,
             input_sender: None,
             master: None,
@@ -78,18 +85,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
-                let front_bitmap =
-                    Bitmap::new(master.buffer_raw_pointer(), self.width, self.height);
-
-                self.bitmap = Some(front_bitmap);
+                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
+                    master.buffer_raw_pointer(),
+                    self.width,
+                    self.height,
+                ))));
             }
             None => {
-                let mut buffer = vec![0u8; (self.width * self.height * 4) as usize];
-                let bitmap =
-                    Bitmap::new(buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
-
-                self._buffer = Some(buffer);
-                self.bitmap = Some(bitmap);
+                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::new(self.width, self.height))));
             }
         }
     }
@@ -116,26 +119,21 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
+        let mut bitmap_guard = self.bitmap.as_ref().unwrap().write().unwrap();
         self.width = width;
         self.height = height;
 
-        // Recreate the bitmap
         match self.master {
             Some(ref _master) => {}
             None => {
-                let mut buffer = vec![0u8; (self.width * self.height * 4) as usize];
-                let bitmap =
-                    Bitmap::new(buffer.as_mut_ptr() as *mut c_void, self.width, self.height);
-
-                self._buffer = Some(buffer);
-                self.bitmap = Some(bitmap);
+                bitmap_guard.resize(width, height)
             }
         }
     }
 
     #[inline]
-    fn bitmap(&self) -> Bitmap {
-        self.bitmap.unwrap()
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
+        self.bitmap.as_ref().unwrap().clone()
     }
 
     #[inline]
@@ -201,6 +199,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         if self.width == 0 || self.height == 0 {
             return;
         }
+
+        let bitmap_guard = self.bitmap.as_ref().unwrap().read().unwrap();
+        if !bitmap_guard.is_prepared() {
+            return;
+        }
+
         unsafe {
             let hwnd = self.hwnd.unwrap();
 
@@ -229,7 +233,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 0,
                 width as i32,
                 height as i32,
-                Some(self.bitmap().get_pixels().as_ptr() as *const c_void),
+                Some(bitmap_guard.get_pixels().as_ptr() as *const c_void),
                 &bmi,
                 DIB_RGB_COLORS,
                 SRCCOPY,

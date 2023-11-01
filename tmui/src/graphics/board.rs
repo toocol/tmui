@@ -1,11 +1,10 @@
 use tlib::nonnull_mut;
-
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
-    sync::Once,
+    sync::{Once, Arc, RwLock},
 };
 
 thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
@@ -18,7 +17,7 @@ static ONCE: Once = Once::new();
 /// Board contains a renderer method `invalidate_visual`, every frame will call this function automaticly and redraw the invalidated element.
 /// (All elements call it's `update()` method can set it's `invalidate` field to true, or call `force_update()` to invoke `invalidate_visual` directly)
 pub struct Board {
-    bitmap: Bitmap,
+    bitmap: Arc<RwLock<Bitmap>>,
     backend: Box<dyn Backend>,
     surface: RefCell<Surface>,
     element_list: RefCell<Vec<Option<NonNull<dyn ElementImpl>>>>,
@@ -26,7 +25,7 @@ pub struct Board {
 
 impl Board {
     #[inline]
-    pub fn new(bitmap: Bitmap, backend: Box<dyn Backend>) -> Self {
+    pub fn new(bitmap: Arc<RwLock<Bitmap>>, backend: Box<dyn Backend>) -> Self {
         if ONCE.is_completed() {
             panic!("`Board can only construct once.`")
         }
@@ -49,37 +48,31 @@ impl Board {
 
     #[inline]
     pub fn width(&self) -> u32 {
-        self.bitmap.width()
+        self.bitmap.read().unwrap().width()
     }
 
     #[inline]
     pub fn height(&self) -> u32 {
-        self.bitmap.height()
+        self.bitmap.read().unwrap().height()
     }
 
     #[inline]
-    pub fn resize(&mut self, bitmap: Bitmap) {
+    pub(crate) fn resize(&mut self) {
         self.surface().flush_submit_and_sync_cpu();
         self.backend
-            .resize(bitmap.width() as i32, bitmap.height() as i32);
+            .resize(self.width() as i32, self.height() as i32);
 
         self.surface = RefCell::new(self.backend.surface());
-        self.bitmap = bitmap;
     }
 
     #[inline]
-    pub fn add_element(&self, element: *mut dyn ElementImpl) {
+    pub(crate) fn add_element(&self, element: *mut dyn ElementImpl) {
         self.element_list.borrow_mut().push(NonNull::new(element))
     }
 
     #[inline]
     pub(crate) fn surface(&self) -> RefMut<Surface> {
         self.surface.borrow_mut()
-    }
-
-    #[inline]
-    pub fn set_surface(&mut self, surface: Surface) {
-        self.surface = RefCell::new(surface);
     }
 
     #[inline]
@@ -101,12 +94,17 @@ impl Board {
                     }
                 }
 
+                let mut bitmap_guard = self.bitmap.write().unwrap();
+                let row_bytes = bitmap_guard.row_bytes();
+
                 self.surface().read_pixels(
                     self.backend.image_info(),
-                    self.bitmap.get_pixels(),
-                    self.bitmap.row_bytes(),
+                    bitmap_guard.get_pixels_mut(),
+                    row_bytes,
                     (0, 0),
                 );
+
+                bitmap_guard.set_prepared(true);
 
                 *notify_update.borrow_mut() = false
             }

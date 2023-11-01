@@ -1,5 +1,5 @@
 #![cfg(free_unix)]
-use std::sync::{mpsc::Sender, Arc};
+use std::sync::{mpsc::Sender, Arc, RwLock};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
 use crate::graphics::bitmap::Bitmap;
 use super::{shared_channel::SharedChannel, PlatformContext};
@@ -11,8 +11,6 @@ pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + 
 
     bitmap: Option<Bitmap>,
 
-    // The memory area of pixels managed by `PlatformWin32`.
-    _buffer: Option<Vec<u8>>,
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -26,7 +24,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
             width,
             height,
             bitmap: None,
-            _buffer: None,
             master: None,
             user_ipc_event_sender: None,
         }
@@ -71,7 +68,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn bitmap(&self) -> crate::graphics::bitmap::Bitmap {
+    fn bitmap(&self) -> Arc<RwLock<crate::graphics::bitmap::Bitmap>> {
         todo!()
     }
 
