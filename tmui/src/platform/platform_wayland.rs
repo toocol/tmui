@@ -1,7 +1,8 @@
 #![cfg(free_unix)]
 use std::sync::{mpsc::Sender, Arc, RwLock};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
-use crate::graphics::bitmap::Bitmap;
+use crate::{primitive::bitmap::Bitmap, runtime::window_context::WindowContext};
+
 use super::{shared_channel::SharedChannel, PlatformContext};
 
 pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -9,7 +10,7 @@ pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + 
     width: u32,
     height: u32,
 
-    bitmap: Option<Bitmap>,
+    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
@@ -68,7 +69,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn bitmap(&self) -> Arc<RwLock<crate::graphics::bitmap::Bitmap>> {
+    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
         todo!()
     }
 
@@ -80,11 +81,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn create_window(&mut self) -> super::window_context::WindowContext {
+    fn create_window(&mut self) -> WindowContext {
         todo!()
     }
 
-    fn platform_main(&mut self, window_context: super::window_context::WindowContext) {
+    fn platform_main(&mut self, window_context: WindowContext) {
         todo!()
     }
 
