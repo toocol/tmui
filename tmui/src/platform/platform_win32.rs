@@ -1,16 +1,15 @@
 #![cfg(target_os = "windows")]
 use super::{
     shared_channel::{self, SharedChannel},
-    window_context::{OutputSender, WindowContext},
-    window_process, Message, PlatformContext,
+    PlatformContext,
 };
-use crate::winit::{
+use crate::{winit::{
     dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
     platform::windows::WindowExtWindows,
     window::WindowBuilder,
-};
-use crate::{application::PLATFORM_CONTEXT, primitive::bitmap::Bitmap};
+}, primitive::Message};
+use crate::{application::PLATFORM_CONTEXT, primitive::bitmap::Bitmap, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
 use std::{
     mem::size_of,
     os::raw::c_void,
@@ -20,7 +19,6 @@ use std::{
         Arc,
     },
 };
-use log::info;
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
 use tlib::figure::Rect;
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
@@ -29,7 +27,6 @@ pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Co
     title: String,
     width: u32,
     height: u32,
-    redraw_suspend: bool,
 
     bitmap: Option<Bitmap>,
     // The memory area of pixels managed by `PlatformWin32`.
@@ -52,7 +49,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
             title: title.to_string(),
             width,
             height,
-            redraw_suspend: false,
             bitmap: None,
             _buffer: None,
             hwnd: None,
@@ -143,7 +139,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn set_input_sender(&mut self, input_sender: Sender<super::Message>) {
+    fn set_input_sender(&mut self, input_sender: Sender<Message>) {
         self.input_sender = Some(input_sender)
     }
 
@@ -193,13 +189,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn redraw_suspend(&mut self) {
-        self.redraw_suspend = true;
-    }
-
-    #[inline]
     fn request_redraw(&mut self, _window: &tlib::winit::window::Window) {
-        self.redraw_suspend = false;
         let hwnd = self.hwnd.unwrap();
 
         unsafe {
@@ -208,13 +198,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     fn redraw(&mut self) {
-        if self.redraw_suspend {
-            info!("Redraw suspend !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            return;
-        }
         if self.width == 0 || self.height == 0 {
             return;
-        } 
+        }
         unsafe {
             let hwnd = self.hwnd.unwrap();
 

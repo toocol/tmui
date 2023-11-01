@@ -1,4 +1,3 @@
-use super::{Message, PlatformContext};
 use crate::{
     cursor::Cursor,
     winit::{
@@ -6,7 +5,7 @@ use crate::{
         event::{Event, WindowEvent},
         event_loop::EventLoop,
         window::Window,
-    },
+    }, platform::PlatformContext, primitive::Message,
 };
 use log::debug;
 use once_cell::sync::Lazy;

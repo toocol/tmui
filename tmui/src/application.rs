@@ -11,12 +11,9 @@ use crate::{
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     event_hints::event_hints,
     graphics::board::Board,
-    platform::{
-        shared_channel::SharedChannel,
-        window_context::{OutputSender, WindowContext},
-        Message, PlatformContext, PlatformIpc, PlatformType,
-    },
-    primitive::{cpu_balance::CpuBalance, frame::Frame},
+    platform::{shared_channel::SharedChannel, PlatformContext, PlatformIpc, PlatformType},
+    primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
+    runtime::window_context::{OutputSender, WindowContext},
     widget::WidgetImpl,
 };
 use lazy_static::lazy_static;

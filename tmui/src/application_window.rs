@@ -2,8 +2,10 @@ use crate::{
     application::PLATFORM_CONTEXT,
     graphics::{board::Board, element::HierachyZ},
     layout::LayoutManager,
-    platform::{window_context::OutputSender, Message, PlatformType},
+    platform::PlatformType,
     prelude::*,
+    runtime::window_context::OutputSender,
+    primitive::Message,
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
 use log::debug;
@@ -17,7 +19,7 @@ use std::{
 };
 use tlib::{
     connect, emit,
-    events::{Event, EventType, downcast_event, KeyEvent, MouseEvent, ResizeEvent},
+    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},

@@ -1,9 +1,8 @@
 use super::{
     shared_channel::{self, SharedChannel},
-    window_context::{OutputSender, WindowContext},
-    window_process, Message, PlatformContext,
+    PlatformContext,
 };
-use crate::{application::PLATFORM_CONTEXT, primitive::bitmap::Bitmap};
+use crate::{application::PLATFORM_CONTEXT, primitive::{bitmap::Bitmap, Message}, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
@@ -68,9 +67,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let slave = self.slave.as_ref().unwrap();
         let front_bitmap = Bitmap::new(slave.buffer_raw_pointer(), slave.width(), slave.height());
 
-        self.region = slave.region(self.shared_widget_id.unwrap()).expect(
-            "The `SharedWidget` with id `{}` was not exist."
-        );
+        self.region = slave
+            .region(self.shared_widget_id.unwrap())
+            .expect("The `SharedWidget` with id `{}` was not exist.");
 
         self.bitmap = Some(front_bitmap);
     }
@@ -141,10 +140,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         } else {
             panic!("Invalid window context.")
         }
-    }
-
-    #[inline]
-    fn redraw_suspend(&mut self) {
     }
 
     #[inline]

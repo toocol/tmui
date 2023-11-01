@@ -6,7 +6,7 @@ use crate::{
         painter::Painter,
     },
     layout::LayoutManager,
-    platform::Message,
+    primitive::Message,
     prelude::*,
 };
 use derivative::Derivative;
