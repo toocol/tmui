@@ -46,7 +46,16 @@ impl Backend for RasterBackend {
             ColorSpace::new_srgb(),
         );
 
-        self.surface = self.surface.new_surface_with_dimensions((width, height)).unwrap();
+        let mut new_surface = self
+            .surface
+            .new_surface_with_dimensions((width, height))
+            .unwrap();
+
+        new_surface
+            .canvas()
+            .draw_image(self.surface.image_snapshot(), (0, 0), None);
+
+        self.surface = new_surface;
     }
 
     #[inline]

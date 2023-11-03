@@ -11,6 +11,7 @@ use tlib::{
 #[extends(Object)]
 pub struct Element {
     window_id: u16,
+    old_rect: Rect,
     rect: Rect,
     /// The region rect of element's coordinate was `Widget`.
     redraw_region: Region,
@@ -103,6 +104,12 @@ pub trait ElementExt: 'static {
 
     /// Go to[`Function defination`](ElementExt::validate) (Defined in [`ElementExt`])
     fn validate(&mut self);
+
+    /// Go to[`Function defination`](ElementExt::rect_record) (Defined in [`ElementExt`])
+    fn rect_record(&self) -> Rect;
+
+    /// Go to[`Function defination`](ElementExt::set_rect_record) (Defined in [`ElementExt`])
+    fn set_rect_record(&mut self, rect: Rect);
 }
 
 impl ElementExt for Element {
@@ -194,6 +201,16 @@ impl ElementExt for Element {
     #[inline]
     fn validate(&mut self) {
         self.set_property("invalidate", false.to_value())
+    }
+
+    #[inline]
+    fn rect_record(&self) -> Rect {
+        self.old_rect
+    }
+
+    #[inline]
+    fn set_rect_record(&mut self, rect: Rect) {
+        self.old_rect = rect
     }
 }
 

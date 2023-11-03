@@ -6,8 +6,9 @@ use crate::{
         painter::Painter,
     },
     layout::LayoutManager,
-    primitive::Message,
     prelude::*,
+    primitive::Message,
+    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
@@ -15,10 +16,11 @@ use std::ptr::NonNull;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
-    figure::{Color, FontTypeface, Size, FPoint},
+    figure::{Color, FPoint, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
+    skia_safe::{region::RegionOp, ClipOp},
 };
 
 /// Size hint for widget:
@@ -32,8 +34,10 @@ pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
     child: Option<Box<dyn WidgetImpl>>,
     child_ref: Option<NonNull<dyn WidgetImpl>>,
+
     initialized: bool,
     first_rendered: bool,
+    rerender_difference: bool,
 
     #[derivative(Default(value = "Color::WHITE"))]
     background: Color,
@@ -292,7 +296,22 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         if !self.first_rendered() || self.rerender_styles() {
             // Draw the background color of the Widget.
-            painter.fill_rect(contents_rect, self.background());
+            if self.rerender_difference() && self.first_rendered() {
+                let rect: skia_safe::IRect = self.rect().into();
+                let old_rect: skia_safe::IRect = self.rect_record().into();
+
+                let mut region = skia_safe::Region::new();
+                region.op_rect(rect, RegionOp::Union);
+                region.op_rect(old_rect, RegionOp::Difference);
+
+                painter.canvas_mut().save();
+                painter.clip_region(region, ClipOp::Intersect);
+                painter.fill_rect(contents_rect, self.background());
+                painter.canvas_mut().restore();
+            } else {
+                painter.fill_rect(contents_rect, self.background());
+            }
+            self.set_rect_record(self.rect());
 
             // Draw the border of the Widget.
             let borders = self.borders();
@@ -317,7 +336,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter.reset();
         painter.set_font(self.font().to_skia_font());
-        self.paint(painter)
+        self.paint(painter);
     }
 }
 
@@ -349,6 +368,12 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::set_rerender_styles) (Defined in [`WidgetExt`])
     fn set_rerender_styles(&mut self, rerender: bool);
+
+    /// Go to[`Function defination`](WidgetExt::rerender_difference) (Defined in [`WidgetExt`])
+    fn rerender_difference(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_rerender_difference) (Defined in [`WidgetExt`])
+    fn set_rerender_difference(&mut self, rerender_difference: bool);
 
     /// ## Do not invoke this function directly.
     ///
@@ -844,6 +869,16 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_rerender_styles(&mut self, rerender: bool) {
         self.set_property("rerender_styles", rerender.to_value())
+    }
+
+    #[inline]
+    fn rerender_difference(&self) -> bool {
+        self.rerender_difference
+    }
+
+    #[inline]
+    fn set_rerender_difference(&mut self, rerender_difference: bool) {
+        self.rerender_difference = rerender_difference
     }
 
     #[inline]
@@ -1382,13 +1417,19 @@ impl WidgetExt for Widget {
     #[inline]
     fn map_to_global_f(&self, point: &FPoint) -> FPoint {
         let contents_rect = self.contents_rect(None);
-        FPoint::new(point.x() + contents_rect.x() as f32, point.y() + contents_rect.y() as f32)
+        FPoint::new(
+            point.x() + contents_rect.x() as f32,
+            point.y() + contents_rect.y() as f32,
+        )
     }
 
     #[inline]
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
         let contents_rect = self.contents_rect(None);
-        FPoint::new(point.x() - contents_rect.x() as f32, point.y() - contents_rect.y() as f32)
+        FPoint::new(
+            point.x() - contents_rect.x() as f32,
+            point.y() - contents_rect.y() as f32,
+        )
     }
 
     #[inline]
@@ -1879,8 +1920,11 @@ impl WindowAcquire for dyn WidgetImpl {
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;
-    use crate::{prelude::*, widget::WidgetGenericExt};
-    use tlib::object::{ObjectImpl, ObjectSubclass};
+    use crate::{prelude::*, skia_safe, widget::WidgetGenericExt};
+    use tlib::{
+        object::{ObjectImpl, ObjectSubclass},
+        skia_safe::region::RegionOp,
+    };
 
     #[extends(Widget)]
     struct SubWidget {}
@@ -1919,5 +1963,14 @@ mod tests {
         assert_eq!(child_ref.id(), child_id);
         assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());
+    }
+
+    #[test]
+    fn test_skia_region() {
+        let mut region = skia_safe::Region::new();
+        let rect1 = skia_safe::IRect::new(0, 0, 100, 100);
+        let rect2 = skia_safe::IRect::new(0, 0, 400, 400);
+        region.op_rect(rect1, RegionOp::Union);
+        region.op_rect(rect2, RegionOp::Difference);
     }
 }

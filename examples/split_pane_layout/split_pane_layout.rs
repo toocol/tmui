@@ -39,6 +39,7 @@ impl ObjectImpl for SplitPaneLayout {
 
         self.set_hexpand(true);
         self.set_vexpand(true);
+        self.set_rerender_difference(true);
     }
 }
 

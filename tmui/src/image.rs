@@ -7,7 +7,7 @@ use std::path::Path;
 use tlib::{
     figure::ImageBuf,
     namespace::ImageOption,
-    skia_safe::{self, matrix::ScaleToFit, Matrix, SamplingOptions, TileMode, Paint},
+    skia_safe::{self, matrix::ScaleToFit, Matrix, SamplingOptions, TileMode, Paint, region::RegionOp, ClipOp},
 };
 
 #[extends(Widget)]
@@ -24,7 +24,7 @@ impl ObjectImpl for Image {}
 
 impl WidgetImpl for Image {
     fn paint(&mut self, mut painter: crate::graphics::painter::Painter) {
-        let contents_rect = self.contents_rect(Some(Coordinate::Widget));
+        let mut contents_rect = self.contents_rect(Some(Coordinate::Widget));
         let image_buf = self.image_buf.as_ref().unwrap();
 
         match self.option {
@@ -75,10 +75,12 @@ impl WidgetImpl for Image {
                 );
                 paint.set_shader(shader);
 
-                let mut region = Region::new();
-                region.add_rect(contents_rect);
+                painter.offset_rect(&mut contents_rect);
+                let mut region = skia_safe::Region::new();
+                let contents_rect: skia_safe::IRect = contents_rect.into();
+                region.op_rect(contents_rect, RegionOp::Union);
 
-                painter.clip(region);
+                painter.clip_region(region, ClipOp::Intersect);
                 painter.draw_paint(&paint);
             }
             ImageOption::Stretch => {

@@ -50,6 +50,12 @@ impl ObjectSubclass for ApplicationWindow {
 }
 
 impl ObjectImpl for ApplicationWindow {
+    fn construct(&mut self) {
+        self.parent_construct();
+
+        self.set_rerender_difference(false)
+    }
+
     fn initialize(&mut self) {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
         debug!("Initialize-phase start.");

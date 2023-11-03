@@ -158,6 +158,16 @@ pub(crate) fn gen_element_trait_impl_clause(
             fn validate(&mut self) {
                 self.#(#element_path).*.validate()
             }
+
+            #[inline]
+            fn rect_record(&self) -> Rect {
+                self.#(#element_path).*.rect_record()
+            }
+
+            #[inline]
+            fn set_rect_record(&mut self, rect: Rect) {
+                self.#(#element_path).*.set_rect_record(rect)
+            }
         }
 
         impl IsA<Element> for #name {}

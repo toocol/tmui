@@ -30,7 +30,7 @@ use std::{
     },
 };
 use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
-use tlib::figure::Rect;
+use tlib::{figure::Rect, ptr_mut};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -164,23 +164,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     fn platform_main(&mut self, window_context: WindowContext) {
-        unsafe {
-            let platform = PLATFORM_CONTEXT
-                .load(Ordering::SeqCst)
-                .as_mut()
-                .expect("`PLATFORM_WIN32` is None.");
+        let platform = ptr_mut!(PLATFORM_CONTEXT.load(Ordering::SeqCst));
 
-            if let WindowContext::Default(window, event_loop, _) = window_context {
-                window_process::WindowProcess::new().event_handle::<T, M>(
-                    platform.as_mut(),
-                    window,
-                    event_loop,
-                    self.master.clone(),
-                    self.user_ipc_event_sender.take(),
-                )
-            } else {
-                panic!("Invalid window context.")
-            }
+        if let WindowContext::Default(window, event_loop, _) = window_context {
+            window_process::WindowProcess::new().event_handle::<T, M>(
+                platform.as_mut(),
+                window,
+                event_loop,
+                self.master.clone(),
+                self.user_ipc_event_sender.take(),
+            )
+        } else {
+            panic!("Invalid window context.")
         }
     }
 

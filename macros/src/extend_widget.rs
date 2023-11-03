@@ -234,6 +234,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn rerender_difference(&self) -> bool {
+                self.#(#widget_path).*.rerender_difference()
+            }
+
+            #[inline]
+            fn set_rerender_difference(&mut self, rerender_difference: bool) {
+                self.#(#widget_path).*.set_rerender_difference(rerender_difference)
+            }
+
+            #[inline]
             fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
                 self.#(#widget_path).*.set_parent(parent)
             }

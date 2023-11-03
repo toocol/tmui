@@ -1,9 +1,9 @@
-use hex_color::HexColor;
 use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Value,
 };
+use hex_color::HexColor;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Color
@@ -119,6 +119,13 @@ impl Color {
         a: 255,
         valid: true,
     };
+    pub const TRANSPARENT: Color = Color {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
+        valid: true,
+    };
 }
 
 impl From<(u8, u8, u8)> for Color {
@@ -172,6 +179,23 @@ impl Into<(i32, i32, i32)> for &Color {
 impl Into<skia_safe::Color> for Color {
     fn into(self) -> skia_safe::Color {
         skia_safe::Color::from_argb(self.a, self.r, self.g, self.b)
+    }
+}
+
+impl Into<skia_safe::Color4f> for Color {
+    fn into(self) -> skia_safe::Color4f {
+        skia_safe::Color4f {
+            r: self.r as f32,
+            g: self.g as f32,
+            b: self.b as f32,
+            a: self.a as f32,
+        }
+    }
+}
+
+impl Into<skia_safe::Color3f> for Color {
+    fn into(self) -> skia_safe::Color3f {
+        skia_safe::Color3f::new(self.r as f32, self.g as f32, self.b as f32)
     }
 }
 
