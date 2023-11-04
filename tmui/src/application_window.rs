@@ -4,8 +4,8 @@ use crate::{
     layout::LayoutManager,
     platform::PlatformType,
     prelude::*,
-    runtime::window_context::OutputSender,
     primitive::Message,
+    runtime::window_context::OutputSender,
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
 use log::debug;
@@ -53,7 +53,7 @@ impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_rerender_difference(false)
+        self.set_rerender_difference(true)
     }
 
     fn initialize(&mut self) {

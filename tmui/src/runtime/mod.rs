@@ -23,7 +23,7 @@ use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
     ptr_mut,
     r#async::tokio_runtime,
-    timer::TimerHub,
+    timer::TimerHub, payload::PayloadWeight,
 };
 
 pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
@@ -134,8 +134,9 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
 
             let update = board.invalidate_visual();
             if update {
-                window.send_message(Message::VSync(Instant::now()));
-                cpu_balance.add_payload();
+                let msg = Message::VSync(Instant::now());
+                cpu_balance.add_payload(msg.payload_wieght());
+                window.send_message(msg);
             }
             update
         } else {
@@ -157,8 +158,9 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
 
                 evt = resize_evt;
             }
+
+            cpu_balance.add_payload(evt.payload_wieght());
             window.dispatch_event(evt);
-            cpu_balance.add_payload();
         }
 
         if let Some(ref on_user_event_receive) = on_user_event_receive {

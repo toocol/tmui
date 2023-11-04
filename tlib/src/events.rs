@@ -5,13 +5,13 @@ use crate::{
     namespace::{AsNumeric, KeyCode, KeyboardModifier, MouseButton},
     prelude::*,
     values::{FromBytes, FromValue, ToBytes},
-    Type, Value,
+    Type, Value, payload::PayloadWeight,
 };
 use std::{any::Any, fmt::Debug, mem::size_of, path::PathBuf};
 use winit::event::Ime;
 
 pub type Event = Box<dyn EventTrait>;
-pub trait EventTrait: 'static + AsAny + Debug + Sync + Send {
+pub trait EventTrait: 'static + PayloadWeight + AsAny + Debug + Sync + Send {
     fn type_(&self) -> EventType;
 }
 
@@ -159,6 +159,12 @@ impl EventTrait for KeyEvent {
     #[inline]
     fn type_(&self) -> EventType {
         self.type_
+    }
+}
+impl PayloadWeight for KeyEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
     }
 }
 impl StaticType for KeyEvent {
@@ -346,6 +352,16 @@ impl EventTrait for MouseEvent {
     }
 }
 
+impl PayloadWeight for MouseEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        match self.type_ {
+            EventType::MouseMove => 0.1,
+            _ => 1.,
+        }
+    }
+}
+
 impl StaticType for MouseEvent {
     #[inline]
     fn static_type() -> Type {
@@ -485,6 +501,13 @@ impl EventTrait for FocusEvent {
     }
 }
 
+impl PayloadWeight for FocusEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
+    }
+}
+
 impl StaticType for FocusEvent {
     #[inline]
     fn static_type() -> Type {
@@ -568,6 +591,13 @@ impl EventTrait for ResizeEvent {
     #[inline]
     fn type_(&self) -> EventType {
         self.type_
+    }
+}
+
+impl PayloadWeight for ResizeEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        10.
     }
 }
 
@@ -660,6 +690,13 @@ impl EventTrait for MovedEvent {
     #[inline]
     fn type_(&self) -> EventType {
         self.type_
+    }
+}
+
+impl PayloadWeight for MovedEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        0.1
     }
 }
 
@@ -760,6 +797,13 @@ impl EventTrait for FileEvent {
     #[inline]
     fn type_(&self) -> EventType {
         self.type_
+    }
+}
+
+impl PayloadWeight for FileEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
     }
 }
 
@@ -868,6 +912,13 @@ impl EventTrait for ReceiveCharacterEvent {
     }
 }
 
+impl PayloadWeight for ReceiveCharacterEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
+    }
+}
+
 impl StaticType for ReceiveCharacterEvent {
     #[inline]
     fn static_type() -> Type {
@@ -948,6 +999,13 @@ impl EventTrait for InputMethodEvent {
     #[inline]
     fn type_(&self) -> EventType {
         self.type_
+    }
+}
+
+impl PayloadWeight for InputMethodEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
     }
 }
 

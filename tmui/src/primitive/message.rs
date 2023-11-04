@@ -1,9 +1,9 @@
 use std::time::Instant;
 use tipc::ipc_event::IpcEvent;
 use tlib::{
-    events::{Event, EventType::*, downcast_event, KeyEvent, MouseEvent},
+    events::{downcast_event, Event, EventType::*, KeyEvent, MouseEvent},
     namespace::AsNumeric,
-    prelude::SystemCursorShape,
+    prelude::SystemCursorShape, payload::PayloadWeight,
 };
 
 #[derive(Debug)]
@@ -16,6 +16,17 @@ pub enum Message {
 
     /// Events like MouseEvent, KeyEvent...
     Event(Event),
+}
+
+impl PayloadWeight for Message {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        match self {
+            Self::VSync(..) => 1.,
+            Self::SetCursorShape(..) => 0.,
+            Self::Event(..) => 1.,
+        }
+    }
 }
 
 impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
@@ -111,12 +122,8 @@ fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
                 Instant::now(),
             )
         }
-        FocusIn => {
-            IpcEvent::RequestFocusEvent(true, Instant::now())
-        }
-        FocusOut => {
-            IpcEvent::RequestFocusEvent(false, Instant::now())
-        }
-        _ => unreachable!()
+        FocusIn => IpcEvent::RequestFocusEvent(true, Instant::now()),
+        FocusOut => IpcEvent::RequestFocusEvent(false, Instant::now()),
+        _ => unreachable!(),
     }
 }

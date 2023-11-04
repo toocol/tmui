@@ -6,6 +6,7 @@ pub mod events;
 pub mod global;
 pub mod namespace;
 pub mod object;
+pub mod payload;
 pub mod prelude;
 pub mod timer;
 pub mod types;
