@@ -5,7 +5,7 @@ use crate::{
     widget::WidgetImpl,
 };
 use log::{error, warn};
-use std::cell::RefMut;
+use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
     global::skia_font_clone,
@@ -116,8 +116,7 @@ impl<'a> Painter<'a> {
     /// Return the save count.
     #[inline]
     pub fn save(&mut self) -> usize {
-        self.canvas.save();
-        self.canvas.save_count()
+        self.canvas.save()
     }
 
     /// Get canvas save count.
@@ -162,8 +161,13 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn save_layer(&mut self, layer: &SaveLayerRec) {
-        self.canvas.save_layer(layer);
+    pub fn save_layer(&mut self, layer: &SaveLayerRec) -> usize {
+        self.canvas.save_layer(layer)
+    }
+
+    #[inline]
+    pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(&mut self, layer: T, alpha: u8) -> usize {
+        self.canvas.save_layer_alpha(layer, alpha as c_uint)
     }
 
     /// Reset the painter to Initial state.

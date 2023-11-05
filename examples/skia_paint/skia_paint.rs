@@ -1,7 +1,8 @@
 use log::debug;
 use skia_safe::textlayout::{FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle};
-use tlib::skia_safe::{textlayout::TypefaceFontProvider, region::RegionOp, canvas::SaveLayerRec};
+use tlib::skia_safe::{canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider};
 use tmui::{
+    graphics::painter::Painter,
     prelude::*,
     skia_safe::{self},
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -9,10 +10,7 @@ use tmui::{
 };
 
 #[extends(Widget)]
-pub struct SkiaPaint {
-    before_layer: usize,
-    after_layer: usize,
-}
+pub struct SkiaPaint {}
 
 impl ObjectSubclass for SkiaPaint {
     const NAME: &'static str = "SkiaPaint";
@@ -26,9 +24,30 @@ impl ObjectImpl for SkiaPaint {
 }
 
 impl WidgetImpl for SkiaPaint {
+    fn on_mouse_pressed(&mut self, _event: &tlib::events::MouseEvent) {
+        self.set_rerender_styles(true);
+        self.update()
+    }
+
     fn paint(&mut self, mut painter: tmui::graphics::painter::Painter) {
-        const TEXT: &'static str = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
-        const REP: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
+        self.draw_text(&mut painter);
+
+        self.draw_region_1(&mut painter);
+
+        self.draw_region_2(&mut painter);
+
+        self.draw_layer(&mut painter);
+
+        println!("cnt: {}", painter.save_count());
+    }
+}
+
+impl SkiaPaint {
+    fn draw_text(&self, painter: &mut Painter) {
+        const TEXT: &'static str =
+            "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
+        const REP: &'static str =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
         const FAMILY: &'static str = "Courier New";
         const FONT_SIZE: f32 = 12.;
 
@@ -74,11 +93,19 @@ impl WidgetImpl for SkiaPaint {
         let width = paragraph.min_intrinsic_width();
         let height = paragraph.height();
         let metrics = &paragraph.get_line_metrics()[0];
-        debug!("{}, {}, {}", metrics.ascent, metrics.descent, metrics.baseline);
+        debug!(
+            "{}, {}, {}",
+            metrics.ascent, metrics.descent, metrics.baseline
+        );
 
         painter.draw_rect(Rect::new(0, 0, cal_width as i32, metrics.baseline as i32));
         painter.draw_rect(Rect::new(0, 0, width as i32, height as i32));
-        painter.draw_rect(Rect::new(0, 100 - cal_height as i32, cal_width as i32, cal_height as i32));
+        painter.draw_rect(Rect::new(
+            0,
+            100 - cal_height as i32,
+            cal_width as i32,
+            cal_height as i32,
+        ));
 
         // draw text
         let canvas = painter.canvas_mut();
@@ -103,7 +130,9 @@ impl WidgetImpl for SkiaPaint {
         painter.draw_paragraph(REP, (0., 300.), 0., 1024.);
         painter.set_color(Color::RED);
         painter.draw_paragraph(REP, (0., 350.), 5., 1024.);
+    }
 
+    fn draw_region_1(&mut self, painter: &mut Painter) {
         let rect1 = skia_safe::IRect::new(0, 400, 200, 600);
         let rect2 = skia_safe::IRect::new(0, 400, 300, 700);
         let mut region = skia_safe::Region::new();
@@ -111,24 +140,55 @@ impl WidgetImpl for SkiaPaint {
         region.op_rect(rect1, RegionOp::Difference);
 
         // painter.fill_region(&region, Color::BLACK);
-        self.before_layer = painter.save();
+        painter.save();
         painter.fill_rect(rect2, Color::BLUE);
         painter.clip_region(region, skia_safe::ClipOp::Intersect);
         painter.fill_rect(rect2, Color::BLACK);
         painter.restore();
+    }
 
+    fn draw_region_2(&mut self, painter: &mut Painter) {
+        let rect1 = skia_safe::IRect::new(400, 400, 600, 600);
+        let rect2 = skia_safe::IRect::new(450, 450, 650, 650);
+        let mut region = skia_safe::Region::new();
+        region.op_rect(rect2, RegionOp::Union);
+        region.op_rect(rect1, RegionOp::Difference);
+
+        let intersects: skia_safe::IRect = {
+            let rect1: Rect = rect1.into();
+            let rect2: Rect = rect2.into();
+            rect1
+                .intersects(&rect2)
+                .unwrap_or((0, 0, 0, 0).into())
+                .into()
+        };
+
+        let mut region_to_remove = skia_safe::Region::new();
+        region_to_remove.op_rect(rect1, RegionOp::Union);
+        region_to_remove.op_rect(intersects, RegionOp::Difference);
+
+        let rect = skia_safe::IRect::new(400, 400, 650, 650);
+        painter.save();
+        painter.fill_rect(rect1, Color::BLUE);
+        painter.clip_region(region, skia_safe::ClipOp::Intersect);
+        painter.fill_rect(rect, Color::BLACK);
+        painter.restore();
+
+        painter.save();
+        painter.clip_region(region_to_remove, skia_safe::ClipOp::Intersect);
+        painter.fill_rect(rect, Color::RED);
+        painter.restore();
+    }
+
+    fn draw_layer(&mut self, painter: &mut Painter) {
         let rect: skia_safe::Rect = Rect::new(0, 0, 100, 100).into();
         let mut layer = SaveLayerRec::default();
         layer = layer.bounds(&rect);
+
         painter.save_layer(&layer);
 
-        self.after_layer = painter.save();
-
         painter.fill_rect(rect, Color::RED);
-        painter.restore_to_count(self.before_layer);
-
-        painter.restore_to_count(self.after_layer);
         painter.clear(Color::TRANSPARENT);
-        painter.restore_to_count(self.before_layer);
+        painter.restore();
     }
 }
