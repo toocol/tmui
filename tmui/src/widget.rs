@@ -3,12 +3,11 @@ use crate::{
     graphics::{
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
-        painter::Painter,
+        painter::Painter, render_difference::RenderDiffence,
     },
     layout::LayoutManager,
     prelude::*,
     primitive::Message,
-    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
@@ -20,7 +19,6 @@ use tlib::{
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
-    skia_safe::{region::RegionOp, ClipOp},
 };
 
 /// Size hint for widget:
@@ -297,17 +295,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         if !self.first_rendered() || self.rerender_styles() {
             // Draw the background color of the Widget.
             if self.rerender_difference() && self.first_rendered() {
-                let rect: skia_safe::IRect = self.rect().into();
-                let old_rect: skia_safe::IRect = self.rect_record().into();
-
-                let mut region = skia_safe::Region::new();
-                region.op_rect(rect, RegionOp::Union);
-                region.op_rect(old_rect, RegionOp::Difference);
-
-                painter.canvas_mut().save();
-                painter.clip_region(region, ClipOp::Intersect);
-                painter.fill_rect(contents_rect, self.background());
-                painter.canvas_mut().restore();
+                self.render_difference(&mut painter);
             } else {
                 painter.fill_rect(contents_rect, self.background());
             }

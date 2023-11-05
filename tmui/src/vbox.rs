@@ -2,7 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutManager,
-    prelude::*,
+    prelude::*, graphics::painter::Painter,
 };
 use derivative::Derivative;
 use log::debug;
@@ -258,5 +258,10 @@ impl StaticContainerScaleCalculate for VBox {
     #[inline]
     fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32 {
         c.children().iter().map(|c| c.vscale()).sum()
+    }
+}
+
+impl ChildContainerDiffRender for VBox {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {
     }
 }

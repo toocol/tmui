@@ -2,6 +2,7 @@ pub mod board;
 pub mod drawing_context;
 pub mod element;
 pub mod painter;
+pub mod render_difference;
 
 #[cfg(test)]
 mod tests {

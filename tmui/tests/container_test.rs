@@ -65,6 +65,10 @@ impl ContainerScaleCalculate for TestContainer {
     }
 }
 
+impl ChildContainerDiffRender for TestContainer {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {}
+}
+
 #[test]
 fn main() {
     let r = TypeRegistry::instance();

@@ -4,7 +4,7 @@ use crate::{
         ContainerImpl, ContainerImplExt, ContainerScaleCalculate, StaticContainerScaleCalculate,
     },
     layout::{ContainerLayout, LayoutManager},
-    prelude::*,
+    prelude::*, graphics::painter::Painter,
 };
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
@@ -143,5 +143,10 @@ impl Stack {
     #[inline]
     pub fn new() -> Box<Self> {
         Object::new(&[])
+    }
+}
+
+impl ChildContainerDiffRender for Stack {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {
     }
 }
