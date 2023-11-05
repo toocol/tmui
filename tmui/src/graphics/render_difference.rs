@@ -37,16 +37,11 @@ pub trait ChildWidgetDiffRender: WidgetImpl {
             let rec_rect = child.rect_record();
             let cur_rect = child.rect();
 
-            if rec_rect.x() == cur_rect.x() && rec_rect.y() == cur_rect.y() {
-                return;
-            }
-
             let intersects: skia_safe::IRect = rec_rect
                 .intersects(&cur_rect)
                 .unwrap_or((0, 0, 0, 0).into())
                 .into();
             let rec_rect: skia_safe::IRect = rec_rect.into();
-
 
             let mut clear_region = skia_safe::Region::new();
             clear_region.op_rect(rec_rect, RegionOp::Union);
