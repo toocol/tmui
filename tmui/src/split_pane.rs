@@ -10,7 +10,7 @@ use crate::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl,
+    widget::WidgetImpl, graphics::painter::Painter,
 };
 use log::debug;
 use std::{collections::HashMap, mem::size_of, ptr::NonNull};
@@ -375,5 +375,10 @@ impl StaticContainerScaleCalculate for SplitPane {
     #[inline]
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_DISMISS
+    }
+}
+
+impl ChildContainerDiffRender for SplitPane {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {
     }
 }

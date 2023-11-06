@@ -182,6 +182,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectWidgetImpl>();
                         type_registry.register::<#name, ReflectContainerImpl>();
                         type_registry.register::<#name, ReflectObjectChildrenConstruct>();
+                        type_registry.register::<#name, ReflectChildContainerDiffRender>();
                         #reflect_content_alignment
                         #reflect_split_infos_getter
                         #reflect_stack_trait

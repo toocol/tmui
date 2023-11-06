@@ -207,6 +207,11 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         #impl_split_pane
 
         #impl_stack_trait
+
+        impl ChildContainerDiffRender for #name {
+            fn container_diff_render(&mut self, painter: &mut Painter) {
+            }
+        }
     ));
 
     Ok(token)

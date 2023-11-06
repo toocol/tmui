@@ -4,8 +4,8 @@ use crate::{
     layout::LayoutManager,
     platform::PlatformType,
     prelude::*,
-    runtime::window_context::OutputSender,
     primitive::Message,
+    runtime::window_context::OutputSender,
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
 use log::debug;
@@ -50,6 +50,12 @@ impl ObjectSubclass for ApplicationWindow {
 }
 
 impl ObjectImpl for ApplicationWindow {
+    fn construct(&mut self) {
+        self.parent_construct();
+
+        self.set_rerender_difference(true)
+    }
+
     fn initialize(&mut self) {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
         debug!("Initialize-phase start.");

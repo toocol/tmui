@@ -4,10 +4,11 @@ use crate::{
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
+        render_difference::RenderDiffence,
     },
     layout::LayoutManager,
-    primitive::Message,
     prelude::*,
+    primitive::Message,
 };
 use derivative::Derivative;
 use log::error;
@@ -15,7 +16,7 @@ use std::ptr::NonNull;
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
-    figure::{Color, FontTypeface, Size, FPoint},
+    figure::{Color, FPoint, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
@@ -32,8 +33,14 @@ pub struct Widget {
     parent: Option<NonNull<dyn WidgetImpl>>,
     child: Option<Box<dyn WidgetImpl>>,
     child_ref: Option<NonNull<dyn WidgetImpl>>,
+
+    old_image_rect: Rect,
+    child_image_rect_union: Rect,
+    need_update_geometry: bool,
+
     initialized: bool,
     first_rendered: bool,
+    rerender_difference: bool,
 
     #[derivative(Default(value = "Color::WHITE"))]
     background: Color,
@@ -215,6 +222,13 @@ impl Widget {
             child.set_rerender_styles(true)
         }
     }
+
+    #[inline]
+    fn notify_minimized(&mut self) {
+        if let Some(child) = self.get_child_mut() {
+            child.set_minimized(true)
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -267,6 +281,12 @@ impl ObjectImpl for Widget {
                     self.notify_rerender_styles()
                 }
             }
+            "minimized" => {
+                let minimized = value.get::<bool>();
+                if minimized {
+                    self.notify_minimized();
+                }
+            }
             _ => {}
         }
     }
@@ -292,7 +312,14 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         if !self.first_rendered() || self.rerender_styles() {
             // Draw the background color of the Widget.
-            painter.fill_rect(contents_rect, self.background());
+            if self.rerender_difference() && self.first_rendered() && !self.window().minimized() {
+                self.render_difference(&mut painter);
+            } else {
+                painter.fill_rect(contents_rect, self.background());
+            }
+
+            self.set_rect_record(self.rect());
+            self.set_image_rect_record(self.image_rect());
 
             // Draw the border of the Widget.
             let borders = self.borders();
@@ -317,7 +344,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter.reset();
         painter.set_font(self.font().to_skia_font());
-        self.paint(painter)
+        self.paint(painter);
     }
 }
 
@@ -349,6 +376,12 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::set_rerender_styles) (Defined in [`WidgetExt`])
     fn set_rerender_styles(&mut self, rerender: bool);
+
+    /// Go to[`Function defination`](WidgetExt::rerender_difference) (Defined in [`WidgetExt`])
+    fn rerender_difference(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_rerender_difference) (Defined in [`WidgetExt`])
+    fn set_rerender_difference(&mut self, rerender_difference: bool);
 
     /// ## Do not invoke this function directly.
     ///
@@ -800,6 +833,27 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::set_vscale) (Defined in [`WidgetExt`])
     fn set_vscale(&mut self, vscale: f32);
+
+    /// Go to[`Function defination`](WidgetExt::child_image_rect_union) (Defined in [`WidgetExt`])
+    fn child_image_rect_union(&self) -> &Rect;
+
+    /// Go to[`Function defination`](WidgetExt::child_image_rect_union_mut) (Defined in [`WidgetExt`])
+    fn child_image_rect_union_mut(&mut self) -> &mut Rect;
+
+    /// Go to[`Function defination`](WidgetExt::need_update_geometry) (Defined in [`WidgetExt`])
+    fn need_update_geometry(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::image_rect_record) (Defined in [`WidgetExt`])
+    fn image_rect_record(&self) -> Rect;
+
+    /// Go to[`Function defination`](WidgetExt::set_image_rect_record) (Defined in [`WidgetExt`])
+    fn set_image_rect_record(&mut self, image_rect: Rect);
+
+    /// Go to[`Function defination`](WidgetExt::minimized) (Defined in [`WidgetExt`])
+    fn minimized(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_minimized) (Defined in [`WidgetExt`])
+    fn set_minimized(&mut self, minimized: bool);
 }
 
 impl WidgetExt for Widget {
@@ -844,6 +898,16 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_rerender_styles(&mut self, rerender: bool) {
         self.set_property("rerender_styles", rerender.to_value())
+    }
+
+    #[inline]
+    fn rerender_difference(&self) -> bool {
+        self.rerender_difference
+    }
+
+    #[inline]
+    fn set_rerender_difference(&mut self, rerender_difference: bool) {
+        self.rerender_difference = rerender_difference
     }
 
     #[inline]
@@ -998,7 +1062,8 @@ impl WidgetExt for Widget {
             self.fixed_height = false;
         }
         if self.id() != self.window_id() {
-            self.update_geometry();
+            self.window().layout_change(self);
+            self.update();
         }
     }
 
@@ -1022,8 +1087,17 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn update_geometry(&mut self) {
-        self.window().layout_change(self);
-        self.update();
+        let mut widget = self as &mut dyn WidgetImpl as *mut dyn WidgetImpl;
+        let mut parent = self.get_parent_mut();
+
+        while let Some(parent_mut) = parent {
+            let w = ptr_mut!(widget);
+
+            parent_mut.child_image_rect_union_mut().or(&w.image_rect());
+
+            widget = parent_mut;
+            parent = w.get_parent_mut();
+        }
     }
 
     #[inline]
@@ -1112,6 +1186,7 @@ impl WidgetExt for Widget {
         rect.set_width(rect.width() + left + right);
         rect.set_height(rect.height() + top + bottom);
 
+        rect.or(self.child_image_rect_union());
         rect
     }
 
@@ -1212,26 +1287,56 @@ impl WidgetExt for Widget {
         self.margins[1] = right;
         self.margins[2] = bottom;
         self.margins[3] = left;
+
+        if top != 0 || right != 0 || bottom != 0 || left != 0 {
+            self.need_update_geometry = true;
+        } else {
+            self.need_update_geometry = false;
+        }
     }
 
     #[inline]
     fn set_margin_top(&mut self, val: i32) {
         self.margins[0] = val;
+
+        if val != 0 {
+            self.need_update_geometry = true;
+        } else {
+            self.need_update_geometry = false;
+        }
     }
 
     #[inline]
     fn set_margin_right(&mut self, val: i32) {
         self.margins[1] = val;
+
+        if val != 0 {
+            self.need_update_geometry = true;
+        } else {
+            self.need_update_geometry = false;
+        }
     }
 
     #[inline]
     fn set_margin_bottom(&mut self, val: i32) {
         self.margins[2] = val;
+
+        if val != 0 {
+            self.need_update_geometry = true;
+        } else {
+            self.need_update_geometry = false;
+        }
     }
 
     #[inline]
     fn set_margin_left(&mut self, val: i32) {
         self.margins[3] = val;
+
+        if val != 0 {
+            self.need_update_geometry = true;
+        } else {
+            self.need_update_geometry = false;
+        }
     }
 
     #[inline]
@@ -1382,13 +1487,19 @@ impl WidgetExt for Widget {
     #[inline]
     fn map_to_global_f(&self, point: &FPoint) -> FPoint {
         let contents_rect = self.contents_rect(None);
-        FPoint::new(point.x() + contents_rect.x() as f32, point.y() + contents_rect.y() as f32)
+        FPoint::new(
+            point.x() + contents_rect.x() as f32,
+            point.y() + contents_rect.y() as f32,
+        )
     }
 
     #[inline]
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
         let contents_rect = self.contents_rect(None);
-        FPoint::new(point.x() - contents_rect.x() as f32, point.y() - contents_rect.y() as f32)
+        FPoint::new(
+            point.x() - contents_rect.x() as f32,
+            point.y() - contents_rect.y() as f32,
+        )
     }
 
     #[inline]
@@ -1442,6 +1553,47 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_vscale(&mut self, vscale: f32) {
         self.vscale = vscale
+    }
+
+    #[inline]
+    fn child_image_rect_union(&self) -> &Rect {
+        &self.child_image_rect_union
+    }
+
+    #[inline]
+    fn child_image_rect_union_mut(&mut self) -> &mut Rect {
+        &mut self.child_image_rect_union
+    }
+
+    #[inline]
+    fn need_update_geometry(&self) -> bool {
+        self.need_update_geometry
+    }
+
+    #[inline]
+    fn image_rect_record(&self) -> Rect {
+        self.old_image_rect
+    }
+
+    #[inline]
+    fn set_image_rect_record(&mut self, image_rect: Rect) {
+        self.old_image_rect = image_rect
+    }
+
+    #[inline]
+    fn minimized(&self) -> bool {
+        match self.get_property("minimized") {
+            Some(val) => val.get::<bool>(),
+            None => false,
+        }
+    }
+
+    #[inline]
+    fn set_minimized(&mut self, minimized: bool) {
+        self.set_rect_record((0, 0, 0, 0).into());
+        self.set_image_rect_record((0, 0, 0, 0).into());
+
+        self.set_property("minimized", minimized.to_value());
     }
 }
 
@@ -1879,8 +2031,11 @@ impl WindowAcquire for dyn WidgetImpl {
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;
-    use crate::{prelude::*, widget::WidgetGenericExt};
-    use tlib::object::{ObjectImpl, ObjectSubclass};
+    use crate::{prelude::*, skia_safe, widget::WidgetGenericExt};
+    use tlib::{
+        object::{ObjectImpl, ObjectSubclass},
+        skia_safe::region::RegionOp,
+    };
 
     #[extends(Widget)]
     struct SubWidget {}
@@ -1919,5 +2074,14 @@ mod tests {
         assert_eq!(child_ref.id(), child_id);
         assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
         assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());
+    }
+
+    #[test]
+    fn test_skia_region() {
+        let mut region = skia_safe::Region::new();
+        let rect1 = skia_safe::IRect::new(0, 0, 100, 100);
+        let rect2 = skia_safe::IRect::new(0, 0, 400, 400);
+        region.op_rect(rect1, RegionOp::Union);
+        region.op_rect(rect2, RegionOp::Difference);
     }
 }

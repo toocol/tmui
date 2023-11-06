@@ -309,7 +309,6 @@ impl WindowProcess {
                         "vscyn track: {}ms",
                         ins.elapsed().as_micros() as f64 / 1000.
                     );
-                    // window.request_redraw();
                     platform_context.request_redraw(&window);
                 }
 

@@ -3,7 +3,7 @@ use crate::{
     container::{ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS},
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, graphics::painter::Painter,
 };
 use derivative::Derivative;
 use log::warn;
@@ -251,7 +251,7 @@ impl StaticContainerScaleCalculate for ScrollArea {
                 // => container_hscale = (area_hscale * width) / (width - 10)
                 (area.hscale() * size.width() as f32) / (size.width() as f32 - 10.)
             }
-            None => SCALE_DISMISS
+            None => SCALE_DISMISS,
         }
     }
 
@@ -259,4 +259,8 @@ impl StaticContainerScaleCalculate for ScrollArea {
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_ADAPTION
     }
+}
+
+impl ChildContainerDiffRender for ScrollArea {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {}
 }

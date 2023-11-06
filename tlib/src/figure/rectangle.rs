@@ -375,9 +375,18 @@ impl Rect {
         }
         *self = self.union(other);
     }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.x = 0;
+        self.y = 0;
+        self.width = 0;
+        self.height = 0;
+    }
 }
 
 impl From<(i32, i32, i32, i32)> for Rect {
+    #[inline]
     fn from((x, y, width, height): (i32, i32, i32, i32)) -> Self {
         Self {
             x,
@@ -389,12 +398,14 @@ impl From<(i32, i32, i32, i32)> for Rect {
 }
 
 impl Into<(i32, i32, i32, i32)> for Rect {
+    #[inline]
     fn into(self) -> (i32, i32, i32, i32) {
         (self.x, self.y, self.width, self.height)
     }
 }
 
 impl Into<skia_safe::Rect> for Rect {
+    #[inline]
     fn into(self) -> skia_safe::Rect {
         skia_safe::Rect::from_xywh(
             self.x as f32,
@@ -405,13 +416,34 @@ impl Into<skia_safe::Rect> for Rect {
     }
 }
 
+impl Into<Rect> for skia_safe::Rect {
+    #[inline]
+    fn into(self) -> Rect {
+        Rect::new(
+            self.x() as i32,
+            self.y() as i32,
+            self.width() as i32,
+            self.height() as i32,
+        )
+    }
+}
+
 impl Into<skia_safe::IRect> for Rect {
+    #[inline]
     fn into(self) -> skia_safe::IRect {
         skia_safe::IRect::from_xywh(self.x, self.y, self.width, self.height)
     }
 }
 
+impl Into<Rect> for skia_safe::IRect {
+    #[inline]
+    fn into(self) -> Rect {
+        Rect::new(self.x(), self.y(), self.width(), self.height())
+    }
+}
+
 impl Into<FRect> for Rect {
+    #[inline]
     fn into(self) -> FRect {
         FRect {
             x: self.x as f32,
@@ -813,7 +845,7 @@ impl FRect {
     #[inline]
     pub fn and(&mut self, other: &FRect) {
         if !other.is_valid() {
-            return
+            return;
         }
         if !self.is_valid() {
             self.x = other.x;
@@ -831,7 +863,7 @@ impl FRect {
     #[inline]
     pub fn or(&mut self, other: &FRect) {
         if !other.is_valid() {
-            return
+            return;
         }
         if !self.is_valid() {
             self.x = other.x;

@@ -301,7 +301,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     .expect(INVALID_GENERIC_PARAM_ERROR)
                     .1;
                 for evt in receiver.receive_user_event_vec() {
-                    cpu_balance.add_payload();
+                    cpu_balance.add_payload(1.);
                     on_user_event_receive(window, evt);
                 }
             }
@@ -320,7 +320,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     .downcast_ref::<SharedChannel<T, M>>()
                     .expect(INVALID_GENERIC_PARAM_ERROR);
                 if let Some(rqst) = receiver.receive_request() {
-                    cpu_balance.add_payload();
+                    cpu_balance.add_payload(1.);
                     sender.resp_request(on_request_receive(window, rqst));
                 }
             }

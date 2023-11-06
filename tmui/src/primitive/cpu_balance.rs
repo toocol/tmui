@@ -13,8 +13,7 @@ const MILLIS_1_DURATION: Duration = Duration::from_millis(1);
 pub(crate) struct CpuBalance {
     loop_start_instant: Instant,
     payload_instant: Instant,
-    payload: usize,
-    indicate: usize,
+    payload: f32,
     high_load: bool,
 }
 
@@ -24,8 +23,7 @@ impl CpuBalance {
         Self {
             loop_start_instant: Instant::now(),
             payload_instant: Instant::now(),
-            payload: 0,
-            indicate: 0,
+            payload: 0.,
             high_load: false,
         }
     }
@@ -46,24 +44,22 @@ impl CpuBalance {
 
     /// Add payload to CpuBalance
     #[inline]
-    pub(crate) fn add_payload(&mut self) {
-        self.payload += 1;
+    pub(crate) fn add_payload(&mut self, payload: f32) {
+        self.payload += payload;
     }
 
     /// Check if the payload has reached the threshhold.
     #[inline]
     pub(crate) fn payload_check(&mut self) {
         let threshold = *Self::payload_threshold();
-        self.high_load = self.payload >= threshold * PAYLOAD_INTERVAL;
+        if !self.high_load {
+            self.high_load = self.payload >= (threshold * PAYLOAD_INTERVAL) as f32;
+        }
 
         if self.payload_instant.elapsed() >= PAYLOAD_RESET_DURATION {
-            self.indicate += 1;
+            self.high_load = self.payload >= (threshold * PAYLOAD_INTERVAL) as f32;
+            self.payload = 0.;
             self.payload_instant = Instant::now();
-
-            if self.payload < self.indicate * threshold * PAYLOAD_INTERVAL {
-                self.indicate = 0;
-                self.payload = 0;
-            }
         }
     }
 

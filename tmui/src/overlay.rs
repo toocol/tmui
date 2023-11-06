@@ -2,7 +2,7 @@ use crate::{
     layout::LayoutManager,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl, container::{ContainerScaleCalculate, SCALE_DISMISS, StaticContainerScaleCalculate},
+    widget::WidgetImpl, container::{ContainerScaleCalculate, SCALE_DISMISS, StaticContainerScaleCalculate}, graphics::painter::Painter,
 };
 
 #[extends(Container)]
@@ -110,4 +110,8 @@ impl StaticContainerScaleCalculate for Overlay {
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_DISMISS
     }
+}
+
+impl ChildContainerDiffRender for Overlay {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {}
 }

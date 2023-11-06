@@ -5,12 +5,12 @@ use crate::{
     widget::WidgetImpl,
 };
 use log::{error, warn};
-use std::cell::RefMut;
+use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
-    figure::{Color, FRect, ImageBuf, Rect, Region},
+    figure::{Color, FRect, ImageBuf, Rect},
     global::skia_font_clone,
     skia_safe::{
-        canvas::SrcRectConstraint,
+        canvas::{SrcRectConstraint, SaveLayerRec},
         textlayout::{
             FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
         },
@@ -97,6 +97,11 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
+    pub fn offset_rect(&self, rect: &mut Rect) {
+        rect.offset(self.x_offset, self.y_offset)
+    }
+
+    #[inline]
     pub fn set_transform(&mut self, transform: Matrix, combined: bool) {
         if combined {
             self.transform = self.transform * transform;
@@ -106,10 +111,18 @@ impl<'a> Painter<'a> {
         self.canvas.set_matrix(&self.transform.into());
     }
 
-    /// Save the canvas status.
+    /// Save the canvas status. 
+    /// 
+    /// Return the save count.
     #[inline]
-    pub fn save(&mut self) {
-        self.canvas.save();
+    pub fn save(&mut self) -> usize {
+        self.canvas.save()
+    }
+
+    /// Get canvas save count.
+    #[inline]
+    pub fn save_count(&self) -> usize {
+        self.canvas.save_count()
     }
 
     /// Save the pen status: Color, Font, line width etc...
@@ -140,6 +153,21 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn restore(&mut self) {
         self.canvas.restore();
+    }
+
+    #[inline]
+    pub fn restore_to_count(&mut self, count: usize) {
+        self.canvas.restore_to_count(count);
+    }
+
+    #[inline]
+    pub fn save_layer(&mut self, layer: &SaveLayerRec) -> usize {
+        self.canvas.save_layer(layer)
+    }
+
+    #[inline]
+    pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(&mut self, layer: T, alpha: u8) -> usize {
+        self.canvas.save_layer_alpha(layer, alpha as c_uint)
     }
 
     /// Reset the painter to Initial state.
@@ -209,6 +237,12 @@ impl<'a> Painter<'a> {
         self.paint.set_stroke_cap(cap);
     }
 
+    /// Clear the canvas with the specified color.
+    #[inline]
+    pub fn clear(&mut self, color: Color) {
+        self.canvas.clear(color);
+    }
+
     /// Stroke and fill the specified Rect with offset. <br>
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
@@ -237,6 +271,26 @@ impl<'a> Painter<'a> {
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
+    }
+
+    #[inline]
+    pub fn fill_region(&mut self, region: &skia_safe::Region, color: Color) {
+        self.paint.set_color(color);
+        self.paint
+            .set_style(crate::skia_safe::PaintStyle::StrokeAndFill);
+
+        self.canvas.draw_region(region, &self.paint);
+        if let Some(color) = self.color {
+            self.paint.set_color(color);
+        }
+    }
+
+    #[inline]
+    pub fn draw_region(&mut self, region: &skia_safe::Region) {
+        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
+
+        self.canvas.draw_region(region, &self.paint);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 
@@ -390,10 +444,8 @@ impl<'a> Painter<'a> {
 
     /// Clip the region to draw.
     #[inline]
-    pub fn clip(&mut self, mut region: Region) {
-        region.offset((self.x_offset, self.y_offset));
-        let region: skia_safe::Region = region.into();
-        self.canvas.clip_region(&region, None);
+    pub fn clip_region(&mut self, region: skia_safe::Region, op: skia_safe::ClipOp) {
+        self.canvas.clip_region(&region, Some(op));
     }
 
     /// Draw the path tho canvas.

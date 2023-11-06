@@ -1,5 +1,4 @@
 use std::{vec::IntoIter, slice::{Iter, IterMut}};
-use skia_safe::region::RegionOp;
 
 use super::{Rect, Point, FRect, FPoint};
 
@@ -94,17 +93,6 @@ impl IntoIterator for Region {
     }
 }
 
-impl Into<skia_safe::Region> for Region {
-    fn into(self) -> skia_safe::Region {
-        let mut region = skia_safe::Region::new();
-        for rect in self.into_iter() {
-            let rect: skia_safe::IRect = rect.into();
-            region.op_rect(rect, RegionOp::Union);
-        }
-        region
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// FRegion
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,17 +181,6 @@ impl IntoIterator for FRegion {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.regions.into_iter()
-    }
-}
-
-impl Into<skia_safe::Region> for FRegion {
-    fn into(self) -> skia_safe::Region {
-        let mut region = skia_safe::Region::new();
-        for rect in self.into_iter() {
-            let rect: skia_safe::IRect = rect.into();
-            region.op_rect(rect, RegionOp::Union);
-        }
-        region
     }
 }
 

@@ -51,6 +51,14 @@ impl ObjectImpl for Container {
                     }
                 }
             }
+            "minimized" => {
+                let minimized = value.get::<bool>();
+                if minimized {
+                    for child in self.children.iter_mut() {
+                        child.set_minimized(true)
+                    }
+                }
+            }
             _ => {}
         }
     }

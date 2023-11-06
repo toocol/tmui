@@ -283,8 +283,10 @@ impl LayoutManager {
             widget.name(),
             parent_size
         );
+
         widget.update();
         widget.set_rerender_styles(true);
+        widget.child_image_rect_union_mut().clear();
 
         let raw_child = widget.get_raw_child();
         let widget_ptr = widget.as_ptr_mut();
@@ -369,6 +371,9 @@ impl LayoutManager {
 
             // Deal with the widget's postion.
             widget_ref.position_layout(previous_ref, parent_ref, false);
+            if widget_ref.need_update_geometry() {
+                widget_ref.update_geometry()
+            }
 
             // Determine whether the widget is a container.
             let is_container = widget_ref.super_type().is_a(Container::static_type());

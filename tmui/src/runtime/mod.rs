@@ -21,6 +21,7 @@ use std::{
 };
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
+    payload::PayloadWeight,
     ptr_mut,
     r#async::tokio_runtime,
     timer::TimerHub,
@@ -133,9 +134,13 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
             frame = frame.next();
 
             let update = board.invalidate_visual();
+            if window.minimized() {
+                window.set_minimized(false);
+            }
             if update {
-                window.send_message(Message::VSync(Instant::now()));
-                cpu_balance.add_payload();
+                let msg = Message::VSync(Instant::now());
+                cpu_balance.add_payload(msg.payload_wieght());
+                window.send_message(msg);
             }
             update
         } else {
@@ -153,12 +158,15 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
                 if resize_evt.width() > 0 && resize_evt.height() > 0 {
                     size_record = (resize_evt.width() as u32, resize_evt.height() as u32);
                     resized = true;
+                } else {
+                    window.set_minimized(true);
                 }
 
                 evt = resize_evt;
             }
+
+            cpu_balance.add_payload(evt.payload_wieght());
             window.dispatch_event(evt);
-            cpu_balance.add_payload();
         }
 
         if let Some(ref on_user_event_receive) = on_user_event_receive {

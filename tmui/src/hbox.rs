@@ -2,7 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutManager,
-    prelude::*,
+    prelude::*, graphics::painter::Painter,
 };
 use tlib::object::ObjectSubclass;
 
@@ -256,5 +256,10 @@ impl StaticContainerScaleCalculate for HBox {
     #[inline]
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_ADAPTION
+    }
+}
+
+impl ChildContainerDiffRender for HBox {
+    fn container_diff_render(&mut self, _painter: &mut Painter) {
     }
 }
