@@ -654,6 +654,41 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn set_vscale(&mut self, vscale: f32) {
                 self.#(#widget_path).*.set_vscale(vscale)
             }
+
+            #[inline]
+            fn child_image_rect_union(&self) -> &Rect {
+                self.#(#widget_path).*.child_image_rect_union()
+            }
+
+            #[inline]
+            fn child_image_rect_union_mut(&mut self) -> &mut Rect {
+                self.#(#widget_path).*.child_image_rect_union_mut()
+            }
+
+            #[inline]
+            fn need_update_geometry(&self) -> bool {
+                self.#(#widget_path).*.need_update_geometry()
+            }
+
+            #[inline]
+            fn image_rect_record(&self) -> Rect {
+                self.#(#widget_path).*.image_rect_record()
+            }
+
+            #[inline]
+            fn set_image_rect_record(&mut self, image_rect: Rect) {
+                self.#(#widget_path).*.set_image_rect_record(image_rect)
+            }
+
+            #[inline]
+            fn minimized(&self) -> bool {
+                self.#(#widget_path).*.minimized()
+            }
+
+            #[inline]
+            fn set_minimized(&mut self, minimized: bool) {
+                self.#(#widget_path).*.set_minimized(minimized)
+            }
         }
 
         impl WidgetImplExt for #name {

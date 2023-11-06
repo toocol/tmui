@@ -34,8 +34,12 @@ impl<T: WidgetImpl> RenderDiffence for T {}
 pub trait ChildWidgetDiffRender: WidgetImpl {
     fn widget_diff_render(&mut self, painter: &mut Painter) {
         if let Some(child) = self.get_child_ref() {
-            let rec_rect = child.rect_record();
+            let rec_rect = child.image_rect_record();
             let cur_rect = child.rect();
+
+            if rec_rect == cur_rect {
+                return;
+            }
 
             let intersects: skia_safe::IRect = rec_rect
                 .intersects(&cur_rect)

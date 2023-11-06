@@ -375,6 +375,14 @@ impl Rect {
         }
         *self = self.union(other);
     }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.x = 0;
+        self.y = 0;
+        self.width = 0;
+        self.height = 0;
+    }
 }
 
 impl From<(i32, i32, i32, i32)> for Rect {

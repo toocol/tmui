@@ -21,9 +21,10 @@ use std::{
 };
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
+    payload::PayloadWeight,
     ptr_mut,
     r#async::tokio_runtime,
-    timer::TimerHub, payload::PayloadWeight,
+    timer::TimerHub,
 };
 
 pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
@@ -133,6 +134,9 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
             frame = frame.next();
 
             let update = board.invalidate_visual();
+            if window.minimized() {
+                window.set_minimized(false);
+            }
             if update {
                 let msg = Message::VSync(Instant::now());
                 cpu_balance.add_payload(msg.payload_wieght());
@@ -154,6 +158,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
                 if resize_evt.width() > 0 && resize_evt.height() > 0 {
                     size_record = (resize_evt.width() as u32, resize_evt.height() as u32);
                     resized = true;
+                } else {
+                    window.set_minimized(true);
                 }
 
                 evt = resize_evt;
