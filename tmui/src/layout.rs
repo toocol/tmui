@@ -284,8 +284,10 @@ impl LayoutManager {
             parent_size
         );
 
-        widget.update();
-        widget.set_rerender_styles(true);
+        if widget.repaint_when_resize() {
+            widget.update();
+            widget.set_rerender_styles(true);
+        }
         widget.child_image_rect_union_mut().clear();
 
         let raw_child = widget.get_raw_child();
