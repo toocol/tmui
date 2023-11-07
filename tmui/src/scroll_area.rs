@@ -124,6 +124,7 @@ impl ObjectSubclass for ScrollArea {
 impl ObjectImpl for ScrollArea {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_rerender_difference(true);
 
         self.scroll_bar.set_vexpand(true);
         self.scroll_bar.set_hscale(10.);
