@@ -689,6 +689,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn set_minimized(&mut self, minimized: bool) {
                 self.#(#widget_path).*.set_minimized(minimized)
             }
+
+            #[inline]
+            fn repaint_when_resize(&self) -> bool {
+                self.#(#widget_path).*.repaint_when_resize()
+            }
+
+            #[inline]
+            fn set_repaint_when_resize(&mut self, repaint: bool) {
+                self.#(#widget_path).*.set_repaint_when_resize(repaint)
+            }
         }
 
         impl WidgetImplExt for #name {

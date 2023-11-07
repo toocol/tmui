@@ -6,7 +6,7 @@ use crate::{
     scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, graphics::painter::Painter,
 };
 use derivative::Derivative;
-use log::warn;
+use log::debug;
 use tlib::{
     connect,
     events::{DeltaType, MouseEvent},
@@ -100,7 +100,7 @@ impl ScrollArea {
     #[inline]
     pub(crate) fn adjust_area_layout(&mut self, size: Size) {
         if size.width() == 0 || size.height() == 0 {
-            warn!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
+            debug!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
             return;
         }
 

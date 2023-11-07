@@ -38,6 +38,9 @@ pub struct Widget {
     child_image_rect_union: Rect,
     need_update_geometry: bool,
 
+    #[derivative(Default(value = "true"))]
+    repaint_when_resize: bool,
+
     initialized: bool,
     first_rendered: bool,
     rerender_difference: bool,
@@ -854,6 +857,12 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::set_minimized) (Defined in [`WidgetExt`])
     fn set_minimized(&mut self, minimized: bool);
+
+    /// Go to[`Function defination`](WidgetExt::repaint_when_resize) (Defined in [`WidgetExt`])
+    fn repaint_when_resize(&self) -> bool;
+
+    /// Go to[`Function defination`](WidgetExt::set_repaint_when_resize) (Defined in [`WidgetExt`])
+    fn set_repaint_when_resize(&mut self, repaint: bool);
 }
 
 impl WidgetExt for Widget {
@@ -1594,6 +1603,16 @@ impl WidgetExt for Widget {
         self.set_image_rect_record((0, 0, 0, 0).into());
 
         self.set_property("minimized", minimized.to_value());
+    }
+
+    #[inline]
+    fn repaint_when_resize(&self) -> bool {
+        self.repaint_when_resize
+    }
+
+    #[inline]
+    fn set_repaint_when_resize(&mut self, repaint: bool) {
+        self.repaint_when_resize = repaint
     }
 }
 
