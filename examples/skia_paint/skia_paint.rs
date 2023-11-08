@@ -19,7 +19,6 @@ impl ObjectSubclass for SkiaPaint {
 impl ObjectImpl for SkiaPaint {
     fn construct(&mut self) {
         self.parent_construct();
-        // self.set_rerender_difference(true);
     }
 }
 

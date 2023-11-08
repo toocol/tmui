@@ -36,6 +36,7 @@ pub struct Widget {
 
     old_image_rect: Rect,
     child_image_rect_union: Rect,
+    child_overflow_rect: Rect,
     need_update_geometry: bool,
 
     #[derivative(Default(value = "true"))]
@@ -55,6 +56,9 @@ pub struct Widget {
     border_style: BorderStyle,
     #[derivative(Default(value = "Color::BLACK"))]
     border_color: Color,
+
+    width_request: i32,
+    height_request: i32,
 
     /// Widget's width was fixed or not,
     /// `true` when user invoke [`width_request`](WidgetExt::width_request)
@@ -476,6 +480,12 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
     fn height_request(&mut self, width: i32);
 
+    /// Go to[`Function defination`](WidgetExt::get_width_request) (Defined in [`WidgetExt`])
+    fn get_width_request(&self) -> i32;
+
+    /// Go to[`Function defination`](WidgetExt::get_height_request) (Defined in [`WidgetExt`])
+    fn get_height_request(&self) -> i32;
+
     /// Update widget's geometry: size, layout...
     ///
     /// Go to[`Function defination`](WidgetExt::update_geometry) (Defined in [`WidgetExt`])
@@ -846,6 +856,12 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::need_update_geometry) (Defined in [`WidgetExt`])
     fn need_update_geometry(&self) -> bool;
 
+    /// Go to[`Function defination`](WidgetExt::child_overflow_rect) (Defined in [`WidgetExt`])
+    fn child_overflow_rect(&self) -> &Rect;
+
+    /// Go to[`Function defination`](WidgetExt::child_overflow_rect_mut) (Defined in [`WidgetExt`])
+    fn child_overflow_rect_mut(&mut self) -> &mut Rect;
+
     /// Go to[`Function defination`](WidgetExt::image_rect_record) (Defined in [`WidgetExt`])
     fn image_rect_record(&self) -> Rect;
 
@@ -1064,13 +1080,14 @@ impl WidgetExt for Widget {
     fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
         if let Some(width) = width {
             self.set_property("width", width.to_value());
-            self.fixed_width = false;
         }
         if let Some(height) = height {
             self.set_property("height", height.to_value());
-            self.fixed_height = false;
         }
         if self.id() != self.window_id() {
+            if ApplicationWindow::is_initialize_phase() {
+                return;
+            }
             self.window().layout_change(self);
             self.update();
         }
@@ -1080,6 +1097,7 @@ impl WidgetExt for Widget {
     fn width_request(&mut self, width: i32) {
         self.set_property("width", width.to_value());
         self.fixed_width = true;
+        self.width_request = width;
         if let Some(parent) = self.get_parent_ref() {
             self.fixed_width_ration = width as f32 / parent.size().width() as f32;
         }
@@ -1089,9 +1107,20 @@ impl WidgetExt for Widget {
     fn height_request(&mut self, height: i32) {
         self.set_property("height", height.to_value());
         self.fixed_height = true;
+        self.height_request = height;
         if let Some(parent) = self.get_parent_ref() {
             self.fixed_height_ration = height as f32 / parent.size().height() as f32;
         }
+    }
+
+    #[inline]
+    fn get_width_request(&self) -> i32 {
+        self.width_request
+    }
+
+    #[inline]
+    fn get_height_request(&self) -> i32 {
+        self.height_request
     }
 
     #[inline]
@@ -1192,10 +1221,15 @@ impl WidgetExt for Widget {
         let (top, right, bottom, left) = self.margins();
         rect.set_x(rect.x() - left);
         rect.set_y(rect.y() - top);
-        rect.set_width(rect.width() + left + right);
-        rect.set_height(rect.height() + top + bottom);
+        if rect.width() != 0 {
+            rect.set_width(rect.width() + left + right);
+        }
+        if rect.height() != 0 {
+            rect.set_height(rect.height() + top + bottom);
+        }
 
         rect.or(self.child_image_rect_union());
+        rect.or(self.child_overflow_rect());
         rect
     }
 
@@ -1577,6 +1611,16 @@ impl WidgetExt for Widget {
     #[inline]
     fn need_update_geometry(&self) -> bool {
         self.need_update_geometry
+    }
+
+    #[inline]
+    fn child_overflow_rect(&self) -> &Rect {
+        &self.child_overflow_rect
+    }
+
+    #[inline]
+    fn child_overflow_rect_mut(&mut self) -> &mut Rect {
+        &mut self.child_overflow_rect
     }
 
     #[inline]

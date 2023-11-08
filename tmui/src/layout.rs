@@ -66,7 +66,7 @@ pub(crate) trait SizeCalculation {
     /// Determine widget's size before calc child's size based on `expand`,`fixed`... <br>
     /// Mainly for processing expanded widgets. <br>
     /// Return the calculated size.
-    fn pre_calc_size(&mut self, parent_size: Size) -> Size;
+    fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> Size;
 
     /// Widget has child:
     fn calc_node_size(&mut self, child_size: Size);
@@ -75,10 +75,11 @@ pub(crate) trait SizeCalculation {
     fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size);
 }
 impl SizeCalculation for dyn WidgetImpl {
-    fn pre_calc_size(&mut self, parent_size: Size) -> Size {
+    fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> Size {
         if self.id() == self.window_id() {
             return self.size();
         }
+        let size = self.size();
         let mut resized = false;
 
         if self.hexpand() && !self.fixed_width() {
@@ -92,12 +93,12 @@ impl SizeCalculation for dyn WidgetImpl {
 
             if parent_hscale.is_adaption() {
                 self.set_fixed_width(parent_size.width());
-                resized = true;
             } else if !parent_hscale.is_dismiss() {
                 let ration = self.hscale() / parent_hscale;
                 self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
-                resized = true;
             }
+        } else {
+            self.set_fixed_width(self.get_width_request())
         }
 
         if self.vexpand() && !self.fixed_height() {
@@ -111,12 +112,23 @@ impl SizeCalculation for dyn WidgetImpl {
 
             if parent_vscale.is_adaption() {
                 self.set_fixed_height(parent_size.height());
-                resized = true;
             } else if !parent_vscale.is_dismiss() {
                 let ration = self.vscale() / parent_vscale;
                 self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
-                resized = true;
             }
+        } else {
+            self.set_fixed_height(self.get_height_request())
+        }
+
+        if window_size.width() == 0 && self.size().width() != 0 {
+            self.set_fixed_width(0);
+        }
+        if window_size.height() == 0 && self.size().height() != 0 {
+            self.set_fixed_height(0);
+        }
+
+        if self.size() != size {
+            resized = true;
         }
 
         if resized {
@@ -137,12 +149,14 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let mut resized = false;
 
-        if size.width() == 0 {
+        if size.width() == 0 && child_size.width() != 0 {
             self.set_fixed_width(child_size.width());
-            resized = true;
         }
-        if size.height() == 0 {
+        if size.height() == 0 && child_size.height() != 0 {
             self.set_fixed_height(child_size.height());
+        }
+
+        if self.size() != size {
             resized = true;
         }
 
@@ -168,7 +182,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_width(
                     (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
                 );
-                resized = true;
+            } else {
+                self.set_fixed_width(self.get_width_request());
             }
         } else {
             if self.hexpand() {
@@ -182,23 +197,14 @@ impl SizeCalculation for dyn WidgetImpl {
 
                 if parent_hscale.is_adaption() {
                     self.set_fixed_width(parent_size.width());
-                    resized = true;
                 } else if !parent_hscale.is_dismiss() {
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
-                    resized = true;
                 }
             } else {
-                if parent_size.width() != 0 {
-                    if size.width() == 0 {
-                        self.set_fixed_width(parent_size.width());
-                        resized = true;
-                    }
-                } else {
-                    if size.width() == 0 {
-                        self.set_fixed_width(window_size.width());
-                        resized = true;
-                    }
+                self.set_fixed_width(parent_size.width());
+                if self.size().width() == 0 {
+                    self.set_fixed_width(window_size.width());
                 }
             }
         }
@@ -208,7 +214,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_height(
                     (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
                 );
-                resized = true;
+            } else {
+                self.set_fixed_height(self.get_height_request())
             }
         } else {
             if self.vexpand() {
@@ -222,25 +229,27 @@ impl SizeCalculation for dyn WidgetImpl {
 
                 if parent_vscale.is_adaption() {
                     self.set_fixed_height(parent_size.height());
-                    resized = true;
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
-                    resized = true;
                 }
             } else {
-                if parent_size.height() != 0 {
-                    if size.height() == 0 {
-                        self.set_fixed_height(parent_size.height());
-                        resized = true;
-                    }
-                } else {
-                    if size.height() == 0 {
-                        self.set_fixed_height(window_size.height());
-                        resized = true;
-                    }
+                self.set_fixed_height(parent_size.height());
+                if self.size().height() == 0 {
+                    self.set_fixed_height(window_size.height());
                 }
             }
+        }
+
+        if window_size.width() == 0 && size.width() != 0 {
+            self.set_fixed_width(0);
+        }
+        if window_size.height() == 0 && size.height() != 0 {
+            self.set_fixed_height(0);
+        }
+
+        if self.size() != size {
+            resized = true;
         }
 
         if resized {
@@ -289,6 +298,7 @@ impl LayoutManager {
             widget.set_rerender_styles(true);
         }
         widget.child_image_rect_union_mut().clear();
+        widget.child_overflow_rect_mut().clear();
 
         let raw_child = widget.get_raw_child();
         let widget_ptr = widget.as_ptr_mut();
@@ -313,7 +323,7 @@ impl LayoutManager {
 
             widget.image_rect().size()
         } else {
-            let size = ptr_mut!(widget_ptr).pre_calc_size(parent_size);
+            let size = ptr_mut!(widget_ptr).pre_calc_size(window_size, parent_size);
 
             let child_size = if is_container {
                 let mut child_size = Size::default();
@@ -361,7 +371,7 @@ impl LayoutManager {
 
     pub(crate) fn child_position_probe(
         mut previous: Option<*const dyn WidgetImpl>,
-        mut parent: Option<*const dyn WidgetImpl>,
+        mut parent: Option<*mut dyn WidgetImpl>,
         mut widget: Option<*mut dyn WidgetImpl>,
     ) {
         let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
@@ -375,6 +385,9 @@ impl LayoutManager {
             widget_ref.position_layout(previous_ref, parent_ref, false);
             if widget_ref.need_update_geometry() {
                 widget_ref.update_geometry()
+            }
+            if let Some(p) = parent {
+                ptr_mut!(p).child_overflow_rect_mut().or(&widget_ref.rect());
             }
 
             // Determine whether the widget is a container.
@@ -401,7 +414,7 @@ impl LayoutManager {
             widget = children.pop_front().take().map_or(None, |widget| widget);
             previous = Some(widget_ptr);
             parent = if let Some(c) = widget.as_ref() {
-                unsafe { c.as_ref().unwrap().get_raw_parent() }
+                unsafe { c.as_mut().unwrap().get_raw_parent_mut() }
             } else {
                 None
             };
