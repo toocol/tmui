@@ -330,6 +330,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn get_width_request(&self) -> i32 {
+                self.#(#widget_path).*.get_width_request()
+            }
+
+            #[inline]
+            fn get_height_request(&self) -> i32 {
+                self.#(#widget_path).*.get_height_request()
+            }
+
+            #[inline]
             fn update_geometry(&mut self) {
                 self.#(#widget_path).*.update_geometry()
             }
@@ -668,6 +678,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn need_update_geometry(&self) -> bool {
                 self.#(#widget_path).*.need_update_geometry()
+            }
+
+            #[inline]
+            fn child_overflow_rect(&self) -> &Rect {
+                self.#(#widget_path).*.child_overflow_rect()
+            }
+
+            #[inline]
+            fn child_overflow_rect_mut(&mut self) -> &mut Rect {
+                self.#(#widget_path).*.child_overflow_rect_mut()
             }
 
             #[inline]

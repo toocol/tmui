@@ -119,6 +119,13 @@ impl Color {
         a: 255,
         valid: true,
     };
+    pub const GREY: Color = Color {
+        r: 128,
+        g: 128,
+        b: 128,
+        a: 255,
+        valid: true,
+    };
     pub const TRANSPARENT: Color = Color {
         r: 0,
         g: 0,

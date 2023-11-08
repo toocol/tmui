@@ -39,11 +39,7 @@ impl ObjectImpl for SelfAdaptionWidget {
     }
 }
 
-impl WidgetImpl for SelfAdaptionWidget {
-    fn paint(&mut self, mut _painter:tmui::graphics::painter::Painter) {
-        println!("rect: {:?}, image_rect: {:?}", self.window().rect(), self.window().image_rect());
-    }
-}
+impl WidgetImpl for SelfAdaptionWidget {}
 
 impl SelfAdaptionWidget {
     #[inline]

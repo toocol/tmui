@@ -109,10 +109,6 @@ impl ScrollArea {
             area.set_hexpand(true);
             area.set_hscale(size.width() as f32 - 10.);
         }
-
-        if !ApplicationWindow::is_initialize_phase() {
-            self.update_geometry();
-        }
     }
 }
 /////////////////////////////////////////// End: ScrollArea self implementations ///////////////////////////////////////////
