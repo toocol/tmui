@@ -98,7 +98,7 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
         }
 
         for child in self.children() {
-            if child.rect().contains(point) {
+            if child.visible() && child.rect().contains(point) {
                 return false;
             }
         }

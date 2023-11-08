@@ -314,6 +314,9 @@ impl Rect {
 
     #[inline]
     pub fn contains(&self, point: &Point) -> bool {
+        if !self.is_valid() {
+            return false
+        }
         point.x() >= self.x()
             && point.y() >= self.y()
             && point.x() <= self.x() + self.width()
@@ -813,6 +816,9 @@ impl FRect {
 
     #[inline]
     pub fn contains(&self, point: &FPoint) -> bool {
+        if !self.is_valid() {
+            return false;
+        }
         point.x() >= self.x()
             && point.y() >= self.y()
             && point.x() <= self.width()
@@ -1206,6 +1212,17 @@ impl AtomicRect {
     }
 
     #[inline]
+    pub fn contains(&self, point: &Point) -> bool {
+        if !self.is_valid() {
+            return false
+        }
+        point.x() >= self.x()
+            && point.y() >= self.y()
+            && point.x() <= self.x() + self.width()
+            && point.y() <= self.y() + self.height()
+    }
+
+    #[inline]
     pub fn is_valid(&self) -> bool {
         self.width.load(Ordering::SeqCst) > 0 && self.height.load(Ordering::SeqCst) > 0
     }
@@ -1457,6 +1474,13 @@ mod tests {
         let rect = AtomicRect::new(20, 25, 300, 400);
         let val = rect.to_value();
         assert!(val.get::<AtomicRect>().equals(&rect));
+    }
+
+    #[test]
+    fn test_contains() {
+        let rect = Rect::new(0, 0, 0, 0);
+        let pos = Point::new(0, 0);
+        assert!(!rect.contains(&pos));
     }
 
     #[test]
