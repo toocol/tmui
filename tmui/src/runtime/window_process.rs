@@ -1,11 +1,14 @@
 use crate::{
     cursor::Cursor,
+    platform::PlatformContext,
+    primitive::Message,
+    runtime::mouse_click_track::MouseClickTrack,
     winit::{
         self,
         event::{Event, WindowEvent},
         event_loop::EventLoop,
         window::Window,
-    }, platform::PlatformContext, primitive::Message,
+    },
 };
 use log::debug;
 use once_cell::sync::Lazy;
@@ -58,6 +61,9 @@ impl WindowProcess {
 
         static mut MOUSE_POSITION: Lazy<(i32, i32)> = Lazy::new(|| (0, 0));
         let mouse_position = unsafe { MOUSE_POSITION.deref_mut() };
+
+        static mut MOUSE_CLICK_TRACK: Lazy<MouseClickTrack> = Lazy::new(|| MouseClickTrack::new());
+        let mouse_click_track = unsafe { MOUSE_CLICK_TRACK.deref_mut() };
 
         event_loop.run(move |event, _, control_flow| {
             let input_sender = platform_context.input_sender();
@@ -214,12 +220,15 @@ impl WindowProcess {
                         },
                     ..
                 } => {
+                    let mouse_button: MouseButton = button.into();
+                    mouse_click_track.receive_mouse_click(mouse_button);
+
                     let evt = MouseEvent::new(
                         EventType::MouseButtonPress,
                         (mouse_position.0, mouse_position.1),
-                        button.into(),
+                        mouse_button,
                         *modifer,
-                        1,
+                        mouse_click_track.click_count(),
                         Point::default(),
                         DeltaType::default(),
                     );

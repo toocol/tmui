@@ -67,18 +67,6 @@ fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
                 Instant::now(),
             )
         }
-        MouseButtonDoubleClick => {
-            let evt = downcast_event::<MouseEvent>(evt).unwrap();
-            let pos = evt.position();
-            IpcEvent::MousePressedEvent(
-                evt.n_press(),
-                pos.0,
-                pos.1,
-                evt.mouse_button().as_numeric(),
-                evt.modifier().as_numeric(),
-                Instant::now(),
-            )
-        }
         MouseMove => {
             let evt = downcast_event::<MouseEvent>(evt).unwrap();
             let pos = evt.position();

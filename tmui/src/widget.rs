@@ -1786,9 +1786,6 @@ pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse released event.
     fn inner_mouse_released(&mut self, event: &MouseEvent);
 
-    /// Invoke when widget's receive mouse double click event.
-    fn inner_mouse_double_click(&mut self, event: &MouseEvent);
-
     /// Invoke when widget's receive mouse move event.
     fn inner_mouse_move(&mut self, event: &MouseEvent);
 
@@ -1822,11 +1819,6 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     #[inline]
     fn inner_mouse_released(&mut self, event: &MouseEvent) {
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
-    }
-
-    #[inline]
-    fn inner_mouse_double_click(&mut self, event: &MouseEvent) {
-        emit!(Widget::inner_mouse_double_click => self.mouse_double_click(), event);
     }
 
     #[inline]
@@ -1914,9 +1906,6 @@ pub trait WidgetImpl:
 
     /// Invoke when widget's receive mouse released event.
     fn on_mouse_released(&mut self, event: &MouseEvent) {}
-
-    /// Invoke when widget's receive mouse double click event.
-    fn on_mouse_double_click(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
     fn on_mouse_move(&mut self, event: &MouseEvent) {}
