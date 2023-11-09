@@ -27,7 +27,6 @@ pub enum EventType {
     None = 0,
     MouseButtonPress,
     MouseButtonRelease,
-    MouseButtonDoubleClick,
     MouseMove,
     MouseWhell,
     MouseEnter,
@@ -50,22 +49,21 @@ impl From<u8> for EventType {
             0 => Self::None,
             1 => Self::MouseButtonPress,
             2 => Self::MouseButtonRelease,
-            3 => Self::MouseButtonDoubleClick,
-            4 => Self::MouseMove,
-            5 => Self::MouseWhell,
-            6 => Self::MouseEnter,
-            7 => Self::MouseLeave,
-            8 => Self::KeyPress,
-            9 => Self::KeyRelease,
-            10 => Self::FocusIn,
-            11 => Self::FocusOut,
-            12 => Self::Resize,
-            13 => Self::Moved,
-            14 => Self::DroppedFile,
-            15 => Self::HoveredFile,
-            16 => Self::HoveredFileCancelled,
-            17 => Self::ReceivedCharacter,
-            18 => Self::InputMethod,
+            3 => Self::MouseMove,
+            4 => Self::MouseWhell,
+            5 => Self::MouseEnter,
+            6 => Self::MouseLeave,
+            7 => Self::KeyPress,
+            8 => Self::KeyRelease,
+            9 => Self::FocusIn,
+            10 => Self::FocusOut,
+            11 => Self::Resize,
+            12 => Self::Moved,
+            13 => Self::DroppedFile,
+            14 => Self::HoveredFile,
+            15 => Self::HoveredFileCancelled,
+            16 => Self::ReceivedCharacter,
+            17 => Self::InputMethod,
             _ => unimplemented!(),
         }
     }
@@ -290,7 +288,6 @@ impl MouseEvent {
         let type_ = match type_ {
             EventType::MouseButtonPress => type_,
             EventType::MouseButtonRelease => type_,
-            EventType::MouseButtonDoubleClick => type_,
             EventType::MouseEnter => type_,
             EventType::MouseLeave => type_,
             EventType::MouseMove => type_,
@@ -356,7 +353,7 @@ impl PayloadWeight for MouseEvent {
     #[inline]
     fn payload_wieght(&self) -> f32 {
         match self.type_ {
-            EventType::MouseMove => 0.1,
+            EventType::MouseMove => 0.2,
             _ => 1.,
         }
     }

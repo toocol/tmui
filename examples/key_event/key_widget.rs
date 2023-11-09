@@ -1,15 +1,15 @@
 use tlib::events::KeyEvent;
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Widget)]
 pub struct KeyWidget {}
 
 impl ObjectSubclass for KeyWidget {
-   const NAME: &'static str = "KeyWidget";
+    const NAME: &'static str = "KeyWidget";
 }
 
 impl ObjectImpl for KeyWidget {
@@ -17,6 +17,7 @@ impl ObjectImpl for KeyWidget {
         self.parent_construct();
 
         self.set_focus(true);
+        self.set_mouse_tracking(true);
         self.set_vexpand(true);
         self.set_hexpand(true);
         self.set_background(Color::from_rgb(120, 120, 120));
@@ -30,6 +31,14 @@ impl WidgetImpl for KeyWidget {
 
     fn on_key_released(&mut self, event: &KeyEvent) {
         println!("Receive key pressed: {:?}", event);
+    }
+
+    fn on_mouse_pressed(&mut self, event: &tlib::events::MouseEvent) {
+        println!("\nReceive mouse pressed event: {:?}\n", event);
+    }
+
+    fn on_mouse_move(&mut self, event: &tlib::events::MouseEvent) {
+        println!("\nReceive mouse moved event: {:?}\n", event);
     }
 }
 

@@ -291,25 +291,6 @@ impl ApplicationWindow {
                 }
             }
 
-            // Mouse double clicked.
-            EventType::MouseButtonDoubleClick => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-                let pos = evt.position().into();
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.point_effective(&pos) {
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.inner_mouse_double_click(evt.as_ref());
-                        widget.on_mouse_double_click(evt.as_ref());
-                        break;
-                    }
-                }
-            }
-
             // Mouse moved.
             EventType::MouseMove => {
                 let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
