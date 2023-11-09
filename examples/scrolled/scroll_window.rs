@@ -1,4 +1,5 @@
 use derivative::Derivative;
+use tlib::{connect, events::MouseEvent};
 use tmui::{
     label::Label,
     prelude::*,
@@ -28,6 +29,8 @@ impl ObjectImpl for ScrollWindow {
         label.set_content_valign(Align::End);
         label.set_size(30);
 
+        connect!(label, mouse_wheel(), self, when_laebl_receive_wheel(MouseEvent));
+
         let mut scroll_area: Box<ScrollArea> = Object::new(&[]);
         scroll_area.set_area(label);
         scroll_area.width_request(400);
@@ -46,3 +49,10 @@ impl ObjectImpl for ScrollWindow {
 }
 
 impl WidgetImpl for ScrollWindow {}
+
+impl ScrollWindow {
+    fn when_laebl_receive_wheel(&self, evt: MouseEvent) {
+        let pos = evt.position();
+        println!("Label receive wheel event. position: {:?}", pos)
+    }
+}

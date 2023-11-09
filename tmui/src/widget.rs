@@ -1764,12 +1764,17 @@ pub trait PointEffective {
 impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
         let self_rect = self.rect();
-        if let Some(child) = self.get_raw_child() {
-            let child_rect = unsafe { child.as_ref().unwrap().rect() };
-            return self_rect.contains(point) && !child_rect.contains(point);
-        } else {
-            return self_rect.contains(point);
+        if !self_rect.contains(point) {
+            return false
         }
+
+        if let Some(child) = self.get_child_ref() {
+            if !child.visible() {
+                return true
+            }
+            return !child.rect().contains(point);
+        } 
+        true
     }
 }
 
