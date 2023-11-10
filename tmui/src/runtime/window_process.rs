@@ -2,7 +2,7 @@ use crate::{
     cursor::Cursor,
     platform::PlatformContext,
     primitive::Message,
-    runtime::mouse_click_track::MouseClickTrack,
+    runtime::runtime_track::RuntimeTrack,
     winit::{
         self,
         event::{Event, WindowEvent},
@@ -50,34 +50,22 @@ impl WindowProcess {
         ipc_master: Option<Arc<IpcMaster<T, M>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
-        static mut VSYNC_REC: Lazy<Option<Instant>> = Lazy::new(|| None);
-        let vsync_rec = unsafe { VSYNC_REC.deref_mut() };
-
-        static mut UPDATE_CNT: Lazy<usize> = Lazy::new(|| 0);
-        let update_cnt = unsafe { UPDATE_CNT.deref_mut() };
-
-        static mut MODIFIER: Lazy<KeyboardModifier> = Lazy::new(|| KeyboardModifier::NoModifier);
-        let modifer = unsafe { MODIFIER.deref_mut() };
-
-        static mut MOUSE_POSITION: Lazy<(i32, i32)> = Lazy::new(|| (0, 0));
-        let mouse_position = unsafe { MOUSE_POSITION.deref_mut() };
-
-        static mut MOUSE_CLICK_TRACK: Lazy<MouseClickTrack> = Lazy::new(|| MouseClickTrack::new());
-        let mouse_click_track = unsafe { MOUSE_CLICK_TRACK.deref_mut() };
+        static mut RUNTIME_TRACK: Lazy<RuntimeTrack> = Lazy::new(|| RuntimeTrack::new());
+        let runtime_track = unsafe { RUNTIME_TRACK.deref_mut() };
 
         event_loop.run(move |event, _, control_flow| {
             let input_sender = platform_context.input_sender();
 
             // Adjusting CPU usage based on vsync signals.
-            if let Some(ins) = vsync_rec {
+            if let Some(ins) = runtime_track.vsync_rec {
                 if ins.elapsed().as_millis() >= 500 {
-                    if *update_cnt < 15 {
+                    if runtime_track.update_cnt < 15 {
                         control_flow.set_wait_timeout(Duration::from_millis(10));
-                        *vsync_rec = None;
+                        runtime_track.vsync_rec = None;
                     } else {
-                        *vsync_rec = Some(Instant::now());
+                        runtime_track.vsync_rec = Some(Instant::now());
                     }
-                    *update_cnt = 0;
+                    runtime_track.update_cnt = 0;
                 }
             } else {
                 control_flow.set_wait_timeout(Duration::from_millis(10));
@@ -94,10 +82,10 @@ impl WindowProcess {
                             );
                             control_flow.set_poll();
                             window.request_redraw();
-                            if vsync_rec.is_none() {
-                                *vsync_rec = Some(Instant::now());
+                            if runtime_track.vsync_rec.is_none() {
+                                runtime_track.vsync_rec = Some(Instant::now());
                             }
-                            *update_cnt += 1;
+                            runtime_track.update_cnt += 1;
                         }
                         IpcEvent::SetCursorShape(cursor) => match cursor {
                             SystemCursorShape::BlankCursor => window.set_cursor_visible(false),
@@ -150,7 +138,7 @@ impl WindowProcess {
                 Event::WindowEvent {
                     event: WindowEvent::ModifiersChanged(modifier),
                     ..
-                } => change_modifer(modifer, modifier.state()),
+                } => convert_modifier(&mut runtime_track.modifier, modifier.state()),
 
                 // Mouse enter window event.
                 Event::WindowEvent {
@@ -172,15 +160,17 @@ impl WindowProcess {
                     let evt = MouseEvent::new(
                         EventType::MouseMove,
                         (position.x as i32, position.y as i32),
-                        MouseButton::NoButton,
-                        *modifer,
+                        runtime_track.mouse_button_state(),
+                        runtime_track.modifier,
                         0,
                         Point::default(),
                         DeltaType::default(),
                     );
+
                     let pos = evt.position();
-                    *mouse_position = (pos.0, pos.1);
+                    runtime_track.mouse_position = (pos.0, pos.1);
                     Cursor::set_position(pos);
+
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
 
@@ -199,9 +189,12 @@ impl WindowProcess {
                     };
                     let evt = MouseEvent::new(
                         EventType::MouseWhell,
-                        (mouse_position.0, mouse_position.1),
-                        MouseButton::NoButton,
-                        *modifer,
+                        (
+                            runtime_track.mouse_position.0,
+                            runtime_track.mouse_position.1,
+                        ),
+                        runtime_track.mouse_button_state(),
+                        runtime_track.modifier,
                         0,
                         point,
                         delta_type,
@@ -221,14 +214,17 @@ impl WindowProcess {
                     ..
                 } => {
                     let mouse_button: MouseButton = button.into();
-                    mouse_click_track.receive_mouse_click(mouse_button);
+                    runtime_track.receive_mouse_click(mouse_button);
 
                     let evt = MouseEvent::new(
                         EventType::MouseButtonPress,
-                        (mouse_position.0, mouse_position.1),
+                        (
+                            runtime_track.mouse_position.0,
+                            runtime_track.mouse_position.1,
+                        ),
                         mouse_button,
-                        *modifer,
-                        mouse_click_track.click_count(),
+                        runtime_track.modifier,
+                        runtime_track.click_count(),
                         Point::default(),
                         DeltaType::default(),
                     );
@@ -246,11 +242,17 @@ impl WindowProcess {
                         },
                     ..
                 } => {
+                    let button: MouseButton = button.into();
+                    runtime_track.receive_mouse_release(button);
+
                     let evt = MouseEvent::new(
                         EventType::MouseButtonRelease,
-                        (mouse_position.0, mouse_position.1),
-                        button.into(),
-                        *modifer,
+                        (
+                            runtime_track.mouse_position.0,
+                            runtime_track.mouse_position.1,
+                        ),
+                        button,
+                        runtime_track.modifier,
                         1,
                         Point::default(),
                         DeltaType::default(),
@@ -279,7 +281,8 @@ impl WindowProcess {
                         Key::Character(str) => to_static(str.to_string()),
                         _ => "",
                     };
-                    let evt = KeyEvent::new(EventType::KeyPress, key_code, *modifer, text);
+                    let evt =
+                        KeyEvent::new(EventType::KeyPress, key_code, runtime_track.modifier, text);
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
@@ -304,7 +307,12 @@ impl WindowProcess {
                         Key::Character(str) => to_static(str.to_string()),
                         _ => "",
                     };
-                    let evt = KeyEvent::new(EventType::KeyRelease, key_code, *modifer, text);
+                    let evt = KeyEvent::new(
+                        EventType::KeyRelease,
+                        key_code,
+                        runtime_track.modifier,
+                        text,
+                    );
 
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
@@ -391,7 +399,7 @@ impl WindowProcess {
 }
 
 #[inline]
-fn change_modifer(modifer: &mut KeyboardModifier, modifier_state: ModifiersState) {
+fn convert_modifier(modifer: &mut KeyboardModifier, modifier_state: ModifiersState) {
     let mut state = KeyboardModifier::NoModifier;
     if modifier_state.shift_key() {
         state = state.or(KeyboardModifier::ShiftModifier);

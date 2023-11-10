@@ -100,7 +100,7 @@ pub enum KeyCode {
     #[default]
     Unknown = 0x00,
 
-    // Unicode Basic Latin block 
+    // Unicode Basic Latin block
     KeySpace,
     KeyExclam,
     KeyQuoteDbl,
@@ -613,7 +613,7 @@ implements_enum_value!(KeyCode, u32);
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// The enum to represent the keyboard modifier.
 #[repr(u32)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default, EnumIter)]
 pub enum KeyboardModifier {
     #[default]
     NoModifier,
@@ -640,7 +640,38 @@ impl KeyboardModifier {
     pub fn or(&self, other: KeyboardModifier) -> KeyboardModifier {
         let one = self.as_u32();
         let other = other.as_u32();
-        Self::Combination(one | other)
+        let after = one | other;
+        if one == 0 {
+            for m in Self::iter() {
+                if m.as_u32() == after {
+                    return m;
+                }
+            }
+        }
+        Self::Combination(after)
+    }
+
+    pub fn remove(&self, remove: KeyboardModifier) -> KeyboardModifier {
+        match self {
+            Self::Combination(data) => {
+                let other = remove.as_u32();
+                let after_remove = *data & !(*data & other);
+
+                for b in Self::iter() {
+                    if after_remove == b.as_u32() {
+                        return b;
+                    }
+                }
+                return Self::Combination(after_remove);
+            }
+            _ => {
+                if *self == remove {
+                    Self::NoModifier
+                } else {
+                    *self
+                }
+            }
+        }
     }
 
     #[inline]
@@ -961,7 +992,7 @@ implements_enum_value!(SystemCursorShape, u8);
 /// [`Coordinate`]
 ////////////////////////////////////////////////////////////////////////////////////////////////
 #[repr(u32)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, EnumIter)]
 pub enum MouseButton {
     #[default]
     NoButton,
@@ -974,6 +1005,7 @@ pub enum MouseButton {
     Combination(u32),
 }
 impl AsNumeric<u32> for MouseButton {
+    #[inline]
     fn as_numeric(&self) -> u32 {
         self.as_u32()
     }
@@ -982,14 +1014,47 @@ impl MouseButton {
     pub fn or(&self, other: MouseButton) -> MouseButton {
         let one = self.as_u32();
         let other = other.as_u32();
-        Self::Combination(one | other)
+        let after = one | other;
+
+        if one == 0 {
+            for b in Self::iter() {
+                if after == b.as_u32() {
+                    return b;
+                }
+            }
+        }
+        return Self::Combination(after);
     }
 
+    pub fn remove(&self, remove: MouseButton) -> MouseButton {
+        match self {
+            Self::Combination(data) => {
+                let other = remove.as_u32();
+                let after_remove = *data & !(*data & other);
+
+                for b in Self::iter() {
+                    if after_remove == b.as_u32() {
+                        return b;
+                    }
+                }
+                return Self::Combination(after_remove);
+            }
+            _ => {
+                if *self == remove {
+                    Self::NoButton
+                } else {
+                    *self
+                }
+            }
+        }
+    }
+
+    #[inline]
     pub fn has(&self, has: MouseButton) -> bool {
         match self {
-            Self::Combination(mask) => {
+            Self::Combination(data) => {
                 let has = has.as_u32();
-                mask & has != 0
+                data & has != 0
             }
             _ => *self == has,
         }
@@ -1062,7 +1127,6 @@ impl From<u8> for ExitStatus {
 }
 implements_enum_value!(ExitStatus, u8);
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /// [`ImageOption`]
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1090,7 +1154,7 @@ impl From<u8> for ImageOption {
             2 => Self::Tile,
             3 => Self::Stretch,
             4 => Self::Center,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -1101,7 +1165,8 @@ mod tests {
     use crate::prelude::ToValue;
 
     use super::{
-        Align, BorderStyle, Coordinate, KeyCode, KeyboardModifier, Orientation, SystemCursorShape, ExitStatus, ImageOption,
+        Align, BorderStyle, Coordinate, ExitStatus, ImageOption, KeyCode, KeyboardModifier,
+        MouseButton, Orientation, SystemCursorShape,
     };
 
     #[test]
@@ -1170,5 +1235,39 @@ mod tests {
     fn test_key_code_ord() {
         let code = KeyCode::KeyC;
         assert!(code >= KeyCode::KeyA && code <= KeyCode::KeyZ);
+    }
+
+    #[test]
+    fn test_modifier_remove() {
+        let mut m = KeyboardModifier::AltModifier;
+        m = m.or(KeyboardModifier::ShiftModifier);
+        let rec_alt_shift = m;
+        m = m.or(KeyboardModifier::ControlModifier);
+
+        m = m.remove(KeyboardModifier::ControlModifier);
+        assert_eq!(m, rec_alt_shift);
+
+        m = m.remove(KeyboardModifier::ShiftModifier);
+        assert_eq!(m, KeyboardModifier::AltModifier);
+
+        m = m.remove(KeyboardModifier::AltModifier);
+        assert_eq!(m, KeyboardModifier::NoModifier);
+    }
+
+    #[test]
+    fn test_mouse_button_remove() {
+        let mut button = MouseButton::LeftButton;
+        button = button.or(MouseButton::MiddleButton);
+        let rec_left_middle = button;
+        button = button.or(MouseButton::RightButton);
+
+        button = button.remove(MouseButton::RightButton);
+        assert_eq!(button, rec_left_middle);
+
+        button = button.remove(MouseButton::MiddleButton);
+        assert_eq!(button, MouseButton::LeftButton);
+
+        button = button.remove(MouseButton::LeftButton);
+        assert_eq!(button, MouseButton::NoButton);
     }
 }
