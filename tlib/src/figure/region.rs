@@ -18,7 +18,17 @@ impl Region {
 
     #[inline]
     pub fn add_rect(&mut self, rect: Rect) {
+        if !rect.is_valid() {
+            return;
+        }
         self.regions.push(rect)
+    }
+
+    #[inline]
+    pub fn add_region(&mut self, region: &Region) {
+        for rect in region.iter() {
+            self.add_rect(*rect);
+        }
     }
 
     #[inline]
@@ -109,7 +119,17 @@ impl FRegion {
 
     #[inline]
     pub fn add_rect(&mut self, rect: FRect) {
+        if !rect.is_valid() {
+            return;
+        }
         self.regions.push(rect)
+    }
+
+    #[inline]
+    pub fn add_region(&mut self, region: &FRegion) {
+        for rect in region.iter() {
+            self.add_rect(*rect);
+        }
     }
 
     #[inline]

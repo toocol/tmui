@@ -91,17 +91,31 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn update_region(&mut self, rect: Rect) {
+            fn update_rect(&mut self, rect: Rect) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
-                self.#(#element_path).*.update_region(rect);
+                self.#(#element_path).*.update_rect(rect);
             }
 
             #[inline]
-            fn update_region_f(&mut self, rect: FRect) {
+            fn update_rect_f(&mut self, rect: FRect) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
-                self.#(#element_path).*.update_region_f(rect);
+                self.#(#element_path).*.update_rect_f(rect);
+            }
+
+            #[inline]
+            fn update_region(&mut self, region: &Region) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_region(region);
+            }
+
+            #[inline]
+            fn update_region_f(&mut self, region: &FRegion) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_region_f(region);
             }
 
             #[inline]
