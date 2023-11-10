@@ -4,12 +4,24 @@ use once_cell::sync::Lazy;
 #[derive(Derivative)]
 #[derivative(Default)]
 pub struct EventHints {
+    /// The maximum time interval used to determine the number of mouse clicks.
     #[derivative(Default(value = "300"))]
     double_click_interval: i32,
+
     #[derivative(Default(value = "3"))]
     wheel_scroll_lines: i32,
+
+    /// The time interval for cursor blinking
     #[derivative(Default(value = "500"))]
     cursor_blinking_time: u32,
+
+    /// The minimum distance that the mouse must move 
+    /// before the user starts the drag operation, 
+    /// 
+    /// representing the number of pixels that the mouse must move 
+    /// to trigger the drag operation 
+    #[derivative(Default(value = "10"))]
+    start_drag_distance: i32,
 }
 
 #[inline]
@@ -47,5 +59,15 @@ impl EventHints {
     #[inline]
     pub fn cursor_blinking_time(&self) -> u32 {
         self.cursor_blinking_time
+    }
+
+    #[inline]
+    pub fn set_start_drag_distance(&mut self, distance: i32) {
+        self.start_drag_distance = distance
+    }
+
+    #[inline]
+    pub fn start_drag_distance(&self) -> i32 {
+        self.start_drag_distance
     }
 }

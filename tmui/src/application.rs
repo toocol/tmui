@@ -510,3 +510,12 @@ pub fn cursor_blinking_time() -> u32 {
 pub fn set_cursor_blinking_time(blinking_time_ms: u32) {
     event_hints().set_cursor_blinking_time(blinking_time_ms)
 }
+
+#[inline]
+pub fn start_drag_distance() -> i32 {
+    event_hints().start_drag_distance()
+}
+#[inline]
+pub fn set_start_drag_disntance(distance: i32) {
+    event_hints().set_start_drag_distance(distance)
+}
