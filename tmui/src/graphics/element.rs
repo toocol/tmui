@@ -54,13 +54,23 @@ pub trait ElementExt: 'static {
 
     /// Specified the region to redraw.
     ///
+    /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
+    fn update_rect(&mut self, rect: Rect);
+
+    /// Specified the region to redraw.
+    ///
+    /// Go to[`Function defination`](ElementExt::update_rect_f) (Defined in [`ElementExt`])
+    fn update_rect_f(&mut self, rect: FRect);
+
+    /// Specified the region to redraw.
+    ///
     /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
-    fn update_region(&mut self, rect: Rect);
+    fn update_region(&mut self, region: &Region);
 
     /// Specified the region to redraw.
     ///
     /// Go to[`Function defination`](ElementExt::update_region_f) (Defined in [`ElementExt`])
-    fn update_region_f(&mut self, rect: FRect);
+    fn update_region_f(&mut self, region: &FRegion);
 
     /// Cleaer the redraw region.
     ///
@@ -130,19 +140,35 @@ impl ElementExt for Element {
     }
 
     #[inline]
-    fn update_region(&mut self, rect: Rect) {
-        if rect.width() == 0 || rect.height() == 0 {
+    fn update_rect(&mut self, rect: Rect) {
+        if !rect.is_valid() {
             return;
         }
         self.redraw_region.add_rect(rect)
     }
 
     #[inline]
-    fn update_region_f(&mut self, rect: FRect) {
-        if rect.width() == 0. || rect.height() == 0. {
+    fn update_rect_f(&mut self, rect: FRect) {
+        if !rect.is_valid() {
             return;
         }
         self.redraw_region_f.add_rect(rect)
+    }
+
+    #[inline]
+    fn update_region(&mut self, region: &Region) {
+        if region.is_empty() {
+            return
+        }
+        self.redraw_region.add_region(region)
+    }
+
+    #[inline]
+    fn update_region_f(&mut self, region: &FRegion) {
+        if region.is_empty() {
+            return
+        }
+        self.redraw_region_f.add_region(region)
     }
 
     #[inline]
