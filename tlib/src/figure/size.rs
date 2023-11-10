@@ -41,6 +41,16 @@ impl Size {
     }
 
     #[inline]
+    pub fn width_mut(&mut self) -> &mut i32 {
+        &mut self.width
+    }
+
+    #[inline]
+    pub fn height_mut(&mut self) -> &mut i32 {
+        &mut self.height
+    }
+
+    #[inline]
     pub fn add_width(&mut self, width: i32) {
         self.width += width
     }
@@ -194,6 +204,16 @@ impl FSize {
     #[inline]
     pub fn set_height(&mut self, height: f32) {
         self.height = height
+    }
+
+    #[inline]
+    pub fn width_mut(&mut self) -> &mut f32 {
+        &mut self.width
+    }
+
+    #[inline]
+    pub fn height_mut(&mut self) -> &mut f32 {
+        &mut self.height
     }
 
     #[inline]

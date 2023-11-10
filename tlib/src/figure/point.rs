@@ -39,6 +39,16 @@ impl Point {
     pub fn set_y(&mut self, y: i32) {
         self.y = y
     }
+
+    #[inline]
+    pub fn x_mut(&mut self) -> &mut i32 {
+        &mut self.x
+    }
+
+    #[inline]
+    pub fn y_mut(&mut self) -> &mut i32 {
+        &mut self.y
+    }
 }
 
 impl Add for Point {
@@ -220,6 +230,16 @@ impl FPoint {
     pub fn set_y(&mut self, y: f32) {
         self.y = y
     }
+
+    #[inline]
+    pub fn x_mut(&mut self) -> &mut f32 {
+        &mut self.x
+    }
+
+    #[inline]
+    pub fn y_mut(&mut self) -> &mut f32 {
+        &mut self.y
+    }
 }
 
 impl Add for FPoint {
@@ -352,5 +372,17 @@ impl ToValue for FPoint {
 impl FromValue for FPoint {
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Point;
+
+    #[test]
+    fn test_mut_ref() {
+        let mut pos: Point = (0, 0).into();
+        *pos.x_mut() += 1;
+        assert_eq!(pos.x(), 1);
     }
 }

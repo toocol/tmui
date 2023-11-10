@@ -95,6 +95,26 @@ impl Rect {
     }
 
     #[inline]
+    pub fn width_mut(&mut self) -> &mut i32 {
+        &mut self.width
+    }
+
+    #[inline]
+    pub fn height_mut(&mut self) -> &mut i32 {
+        &mut self.height
+    }
+
+    #[inline]
+    pub fn x_mut(&mut self) -> &mut i32 {
+        &mut self.x
+    }
+
+    #[inline]
+    pub fn y_mut(&mut self) -> &mut i32 {
+        &mut self.y
+    }
+
+    #[inline]
     pub fn top_left(&self) -> Point {
         Point::new(self.x, self.y)
     }
@@ -597,6 +617,26 @@ impl FRect {
     }
 
     #[inline]
+    pub fn width_mut(&mut self) -> &mut f32 {
+        &mut self.width
+    }
+
+    #[inline]
+    pub fn height_mut(&mut self) -> &mut f32 {
+        &mut self.height
+    }
+
+    #[inline]
+    pub fn x_mut(&mut self) -> &mut f32 {
+        &mut self.x
+    }
+
+    #[inline]
+    pub fn y_mut(&mut self) -> &mut f32 {
+        &mut self.y
+    }
+
+    #[inline]
     pub fn top_left(&self) -> FPoint {
         FPoint::new(self.x, self.y)
     }
@@ -1067,6 +1107,26 @@ impl AtomicRect {
     #[inline]
     pub fn set_y(&mut self, y: i32) {
         self.y.store(y, Ordering::Release)
+    }
+
+        #[inline]
+    pub fn width_mut(&mut self) -> &mut AtomicI32 {
+        &mut self.width
+    }
+
+    #[inline]
+    pub fn height_mut(&mut self) -> &mut AtomicI32 {
+        &mut self.height
+    }
+
+    #[inline]
+    pub fn x_mut(&mut self) -> &mut AtomicI32 {
+        &mut self.x
+    }
+
+    #[inline]
+    pub fn y_mut(&mut self) -> &mut AtomicI32 {
+        &mut self.y
     }
 
     #[inline]
