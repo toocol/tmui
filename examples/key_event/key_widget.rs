@@ -1,4 +1,6 @@
-use tlib::events::KeyEvent;
+use std::time::Duration;
+
+use tlib::{events::KeyEvent, timer::Timer, connect};
 use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -6,7 +8,9 @@ use tmui::{
 };
 
 #[extends(Widget)]
-pub struct KeyWidget {}
+pub struct KeyWidget {
+    timer: Timer,
+}
 
 impl ObjectSubclass for KeyWidget {
     const NAME: &'static str = "KeyWidget";
@@ -21,6 +25,11 @@ impl ObjectImpl for KeyWidget {
         self.set_vexpand(true);
         self.set_hexpand(true);
         self.set_background(Color::from_rgb(120, 120, 120));
+
+        self.window().high_load_request(true);
+
+        connect!(self.timer, timeout(), self, timeout());
+        self.timer.start(Duration::from_secs(10));
     }
 }
 
@@ -45,5 +54,9 @@ impl WidgetImpl for KeyWidget {
 impl KeyWidget {
     pub fn new() -> Box<Self> {
         Object::new(&[])
+    }
+
+    pub fn timeout(&self) {
+        self.window().high_load_request(false);
     }
 }

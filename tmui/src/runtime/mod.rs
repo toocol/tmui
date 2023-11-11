@@ -184,6 +184,9 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
         }
 
         cpu_balance.payload_check();
+        if window.is_high_load_requested() {
+            cpu_balance.request_high_load();
+        }
         cpu_balance.sleep(update);
     }
 }

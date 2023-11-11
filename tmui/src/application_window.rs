@@ -43,6 +43,7 @@ pub struct ApplicationWindow {
     base_offset: Point,
 
     focused_widget: u16,
+    high_load_request: bool,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -180,6 +181,16 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn is_initialize_phase() -> bool {
         INTIALIZE_PHASE.with(|p| *p.borrow())
+    }
+
+    #[inline]
+    pub fn high_load_request(&mut self, high_load: bool) {
+        self.high_load_request = high_load
+    }
+
+    #[inline]
+    pub fn is_high_load_requested(&self) -> bool {
+        self.high_load_request
     }
 
     #[inline]
