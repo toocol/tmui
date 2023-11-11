@@ -7,7 +7,10 @@ use std::{
     sync::{Once, Arc, RwLock},
 };
 
-thread_local! {static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true)}
+thread_local! {
+    static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true);
+    static FORCE_UPDATE: RefCell<bool> = RefCell::new(false);
+}
 static ONCE: Once = Once::new();
 
 /// Basic drawing Board with Skia surface.
@@ -44,6 +47,16 @@ impl Board {
     #[inline]
     pub fn notify_update() {
         NOTIFY_UPDATE.with(|notify_update| *notify_update.borrow_mut() = true)
+    }
+
+    #[inline]
+    pub fn force_update() {
+        FORCE_UPDATE.with(|force_update| *force_update.borrow_mut() = true)
+    }
+
+    #[inline]
+    pub fn is_force_update() -> bool {
+        FORCE_UPDATE.with(|force_update| *force_update.borrow_mut())
     }
 
     #[inline]
@@ -106,7 +119,8 @@ impl Board {
 
                 bitmap_guard.set_prepared(true);
 
-                *notify_update.borrow_mut() = false
+                *notify_update.borrow_mut() = false;
+                FORCE_UPDATE.with(|force_update| *force_update.borrow_mut() = false);
             }
             update
         })

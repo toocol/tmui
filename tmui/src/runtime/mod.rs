@@ -108,7 +108,7 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
         cpu_balance.loop_start();
         let elapsed = last_frame.elapsed();
 
-        update = if elapsed.as_micros() >= FRAME_INTERVAL {
+        update = if elapsed.as_micros() >= FRAME_INTERVAL || Board::is_force_update() {
             if resized {
                 platform.resize(size_record.0, size_record.1);
                 board.resize();
