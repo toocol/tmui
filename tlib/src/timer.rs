@@ -207,8 +207,7 @@ pub fn sleep(wait: Duration) {
         let remaining_time = wait_until - now;
 
         if remaining_time >= Duration::from_millis(10) {
-            let start_time = Instant::now();
-            std::thread::park_timeout(Duration::from_millis(1) - start_time.elapsed());
+            std::thread::park_timeout(Duration::from_millis(1));
         } else {
             std::thread::yield_now();
         }

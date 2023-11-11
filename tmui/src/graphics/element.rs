@@ -52,6 +52,11 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::update) (Defined in [`ElementExt`])
     fn update(&mut self);
 
+    /// Mark element's invalidate field to true, and element will be redrawed immediately.
+    ///
+    /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
+    fn force_update(&mut self);
+
     /// Specified the region to redraw.
     ///
     /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
@@ -137,6 +142,12 @@ impl ElementExt for Element {
     fn update(&mut self) {
         self.set_property("invalidate", true.to_value());
         Board::notify_update()
+    }
+
+    #[inline]
+    fn force_update(&mut self) {
+        self.update();
+        Board::force_update();
     }
 
     #[inline]

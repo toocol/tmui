@@ -10,7 +10,7 @@ use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
     global::skia_font_clone,
     skia_safe::{
-        canvas::{SrcRectConstraint, SaveLayerRec},
+        canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
             FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
         },
@@ -19,7 +19,6 @@ use tlib::{
 
 pub struct Painter<'a> {
     canvas: RefMut<'a, Canvas>,
-    path: Path,
     paint: Paint,
     font: Option<Font>,
     color: Option<Color>,
@@ -48,7 +47,6 @@ impl<'a> Painter<'a> {
         let rect = widget.rect();
         Painter {
             canvas,
-            path: Path::default(),
             paint: Paint::default(),
             font: None,
             color: None,
@@ -77,16 +75,6 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn path_ref(&self) -> &Path {
-        &self.path
-    }
-
-    #[inline]
-    pub fn path_mut(&mut self) -> &mut Path {
-        &mut self.path
-    }
-
-    #[inline]
     pub fn canvas_ref(&self) -> &Canvas {
         &self.canvas
     }
@@ -111,8 +99,8 @@ impl<'a> Painter<'a> {
         self.canvas.set_matrix(&self.transform.into());
     }
 
-    /// Save the canvas status. 
-    /// 
+    /// Save the canvas status.
+    ///
     /// Return the save count.
     #[inline]
     pub fn save(&mut self) -> usize {
@@ -166,7 +154,11 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(&mut self, layer: T, alpha: u8) -> usize {
+    pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(
+        &mut self,
+        layer: T,
+        alpha: u8,
+    ) -> usize {
         self.canvas.save_layer_alpha(layer, alpha as c_uint)
     }
 
@@ -175,7 +167,6 @@ impl<'a> Painter<'a> {
     pub fn reset(&mut self) {
         self.canvas.reset_matrix();
         self.paint.reset();
-        self.path.reset();
     }
 
     /// Set the antialiasing to true.
@@ -200,7 +191,8 @@ impl<'a> Painter<'a> {
     pub fn set_font(&mut self, font: Font) {
         self.text_style.set_font_size(font.size());
         if let Some(typeface) = font.typeface() {
-            self.text_style.set_font_families(&vec![typeface.family_name()]);
+            self.text_style
+                .set_font_families(&vec![typeface.family_name()]);
         }
         self.font = Some(font);
     }
@@ -295,13 +287,19 @@ impl<'a> Painter<'a> {
     }
 
     /// Draw text paragraph at specified position `origin` with offset. <br>
-    /// 
+    ///
     /// letter_spacing: The spacing betweeen characters.
     /// width_layout: The specified width of a text paragraph.
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_paragraph<T: Into<Point>>(&mut self, text: &str, origin: T, letter_spacing: f32, width_layout: f32) {
+    pub fn draw_paragraph<T: Into<Point>>(
+        &mut self,
+        text: &str,
+        origin: T,
+        letter_spacing: f32,
+        width_layout: f32,
+    ) {
         if let Some(font) = self.font.as_ref() {
             // create font manager
             let mut typeface_provider = TypefaceFontProvider::new();
@@ -320,7 +318,8 @@ impl<'a> Painter<'a> {
             self.paragraph_style.set_text_style(&self.text_style);
 
             // layout the paragraph
-            let mut paragraph_builder = ParagraphBuilder::new(&self.paragraph_style, font_collection);
+            let mut paragraph_builder =
+                ParagraphBuilder::new(&self.paragraph_style, font_collection);
             paragraph_builder.add_text(text);
             let mut paragraph = paragraph_builder.build();
             paragraph.layout(width_layout);

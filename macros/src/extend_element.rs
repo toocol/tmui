@@ -91,6 +91,12 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
+            fn force_update(&mut self) {
+                self.update();
+                Board::force_update();
+            }
+
+            #[inline]
             fn update_rect(&mut self, rect: Rect) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
