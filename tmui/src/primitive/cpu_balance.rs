@@ -63,6 +63,11 @@ impl CpuBalance {
         }
     }
 
+    #[inline]
+    pub(crate) fn request_high_load(&mut self) {
+        self.high_load = true;
+    }
+
     /// Invoke when ui main each loop start.
     #[inline]
     pub(crate) fn loop_start(&mut self) {
