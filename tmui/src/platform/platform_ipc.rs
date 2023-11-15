@@ -1,5 +1,16 @@
 use super::PlatformContext;
-use crate::{application::PLATFORM_CONTEXT, primitive::{bitmap::Bitmap, Message, shared_channel::{SharedChannel, self}}, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
+use crate::{
+    application::PLATFORM_CONTEXT,
+    primitive::{
+        bitmap::Bitmap,
+        shared_channel::{self, SharedChannel},
+        Message,
+    },
+    runtime::{
+        window_context::{OutputSender, WindowContext},
+        window_process,
+    },
+};
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
@@ -62,13 +73,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let front_bitmap = Bitmap::from_raw_pointer(slave.buffer_raw_pointer(), slave.width(), slave.height());
+        let bitmap =
+            Bitmap::from_raw_pointer(slave.buffer_raw_pointer(), slave.width(), slave.height());
 
         self.region = slave
             .region(self.shared_widget_id.unwrap())
             .expect("The `SharedWidget` with id `{}` was not exist.");
 
-        self.bitmap = Some(Arc::new(RwLock::new(front_bitmap)));
+        self.bitmap = Some(Arc::new(RwLock::new(bitmap)));
     }
 
     #[inline]

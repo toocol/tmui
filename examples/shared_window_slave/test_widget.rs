@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 use lazy_static::lazy_static;
-use log::debug;
+use log::info;
 use tlib::{
     connect, disconnect,
     object::{ObjectImpl, ObjectSubclass},
@@ -48,12 +48,13 @@ impl TestWidget {
         self.idx += 1;
         if self.idx >= 3 {
             self.idx = 0;
+
             let rec = Instant::now();
             let resp = Application::<UserEvent, Request>::send_request(Request::Request).unwrap();
             if let Request::Response(a) = resp {
                 assert_eq!(100, a);
             }
-            debug!(
+            info!(
                 "Request time: {}ms",
                 rec.elapsed().as_micros() as f64 / 1000.
             );
@@ -65,6 +66,7 @@ impl TestWidget {
             self.cnt,
             Instant::now(),
         ));
+
         self.cnt += 1;
 
         if self.ins.as_ref().unwrap().elapsed().as_secs() >= 10 {

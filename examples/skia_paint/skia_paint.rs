@@ -35,6 +35,8 @@ impl WidgetImpl for SkiaPaint {
 
         self.draw_region_2(&mut painter);
 
+        self.draw_region_3(&mut painter);
+
         self.draw_layer(&mut painter);
 
         println!("cnt: {}", painter.save_count());
@@ -176,6 +178,20 @@ impl SkiaPaint {
         painter.save();
         painter.clip_region(region_to_remove, skia_safe::ClipOp::Intersect);
         painter.fill_rect(rect, Color::RED);
+        painter.restore();
+    }
+
+    fn draw_region_3(&mut self, painter: &mut Painter) {
+        let rect1 = skia_safe::IRect::new(700, 400, 950, 650);
+        let rect2 = skia_safe::IRect::new(700, 400, 900, 600);
+
+        let mut region = skia_safe::Region::new();
+        region.op_rect(rect2, RegionOp::Union);
+        region.op_rect(rect1, RegionOp::Difference);
+
+        painter.save();
+        painter.clip_region(region, skia_safe::ClipOp::Intersect);
+        painter.fill_rect(rect2, Color::BLACK);
         painter.restore();
     }
 

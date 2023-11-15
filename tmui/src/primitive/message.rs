@@ -30,6 +30,7 @@ impl PayloadWeight for Message {
 }
 
 impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
+    #[inline]
     fn into(self) -> IpcEvent<T> {
         match self {
             Self::VSync(a) => IpcEvent::VSync(a),

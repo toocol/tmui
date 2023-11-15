@@ -161,6 +161,7 @@ impl Type {
         name: "char",
     };
 
+    #[inline]
     pub fn from_name(name: &'static str) -> Self {
         Type {
             ttype: TTYPE_OBJECT,
@@ -168,14 +169,17 @@ impl Type {
         }
     }
 
+    #[inline]
     pub fn is_object(&self) -> bool {
         self.ttype == TTYPE_OBJECT
     }
 
+    #[inline]
     pub fn is_a(&self, t: Self) -> bool {
         self.name == t.name
     }
 
+    #[inline]
     pub fn name(&self) -> &'static str {
         self.name
     }

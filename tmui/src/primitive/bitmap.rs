@@ -109,8 +109,8 @@ impl Bitmap {
     }
 
     #[inline]
-    pub fn set_prepared(&mut self, prepared: bool) {
-        self.prepared = prepared;
+    pub fn prepared(&mut self) {
+        self.prepared = true;
     }
 
     #[inline]

@@ -110,14 +110,15 @@ impl Board {
                 let mut bitmap_guard = self.bitmap.write().unwrap();
                 let row_bytes = bitmap_guard.row_bytes();
 
+                let pixels = bitmap_guard.get_pixels_mut();
                 self.surface().read_pixels(
                     self.backend.image_info(),
-                    bitmap_guard.get_pixels_mut(),
+                    pixels,
                     row_bytes,
                     (0, 0),
                 );
 
-                bitmap_guard.set_prepared(true);
+                bitmap_guard.prepared();
 
                 *notify_update.borrow_mut() = false;
                 FORCE_UPDATE.with(|force_update| *force_update.borrow_mut() = false);

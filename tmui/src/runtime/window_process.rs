@@ -10,7 +10,7 @@ use crate::{
         window::Window,
     },
 };
-use log::debug;
+use log::{debug, info};
 use once_cell::sync::Lazy;
 use std::{
     ops::DerefMut,
@@ -54,8 +54,6 @@ impl WindowProcess {
         let runtime_track = unsafe { RUNTIME_TRACK.deref_mut() };
 
         event_loop.run(move |event, _, control_flow| {
-            let input_sender = platform_context.input_sender();
-
             // Adjusting CPU usage based on vsync signals.
             if let Some(ins) = runtime_track.vsync_rec {
                 if ins.elapsed().as_millis() >= 500 {
@@ -76,12 +74,12 @@ impl WindowProcess {
                 for evt in master.try_recv_vec() {
                     match evt {
                         IpcEvent::VSync(ins) => {
-                            debug!(
+                            info!(
                                 "Ipc vsync track: {}ms",
                                 ins.elapsed().as_micros() as f64 / 1000.
                             );
                             control_flow.set_poll();
-                            window.request_redraw();
+                            platform_context.request_redraw(&window);
                             if runtime_track.vsync_rec.is_none() {
                                 runtime_track.vsync_rec = Some(Instant::now());
                             }
@@ -105,6 +103,7 @@ impl WindowProcess {
                 }
             }
 
+            let input_sender = platform_context.input_sender();
             match event {
                 // Window resized event.
                 Event::WindowEvent {
@@ -369,6 +368,7 @@ impl WindowProcess {
                     if unsafe { EXIT.load(Ordering::SeqCst) } {
                         return;
                     }
+                    // Send to master
                     ipc_slave_clone.try_send(message.into()).unwrap()
                 }
             })
@@ -389,11 +389,13 @@ impl WindowProcess {
             }
             if user_events.len() > 0 {
                 if let Some(ref sender) = user_ipc_event_sender {
+                    // Send events receiveed from master to the ui main thread.
                     sender.send(user_events).unwrap();
                 }
             }
 
             std::thread::park_timeout(Duration::from_micros(10));
+            // std::thread::yield_now();
         }
     }
 }

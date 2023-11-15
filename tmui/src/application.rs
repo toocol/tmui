@@ -11,7 +11,7 @@ use crate::{
     backend::BackendType,
     event_hints::event_hints,
     platform::{PlatformContext, PlatformIpc, PlatformType},
-    primitive::{cpu_balance::CpuBalance, Message, shared_channel::SharedChannel},
+    primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel, Message},
     runtime::{ui_runtime, window_context::WindowContext},
 };
 use lazy_static::lazy_static;
