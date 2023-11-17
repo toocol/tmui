@@ -1,9 +1,11 @@
 pub mod opengl_backend;
 pub mod raster_backend;
 
+use std::sync::{Arc, RwLock};
+
 use tlib::skia_safe::ImageInfo;
 
-use crate::skia_safe::Surface;
+use crate::{skia_safe::Surface, primitive::bitmap::Bitmap};
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -15,7 +17,7 @@ pub enum BackendType {
 
 /// Renderer backend, provide skia Surface
 pub trait Backend: 'static {
-    fn resize(&mut self, width: i32, height: i32);
+    fn resize(&mut self, bitmap: Arc<RwLock<Bitmap>>);
 
     fn surface(&self) -> Surface;
 

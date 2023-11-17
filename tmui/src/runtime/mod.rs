@@ -63,10 +63,10 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     let backend: Box<dyn Backend>;
     match backend_type {
         BackendType::Raster => {
-            backend = RasterBackend::new(platform.width() as i32, platform.height() as i32)
+            backend = RasterBackend::new(platform.bitmap())
         }
         BackendType::OpenGL => {
-            backend = OpenGLBackend::new(platform.width() as i32, platform.height() as i32)
+            backend = OpenGLBackend::new(platform.bitmap())
         }
     }
 

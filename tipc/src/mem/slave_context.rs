@@ -1,8 +1,8 @@
 use super::{
-    mem_queue::{BuildType, MemQueue, MemQueueBuilder, MemQueueError},
+    mem_queue::{MemQueue, MemQueueBuilder, MemQueueError},
     IpcError, MemContext, RequestSide, SharedInfo, IPC_MEM_MASTER_QUEUE,
     IPC_MEM_PRIMARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SIGNAL_EVT, IPC_MEM_SLAVE_QUEUE,
-    IPC_QUEUE_SIZE,
+    IPC_QUEUE_SIZE, BuildType,
 };
 use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use parking_lot::Mutex;

@@ -1,5 +1,10 @@
+use std::sync::{Arc, RwLock};
+
 use super::Backend;
-use crate::skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface};
+use crate::{
+    primitive::bitmap::Bitmap,
+    skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface},
+};
 
 /// Backend for Raster,
 /// CPU rendering, no GPU acceleration.
@@ -10,20 +15,32 @@ pub struct RasterBackend {
 }
 
 impl RasterBackend {
-    pub fn new(width: i32, height: i32) -> Box<Self> {
+    pub fn new(bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
         #[cfg(windows_platform)]
         let color_type = ColorType::BGRA8888;
         #[cfg(not(windows_platform))]
         let color_type = ColorType::RGBA8888;
 
+        let mut guard = bitmap.write().unwrap();
+
         let image_info = ImageInfo::new(
-            (width, height),
+            (guard.width() as i32, guard.height() as i32),
             color_type,
             AlphaType::Premul,
             ColorSpace::new_srgb(),
         );
 
-        let surface = Surface::new_raster_n32_premul((width, height)).unwrap();
+        // let surface = Surface::new_raster_n32_premul((width, height)).unwrap();
+
+        let row_bytes = guard.row_bytes();
+        let surface = Surface::new_raster_direct(
+            &image_info,
+            guard.get_pixels_mut().0,
+            row_bytes,
+            None,
+        )
+        .unwrap()
+        .to_owned();
 
         Box::new(Self {
             image_info: image_info,
@@ -33,27 +50,41 @@ impl RasterBackend {
 }
 
 impl Backend for RasterBackend {
-    fn resize(&mut self, width: i32, height: i32) {
+    fn resize(&mut self, bitmap: Arc<RwLock<Bitmap>>) {
         #[cfg(windows_platform)]
         let color_type = ColorType::BGRA8888;
         #[cfg(not(windows_platform))]
         let color_type = ColorType::RGBA8888;
 
+        let mut guard = bitmap.write().unwrap();
+
         self.image_info = ImageInfo::new(
-            (width, height),
+            (guard.width() as i32, guard.height() as i32),
             color_type,
             AlphaType::Premul,
             ColorSpace::new_srgb(),
         );
 
-        let mut new_surface = self
-            .surface
-            .new_surface_with_dimensions((width, height))
-            .unwrap();
+        // let mut new_surface = self
+        //     .surface
+        //     .new_surface_with_dimensions((width, height))
+        //     .unwrap();
+
+        let row_bytes = guard.row_bytes();
+        let mut new_surface = Surface::new_raster_direct(
+            &self.image_info,
+            guard.get_pixels_mut().0,
+            row_bytes,
+            None,
+        )
+        .unwrap()
+        .to_owned();
 
         new_surface
             .canvas()
             .draw_image(self.surface.image_snapshot(), (0, 0), None);
+
+        guard.release_retention();
 
         self.surface = new_surface;
     }

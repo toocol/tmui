@@ -73,7 +73,7 @@ impl Board {
     pub(crate) fn resize(&mut self) {
         self.surface().flush_submit_and_sync_cpu();
         self.backend
-            .resize(self.width() as i32, self.height() as i32);
+            .resize(self.bitmap.clone());
 
         self.surface = RefCell::new(self.backend.surface());
     }
@@ -108,15 +108,15 @@ impl Board {
                 }
 
                 let mut bitmap_guard = self.bitmap.write().unwrap();
-                let row_bytes = bitmap_guard.row_bytes();
 
-                let pixels = bitmap_guard.get_pixels_mut();
-                self.surface().read_pixels(
-                    self.backend.image_info(),
-                    pixels,
-                    row_bytes,
-                    (0, 0),
-                );
+                // let row_bytes = bitmap_guard.row_bytes();
+                // let pixels = bitmap_guard.get_pixels_mut();
+                // self.surface().read_pixels(
+                //     self.backend.image_info(),
+                //     pixels,
+                //     row_bytes,
+                //     (0, 0),
+                // );
 
                 bitmap_guard.prepared();
 

@@ -55,6 +55,8 @@ fn user_events_receive(_: &mut ApplicationWindow, evt: UserEvent) {
                 b.elapsed().as_micros() as f64 / 1000.
             );
             assert_eq!(a, CNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst));
+
+            Application::<UserEvent, Request>::send_user_event(evt)
         }
         _ => unreachable!(),
     }

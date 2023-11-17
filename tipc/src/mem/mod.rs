@@ -8,7 +8,9 @@ use std::{
 };
 
 pub mod master_context;
+pub mod mem_mutex;
 pub mod mem_queue;
+pub mod mem_rw_lock;
 pub mod slave_context;
 
 pub(crate) const IPC_QUEUE_SIZE: usize = 10000;
@@ -55,6 +57,13 @@ pub(crate) enum RequestSide {
     None,
     Master,
     Slave,
+}
+
+#[derive(Default, Debug, Clone, Copy)]
+pub enum BuildType {
+    #[default]
+    Create,
+    Open,
 }
 
 #[repr(C)]

@@ -226,7 +226,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 0,
                 width as i32,
                 height as i32,
-                Some(bitmap_guard.get_pixels().as_ptr() as *const c_void),
+                Some(bitmap_guard.get_pixels().0.as_ptr() as *const c_void),
                 &bmi,
                 DIB_RGB_COLORS,
                 SRCCOPY,

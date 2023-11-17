@@ -8,6 +8,7 @@ use std::{
     mem::size_of,
     sync::atomic::{AtomicUsize, Ordering},
 };
+use super::BuildType;
 
 #[repr(C)]
 struct _MemQueue<const QUEUE_SIZE: usize, T: 'static + Copy> {
@@ -132,12 +133,6 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
     }
 }
 
-#[derive(Default)]
-pub enum BuildType {
-    #[default]
-    Create,
-    Open,
-}
 #[derive(Default)]
 pub struct MemQueueBuilder {
     build_type: BuildType,

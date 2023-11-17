@@ -2155,11 +2155,13 @@ dependencies = [
  "ctrlc",
  "libc",
  "log",
+ "nix 0.23.2",
  "parking_lot",
  "rand",
  "raw_sync",
  "shared_memory",
  "tlib",
+ "winapi",
 ]
 
 [[package]]

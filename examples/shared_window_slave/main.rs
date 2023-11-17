@@ -32,7 +32,13 @@ fn main() {
 
     app.connect_activate(build_ui);
 
+    app.connect_user_events_receive(user_events_receive);
+
     app.run();
+}
+
+fn user_events_receive(_window: &mut ApplicationWindow, evt: UserEvent) {
+    println!("Receive user event: {:?}", evt)
 }
 
 fn build_ui(window: &mut ApplicationWindow) {

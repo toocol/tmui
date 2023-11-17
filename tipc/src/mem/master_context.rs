@@ -1,11 +1,11 @@
 use super::{
     mem_queue::{MemQueue, MemQueueError},
-    MemContext, IPC_MEM_SIGNAL_EVT, IPC_QUEUE_SIZE,
+    MemContext, IPC_MEM_SIGNAL_EVT, IPC_QUEUE_SIZE, BuildType,
 };
 use crate::{
     ipc_event::{InnerIpcEvent, IpcEvent},
     mem::{
-        mem_queue::{BuildType, MemQueueBuilder},
+        mem_queue::MemQueueBuilder,
         IpcError, RequestSide, SharedInfo, IPC_MEM_MASTER_QUEUE, IPC_MEM_PRIMARY_BUFFER_NAME,
         IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
     },

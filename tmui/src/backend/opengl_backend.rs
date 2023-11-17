@@ -1,7 +1,9 @@
+use std::sync::{Arc, RwLock};
+
 use tlib::global::SemanticExt;
 
 use super::Backend;
-use crate::skia_safe::Surface;
+use crate::{skia_safe::Surface, primitive::bitmap::Bitmap};
 
 /// Backend for OpenGL,
 /// Support cross platform GPU acceleration.
@@ -11,13 +13,13 @@ pub struct OpenGLBackend {
 }
 
 impl OpenGLBackend {
-    pub fn new(_width: i32, _height: i32) -> Box<Self> {
+    pub fn new(_bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
         Self {}.boxed()
     }
 }
 
 impl Backend for OpenGLBackend {
-    fn resize(&mut self, _width: i32, _height: i32) {
+    fn resize(&mut self, _bitmap: Arc<RwLock<Bitmap>>) {
         todo!()
     }
 
