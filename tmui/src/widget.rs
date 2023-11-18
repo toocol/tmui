@@ -114,6 +114,11 @@ pub trait WidgetSignals: ActionExt {
         /// @param [`Size`]
         size_changed();
 
+        /// Emit when widget's geometry(size or position) changed.
+        ///
+        /// @param [`Rect`]
+        geometry_changed();
+
         /// Emit when widget's receive mouse pressed event.
         ///
         /// @param [`MouseEvent`]

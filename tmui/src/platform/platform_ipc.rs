@@ -73,8 +73,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn initialize(&mut self) {
         let slave = self.slave.as_ref().unwrap();
-        let bitmap =
-            Bitmap::from_raw_pointer(slave.buffer_raw_pointer(), slave.width(), slave.height());
+        let bitmap = Bitmap::from_raw_pointer(
+            slave.buffer_raw_pointer(),
+            slave.width(),
+            slave.height(),
+            slave.buffer_lock(),
+            slave.name(),
+            slave.ty(),
+        );
 
         self.region = slave
             .region(self.shared_widget_id.unwrap())
@@ -104,10 +110,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn resize(&mut self, width: u32, height: u32) {
-        self.region.set_width(width as i32);
-        self.region.set_height(height as i32);
-        todo!()
+    fn resize(&mut self, _width: u32, _height: u32) {
+        // Ipc slave could do nothing when resize.
     }
 
     #[inline]

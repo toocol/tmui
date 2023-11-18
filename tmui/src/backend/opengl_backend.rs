@@ -13,7 +13,7 @@ pub struct OpenGLBackend {
 }
 
 impl OpenGLBackend {
-    pub fn new(_bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
+    pub(crate) fn new(_bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
         Self {}.boxed()
     }
 }

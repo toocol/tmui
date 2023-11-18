@@ -2,12 +2,12 @@ use std::{
     env,
     sync::atomic::{AtomicBool, Ordering},
     thread::{self},
-    time::Instant,
+    time::{Instant, Duration},
 };
 use tipc::mem::{mem_rw_lock::MemRwLock, BuildType};
 use tlib::global::SemanticExt;
 
-const OS_ID: &'static str = "mem_rw_lock44";
+const OS_ID: &'static str = "mem_rwlock";
 
 fn main() {
     let mut args = env::args();
@@ -51,6 +51,7 @@ fn master() {
     loop {
         let _guard = lock.write();
         println!("write");
+        thread::sleep(Duration::from_millis(500));
 
         if exit.load(Ordering::SeqCst) {
             break;

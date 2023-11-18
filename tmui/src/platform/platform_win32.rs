@@ -89,6 +89,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     master.buffer_raw_pointer(),
                     self.width,
                     self.height,
+                    master.buffer_lock(),
+                    master.name(),
+                    master.ty(),
                 ))));
             }
             None => {
@@ -124,7 +127,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.height = height;
 
         match self.master {
-            Some(ref _master) => {}
+            Some(ref _master) => {
+                bitmap_guard.ipc_write();
+                // bitmap_guard.update_raw_pointer(master.buffer_raw_pointer(), width, height)
+            }
             None => bitmap_guard.resize(width, height),
         }
     }
@@ -216,6 +222,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let mut ps = PAINTSTRUCT::default();
             let hdc = BeginPaint(hwnd, &mut ps);
 
+            let (pixels, _guard) = bitmap_guard.get_pixels();
             StretchDIBits(
                 hdc,
                 0,
@@ -226,7 +233,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 0,
                 width as i32,
                 height as i32,
-                Some(bitmap_guard.get_pixels().0.as_ptr() as *const c_void),
+                Some(pixels.as_ptr() as *const c_void),
                 &bmi,
                 DIB_RGB_COLORS,
                 SRCCOPY,

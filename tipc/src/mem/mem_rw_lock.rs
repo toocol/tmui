@@ -5,17 +5,20 @@ use super::{
 use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::{
     mem::size_of,
-    sync::atomic::{AtomicUsize, Ordering}, thread,
+    sync::atomic::{Ordering, AtomicU8}, thread,
 };
 
+#[repr(C)]
 struct _MemRwLock {
-    read: AtomicUsize,
-    write: AtomicUsize,
+    read: AtomicU8,
+    write: AtomicU8,
 }
 
-// Read write lock based on shared memory.
+/// Read write lock based on shared memory.
+/// It's a cross process lock. <br>
+/// `Non reentrant lock`
 pub struct MemRwLock {
-    lock: Shmem,
+    inner: Shmem,
     mutex: MemMutex,
 }
 
@@ -31,7 +34,7 @@ impl MemRwLock {
             .create()?;
 
         Ok(Self {
-            lock: shmem,
+            inner: shmem,
             mutex: MemMutex::new(os_id, MemMutexOp::Create)?,
         })
     }
@@ -41,7 +44,7 @@ impl MemRwLock {
         let shmem = ShmemConf::new().os_id(os_id).open()?;
 
         Ok(Self {
-            lock: shmem,
+            inner: shmem,
             mutex: MemMutex::new(os_id, MemMutexOp::Open)?,
         })
     }
@@ -53,42 +56,42 @@ impl MemRwLock {
 
     #[inline]
     pub fn read(&self) -> MemRwLockGuard {
-        let lock = self.lock_mut();
+        let inner = self.inner_mut();
         let _guard = self.mutex.lock();
         loop {
-            let val = lock.write.load(Ordering::SeqCst);
+            let val = inner.write.load(Ordering::SeqCst);
 
             if val == 0 {
                 break;
             }
             thread::yield_now();
         }
-        lock.read.fetch_add(1, Ordering::SeqCst);
+        inner.read.fetch_add(1, Ordering::SeqCst);
 
         MemRwLockGuard::new(self, LockType::Read)
     }
 
     #[inline]
     pub fn write(&self) -> MemRwLockGuard {
-        let lock = self.lock_mut();
+        let inner = self.inner_mut();
         let _guard = self.mutex.lock();
         loop {
-            let read = lock.read.load(Ordering::SeqCst);
-            let write = lock.write.load(Ordering::SeqCst);
+            let read = inner.read.load(Ordering::SeqCst);
+            let write = inner.write.load(Ordering::SeqCst);
 
             if read == 0 && write == 0 {
                 break;
             }
             thread::yield_now();
         }
-        lock.write.fetch_add(1, Ordering::SeqCst);
+        inner.write.fetch_add(1, Ordering::SeqCst);
 
         MemRwLockGuard::new(self, LockType::Write)
     }
 
     #[inline]
-    fn lock_mut(&self) -> &'static mut _MemRwLock {
-        unsafe { (self.lock.as_ptr() as *mut _MemRwLock).as_mut().unwrap() }
+    fn inner_mut(&self) -> &'static mut _MemRwLock {
+        unsafe { (self.inner.as_ptr() as *mut _MemRwLock).as_mut().unwrap() }
     }
 }
 
@@ -107,14 +110,14 @@ impl<'lock> MemRwLockGuard<'lock> {
 impl<'lock> Drop for MemRwLockGuard<'lock> {
     #[inline]
     fn drop(&mut self) {
-        let lock = self.lock.lock_mut();
+        let inner = self.lock.inner_mut();
 
         match self.tty {
             LockType::Read => {
-                lock.read.fetch_sub(1, Ordering::SeqCst);
+                inner.read.fetch_sub(1, Ordering::SeqCst);
             }
             LockType::Write => {
-                let old = lock.write.fetch_sub(1, Ordering::SeqCst);
+                let old = inner.write.fetch_sub(1, Ordering::SeqCst);
                 debug_assert_eq!(old, 1)
             }
         }

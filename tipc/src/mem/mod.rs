@@ -1,10 +1,10 @@
 use tlib::figure::Rect;
-use self::mem_queue::MemQueueError;
+use self::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
 use crate::ipc_event::IpcEvent;
 use std::{
     error::Error,
     fmt::Display,
-    sync::atomic::{AtomicBool, AtomicU32, AtomicUsize}, mem::MaybeUninit,
+    sync::{atomic::{AtomicBool, AtomicU32, AtomicUsize}, Arc}, mem::MaybeUninit,
 };
 
 pub mod master_context;
@@ -21,6 +21,7 @@ pub(crate) const IPC_TEXT_EVT_SIZE: usize = 4096;
 
 pub(crate) const IPC_MEM_PRIMARY_BUFFER_NAME: &'static str = "_mem_bf";
 pub(crate) const IPC_MEM_SHARED_INFO_NAME: &'static str = "_mem_sh_info";
+pub(crate) const IPC_MEM_LOCK_NAME: &'static str = "_mem_rwl";
 pub(crate) const IPC_MEM_MASTER_QUEUE: &'static str = "_mem_m_q";
 pub(crate) const IPC_MEM_SLAVE_QUEUE: &'static str = "_mem_s_q";
 pub(crate) const IPC_MEM_SIGNAL_EVT: &'static str = "_mem_e_s";
@@ -49,6 +50,8 @@ pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
     fn wait(&self);
 
     fn signal(&self);
+
+    fn buffer_lock(&self) -> Arc<MemRwLock>;
 }
 
 #[repr(C)]

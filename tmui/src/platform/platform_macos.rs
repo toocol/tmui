@@ -99,6 +99,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     master.buffer_raw_pointer(),
                     self.width,
                     self.height,
+                    master.buffer_lock(),
                 ))));
             }
             None => {
@@ -222,8 +223,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let content_view = ns_window.contentView();
             let rect = content_view.bounds();
 
+            let (pixels, _guard) = bitmap_guard.get_pixels();
+
             // Create the CGImage from memory pixels buffer.
-            let data_provider = CGDataProvider::from_slice(bitmap_guard.get_pixels());
+            let data_provider = CGDataProvider::from_slice(pixels);
             let cg_image = CGImage::new(
                 self.width as usize,
                 self.height as usize,

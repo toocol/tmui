@@ -1,14 +1,22 @@
 use ipc_event::IpcEvent;
 use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
-use mem::mem_queue::MemQueueError;
-use std::{error::Error, ffi::c_void, marker::PhantomData};
+use mem::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
+use std::{error::Error, ffi::c_void, marker::PhantomData, sync::Arc};
 use tlib::figure::Rect;
 
 pub mod ipc_event;
 pub mod ipc_master;
 pub mod ipc_slave;
 pub mod mem;
+
+pub use shared_memory::*;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpcType {
+    Master,
+    Slave,
+}
 
 pub struct IpcBuilder<T: 'static + Copy, M: 'static + Copy> {
     name: Option<String>,
@@ -109,6 +117,8 @@ pub trait WithIpcSlave<T: 'static + Copy, M: 'static + Copy> {
 }
 
 pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
+    fn name(&self) -> &str;
+
     fn buffer(&self) -> &'static mut [u8];
 
     fn buffer_raw_pointer(&self) -> *mut c_void;
@@ -138,4 +148,8 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn width(&self) -> u32;
 
     fn height(&self) -> u32;
+
+    fn buffer_lock(&self) -> Arc<MemRwLock>;
+
+    fn ty(&self) -> IpcType;
 }

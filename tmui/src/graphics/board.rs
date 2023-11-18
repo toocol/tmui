@@ -28,7 +28,7 @@ pub struct Board {
 
 impl Board {
     #[inline]
-    pub fn new(bitmap: Arc<RwLock<Bitmap>>, backend: Box<dyn Backend>) -> Self {
+    pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>, backend: Box<dyn Backend>) -> Self {
         if ONCE.is_completed() {
             panic!("`Board can only construct once.`")
         }
@@ -93,6 +93,13 @@ impl Board {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
             if *notify_update.borrow() {
+                let mut bitmap_guard = self.bitmap.write().unwrap();
+                
+                // Invoke `ipc_write()` here, so that the following code can 
+                // be executed with cross process lock,
+                // when program was under cross process rendering.
+                let _ = bitmap_guard.ipc_write();
+
                 // The parent elements always at the end of `element_list`.
                 // We should renderer the parent elements first.
                 for element in self.element_list.borrow_mut().iter_mut() {
@@ -106,8 +113,6 @@ impl Board {
                         update = true;
                     }
                 }
-
-                let mut bitmap_guard = self.bitmap.write().unwrap();
 
                 // let row_bytes = bitmap_guard.row_bytes();
                 // let pixels = bitmap_guard.get_pixels_mut();

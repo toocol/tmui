@@ -15,7 +15,7 @@ pub struct RasterBackend {
 }
 
 impl RasterBackend {
-    pub fn new(bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
+    pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
         #[cfg(windows_platform)]
         let color_type = ColorType::BGRA8888;
         #[cfg(not(windows_platform))]

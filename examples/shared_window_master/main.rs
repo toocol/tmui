@@ -7,7 +7,7 @@ use tmui::{
     application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
 };
 
-pub const IPC_NAME: &'static str = "shmem_ipcdp";
+pub const IPC_NAME: &'static str = "shmem_ipccd27";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]
@@ -43,8 +43,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let shwidet = MasterSharedWidget::new();
-    window.child(shwidet);
+    window.child(MasterSharedWidget::new());
 }
 
 fn user_events_receive(_: &mut ApplicationWindow, evt: UserEvent) {

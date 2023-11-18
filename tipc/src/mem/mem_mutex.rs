@@ -5,10 +5,13 @@ use std::{
     thread,
 };
 
+#[repr(C)]
 struct _MemMutex {
     locked: AtomicBool,
 }
 
+/// Cross process mutex based on shared memory. <br>
+/// `Non reentrant lock`
 pub struct MemMutex {
     inner: Shmem,
 }

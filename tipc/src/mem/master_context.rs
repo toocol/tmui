@@ -1,13 +1,13 @@
 use super::{
     mem_queue::{MemQueue, MemQueueError},
-    MemContext, IPC_MEM_SIGNAL_EVT, IPC_QUEUE_SIZE, BuildType,
+    mem_rw_lock::MemRwLock,
+    BuildType, MemContext, IPC_MEM_LOCK_NAME, IPC_MEM_SIGNAL_EVT, IPC_QUEUE_SIZE,
 };
 use crate::{
     ipc_event::{InnerIpcEvent, IpcEvent},
     mem::{
-        mem_queue::MemQueueBuilder,
-        IpcError, RequestSide, SharedInfo, IPC_MEM_MASTER_QUEUE, IPC_MEM_PRIMARY_BUFFER_NAME,
-        IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
+        mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_MASTER_QUEUE,
+        IPC_MEM_PRIMARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
     },
 };
 use parking_lot::Mutex;
@@ -16,12 +16,19 @@ use raw_sync::{
     Timeout,
 };
 use shared_memory::{Shmem, ShmemConf};
-use std::{error::Error, marker::PhantomData, mem::size_of, sync::atomic::Ordering};
+use std::{
+    error::Error,
+    marker::PhantomData,
+    mem::size_of,
+    sync::{atomic::Ordering, Arc},
+};
+use tlib::global::SemanticExt;
 
 pub(crate) struct MasterContext<T: 'static + Copy, M: 'static + Copy> {
     buffer: Shmem,
     shared_info: Shmem,
     wait_signal_mem: Shmem,
+    buffer_lock: Arc<MemRwLock>,
     master_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     slave_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     _request_type: PhantomData<M>,
@@ -61,6 +68,15 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
             .create()
             .unwrap();
 
+        let mut lock_name = name.to_string();
+        lock_name.push_str(IPC_MEM_LOCK_NAME);
+        let buffer_lock = MemRwLock::builder()
+            .os_id(lock_name)
+            .build_type(BuildType::Create)
+            .build()
+            .unwrap()
+            .arc();
+
         let mut master_queue_name = name.to_string();
         master_queue_name.push_str(IPC_MEM_MASTER_QUEUE);
         let master_queue = MemQueueBuilder::new()
@@ -80,6 +96,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
         Self {
             buffer,
             shared_info,
+            buffer_lock,
             wait_signal_mem: event_signal_mem,
             master_queue,
             slave_queue,
@@ -202,5 +219,10 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     fn signal(&self) {
         let (evt, _) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()).unwrap() };
         evt.set(EventState::Signaled).unwrap();
+    }
+
+    #[inline]
+    fn buffer_lock(&self) -> Arc<MemRwLock> {
+        self.buffer_lock.clone()
     }
 }
