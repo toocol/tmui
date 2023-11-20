@@ -1,9 +1,9 @@
 use super::{
     mem_queue::{MemQueue, MemQueueBuilder, MemQueueError},
     mem_rw_lock::MemRwLock,
-    BuildType, IpcError, MemContext, RequestSide, SharedInfo, IPC_MEM_LOCK_NAME,
-    IPC_MEM_MASTER_QUEUE, IPC_MEM_PRIMARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME,
-    IPC_MEM_SIGNAL_EVT, IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
+    BuildType, IpcError, MemContext, RequestSide, SharedInfo, IPC_MEM_BUFFER_NAME,
+    IPC_MEM_LOCK_NAME, IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SIGNAL_EVT,
+    IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
 };
 use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use parking_lot::Mutex;
@@ -20,7 +20,8 @@ use std::{
 use tlib::global::SemanticExt;
 
 pub(crate) struct SlaveContext<T: 'static + Copy, M: 'static + Copy> {
-    buffer: Shmem,
+    name: String,
+    buffer: Option<Shmem>,
     shared_info: Shmem,
     wait_signal_mem: Shmem,
     buffer_lock: Arc<MemRwLock>,
@@ -32,13 +33,30 @@ pub(crate) struct SlaveContext<T: 'static + Copy, M: 'static + Copy> {
 
 impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
     pub(crate) fn open<P: ToString>(name: P) -> Self {
-        let mut primary_buffer_name = name.to_string();
-        primary_buffer_name.push_str(IPC_MEM_PRIMARY_BUFFER_NAME);
-        let buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
-
         let mut shared_info_name = name.to_string();
         shared_info_name.push_str(IPC_MEM_SHARED_INFO_NAME);
         let shared_info = ShmemConf::new().os_id(shared_info_name).open().unwrap();
+
+        let sinfo = unsafe {
+            (shared_info.as_ptr() as *const SharedInfo<M>)
+                .as_ref()
+                .unwrap()
+        };
+        let (width, height, name_helper) = (
+            sinfo.width.load(Ordering::Acquire),
+            sinfo.height.load(Ordering::Acquire),
+            sinfo.name_helper.load(Ordering::Acquire),
+        );
+
+        let primary_buffer_name = format!(
+            "{}{}{}{}_{}",
+            name.to_string(),
+            IPC_MEM_BUFFER_NAME,
+            width,
+            height,
+            name_helper
+        );
+        let buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
 
         let mut event_signal_name = name.to_string();
         event_signal_name.push_str(IPC_MEM_SIGNAL_EVT);
@@ -70,7 +88,8 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
             .unwrap();
 
         Self {
-            buffer,
+            name: name.to_string(),
+            buffer: Some(buffer),
             shared_info,
             wait_signal_mem: event_signal_mem,
             buffer_lock,
@@ -92,8 +111,13 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
 
 impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, M> {
     #[inline]
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    #[inline]
     fn buffer(&self) -> *mut u8 {
-        self.buffer.as_ptr()
+        self.buffer.as_ref().unwrap().as_ptr()
     }
 
     #[inline]
@@ -200,5 +224,31 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
     #[inline]
     fn buffer_lock(&self) -> Arc<MemRwLock> {
         self.buffer_lock.clone()
+    }
+
+    fn resize(&mut self, _width: u32, _height: u32) -> Shmem {
+        let sinfo = unsafe {
+            (self.shared_info.as_ptr() as *const SharedInfo<M>)
+                .as_ref()
+                .unwrap()
+        };
+        let (width, height, name_helper) = (
+            sinfo.width.load(Ordering::Acquire),
+            sinfo.height.load(Ordering::Acquire),
+            sinfo.name_helper.load(Ordering::Acquire),
+        );
+
+        let primary_buffer_name = format!(
+            "{}{}{}{}_{}",
+            self.name.to_string(),
+            IPC_MEM_BUFFER_NAME,
+            width,
+            height,
+            name_helper
+        );
+
+        let buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
+
+        self.buffer.replace(buffer).unwrap()
     }
 }

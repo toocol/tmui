@@ -11,6 +11,7 @@ pub mod ipc_slave;
 pub mod mem;
 
 pub use shared_memory::*;
+pub use parking_lot::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IpcType {
@@ -152,4 +153,6 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn buffer_lock(&self) -> Arc<MemRwLock>;
 
     fn ty(&self) -> IpcType;
+
+    fn resize(&mut self, width: u32, height: u32) -> Shmem;
 }

@@ -7,11 +7,12 @@ pub(crate) mod platform_x11;
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
 use crate::primitive::{bitmap::Bitmap, Message};
 use crate::runtime::window_context::WindowContext;
+use tipc::RwLock;
 use tlib::{figure::Rect, winit::window::Window};
 
 pub(crate) use platform_ipc::*;

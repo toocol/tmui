@@ -17,7 +17,6 @@ pub struct IpcMaster<T: 'static + Copy, M: 'static + Copy> {
     width: usize,
     height: usize,
     master_context: MasterContext<T, M>,
-    name: String,
 }
 
 /// SAFETY: MemQueue and memory context use `Mutex` to ensure thread safety.
@@ -32,7 +31,6 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
             width: width as usize,
             height: height as usize,
             master_context: master_context,
-            name: name.to_string(),
         }
     }
 
@@ -67,7 +65,7 @@ impl<T: 'static + Copy, M: 'static + Copy> Drop for IpcMaster<T, M> {
 impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     #[inline]
     fn name(&self) -> &str {
-        &self.name
+        self.master_context.name()
     }
 
     #[inline]
@@ -169,5 +167,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     #[inline]
     fn ty(&self) -> crate::IpcType {
         crate::IpcType::Master
+    }
+
+    #[inline]
+    fn resize(&mut self, width: u32, height: u32) -> shared_memory::Shmem {
+        self.master_context.resize(width, height)
     }
 }

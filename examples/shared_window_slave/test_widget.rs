@@ -32,7 +32,7 @@ impl ObjectImpl for TestWidget {
         self.idx = 0;
 
         connect!(self.timer, timeout(), self, timeout());
-        self.timer.start(Duration::from_secs(1));
+        self.timer.start(Duration::from_millis(10));
         self.ins = Some(Instant::now());
     }
 }

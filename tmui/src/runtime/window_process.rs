@@ -22,7 +22,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
+use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
@@ -47,7 +47,7 @@ impl WindowProcess {
         platform_context: &'static mut dyn PlatformContext,
         window: Window,
         event_loop: EventLoop<Message>,
-        ipc_master: Option<Arc<IpcMaster<T, M>>>,
+        ipc_master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
         static mut RUNTIME_TRACK: Lazy<RuntimeTrack> = Lazy::new(|| RuntimeTrack::new());
@@ -61,6 +61,7 @@ impl WindowProcess {
                         control_flow.set_wait_timeout(Duration::from_millis(10));
                         runtime_track.vsync_rec = None;
                     } else {
+                        control_flow.set_poll();
                         runtime_track.vsync_rec = Some(Instant::now());
                     }
                     runtime_track.update_cnt = 0;
@@ -71,7 +72,7 @@ impl WindowProcess {
 
             if let Some(master) = ipc_master.clone() {
                 let mut user_events = vec![];
-                for evt in master.try_recv_vec() {
+                for evt in master.read().try_recv_vec() {
                     match evt {
                         IpcEvent::VSync(ins) => {
                             info!(
@@ -121,7 +122,7 @@ impl WindowProcess {
                 } => {
                     println!("The close button was pressed; stopping");
                     if let Some(master) = ipc_master.clone() {
-                        master.try_send(IpcEvent::Exit).unwrap();
+                        master.read().try_send(IpcEvent::Exit).unwrap();
                         platform_context.wait();
                     }
                     control_flow.set_exit();
@@ -352,7 +353,7 @@ impl WindowProcess {
         &self,
         platform_context: &'static mut dyn PlatformContext,
         output_receiver: Receiver<Message>,
-        ipc_slave: Arc<IpcSlave<T, M>>,
+        ipc_slave: Arc<RwLock<IpcSlave<T, M>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
         let _input_sender = platform_context.input_sender();
@@ -369,13 +370,14 @@ impl WindowProcess {
                         return;
                     }
                     // Send to master
-                    ipc_slave_clone.try_send(message.into()).unwrap()
+                    ipc_slave_clone.read().try_send(message.into()).unwrap()
                 }
             })
             .unwrap();
 
         'main: loop {
             let mut user_events = vec![];
+            let ipc_slave = ipc_slave.read();
             while ipc_slave.has_event() {
                 let evt = ipc_slave.try_recv().unwrap();
                 match evt {

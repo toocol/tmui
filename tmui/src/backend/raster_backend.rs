@@ -1,4 +1,5 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tipc::RwLock;
 
 use super::Backend;
 use crate::{
@@ -21,7 +22,7 @@ impl RasterBackend {
         #[cfg(not(windows_platform))]
         let color_type = ColorType::RGBA8888;
 
-        let mut guard = bitmap.write().unwrap();
+        let mut guard = bitmap.write();
 
         let image_info = ImageInfo::new(
             (guard.width() as i32, guard.height() as i32),
@@ -56,7 +57,7 @@ impl Backend for RasterBackend {
         #[cfg(not(windows_platform))]
         let color_type = ColorType::RGBA8888;
 
-        let mut guard = bitmap.write().unwrap();
+        let mut guard = bitmap.write();
 
         self.image_info = ImageInfo::new(
             (guard.width() as i32, guard.height() as i32),
@@ -71,9 +72,10 @@ impl Backend for RasterBackend {
         //     .unwrap();
 
         let row_bytes = guard.row_bytes();
+        let (pixels, _) = guard.get_pixels_mut();
         let mut new_surface = Surface::new_raster_direct(
             &self.image_info,
-            guard.get_pixels_mut().0,
+            pixels,
             row_bytes,
             None,
         )

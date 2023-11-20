@@ -1,5 +1,6 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
+use tipc::RwLock;
 use tlib::global::SemanticExt;
 
 use super::Backend;

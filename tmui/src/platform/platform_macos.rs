@@ -29,9 +29,9 @@ use objc::*;
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
-    Arc, RwLock,
+    Arc
 };
-use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
+use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster, RwLock};
 use tlib::winit::{
     dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
@@ -53,7 +53,7 @@ pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Co
     color_space: CGColorSpace,
 
     // Ipc shared memory context.
-    master: Option<Arc<IpcMaster<T, M>>>,
+    master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
@@ -95,11 +95,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
+                let master = master.read();
                 self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
                     master.buffer_raw_pointer(),
                     self.width,
                     self.height,
                     master.buffer_lock(),
+                    master.name(),
+                    master.ty(),
                 ))));
             }
             None => {
@@ -135,7 +138,17 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.resized = true;
 
         match self.master {
-            Some(ref _master) => {}
+            Some(ref master) => {
+                let mut master = master.write();
+                let old_shmem = master.resize(width, height);
+
+                bitmap_guard.update_raw_pointer(
+                    master.buffer_raw_pointer(),
+                    old_shmem,
+                    width,
+                    height,
+                );
+            }
             None => bitmap_guard.resize(width, height),
         }
     }

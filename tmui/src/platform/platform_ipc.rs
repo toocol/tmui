@@ -14,9 +14,9 @@ use crate::{
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
-    Arc, RwLock,
+    Arc,
 };
-use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
+use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
 use tlib::figure::Rect;
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -28,7 +28,7 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
     input_sender: Option<Sender<Message>>,
 
     /// Shared memory ipc slave
-    slave: Option<Arc<IpcSlave<T, M>>>,
+    slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
 
     shared_widget_id: Option<&'static str>,
@@ -72,7 +72,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     for PlatformIpc<T, M>
 {
     fn initialize(&mut self) {
-        let slave = self.slave.as_ref().unwrap();
+        let slave = self.slave.as_ref().unwrap().read();
         let bitmap = Bitmap::from_raw_pointer(
             slave.buffer_raw_pointer(),
             slave.width(),
@@ -110,8 +110,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn resize(&mut self, _width: u32, _height: u32) {
-        // Ipc slave could do nothing when resize.
+    fn resize(&mut self, width: u32, height: u32) {
+        let mut slave = self.slave.as_ref().unwrap().write();
+        let old_shmem = slave.resize(width, height);
+
+        self.bitmap().write().update_raw_pointer(
+            slave.buffer_raw_pointer(),
+            old_shmem,
+            width,
+            height,
+        )
     }
 
     #[inline]
@@ -164,14 +172,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     #[inline]
     fn wait(&self) {
         if let Some(ref slave) = self.slave {
-            slave.wait()
+            slave.read().wait()
         }
     }
 
     #[inline]
     fn signal(&self) {
         if let Some(ref slave) = self.slave {
-            slave.signal()
+            slave.read().signal()
         }
     }
 
@@ -183,6 +191,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSl
     for PlatformIpc<T, M>
 {
     fn proc_ipc_slave(&mut self, slave: tipc::ipc_slave::IpcSlave<T, M>) {
-        self.slave = Some(Arc::new(slave))
+        self.slave = Some(Arc::new(RwLock::new(slave)))
     }
 }

@@ -1,12 +1,12 @@
-#![allow(dead_code)]
 #![allow(unused_unsafe)]
 use std::{
+    collections::VecDeque,
     ffi::c_void,
     mem::size_of,
     ptr::NonNull,
     slice,
     sync::{
-        atomic::{AtomicPtr, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
     },
 };
@@ -19,8 +19,17 @@ use tlib::global::SemanticExt;
 const SHMEM_PIXELSS_ADDRESS_SUFFIX: &'static str = "_shpad";
 
 #[repr(C)]
-struct _ShmemPixels {
-    ptr: AtomicPtr<c_void>,
+struct _ShmemInfo {
+    prepared: AtomicBool,
+
+    master_release_idx: AtomicUsize,
+    slave_release_idx: AtomicUsize,
+}
+
+macro_rules! shmem_info {
+    ( $shmem:expr) => {
+        unsafe { ($shmem.as_ptr() as *mut _ShmemInfo).as_mut().unwrap() }
+    };
 }
 
 pub(crate) enum Bitmap {
@@ -42,11 +51,14 @@ pub(crate) enum Bitmap {
     },
 
     Shared {
+        ty: IpcType,
         /// The raw pointer of shared memory pixels data.
         raw_pointer: Option<NonNull<c_void>>,
+        /// Temporarily retain the previous pixels datas.
+        rentention: VecDeque<Shmem>,
         /// The address of shared memory pixels data.
-        shmem_pixels: Shmem,
-        /// The lock to visit `raw_pointer`
+        shmem_info: Shmem,
+        /// The lock to visit `raw_pointer`.
         lock: Arc<MemRwLock>,
         /// The length of the pixels.
         total_bytes: usize,
@@ -56,15 +68,7 @@ pub(crate) enum Bitmap {
         width: u32,
         /// The height of `Bitmap`.
         height: u32,
-        /// Is this bitmap rendered.
-        prepared: bool,
     },
-}
-
-macro_rules! shmem_pixels {
-    ( $shmem:expr) => {
-        unsafe { ($shmem.as_ptr() as *mut _ShmemPixels).as_mut().unwrap() }
-    };
 }
 
 impl Bitmap {
@@ -96,29 +100,24 @@ impl Bitmap {
 
         let shmem_pixels = match ipc_type {
             IpcType::Master => ShmemConf::new()
-                .size(size_of::<_ShmemPixels>())
+                .size(size_of::<_ShmemInfo>())
                 .os_id(address_name)
                 .create()
                 .unwrap(),
             IpcType::Slave => ShmemConf::new().os_id(address_name).open().unwrap(),
         };
 
-        shmem_pixels!(shmem_pixels)
-            .ptr
-            .store(pointer, Ordering::SeqCst);
-
-        let bitmap = Self::Shared {
+        Self::Shared {
+            ty: ipc_type,
             raw_pointer: NonNull::new(pointer),
-            shmem_pixels,
+            rentention: VecDeque::new(),
+            shmem_info: shmem_pixels,
             lock: lock,
             total_bytes: (width * height * 4) as usize,
             row_bytes: (width * 4) as usize,
             width,
             height,
-            prepared: false,
-        };
-
-        bitmap
+        }
     }
 
     #[inline]
@@ -146,27 +145,29 @@ impl Bitmap {
     }
 
     #[inline]
-    pub fn update_raw_pointer(&mut self, n_raw_pointer: *mut c_void, w: u32, h: u32) {
+    pub fn update_raw_pointer(&mut self, n_raw_pointer: *mut c_void, old_shmem: Shmem, w: u32, h: u32) {
         match self {
             Self::Shared {
+                ty,
                 raw_pointer,
-                shmem_pixels,
+                rentention,
+                shmem_info: shmem_pixels,
                 total_bytes,
                 row_bytes,
                 width,
                 height,
-                prepared,
                 ..
             } => {
                 *raw_pointer = NonNull::new(n_raw_pointer);
-                shmem_pixels!(shmem_pixels)
-                    .ptr
-                    .store(n_raw_pointer, Ordering::Release);
+                if *ty == IpcType::Master {
+                    rentention.push_back(old_shmem)
+                }
+                let shmem_info = shmem_info!(shmem_pixels);
+                shmem_info.prepared.store(false, Ordering::Release);
                 *total_bytes = (w * h * 4) as usize;
                 *row_bytes = (w * 4) as usize;
                 *width = w;
                 *height = h;
-                *prepared = false;
             }
             _ => {}
         }
@@ -178,7 +179,7 @@ impl Bitmap {
     pub fn get_pixels(&self) -> (&[u8], Option<MemRwLockGuard>) {
         match self {
             Self::Shared {
-                shmem_pixels,
+                raw_pointer,
                 lock,
                 total_bytes,
                 ..
@@ -186,9 +187,7 @@ impl Bitmap {
                 return unsafe {
                     (
                         slice::from_raw_parts(
-                            shmem_pixels!(shmem_pixels)
-                                .ptr
-                                .load(Ordering::Acquire) as *const u8,
+                            raw_pointer.as_ref().unwrap().as_ptr() as *const u8,
                             *total_bytes,
                         ),
                         Some(lock.read()),
@@ -207,7 +206,8 @@ impl Bitmap {
     pub fn get_pixels_mut(&mut self) -> (&mut [u8], Option<MemRwLockGuard>) {
         match self {
             Self::Shared {
-                shmem_pixels,
+                raw_pointer,
+                // shmem_pixels,
                 lock,
                 total_bytes,
                 ..
@@ -215,9 +215,7 @@ impl Bitmap {
                 return unsafe {
                     (
                         slice::from_raw_parts_mut(
-                            shmem_pixels!(shmem_pixels)
-                                .ptr
-                                .load(Ordering::Acquire) as *mut u8,
+                            raw_pointer.as_mut().unwrap().as_ptr() as *mut u8,
                             *total_bytes,
                         ),
                         Some(lock.write()),
@@ -258,7 +256,12 @@ impl Bitmap {
     pub fn prepared(&mut self) {
         match self {
             Self::Direct { prepared, .. } => *prepared = true,
-            Self::Shared { prepared, .. } => *prepared = true,
+            Self::Shared {
+                shmem_info: shmem_pixels,
+                ..
+            } => shmem_info!(shmem_pixels)
+                .prepared
+                .store(true, Ordering::Release),
         }
     }
 
@@ -266,7 +269,10 @@ impl Bitmap {
     pub fn is_prepared(&self) -> bool {
         match self {
             Self::Direct { prepared, .. } => *prepared,
-            Self::Shared { prepared, .. } => *prepared,
+            Self::Shared {
+                shmem_info: shmem_pixels,
+                ..
+            } => shmem_info!(shmem_pixels).prepared.load(Ordering::Acquire),
         }
     }
 
@@ -276,7 +282,42 @@ impl Bitmap {
             Self::Direct { retention, .. } => {
                 retention.take();
             }
-            Self::Shared { .. } => {}
+            Self::Shared {
+                ty,
+                rentention,
+                shmem_info,
+                ..
+            } => {
+                let shmem_info = shmem_info!(shmem_info);
+
+                match ty {
+                    IpcType::Master => shmem_info.master_release_idx.fetch_add(1, Ordering::Release),
+                    IpcType::Slave => shmem_info.slave_release_idx.fetch_add(1, Ordering::Release),
+                };
+                
+                if *ty == IpcType::Slave {
+                    return
+                }
+
+                shmem_info
+                    .master_release_idx
+                    .fetch_update(Ordering::Release, Ordering::Acquire, |master_idx| {
+                        let mut cnt = 0;
+                        shmem_info.slave_release_idx.fetch_update(
+                            Ordering::Release,
+                            Ordering::Acquire,
+                            |slave_idx| {
+                                for _ in 0..slave_idx.min(master_idx) {
+                                    rentention.pop_front();
+                                    cnt += 1;
+                                }
+                                Some(slave_idx - cnt)
+                            }
+                        ).expect("Shared bitmap release retention failed, cause by `slave_release_idx` fetch_update()");
+                        Some(master_idx - cnt)
+                    })
+                    .expect("Shared bitmap release retention failed, cause by `master_release_idx` fetch_update()");
+            }
         }
     }
 

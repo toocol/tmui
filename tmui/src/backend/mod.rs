@@ -1,8 +1,9 @@
 pub mod opengl_backend;
 pub mod raster_backend;
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
+use tipc::RwLock;
 use tlib::skia_safe::ImageInfo;
 
 use crate::{skia_safe::Surface, primitive::bitmap::Bitmap};

@@ -17,7 +17,6 @@ pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
     width: usize,
     height: usize,
     slave_context: SlaveContext<T, M>,
-    name: String,
 }
 
 /// SAFETY: MemQueue and memory context use `Mutex` to ensure thread safety.
@@ -35,7 +34,6 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
             width: width as usize,
             height: height as usize,
             slave_context: slave_context,
-            name: name.to_string()
         }
     }
 }
@@ -43,7 +41,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
 impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     #[inline]
     fn name(&self) -> &str {
-        &self.name
+        self.slave_context.name()
     }
 
     #[inline]
@@ -145,5 +143,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     #[inline]
     fn ty(&self) -> crate::IpcType {
         crate::IpcType::Slave
+    }
+
+    #[inline]
+    fn resize(&mut self, width: u32, height: u32) -> shared_memory::Shmem {
+        self.slave_context.resize(width, height)
     }
 }

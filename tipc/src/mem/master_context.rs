@@ -6,8 +6,8 @@ use super::{
 use crate::{
     ipc_event::{InnerIpcEvent, IpcEvent},
     mem::{
-        mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_MASTER_QUEUE,
-        IPC_MEM_PRIMARY_BUFFER_NAME, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
+        mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_BUFFER_NAME,
+        IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
     },
 };
 use parking_lot::Mutex;
@@ -25,7 +25,8 @@ use std::{
 use tlib::global::SemanticExt;
 
 pub(crate) struct MasterContext<T: 'static + Copy, M: 'static + Copy> {
-    buffer: Shmem,
+    name: String,
+    buffer: Option<Shmem>,
     shared_info: Shmem,
     wait_signal_mem: Shmem,
     buffer_lock: Arc<MemRwLock>,
@@ -37,11 +38,17 @@ pub(crate) struct MasterContext<T: 'static + Copy, M: 'static + Copy> {
 
 impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
     pub(crate) fn create<P: ToString>(name: P, width: u32, height: u32) -> Self {
-        let mut primary_buffer_name = name.to_string();
-        primary_buffer_name.push_str(IPC_MEM_PRIMARY_BUFFER_NAME);
+        let buffer_name = format!(
+            "{}{}{}{}_{}",
+            name.to_string(),
+            IPC_MEM_BUFFER_NAME,
+            width,
+            height,
+            0
+        );
         let buffer = ShmemConf::new()
             .size((width * height * 4) as usize)
-            .os_id(primary_buffer_name)
+            .os_id(buffer_name)
             .create()
             .unwrap();
 
@@ -94,7 +101,8 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
             .unwrap();
 
         Self {
-            buffer,
+            name: name.to_string(),
+            buffer: Some(buffer),
             shared_info,
             buffer_lock,
             wait_signal_mem: event_signal_mem,
@@ -116,8 +124,13 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
 
 impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T, M> {
     #[inline]
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    #[inline]
     fn buffer(&self) -> *mut u8 {
-        self.buffer.as_ptr()
+        self.buffer.as_ref().unwrap().as_ptr()
     }
 
     #[inline]
@@ -224,5 +237,33 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     #[inline]
     fn buffer_lock(&self) -> Arc<MemRwLock> {
         self.buffer_lock.clone()
+    }
+
+    fn resize(&mut self, width: u32, height: u32) -> Shmem {
+        let info_data = unsafe {
+            (self.shared_info.as_ptr() as *mut SharedInfo<M>)
+                .as_mut()
+                .unwrap()
+        };
+        info_data.width.store(width, Ordering::Release);
+        info_data.height.store(height, Ordering::Release);
+        let name_helper = info_data.name_helper.fetch_add(1, Ordering::Release);
+
+        let buffer_name = format!(
+            "{}{}{}{}_{}",
+            self.name,
+            IPC_MEM_BUFFER_NAME,
+            width,
+            height,
+            name_helper + 1
+        );
+
+        let buffer = ShmemConf::new()
+            .size((width * height * 4) as usize)
+            .os_id(buffer_name)
+            .create()
+            .unwrap();
+
+        self.buffer.replace(buffer).unwrap()
     }
 }

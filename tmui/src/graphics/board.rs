@@ -1,10 +1,11 @@
+use tipc::RwLock;
 use tlib::nonnull_mut;
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
-    sync::{Once, Arc, RwLock},
+    sync::{Once, Arc},
 };
 
 thread_local! {
@@ -61,12 +62,12 @@ impl Board {
 
     #[inline]
     pub fn width(&self) -> u32 {
-        self.bitmap.read().unwrap().width()
+        self.bitmap.read().width()
     }
 
     #[inline]
     pub fn height(&self) -> u32 {
-        self.bitmap.read().unwrap().height()
+        self.bitmap.read().height()
     }
 
     #[inline]
@@ -93,7 +94,7 @@ impl Board {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
             if *notify_update.borrow() {
-                let mut bitmap_guard = self.bitmap.write().unwrap();
+                let mut bitmap_guard = self.bitmap.write();
                 
                 // Invoke `ipc_write()` here, so that the following code can 
                 // be executed with cross process lock,
