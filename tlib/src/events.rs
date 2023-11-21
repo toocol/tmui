@@ -3,16 +3,17 @@ use crate::{
     global::to_static,
     impl_as_any, implements_enum_value,
     namespace::{AsNumeric, KeyCode, KeyboardModifier, MouseButton},
+    payload::PayloadWeight,
     prelude::*,
     values::{FromBytes, FromValue, ToBytes},
-    Type, Value, payload::PayloadWeight,
+    Type, Value,
 };
 use std::{any::Any, fmt::Debug, mem::size_of, path::PathBuf};
 use winit::event::Ime;
 
 pub type Event = Box<dyn EventTrait>;
 pub trait EventTrait: 'static + PayloadWeight + AsAny + Debug + Sync + Send {
-    fn type_(&self) -> EventType;
+    fn event_type(&self) -> EventType;
 }
 
 #[inline]
@@ -155,7 +156,7 @@ impl KeyEvent {
 }
 impl EventTrait for KeyEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -344,7 +345,7 @@ impl MouseEvent {
 
 impl EventTrait for MouseEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -493,7 +494,7 @@ impl FocusEvent {
 }
 impl EventTrait for FocusEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -586,7 +587,7 @@ impl ResizeEvent {
 }
 impl EventTrait for ResizeEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -685,7 +686,7 @@ impl MovedEvent {
 }
 impl EventTrait for MovedEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -792,7 +793,7 @@ impl FileEvent {
 }
 impl EventTrait for FileEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -904,7 +905,7 @@ impl ReceiveCharacterEvent {
 }
 impl EventTrait for ReceiveCharacterEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }
@@ -994,7 +995,7 @@ impl InputMethodEvent {
 }
 impl EventTrait for InputMethodEvent {
     #[inline]
-    fn type_(&self) -> EventType {
+    fn event_type(&self) -> EventType {
         self.type_
     }
 }

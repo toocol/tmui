@@ -22,7 +22,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock};
+use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock, ipc_event::IpcEvent};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,

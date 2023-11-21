@@ -1,10 +1,14 @@
 use std::time::Instant;
 use tlib::{prelude::SystemCursorShape, figure::Point};
-use crate::mem::{IPC_KEY_EVT_SIZE, IPC_TEXT_EVT_SIZE};
+
+pub const IPC_KEY_EVT_SIZE: usize = 8;
+pub const IPC_TEXT_EVT_SIZE: usize = 4096;
 
 pub enum IpcEvent<T: 'static + Copy> {
     None,
     Exit,
+    /// (width, height, timestamp)
+    ResizeEvent(i32, i32, Instant),
     /// The vsync event.
     VSync(Instant),
     /// (characters, key_code, modifier, timestamp)
@@ -38,6 +42,8 @@ pub enum IpcEvent<T: 'static + Copy> {
 pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     None,
     Exit,
+    /// (width, height, timestamp)
+    ResizeEvent(i32, i32, Instant),
     /// (instant_of_vsync)
     VSync(Instant),
     /// (characters, key_code, modifier, timestamp)
@@ -71,6 +77,7 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
         match self {
             Self::None => InnerIpcEvent::None,
             Self::Exit => InnerIpcEvent::Exit,
+            Self::ResizeEvent(a, b, c) => InnerIpcEvent::ResizeEvent(a, b, c),
             Self::VSync(a) => InnerIpcEvent::VSync(a),
             Self::KeyPressedEvent(a, b, c, d) => {
                 let bytes = a.as_bytes();
@@ -133,6 +140,7 @@ impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
         match self {
             Self::None => IpcEvent::None,
             Self::Exit => IpcEvent::Exit,
+            Self::ResizeEvent(a, b, c) => IpcEvent::ResizeEvent(a, b, c),
             Self::VSync(a) => IpcEvent::VSync(a),
             Self::KeyPressedEvent(a, b, c, d) => {
                 let str = String::from_utf8(a.to_vec())

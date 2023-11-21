@@ -15,6 +15,7 @@ use crate::{
     runtime::{ui_runtime, window_context::WindowContext},
 };
 use lazy_static::lazy_static;
+use tlib::events::Event;
 use std::{
     any::Any,
     cell::RefCell,
@@ -256,6 +257,19 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     .expect(INVALID_GENERIC_PARAM_ERROR)
                     .0;
                 sender.send_user_event(evt)
+            }
+        });
+    }
+
+    #[inline]
+    pub(crate) fn send_event_ipc(evt: Event) {
+        SHARED_CHANNEL.with(|s| {
+            if let Some(channel) = s.borrow().as_ref() {
+                let sender = &channel
+                    .downcast_ref::<SharedChannel<T, M>>()
+                    .expect(INVALID_GENERIC_PARAM_ERROR)
+                    .0;
+                sender.send_event_ipc(evt)
             }
         });
     }

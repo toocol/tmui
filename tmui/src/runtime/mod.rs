@@ -62,12 +62,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     // Create the [`Backend`] based on the backend type specified by the user.
     let backend: Box<dyn Backend>;
     match backend_type {
-        BackendType::Raster => {
-            backend = RasterBackend::new(platform.bitmap())
-        }
-        BackendType::OpenGL => {
-            backend = OpenGLBackend::new(platform.bitmap())
-        }
+        BackendType::Raster => backend = RasterBackend::new(platform.bitmap()),
+        BackendType::OpenGL => backend = OpenGLBackend::new(platform.bitmap()),
     }
 
     // Prepare ApplicationWindow env: Create the `Board`.
@@ -153,7 +149,7 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
         tlib::r#async::async_callbacks();
 
         if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
-            if evt.type_() == EventType::Resize {
+            if evt.event_type() == EventType::Resize {
                 let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
 
                 if resize_evt.width() > 0 && resize_evt.height() > 0 {
@@ -167,7 +163,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
             }
 
             cpu_balance.add_payload(evt.payload_wieght());
-            window.dispatch_event(evt);
+            let evt = window.dispatch_event(evt);
+            Application::<T, M>::send_event_ipc(evt);
         }
 
         if let Some(ref on_user_event_receive) = on_user_event_receive {

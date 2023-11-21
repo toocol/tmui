@@ -1,9 +1,10 @@
 use std::time::Instant;
 use tipc::ipc_event::IpcEvent;
 use tlib::{
-    events::{downcast_event, Event, EventType::*, KeyEvent, MouseEvent},
+    events::{downcast_event, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
     namespace::AsNumeric,
-    prelude::SystemCursorShape, payload::PayloadWeight,
+    payload::PayloadWeight,
+    prelude::SystemCursorShape,
 };
 
 #[derive(Debug)]
@@ -42,9 +43,13 @@ impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
 
 /// Maybe it's useless, write this just in case.
 #[inline]
-fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
-    let ty = evt.type_();
+pub(crate) fn convert_event<T: 'static + Copy + Sync + Send>(evt: Event) -> IpcEvent<T> {
+    let ty = evt.event_type();
     match ty {
+        Resize => {
+            let evt = downcast_event::<ResizeEvent>(evt).unwrap();
+            IpcEvent::ResizeEvent(evt.width(), evt.height(), Instant::now())
+        }
         MouseButtonPress => {
             let evt = downcast_event::<MouseEvent>(evt).unwrap();
             let pos = evt.position();

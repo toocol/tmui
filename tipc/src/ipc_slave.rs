@@ -1,16 +1,10 @@
 use crate::{
-    ipc_event::IpcEvent,
+    generate_u128,
     mem::{mem_queue::MemQueueError, slave_context::SlaveContext, MemContext},
-    IpcNode,
+    IpcNode, ipc_event::IpcEvent,
 };
 use core::slice;
-use std::{
-    collections::hash_map::DefaultHasher,
-    error::Error,
-    ffi::c_void,
-    hash::{Hash, Hasher},
-    sync::atomic::Ordering,
-};
+use std::{error::Error, ffi::c_void, sync::atomic::Ordering};
 use tlib::figure::Rect;
 
 pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
@@ -110,9 +104,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
 
     #[inline]
     fn region(&self, id: &'static str) -> Option<Rect> {
-        let mut hasher = DefaultHasher::default();
-        id.hash(&mut hasher);
-        let id = hasher.finish();
+        let id = generate_u128(id).expect(&format!("Invalid id: {}", id));
 
         let shared_info = self.slave_context.shared_info();
         let idx = shared_info.region_idx.load(Ordering::Acquire);

@@ -114,6 +114,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let mut slave = self.slave.as_ref().unwrap().write();
         let old_shmem = slave.resize(width, height);
 
+        self.region = slave
+            .region(self.shared_widget_id.unwrap())
+            .expect("The `SharedWidget` with id `{}` was not exist.");
+
         self.bitmap().write().update_raw_pointer(
             slave.buffer_raw_pointer(),
             old_shmem,

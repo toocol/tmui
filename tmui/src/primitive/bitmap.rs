@@ -16,7 +16,7 @@ use tipc::{
 };
 use tlib::global::SemanticExt;
 
-const SHMEM_PIXELSS_ADDRESS_SUFFIX: &'static str = "_shpad";
+const SHMEM_BITMAP_INFO_SUFFIX: &'static str = "_shbif";
 
 #[repr(C)]
 struct _ShmemInfo {
@@ -96,9 +96,9 @@ impl Bitmap {
         ipc_type: IpcType,
     ) -> Self {
         let mut address_name = ipc_name.to_string();
-        address_name.push_str(SHMEM_PIXELSS_ADDRESS_SUFFIX);
+        address_name.push_str(SHMEM_BITMAP_INFO_SUFFIX);
 
-        let shmem_pixels = match ipc_type {
+        let shmem_info = match ipc_type {
             IpcType::Master => ShmemConf::new()
                 .size(size_of::<_ShmemInfo>())
                 .os_id(address_name)
@@ -111,7 +111,7 @@ impl Bitmap {
             ty: ipc_type,
             raw_pointer: NonNull::new(pointer),
             rentention: VecDeque::new(),
-            shmem_info: shmem_pixels,
+            shmem_info,
             lock: lock,
             total_bytes: (width * height * 4) as usize,
             row_bytes: (width * 4) as usize,
@@ -151,7 +151,7 @@ impl Bitmap {
                 ty,
                 raw_pointer,
                 rentention,
-                shmem_info: shmem_pixels,
+                shmem_info,
                 total_bytes,
                 row_bytes,
                 width,
@@ -162,7 +162,7 @@ impl Bitmap {
                 if *ty == IpcType::Master {
                     rentention.push_back(old_shmem)
                 }
-                let shmem_info = shmem_info!(shmem_pixels);
+                let shmem_info = shmem_info!(shmem_info);
                 shmem_info.prepared.store(false, Ordering::Release);
                 *total_bytes = (w * h * 4) as usize;
                 *row_bytes = (w * 4) as usize;
@@ -207,7 +207,6 @@ impl Bitmap {
         match self {
             Self::Shared {
                 raw_pointer,
-                // shmem_pixels,
                 lock,
                 total_bytes,
                 ..
@@ -257,9 +256,9 @@ impl Bitmap {
         match self {
             Self::Direct { prepared, .. } => *prepared = true,
             Self::Shared {
-                shmem_info: shmem_pixels,
+                shmem_info,
                 ..
-            } => shmem_info!(shmem_pixels)
+            } => shmem_info!(shmem_info)
                 .prepared
                 .store(true, Ordering::Release),
         }
@@ -270,9 +269,9 @@ impl Bitmap {
         match self {
             Self::Direct { prepared, .. } => *prepared,
             Self::Shared {
-                shmem_info: shmem_pixels,
+                shmem_info,
                 ..
-            } => shmem_info!(shmem_pixels).prepared.load(Ordering::Acquire),
+            } => shmem_info!(shmem_info).prepared.load(Ordering::Acquire),
         }
     }
 

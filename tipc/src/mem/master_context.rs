@@ -3,13 +3,10 @@ use super::{
     mem_rw_lock::MemRwLock,
     BuildType, MemContext, IPC_MEM_LOCK_NAME, IPC_MEM_SIGNAL_EVT, IPC_QUEUE_SIZE,
 };
-use crate::{
-    ipc_event::{InnerIpcEvent, IpcEvent},
-    mem::{
-        mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_BUFFER_NAME,
-        IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
-    },
-};
+use crate::{mem::{
+    mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_BUFFER_NAME,
+    IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
+}, ipc_event::{InnerIpcEvent, IpcEvent}};
 use parking_lot::Mutex;
 use raw_sync::{
     events::{Event, EventInit, EventState},

@@ -1,6 +1,6 @@
-use std::time::{Duration, Instant};
 use lazy_static::lazy_static;
 use log::info;
+use std::time::{Duration, Instant};
 use tlib::{
     connect, disconnect,
     object::{ObjectImpl, ObjectSubclass},
@@ -32,12 +32,16 @@ impl ObjectImpl for TestWidget {
         self.idx = 0;
 
         connect!(self.timer, timeout(), self, timeout());
-        self.timer.start(Duration::from_millis(10));
+        self.timer.start(Duration::from_secs(1));
         self.ins = Some(Instant::now());
     }
 }
 
-impl WidgetImpl for TestWidget {}
+impl WidgetImpl for TestWidget {
+    fn on_mouse_pressed(&mut self, event: &tlib::events::MouseEvent) {
+        println!("Receive mouse pressed event, {:?}", event)
+    }
+}
 
 impl TestWidget {
     pub fn new() -> Box<Self> {

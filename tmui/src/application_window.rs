@@ -256,17 +256,18 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn dispatch_event(&mut self, evt: Event) {
-        match evt.type_() {
+    pub(crate) fn dispatch_event(&mut self, mut event: Event) -> Event {
+        match event.event_type() {
             // Window Resize.
             EventType::Resize => {
-                let evt = downcast_event::<ResizeEvent>(evt).unwrap();
+                let evt = downcast_event::<ResizeEvent>(event).unwrap();
                 self.resize(Some(evt.width()), Some(evt.height()));
+                event = evt;
             }
 
             // Mouse pressed.
             EventType::MouseButtonPress => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -281,11 +282,12 @@ impl ApplicationWindow {
                         break;
                     }
                 }
+                event = evt;
             }
 
             // Mouse released.
             EventType::MouseButtonRelease => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -300,11 +302,13 @@ impl ApplicationWindow {
                         break;
                     }
                 }
+
+                event = evt;
             }
 
             // Mouse moved.
             EventType::MouseMove => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -322,11 +326,13 @@ impl ApplicationWindow {
                         break;
                     }
                 }
+
+                event = evt;
             }
 
             // Mouse wheeled.
             EventType::MouseWhell => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -341,6 +347,8 @@ impl ApplicationWindow {
                         break;
                     }
                 }
+
+                event = evt;
             }
 
             EventType::MouseEnter => {}
@@ -349,7 +357,7 @@ impl ApplicationWindow {
 
             // Key pressed.
             EventType::KeyPress => {
-                let evt = downcast_event::<KeyEvent>(evt).unwrap();
+                let evt = downcast_event::<KeyEvent>(event).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -361,11 +369,13 @@ impl ApplicationWindow {
                         break;
                     }
                 }
+
+                event = evt;
             }
 
             // Key released.
             EventType::KeyRelease => {
-                let evt = downcast_event::<KeyEvent>(evt).unwrap();
+                let evt = downcast_event::<KeyEvent>(event).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -377,6 +387,8 @@ impl ApplicationWindow {
                         break;
                     }
                 }
+
+                event = evt;
             }
 
             EventType::FocusIn => {}
@@ -389,6 +401,8 @@ impl ApplicationWindow {
             EventType::InputMethod => {}
             EventType::None => {}
         }
+
+        event
     }
 
     /// Should set the parent of widget before use this function.

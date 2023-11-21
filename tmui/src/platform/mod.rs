@@ -94,6 +94,6 @@ pub(crate) trait PlatformContext: 'static {
     /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
     fn signal(&self);
 
-    /// For shared-memory application, add shared region rect
+    /// For shared-memory application, add or update shared region rect.
     fn add_shared_region(&self, id: &'static str, rect: Rect);
 }

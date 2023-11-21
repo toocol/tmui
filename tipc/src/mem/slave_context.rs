@@ -1,3 +1,4 @@
+use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use super::{
     mem_queue::{MemQueue, MemQueueBuilder, MemQueueError},
     mem_rw_lock::MemRwLock,
@@ -5,7 +6,6 @@ use super::{
     IPC_MEM_LOCK_NAME, IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SIGNAL_EVT,
     IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
 };
-use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use parking_lot::Mutex;
 use raw_sync::{
     events::{Event, EventInit, EventState},
@@ -48,7 +48,7 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
             sinfo.name_helper.load(Ordering::Acquire),
         );
 
-        let primary_buffer_name = format!(
+        let buffer_name = format!(
             "{}{}{}{}_{}",
             name.to_string(),
             IPC_MEM_BUFFER_NAME,
@@ -56,7 +56,7 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
             height,
             name_helper
         );
-        let buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
+        let buffer = ShmemConf::new().os_id(buffer_name).open().unwrap();
 
         let mut event_signal_name = name.to_string();
         event_signal_name.push_str(IPC_MEM_SIGNAL_EVT);
@@ -238,7 +238,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
             sinfo.name_helper.load(Ordering::Acquire),
         );
 
-        let primary_buffer_name = format!(
+        let buffer_name = format!(
             "{}{}{}{}_{}",
             self.name.to_string(),
             IPC_MEM_BUFFER_NAME,
@@ -247,7 +247,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
             name_helper
         );
 
-        let buffer = ShmemConf::new().os_id(primary_buffer_name).open().unwrap();
+        let buffer = ShmemConf::new().os_id(buffer_name).open().unwrap();
 
         self.buffer.replace(buffer).unwrap()
     }

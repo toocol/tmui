@@ -1,6 +1,8 @@
 use std::{sync::{mpsc::Receiver, Arc}, time::Instant};
 
-use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock};
+use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock, ipc_event::IpcEvent};
+use tlib::events::Event;
+use super::convert_event;
 
 pub(crate) type SharedChannel<T, M> =
     (SharedSender<T, M>, SharedReceiver<T, M>);
@@ -73,6 +75,26 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedSen
                 .unwrap()
                 .read()
                 .try_send(IpcEvent::UserEvent(user_evt, Instant::now()))
+                .unwrap(),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn send_event_ipc(&self, event: Event) {
+        match self.ty {
+            SharedType::Master => self
+                .master
+                .as_ref()
+                .unwrap()
+                .read()
+                .try_send(convert_event::<T>(event))
+                .unwrap(),
+            SharedType::Slave => self
+                .slave
+                .as_ref()
+                .unwrap()
+                .read()
+                .try_send(convert_event::<T>(event))
                 .unwrap(),
         }
     }
