@@ -3,12 +3,12 @@ use super::PlatformContext;
 use crate::{
     primitive::{
         bitmap::Bitmap,
-        shared_channel::{self, SharedChannel},
+        shared_channel::SharedChannel,
     },
     runtime::window_context::WindowContext,
 };
-use std::sync::{mpsc::Sender, Arc, RwLock};
-use tipc::{ipc_master::IpcMaster, WithIpcMaster};
+use std::sync::{mpsc::Sender, Arc};
+use tipc::{ipc_master::IpcMaster, WithIpcMaster, RwLock};
 
 pub(crate) struct PlatformX11<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
