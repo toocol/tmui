@@ -1,5 +1,5 @@
-use tipc::RwLock;
-use tlib::nonnull_mut;
+use tipc::{RwLock, lock_api::RwLockWriteGuard, RawRwLock};
+use tlib::{nonnull_mut, ptr_ref};
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
 use std::{
@@ -99,7 +99,7 @@ impl Board {
                 // Invoke `ipc_write()` here, so that the following code can 
                 // be executed with cross process lock,
                 // when program was under cross process rendering.
-                let _ = bitmap_guard.ipc_write();
+                let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
 
                 // The parent elements always at the end of `element_list`.
                 // We should renderer the parent elements first.

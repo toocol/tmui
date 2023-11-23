@@ -96,6 +96,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
     let mut log_instant = Instant::now();
 
+    Application::<T, M>::set_app_started();
+
     loop {
         if APP_STOPPED.load(Ordering::Relaxed) {
             break;

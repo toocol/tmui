@@ -1,5 +1,6 @@
 use std::sync::Arc;
-use tipc::RwLock;
+use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
+use tlib::ptr_ref;
 
 use super::Backend;
 use crate::{
@@ -23,6 +24,7 @@ impl RasterBackend {
         let color_type = ColorType::RGBA8888;
 
         let mut guard = bitmap.write();
+        let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
 
         let image_info = ImageInfo::new(
             (guard.width() as i32, guard.height() as i32),
@@ -34,14 +36,10 @@ impl RasterBackend {
         // let surface = Surface::new_raster_n32_premul((width, height)).unwrap();
 
         let row_bytes = guard.row_bytes();
-        let surface = Surface::new_raster_direct(
-            &image_info,
-            guard.get_pixels_mut().0,
-            row_bytes,
-            None,
-        )
-        .unwrap()
-        .to_owned();
+        let surface =
+            Surface::new_raster_direct(&image_info, guard.get_pixels_mut(), row_bytes, None)
+                .unwrap()
+                .to_owned();
 
         Box::new(Self {
             image_info: image_info,
@@ -58,9 +56,13 @@ impl Backend for RasterBackend {
         let color_type = ColorType::RGBA8888;
 
         let mut guard = bitmap.write();
+        let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
+        let row_bytes = guard.row_bytes();
+        let dimensitions = (guard.width() as i32, guard.height() as i32);
 
         self.image_info = ImageInfo::new(
-            (guard.width() as i32, guard.height() as i32),
+            dimensitions,
             color_type,
             AlphaType::Premul,
             ColorSpace::new_srgb(),
@@ -71,16 +73,10 @@ impl Backend for RasterBackend {
         //     .new_surface_with_dimensions((width, height))
         //     .unwrap();
 
-        let row_bytes = guard.row_bytes();
-        let (pixels, _) = guard.get_pixels_mut();
-        let mut new_surface = Surface::new_raster_direct(
-            &self.image_info,
-            pixels,
-            row_bytes,
-            None,
-        )
-        .unwrap()
-        .to_owned();
+        let mut new_surface =
+            Surface::new_raster_direct(&self.image_info, guard.get_pixels_mut(), row_bytes, None)
+                .unwrap()
+                .to_owned();
 
         new_surface
             .canvas()

@@ -16,8 +16,10 @@ use std::sync::{
     mpsc::{channel, Sender},
     Arc,
 };
-use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
-use tlib::figure::Rect;
+use tipc::{
+    ipc_slave::IpcSlave, lock_api::RwLockWriteGuard, IpcNode, RawRwLock, RwLock, WithIpcSlave,
+};
+use tlib::{figure::Rect, ptr_ref};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -111,6 +113,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
+        let bitmap = self.bitmap();
+        let mut guard = bitmap.write();
+        let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
         let mut slave = self.slave.as_ref().unwrap().write();
         let old_shmem = slave.resize(width, height);
 
@@ -118,11 +124,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             .region(self.shared_widget_id.unwrap())
             .expect("The `SharedWidget` with id `{}` was not exist.");
 
-        self.bitmap().write().update_raw_pointer(
+        guard.update_raw_pointer(
             slave.buffer_raw_pointer(),
             old_shmem,
-            width,
-            height,
+            slave.width(),
+            slave.height(),
         )
     }
 

@@ -179,26 +179,22 @@ impl Bitmap {
     /// Can't used with [`get_pixels_mut()`](Bitmap::get_pixels_mut), [`ipc_write()`](Bitmap::ipc_write)
     /// in same code block, otherwise, it may cause deadlock issues
     #[inline]
-    pub fn get_pixels(&self) -> (&[u8], Option<MemRwLockGuard>) {
+    pub fn get_pixels(&self) -> &[u8] {
         match self {
             Self::Shared {
                 raw_pointer,
-                lock,
                 total_bytes,
                 ..
             } => {
                 return unsafe {
-                    (
-                        slice::from_raw_parts(
-                            raw_pointer.as_ref().unwrap().as_ptr() as *const u8,
-                            *total_bytes,
-                        ),
-                        Some(lock.read()),
+                    slice::from_raw_parts(
+                        raw_pointer.as_ref().unwrap().as_ptr() as *const u8,
+                        *total_bytes,
                     )
                 };
             }
             Self::Direct { pixels, .. } => {
-                return (pixels.as_ref().unwrap().as_ref(), None);
+                return pixels.as_ref().unwrap().as_ref();
             }
         }
     }
@@ -206,26 +202,22 @@ impl Bitmap {
     /// Can't used with [`get_pixels()`](Bitmap::get_pixels), [`ipc_write()`](Bitmap::ipc_write)
     /// in same code block, otherwise, it may cause deadlock issues
     #[inline]
-    pub fn get_pixels_mut(&mut self) -> (&mut [u8], Option<MemRwLockGuard>) {
+    pub fn get_pixels_mut(&mut self) -> &mut [u8] {
         match self {
             Self::Shared {
                 raw_pointer,
-                lock,
                 total_bytes,
                 ..
             } => {
                 return unsafe {
-                    (
-                        slice::from_raw_parts_mut(
-                            raw_pointer.as_mut().unwrap().as_ptr() as *mut u8,
-                            *total_bytes,
-                        ),
-                        Some(lock.write()),
+                    slice::from_raw_parts_mut(
+                        raw_pointer.as_mut().unwrap().as_ptr() as *mut u8,
+                        *total_bytes,
                     )
                 };
             }
             Self::Direct { pixels, .. } => {
-                return (pixels.as_mut().unwrap().as_mut(), None);
+                return pixels.as_mut().unwrap().as_mut();
             }
         }
     }
@@ -289,40 +281,50 @@ impl Bitmap {
                 let shmem_info = shmem_info!(shmem_info);
 
                 match ty {
-                    IpcType::Master => shmem_info
-                        .master_release_idx
-                        .fetch_add(1, Ordering::Release),
-                    IpcType::Slave => shmem_info.slave_release_idx.fetch_add(1, Ordering::Release),
+                    IpcType::Master => {
+                        shmem_info
+                            .master_release_idx
+                            .fetch_add(1, Ordering::Release);
+
+                        shmem_info
+                            .master_release_idx
+                            .fetch_update(Ordering::Release, Ordering::Acquire, |master_idx| {
+                                let mut cnt = 0;
+                                shmem_info.slave_release_idx.fetch_update(
+                                    Ordering::Release,
+                                    Ordering::Acquire,
+                                    |slave_idx| {
+                                        for _ in 0..slave_idx.min(master_idx) {
+                                            rentention.pop_front();
+                                            cnt += 1;
+                                        }
+                                        Some(slave_idx - cnt)
+                                    }
+                                ).expect("Shared bitmap release retention failed, cause by `slave_release_idx` fetch_update()");
+                                Some(master_idx - cnt)
+                            })
+                            .expect("Shared bitmap release retention failed, cause by `master_release_idx` fetch_update()");
+                    }
+                    IpcType::Slave => {
+                        rentention.pop_front();
+
+                        shmem_info.slave_release_idx.fetch_add(1, Ordering::Release);
+                    }
                 };
-
-                if *ty == IpcType::Slave {
-                    return;
-                }
-
-                shmem_info
-                    .master_release_idx
-                    .fetch_update(Ordering::Release, Ordering::Acquire, |master_idx| {
-                        let mut cnt = 0;
-                        shmem_info.slave_release_idx.fetch_update(
-                            Ordering::Release,
-                            Ordering::Acquire,
-                            |slave_idx| {
-                                for _ in 0..slave_idx.min(master_idx) {
-                                    rentention.pop_front();
-                                    cnt += 1;
-                                }
-                                Some(slave_idx - cnt)
-                            }
-                        ).expect("Shared bitmap release retention failed, cause by `slave_release_idx` fetch_update()");
-                        Some(master_idx - cnt)
-                    })
-                    .expect("Shared bitmap release retention failed, cause by `master_release_idx` fetch_update()");
             }
         }
     }
 
-    /// Can't used with [`get_pixels()`](Bitmap::get_pixels), [`get_pixels_mut()`](Bitmap::get_pixels_mut)
-    /// in same code block, otherwise, it may cause deadlock issues
+    /// Can't used with [`ipc_write()`](Bitmap::ipc_write) in same code block, otherwise, it may cause deadlock issues
+    #[inline]
+    pub fn ipc_read(&self) -> Option<MemRwLockGuard> {
+        match self {
+            Self::Direct { .. } => None,
+            Self::Shared { lock, .. } => Some(lock.read()),
+        }
+    }
+
+    /// Can't used with [`ipc_read()`](Bitmap::ipc_read) in same code block, otherwise, it may cause deadlock issues
     #[inline]
     pub fn ipc_write(&self) -> Option<MemRwLockGuard> {
         match self {

@@ -29,8 +29,8 @@ use std::{
         Arc,
     },
 };
-use tipc::{ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster};
-use tlib::{figure::Rect, ptr_mut};
+use tipc::{ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster, lock_api::RwLockWriteGuard, RawRwLock};
+use tlib::{figure::Rect, ptr_mut, ptr_ref};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -128,6 +128,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         match self.master {
             Some(ref master) => {
+                let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
                 let mut master = master.write();
                 let old_shmem = master.resize(width, height);
 
@@ -229,7 +231,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let mut ps = PAINTSTRUCT::default();
             let hdc = BeginPaint(hwnd, &mut ps);
 
-            let (pixels, _guard) = bitmap_guard.get_pixels();
+            let _guard = bitmap_guard.ipc_read();
+            let pixels = bitmap_guard.get_pixels();
             StretchDIBits(
                 hdc,
                 0,

@@ -236,10 +236,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let content_view = ns_window.contentView();
             let rect = content_view.bounds();
 
-            let (pixels, _guard) = bitmap_guard.get_pixels();
+            let _guard = bitmap_guard.ipc_read();
 
             // Create the CGImage from memory pixels buffer.
-            let data_provider = CGDataProvider::from_slice(pixels);
+            let data_provider = CGDataProvider::from_slice(bitmap_guard.get_pixels());
             let cg_image = CGImage::new(
                 self.width as usize,
                 self.height as usize,

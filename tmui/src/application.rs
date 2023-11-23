@@ -14,8 +14,6 @@ use crate::{
     primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel, Message},
     runtime::{ui_runtime, window_context::WindowContext},
 };
-use lazy_static::lazy_static;
-use tlib::events::Event;
 use std::{
     any::Any,
     cell::RefCell,
@@ -29,11 +27,8 @@ use std::{
     thread,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
+use tlib::events::Event;
 
-lazy_static! {
-    pub(crate) static ref PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
-        AtomicPtr::new(null_mut());
-}
 thread_local! {
     pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
     pub(crate) static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
@@ -43,6 +38,9 @@ pub const FRAME_INTERVAL: u128 = 16000;
 
 const INVALID_GENERIC_PARAM_ERROR: &'static str =
     "Invalid generic parameters, please use generic parameter defined on Application.";
+pub(crate) static PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
+    AtomicPtr::new(null_mut());
+pub(crate) static APP_STARTED: AtomicBool = AtomicBool::new(false);
 pub(crate) static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 pub(crate) static IS_SHARED: AtomicBool = AtomicBool::new(false);
 static ONCE: Once = Once::new();
@@ -353,6 +351,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 }
             }
         });
+    }
+
+    #[inline]
+    pub(crate) fn set_app_started() {
+        APP_STARTED.store(true, Ordering::Release);
+    }
+
+    #[inline]
+    pub(crate) fn is_app_started() -> bool {
+        APP_STARTED.load(Ordering::Acquire)
     }
 }
 

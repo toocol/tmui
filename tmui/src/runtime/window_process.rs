@@ -8,7 +8,7 @@ use crate::{
         event::{Event, WindowEvent},
         event_loop::EventLoop,
         window::Window,
-    },
+    }, application::Application,
 };
 use log::{debug, info};
 use once_cell::sync::Lazy;
@@ -111,6 +111,9 @@ impl WindowProcess {
                     event: WindowEvent::Resized(size),
                     ..
                 } => {
+                    if !Application::<T, M>::is_app_started() {
+                        return;
+                    }
                     let evt = ResizeEvent::new(size.width as i32, size.height as i32);
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
@@ -394,7 +397,6 @@ impl WindowProcess {
                         break 'main;
                     }
                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                    IpcEvent::ResizeEvent(..) => {}
                     evt => input_sender.send(Message::Event(evt.into())).unwrap(),
                 }
             }
