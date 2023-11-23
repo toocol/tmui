@@ -29,15 +29,15 @@ use objc::*;
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
-    Arc, RwLock,
+    Arc
 };
-use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
-use tlib::winit::{
+use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster, RwLock, lock_api::RwLockWriteGuard, RawRwLock};
+use tlib::{winit::{
     dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
     platform::macos::WindowExtMacOS,
     window::WindowBuilder,
-};
+}, ptr_ref};
 
 pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -53,7 +53,7 @@ pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Co
     color_space: CGColorSpace,
 
     // Ipc shared memory context.
-    master: Option<Arc<IpcMaster<T, M>>>,
+    master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
@@ -95,10 +95,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
+                let master = master.read();
                 self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
                     master.buffer_raw_pointer(),
                     self.width,
                     self.height,
+                    master.buffer_lock(),
+                    master.name(),
+                    master.ty(),
                 ))));
             }
             None => {
@@ -128,13 +132,25 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
-        let mut bitmap_guard = self.bitmap.as_ref().unwrap().write().unwrap();
+        let mut bitmap_guard = self.bitmap.as_ref().unwrap().write();
         self.width = width;
         self.height = height;
         self.resized = true;
 
         match self.master {
-            Some(ref _master) => {}
+            Some(ref master) => {
+                let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
+                let mut master = master.write();
+                let old_shmem = master.resize(width, height);
+
+                bitmap_guard.update_raw_pointer(
+                    master.buffer_raw_pointer(),
+                    old_shmem,
+                    width,
+                    height,
+                );
+            }
             None => bitmap_guard.resize(width, height),
         }
     }
@@ -210,7 +226,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             return;
         }
 
-        let bitmap_guard = self.bitmap.as_ref().unwrap().read().unwrap();
+        let bitmap_guard = self.bitmap.as_ref().unwrap().read();
         if !bitmap_guard.is_prepared() {
             return;
         }
@@ -221,6 +237,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
             let content_view = ns_window.contentView();
             let rect = content_view.bounds();
+
+            let _guard = bitmap_guard.ipc_read();
 
             // Create the CGImage from memory pixels buffer.
             let data_provider = CGDataProvider::from_slice(bitmap_guard.get_pixels());
@@ -265,21 +283,21 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     #[inline]
     fn wait(&self) {
         if let Some(ref master) = self.master {
-            master.wait()
+            master.read().wait()
         }
     }
 
     #[inline]
     fn signal(&self) {
         if let Some(ref master) = self.master {
-            master.signal()
+            master.read().signal()
         }
     }
 
     #[inline]
     fn add_shared_region(&self, id: &'static str, rect: tlib::figure::Rect) {
         if let Some(ref master) = self.master {
-            master.add_rect(id, rect)
+            master.read().add_rect(id, rect)
         }
     }
 }
@@ -288,6 +306,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMa
     for PlatformMacos<T, M>
 {
     fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
-        self.master = Some(Arc::new(master))
+        self.master = Some(Arc::new(RwLock::new(master)))
     }
 }

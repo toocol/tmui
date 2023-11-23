@@ -1,16 +1,10 @@
 use crate::{
-    ipc_event::IpcEvent,
+    generate_u128,
     mem::{master_context::MasterContext, mem_queue::MemQueueError, MemContext, MAX_REGION_SIZE},
-    IpcNode,
+    IpcNode, ipc_event::IpcEvent,
 };
 use core::{panic, slice};
-use std::{
-    collections::hash_map::DefaultHasher,
-    error::Error,
-    ffi::c_void,
-    hash::{Hash, Hasher},
-    sync::atomic::Ordering,
-};
+use std::{error::Error, ffi::c_void, sync::atomic::Ordering};
 use tlib::figure::Rect;
 
 pub struct IpcMaster<T: 'static + Copy, M: 'static + Copy> {
@@ -35,9 +29,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
     }
 
     pub fn add_rect(&self, id: &'static str, rect: Rect) {
-        let mut hasher = DefaultHasher::default();
-        id.hash(&mut hasher);
-        let id = hasher.finish();
+        let id = generate_u128(id).expect(&format!("Invalid id: {}", id));
 
         let shared_ifo = self.master_context.shared_info();
         let idx = shared_ifo.region_idx.load(Ordering::Acquire);
@@ -63,6 +55,11 @@ impl<T: 'static + Copy, M: 'static + Copy> Drop for IpcMaster<T, M> {
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
+    #[inline]
+    fn name(&self) -> &str {
+        self.master_context.name()
+    }
+
     #[inline]
     fn buffer(&self) -> &'static mut [u8] {
         unsafe {
@@ -129,9 +126,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
 
     #[inline]
     fn region(&self, id: &'static str) -> Option<Rect> {
-        let mut hasher = DefaultHasher::default();
-        id.hash(&mut hasher);
-        let id = hasher.finish();
+        let id = generate_u128(id).expect(&format!("Invalid id: {}", id));
 
         let shared_info = self.master_context.shared_info();
         let idx = shared_info.region_idx.load(Ordering::Acquire);
@@ -152,5 +147,20 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     #[inline]
     fn height(&self) -> u32 {
         self.master_context.height()
+    }
+
+    #[inline]
+    fn buffer_lock(&self) -> std::sync::Arc<crate::mem::mem_rw_lock::MemRwLock> {
+        self.master_context.buffer_lock()
+    }
+
+    #[inline]
+    fn ty(&self) -> crate::IpcType {
+        crate::IpcType::Master
+    }
+
+    #[inline]
+    fn resize(&mut self, width: u32, height: u32) -> shared_memory::Shmem {
+        self.master_context.resize(width, height)
     }
 }

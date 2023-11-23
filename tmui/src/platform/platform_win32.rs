@@ -26,11 +26,11 @@ use std::{
     sync::{
         atomic::Ordering,
         mpsc::{channel, Sender},
-        Arc, RwLock,
+        Arc,
     },
 };
-use tipc::{ipc_master::IpcMaster, IpcNode, WithIpcMaster};
-use tlib::{figure::Rect, ptr_mut};
+use tipc::{ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster, lock_api::RwLockWriteGuard, RawRwLock};
+use tlib::{figure::Rect, ptr_mut, ptr_ref};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -41,12 +41,11 @@ pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Co
     bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     /// The fileds associated with win32
-    // _hins: HINSTANCE,
     hwnd: Option<HWND>,
     input_sender: Option<Sender<Message>>,
 
     /// Shared memory ipc
-    master: Option<Arc<IpcMaster<T, M>>>,
+    master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
@@ -85,10 +84,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {
         match self.master {
             Some(ref master) => {
+                let guard = master.read();
                 self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
-                    master.buffer_raw_pointer(),
+                    guard.buffer_raw_pointer(),
                     self.width,
                     self.height,
+                    guard.buffer_lock(),
+                    guard.name(),
+                    guard.ty(),
                 ))));
             }
             None => {
@@ -119,12 +122,24 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
-        let mut bitmap_guard = self.bitmap.as_ref().unwrap().write().unwrap();
+        let mut bitmap_guard = self.bitmap.as_ref().unwrap().write();
         self.width = width;
         self.height = height;
 
         match self.master {
-            Some(ref _master) => {}
+            Some(ref master) => {
+                let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
+                let mut master = master.write();
+                let old_shmem = master.resize(width, height);
+
+                bitmap_guard.update_raw_pointer(
+                    master.buffer_raw_pointer(),
+                    old_shmem,
+                    width,
+                    height,
+                );
+            }
             None => bitmap_guard.resize(width, height),
         }
     }
@@ -193,7 +208,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             return;
         }
 
-        let bitmap_guard = self.bitmap.as_ref().unwrap().read().unwrap();
+        let bitmap_guard = self.bitmap.as_ref().unwrap().read();
         if !bitmap_guard.is_prepared() {
             return;
         }
@@ -216,6 +231,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             let mut ps = PAINTSTRUCT::default();
             let hdc = BeginPaint(hwnd, &mut ps);
 
+            let _guard = bitmap_guard.ipc_read();
+            let pixels = bitmap_guard.get_pixels();
             StretchDIBits(
                 hdc,
                 0,
@@ -226,7 +243,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 0,
                 width as i32,
                 height as i32,
-                Some(bitmap_guard.get_pixels().as_ptr() as *const c_void),
+                Some(pixels.as_ptr() as *const c_void),
                 &bmi,
                 DIB_RGB_COLORS,
                 SRCCOPY,
@@ -241,21 +258,21 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     #[inline]
     fn wait(&self) {
         if let Some(ref master) = self.master {
-            master.wait()
+            master.read().wait()
         }
     }
 
     #[inline]
     fn signal(&self) {
         if let Some(ref master) = self.master {
-            master.signal()
+            master.read().signal()
         }
     }
 
     #[inline]
     fn add_shared_region(&self, id: &'static str, rect: Rect) {
         if let Some(ref master) = self.master {
-            master.add_rect(id, rect)
+            master.read().add_rect(id, rect)
         }
     }
 }
@@ -264,6 +281,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMa
     for PlatformWin32<T, M>
 {
     fn proc_ipc_master(&mut self, master: tipc::ipc_master::IpcMaster<T, M>) {
-        self.master = Some(Arc::new(master))
+        self.master = Some(Arc::new(RwLock::new(master)))
     }
 }

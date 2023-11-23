@@ -21,14 +21,21 @@ impl ObjectImpl for KeyWidget {
         self.parent_construct();
 
         self.set_focus(true);
-        self.set_mouse_tracking(true);
+        self.set_mouse_tracking(false);
         self.set_vexpand(true);
         self.set_hexpand(true);
-        self.set_background(Color::from_rgb(120, 120, 120));
+        self.set_hscale(0.7);
+        self.set_vscale(0.6);
+        self.set_background(Color::GREY);
+
+        self.set_halign(Align::End);
+        self.set_valign(Align::End);
 
         self.window().high_load_request(true);
 
         connect!(self.timer, timeout(), self, timeout());
+        connect!(self, size_changed(), self, on_size_changed(Size));
+        connect!(self, geometry_changed(), self, on_geometry_changed(Rect));
         self.timer.start(Duration::from_secs(10));
     }
 }
@@ -58,5 +65,13 @@ impl KeyWidget {
 
     pub fn timeout(&self) {
         self.window().high_load_request(false);
+    }
+
+    pub fn on_size_changed(&self, size: Size) {
+        println!("size changed: {:?}", size)
+    }
+
+    pub fn on_geometry_changed(&self, rect: Rect) {
+        println!("geometry changed: {:?}", rect)
     }
 }

@@ -1,12 +1,25 @@
 use super::PlatformContext;
-use crate::{application::PLATFORM_CONTEXT, primitive::{bitmap::Bitmap, Message, shared_channel::{SharedChannel, self}}, runtime::{window_process, window_context::{OutputSender, WindowContext}}};
+use crate::{
+    application::PLATFORM_CONTEXT,
+    primitive::{
+        bitmap::Bitmap,
+        shared_channel::{self, SharedChannel},
+        Message,
+    },
+    runtime::{
+        window_context::{OutputSender, WindowContext},
+        window_process,
+    },
+};
 use std::sync::{
     atomic::Ordering,
     mpsc::{channel, Sender},
-    Arc, RwLock,
+    Arc,
 };
-use tipc::{ipc_slave::IpcSlave, IpcNode, WithIpcSlave};
-use tlib::figure::Rect;
+use tipc::{
+    ipc_slave::IpcSlave, lock_api::RwLockWriteGuard, IpcNode, RawRwLock, RwLock, WithIpcSlave,
+};
+use tlib::{figure::Rect, ptr_ref};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -17,7 +30,7 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
     input_sender: Option<Sender<Message>>,
 
     /// Shared memory ipc slave
-    slave: Option<Arc<IpcSlave<T, M>>>,
+    slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
     user_ipc_event_sender: Option<Sender<Vec<T>>>,
 
     shared_widget_id: Option<&'static str>,
@@ -61,14 +74,21 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     for PlatformIpc<T, M>
 {
     fn initialize(&mut self) {
-        let slave = self.slave.as_ref().unwrap();
-        let front_bitmap = Bitmap::from_raw_pointer(slave.buffer_raw_pointer(), slave.width(), slave.height());
+        let slave = self.slave.as_ref().unwrap().read();
+        let bitmap = Bitmap::from_raw_pointer(
+            slave.buffer_raw_pointer(),
+            slave.width(),
+            slave.height(),
+            slave.buffer_lock(),
+            slave.name(),
+            slave.ty(),
+        );
 
         self.region = slave
             .region(self.shared_widget_id.unwrap())
             .expect("The `SharedWidget` with id `{}` was not exist.");
 
-        self.bitmap = Some(Arc::new(RwLock::new(front_bitmap)));
+        self.bitmap = Some(Arc::new(RwLock::new(bitmap)));
     }
 
     #[inline]
@@ -93,9 +113,23 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
     #[inline]
     fn resize(&mut self, width: u32, height: u32) {
-        self.region.set_width(width as i32);
-        self.region.set_height(height as i32);
-        todo!()
+        let bitmap = self.bitmap();
+        let mut guard = bitmap.write();
+        let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
+        let mut slave = self.slave.as_ref().unwrap().write();
+        let old_shmem = slave.resize(width, height);
+
+        self.region = slave
+            .region(self.shared_widget_id.unwrap())
+            .expect("The `SharedWidget` with id `{}` was not exist.");
+
+        guard.update_raw_pointer(
+            slave.buffer_raw_pointer(),
+            old_shmem,
+            slave.width(),
+            slave.height(),
+        )
     }
 
     #[inline]
@@ -148,14 +182,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     #[inline]
     fn wait(&self) {
         if let Some(ref slave) = self.slave {
-            slave.wait()
+            slave.read().wait()
         }
     }
 
     #[inline]
     fn signal(&self) {
         if let Some(ref slave) = self.slave {
-            slave.signal()
+            slave.read().signal()
         }
     }
 
@@ -167,6 +201,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSl
     for PlatformIpc<T, M>
 {
     fn proc_ipc_slave(&mut self, slave: tipc::ipc_slave::IpcSlave<T, M>) {
-        self.slave = Some(Arc::new(slave))
+        self.slave = Some(Arc::new(RwLock::new(slave)))
     }
 }

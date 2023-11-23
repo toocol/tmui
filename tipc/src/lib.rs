@@ -1,14 +1,24 @@
 use ipc_event::IpcEvent;
 use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
-use mem::mem_queue::MemQueueError;
-use std::{error::Error, ffi::c_void, marker::PhantomData};
+use lazy_static::lazy_static;
+use mem::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
+use std::{collections::HashMap, error::Error, ffi::c_void, marker::PhantomData, sync::Arc};
 use tlib::figure::Rect;
 
 pub mod ipc_event;
 pub mod ipc_master;
 pub mod ipc_slave;
 pub mod mem;
+
+pub use parking_lot::*;
+pub use shared_memory::*;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpcType {
+    Master,
+    Slave,
+}
 
 pub struct IpcBuilder<T: 'static + Copy, M: 'static + Copy> {
     name: Option<String>,
@@ -109,6 +119,8 @@ pub trait WithIpcSlave<T: 'static + Copy, M: 'static + Copy> {
 }
 
 pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
+    fn name(&self) -> &str;
+
     fn buffer(&self) -> &'static mut [u8];
 
     fn buffer_raw_pointer(&self) -> *mut c_void;
@@ -138,4 +150,68 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn width(&self) -> u32;
 
     fn height(&self) -> u32;
+
+    fn buffer_lock(&self) -> Arc<MemRwLock>;
+
+    fn ty(&self) -> IpcType;
+
+    fn resize(&mut self, width: u32, height: u32) -> Shmem;
+}
+
+lazy_static! {
+    static ref CHARCTER_MAP: HashMap<u8, u8> = {
+        let mut mapping = HashMap::new();
+        let mut cur = 0;
+
+        for c in b'0'..b'9' {
+            mapping.insert(c, cur);
+            cur += 1;
+        }
+
+        for c in b'a'..b'z' {
+            mapping.insert(c, cur);
+            cur += 1;
+        }
+
+        for c in b'A'..b'z' {
+            mapping.insert(c, cur);
+            cur += 1;
+        }
+
+        for c in b"!@#$%^&*()-_+=/\\" {
+            mapping.insert(*c, cur);
+            cur += 1;
+        }
+
+        mapping
+    };
+}
+
+#[inline]
+pub fn generate_u128(input: &str) -> Option<u128> {
+    let bytes = input.as_bytes();
+    let mut result = Vec::with_capacity(bytes.len() * 2); // Assuming max 3 digits per byte
+
+    for b in bytes {
+        result.extend_from_slice(CHARCTER_MAP.get(b)?.to_string().as_bytes());
+    }
+
+    let result_str = String::from_utf8(result).ok()?;
+    result_str.parse::<u128>().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::generate_u128;
+
+    #[test]
+    fn test_generate_u128() {
+        let res1 = generate_u128(&"shmem_widgetdddddd".to_uppercase());
+        assert!(res1.is_some());
+
+        let res2 = generate_u128("shmem_widggt");
+        assert!(res2.is_some());
+
+        assert!(res1.unwrap() != res2.unwrap());
+    }
 }

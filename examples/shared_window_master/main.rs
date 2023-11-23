@@ -1,11 +1,13 @@
 mod shared_widget;
 
-use std::{time::Instant, sync::atomic::AtomicI32};
-use shared_widget::MasterSharedWidget;
-use tmui::{application::Application, application_window::ApplicationWindow, widget::{WidgetExt, WidgetImplExt}};
 use log::info;
+use shared_widget::MasterSharedWidget;
+use std::{sync::atomic::AtomicI32, time::Instant};
+use tmui::{
+    application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
+};
 
-pub const IPC_NAME: &'static str = "shmem_widgets";
+pub const IPC_NAME: &'static str = "shmem_ipc59";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]
@@ -19,7 +21,7 @@ enum UserEvent {
 #[allow(dead_code)]
 enum Request {
     Request,
-    Response(i32)
+    Response(i32),
 }
 
 fn main() {
@@ -41,20 +43,21 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut shwidet = MasterSharedWidget::new();
-    let size = window.size();
-    shwidet.width_request(size.width());
-    shwidet.height_request(size.height());
-    window.child(shwidet);
+    window.child(MasterSharedWidget::new());
 }
 
 fn user_events_receive(_: &mut ApplicationWindow, evt: UserEvent) {
     match evt {
         UserEvent::TestEvent(a, b) => {
-            info!("Recevie user event: {}ms", b.elapsed().as_micros() as f64 / 1000.);
+            info!(
+                "Recevie user event: {}ms",
+                b.elapsed().as_micros() as f64 / 1000.
+            );
             assert_eq!(a, CNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst));
+
+            Application::<UserEvent, Request>::send_user_event(evt)
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 

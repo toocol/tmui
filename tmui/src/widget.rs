@@ -114,6 +114,11 @@ pub trait WidgetSignals: ActionExt {
         /// @param [`Size`]
         size_changed();
 
+        /// Emit when widget's geometry(size or position) changed.
+        ///
+        /// @param [`Rect`]
+        geometry_changed();
+
         /// Emit when widget's receive mouse pressed event.
         ///
         /// @param [`MouseEvent`]
@@ -317,12 +322,17 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             return;
         }
 
+        let is_shared_widget = self.super_type().is_a(SharedWidget::static_type());
+
         if !self.first_rendered() || self.rerender_styles() {
-            // Draw the background color of the Widget.
-            if self.rerender_difference() && self.first_rendered() && !self.window().minimized() {
-                self.render_difference(&mut painter);
-            } else {
-                painter.fill_rect(contents_rect, self.background());
+            if !is_shared_widget {
+                // Draw the background color of the Widget.
+                if self.rerender_difference() && self.first_rendered() && !self.window().minimized()
+                {
+                    self.render_difference(&mut painter);
+                } else {
+                    painter.fill_rect(contents_rect, self.background());
+                }
             }
 
             self.set_rect_record(self.rect());
@@ -1765,15 +1775,15 @@ impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
         let self_rect = self.rect();
         if !self_rect.contains(point) {
-            return false
+            return false;
         }
 
         if let Some(child) = self.get_child_ref() {
             if !child.visible() {
-                return true
+                return true;
             }
             return !child.rect().contains(point);
-        } 
+        }
         true
     }
 }

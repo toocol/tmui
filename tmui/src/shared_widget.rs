@@ -1,4 +1,6 @@
+use lazy_static::lazy_static;
 use std::sync::atomic::Ordering;
+use tlib::connect;
 
 use crate::{
     application::{self, PLATFORM_CONTEXT},
@@ -10,6 +12,25 @@ use crate::{
     },
     widget::WidgetImpl,
 };
+
+lazy_static! {
+    static ref SUPPORTED_CHARACTER: Vec<u8> = {
+        let mut chs = vec![];
+        for c in b'0'..b'9' {
+            chs.push(c)
+        }
+        for c in b'a'..b'z' {
+            chs.push(c)
+        }
+        for c in b'A'..b'z' {
+            chs.push(c)
+        }
+        for c in b"!@#$%^&*()-_+=/\\" {
+            chs.push(*c)
+        }
+        chs
+    };
+}
 
 #[extends(Widget)]
 #[run_after]
@@ -28,6 +49,8 @@ impl ObjectImpl for SharedWidget {
         }
 
         self.parent_construct();
+
+        connect!(self, geometry_changed(), self, on_geometry_changed(Rect));
     }
 }
 
@@ -52,11 +75,33 @@ pub trait SharedWidgetExt {
 impl SharedWidgetExt for SharedWidget {
     #[inline]
     fn shared_id(&self) -> &'static str {
-        self.shared_id.expect("`SharedWidget` should set the `shared_id`")
+        self.shared_id
+            .expect("`SharedWidget` should set the `shared_id`")
     }
 
     #[inline]
     fn set_shared_id(&mut self, id: &'static str) {
+        self.check_shared_id(id);
         self.shared_id = Some(id)
+    }
+}
+
+impl SharedWidget {
+    #[inline]
+    fn on_geometry_changed(&self, _: Rect) {
+        let platform_context = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
+        platform_context.add_shared_region(self.shared_id(), self.rect());
+    }
+
+    #[inline]
+    fn check_shared_id(&self, shared_id: &str) {
+        if shared_id.len() > 18 {
+            panic!("The maximum length of `shared_id` of SharedWidget is 18.")
+        }
+        for b in shared_id.as_bytes() {
+            if !SUPPORTED_CHARACTER.contains(b) {
+                panic!("Unsupported character {}, `shared_id` only support character: [0-9][a-z][A-Z][!@#$%^&*()-_+=/\\]", *b as char)
+            }
+        }
     }
 }

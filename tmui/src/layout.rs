@@ -390,6 +390,12 @@ impl LayoutManager {
                 ptr_mut!(p).child_overflow_rect_mut().or(&widget_ref.rect());
             }
 
+            // Emit `geometry_changed()` when widget's position or size has changed.
+            let new_rect = widget_ref.rect();
+            if widget_ref.rect_record() != new_rect {
+                emit!(widget_ref.geometry_changed(), new_rect)
+            }
+
             // Determine whether the widget is a container.
             let is_container = widget_ref.super_type().is_a(Container::static_type());
             let container_ref = if is_container {

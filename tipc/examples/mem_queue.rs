@@ -2,7 +2,7 @@ use std::{
     env,
     time::{Duration, Instant},
 };
-use tipc::mem::mem_queue::{BuildType, MemQueue, MemQueueBuilder};
+use tipc::mem::{mem_queue::{MemQueue, MemQueueBuilder}, BuildType};
 use tlib::utils::TimeStamp;
 
 const SIZE: usize = 10000;

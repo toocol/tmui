@@ -1,16 +1,16 @@
 use crate::{
     cursor::Cursor,
     platform::PlatformContext,
-    primitive::Message,
+    primitive::{Message, cpu_balance::CpuBalance},
     runtime::runtime_track::RuntimeTrack,
     winit::{
         self,
         event::{Event, WindowEvent},
         event_loop::EventLoop,
         window::Window,
-    },
+    }, application::Application,
 };
-use log::debug;
+use log::{debug, info};
 use once_cell::sync::Lazy;
 use std::{
     ops::DerefMut,
@@ -22,7 +22,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode};
+use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
@@ -32,7 +32,7 @@ use tlib::{
     winit::{
         event::{ElementState, MouseScrollDelta},
         keyboard::{Key, ModifiersState},
-    },
+    }, payload::PayloadWeight,
 };
 
 pub(crate) struct WindowProcess;
@@ -47,15 +47,13 @@ impl WindowProcess {
         platform_context: &'static mut dyn PlatformContext,
         window: Window,
         event_loop: EventLoop<Message>,
-        ipc_master: Option<Arc<IpcMaster<T, M>>>,
+        ipc_master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
         static mut RUNTIME_TRACK: Lazy<RuntimeTrack> = Lazy::new(|| RuntimeTrack::new());
         let runtime_track = unsafe { RUNTIME_TRACK.deref_mut() };
 
         event_loop.run(move |event, _, control_flow| {
-            let input_sender = platform_context.input_sender();
-
             // Adjusting CPU usage based on vsync signals.
             if let Some(ins) = runtime_track.vsync_rec {
                 if ins.elapsed().as_millis() >= 500 {
@@ -63,6 +61,7 @@ impl WindowProcess {
                         control_flow.set_wait_timeout(Duration::from_millis(10));
                         runtime_track.vsync_rec = None;
                     } else {
+                        control_flow.set_poll();
                         runtime_track.vsync_rec = Some(Instant::now());
                     }
                     runtime_track.update_cnt = 0;
@@ -73,15 +72,15 @@ impl WindowProcess {
 
             if let Some(master) = ipc_master.clone() {
                 let mut user_events = vec![];
-                for evt in master.try_recv_vec() {
+                for evt in master.read().try_recv_vec() {
                     match evt {
                         IpcEvent::VSync(ins) => {
-                            debug!(
+                            info!(
                                 "Ipc vsync track: {}ms",
                                 ins.elapsed().as_micros() as f64 / 1000.
                             );
                             control_flow.set_poll();
-                            window.request_redraw();
+                            platform_context.request_redraw(&window);
                             if runtime_track.vsync_rec.is_none() {
                                 runtime_track.vsync_rec = Some(Instant::now());
                             }
@@ -105,12 +104,16 @@ impl WindowProcess {
                 }
             }
 
+            let input_sender = platform_context.input_sender();
             match event {
                 // Window resized event.
                 Event::WindowEvent {
                     event: WindowEvent::Resized(size),
                     ..
                 } => {
+                    if !Application::<T, M>::is_app_started() {
+                        return;
+                    }
                     let evt = ResizeEvent::new(size.width as i32, size.height as i32);
                     input_sender.send(Message::Event(Box::new(evt))).unwrap();
                 }
@@ -122,7 +125,7 @@ impl WindowProcess {
                 } => {
                     println!("The close button was pressed; stopping");
                     if let Some(master) = ipc_master.clone() {
-                        master.try_send(IpcEvent::Exit).unwrap();
+                        master.read().try_send(IpcEvent::Exit).unwrap();
                         platform_context.wait();
                     }
                     control_flow.set_exit();
@@ -353,10 +356,10 @@ impl WindowProcess {
         &self,
         platform_context: &'static mut dyn PlatformContext,
         output_receiver: Receiver<Message>,
-        ipc_slave: Arc<IpcSlave<T, M>>,
+        ipc_slave: Arc<RwLock<IpcSlave<T, M>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
-        let _input_sender = platform_context.input_sender();
+        let input_sender = platform_context.input_sender();
 
         let ipc_slave_clone = ipc_slave.clone();
 
@@ -369,31 +372,44 @@ impl WindowProcess {
                     if unsafe { EXIT.load(Ordering::SeqCst) } {
                         return;
                     }
-                    ipc_slave_clone.try_send(message.into()).unwrap()
+                    // Send to master
+                    ipc_slave_clone.read().try_send(message.into()).unwrap()
                 }
             })
             .unwrap();
 
+        let mut cpu_balance = CpuBalance::new();
+
         'main: loop {
+            cpu_balance.loop_start();
+
             let mut user_events = vec![];
+            let ipc_slave = ipc_slave.read();
+
             while ipc_slave.has_event() {
                 let evt = ipc_slave.try_recv().unwrap();
+
+                cpu_balance.add_payload(evt.payload_wieght());
+
                 match evt {
                     IpcEvent::Exit => {
                         unsafe { EXIT.store(true, Ordering::SeqCst) };
                         break 'main;
                     }
                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                    _ => {}
+                    evt => input_sender.send(Message::Event(evt.into())).unwrap(),
                 }
             }
+
             if user_events.len() > 0 {
                 if let Some(ref sender) = user_ipc_event_sender {
+                    // Send events receiveed from master to the ui main thread.
                     sender.send(user_events).unwrap();
                 }
             }
 
-            std::thread::park_timeout(Duration::from_micros(10));
+            cpu_balance.payload_check();
+            cpu_balance.sleep(false);
         }
     }
 }

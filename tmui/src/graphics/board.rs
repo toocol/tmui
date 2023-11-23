@@ -1,10 +1,11 @@
-use tlib::nonnull_mut;
+use tipc::{RwLock, lock_api::RwLockWriteGuard, RawRwLock};
+use tlib::{nonnull_mut, ptr_ref};
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
-    sync::{Once, Arc, RwLock},
+    sync::{Once, Arc},
 };
 
 thread_local! {
@@ -28,7 +29,7 @@ pub struct Board {
 
 impl Board {
     #[inline]
-    pub fn new(bitmap: Arc<RwLock<Bitmap>>, backend: Box<dyn Backend>) -> Self {
+    pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>, backend: Box<dyn Backend>) -> Self {
         if ONCE.is_completed() {
             panic!("`Board can only construct once.`")
         }
@@ -61,19 +62,19 @@ impl Board {
 
     #[inline]
     pub fn width(&self) -> u32 {
-        self.bitmap.read().unwrap().width()
+        self.bitmap.read().width()
     }
 
     #[inline]
     pub fn height(&self) -> u32 {
-        self.bitmap.read().unwrap().height()
+        self.bitmap.read().height()
     }
 
     #[inline]
     pub(crate) fn resize(&mut self) {
         self.surface().flush_submit_and_sync_cpu();
         self.backend
-            .resize(self.width() as i32, self.height() as i32);
+            .resize(self.bitmap.clone());
 
         self.surface = RefCell::new(self.backend.surface());
     }
@@ -93,6 +94,13 @@ impl Board {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
             if *notify_update.borrow() {
+                let mut bitmap_guard = self.bitmap.write();
+                
+                // Invoke `ipc_write()` here, so that the following code can 
+                // be executed with cross process lock,
+                // when program was under cross process rendering.
+                let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+
                 // The parent elements always at the end of `element_list`.
                 // We should renderer the parent elements first.
                 for element in self.element_list.borrow_mut().iter_mut() {
@@ -107,17 +115,16 @@ impl Board {
                     }
                 }
 
-                let mut bitmap_guard = self.bitmap.write().unwrap();
-                let row_bytes = bitmap_guard.row_bytes();
+                // let row_bytes = bitmap_guard.row_bytes();
+                // let pixels = bitmap_guard.get_pixels_mut();
+                // self.surface().read_pixels(
+                //     self.backend.image_info(),
+                //     pixels,
+                //     row_bytes,
+                //     (0, 0),
+                // );
 
-                self.surface().read_pixels(
-                    self.backend.image_info(),
-                    bitmap_guard.get_pixels_mut(),
-                    row_bytes,
-                    (0, 0),
-                );
-
-                bitmap_guard.set_prepared(true);
+                bitmap_guard.prepared();
 
                 *notify_update.borrow_mut() = false;
                 FORCE_UPDATE.with(|force_update| *force_update.borrow_mut() = false);

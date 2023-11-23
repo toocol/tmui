@@ -7,7 +7,7 @@ use tmui::{
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shmem_widgets";
+pub const IPC_NAME: &'static str = "shmem_ipc59";
 
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
@@ -32,7 +32,13 @@ fn main() {
 
     app.connect_activate(build_ui);
 
+    app.connect_user_events_receive(user_events_receive);
+
     app.run();
+}
+
+fn user_events_receive(_window: &mut ApplicationWindow, evt: UserEvent) {
+    println!("Receive user event: {:?}", evt)
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
@@ -40,8 +46,10 @@ fn build_ui(window: &mut ApplicationWindow) {
     label.set_background(Color::CYAN);
     label.set_halign(Align::Center);
     label.set_valign(Align::Center);
-    label.width_request(200);
-    label.height_request(40);
+    label.set_hexpand(true);
+    label.set_vexpand(true);
+    label.set_hscale(0.8);
+    label.set_vscale(0.8);
     label.set_content_halign(Align::End);
     label.set_content_valign(Align::End);
     label.set_size(30);
@@ -51,8 +59,10 @@ fn build_ui(window: &mut ApplicationWindow) {
 
     let mut test_widget = TestWidget::new();
     test_widget.set_background(Color::RED);
-    test_widget.width_request(400);
-    test_widget.height_request(300);
+    test_widget.set_hexpand(true);
+    test_widget.set_vexpand(true);
+    test_widget.set_hscale(0.5);
+    test_widget.set_vscale(0.5);
     test_widget.set_halign(Align::Center);
     test_widget.set_valign(Align::Center);
 

@@ -1,29 +1,36 @@
-use tlib::figure::Rect;
-use self::mem_queue::MemQueueError;
 use crate::ipc_event::IpcEvent;
+use self::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
+use shared_memory::Shmem;
 use std::{
     error::Error,
     fmt::Display,
-    sync::atomic::{AtomicBool, AtomicU32, AtomicUsize}, mem::MaybeUninit,
+    mem::MaybeUninit,
+    sync::{
+        atomic::{AtomicBool, AtomicU32, AtomicUsize},
+        Arc,
+    },
 };
+use tlib::figure::Rect;
 
 pub mod master_context;
+pub mod mem_mutex;
 pub mod mem_queue;
+pub mod mem_rw_lock;
 pub mod slave_context;
 
 pub(crate) const IPC_QUEUE_SIZE: usize = 10000;
 pub(crate) const MAX_REGION_SIZE: usize = 10;
 
-pub(crate) const IPC_KEY_EVT_SIZE: usize = 8;
-pub(crate) const IPC_TEXT_EVT_SIZE: usize = 4096;
-
-pub(crate) const IPC_MEM_PRIMARY_BUFFER_NAME: &'static str = "_mem_bf";
+pub(crate) const IPC_MEM_BUFFER_NAME: &'static str = "_mem_bf";
 pub(crate) const IPC_MEM_SHARED_INFO_NAME: &'static str = "_mem_sh_info";
+pub(crate) const IPC_MEM_LOCK_NAME: &'static str = "_mem_rwl";
 pub(crate) const IPC_MEM_MASTER_QUEUE: &'static str = "_mem_m_q";
 pub(crate) const IPC_MEM_SLAVE_QUEUE: &'static str = "_mem_s_q";
 pub(crate) const IPC_MEM_SIGNAL_EVT: &'static str = "_mem_e_s";
 
 pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
+    fn name(&self) -> &str;
+
     fn buffer(&self) -> *mut u8;
 
     fn width(&self) -> u32;
@@ -47,6 +54,10 @@ pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
     fn wait(&self);
 
     fn signal(&self);
+
+    fn buffer_lock(&self) -> Arc<MemRwLock>;
+
+    fn resize(&mut self, width: u32, height: u32) -> Shmem;
 }
 
 #[repr(C)]
@@ -57,14 +68,23 @@ pub(crate) enum RequestSide {
     Slave,
 }
 
+#[derive(Default, Debug, Clone, Copy)]
+pub enum BuildType {
+    #[default]
+    Create,
+    Open,
+}
+
 #[repr(C)]
 pub(crate) struct SharedInfo<M: 'static + Copy> {
+    pub(crate) name_helper: AtomicU32,
+
     /// The size of application.
     pub(crate) width: AtomicU32,
     pub(crate) height: AtomicU32,
 
     /// The clip region to renderer in slave.
-    pub(crate) regions: [MaybeUninit<(u64, Rect)>; MAX_REGION_SIZE],
+    pub(crate) regions: [MaybeUninit<(u128, Rect)>; MAX_REGION_SIZE],
     pub(crate) region_idx: AtomicUsize,
 
     pub(crate) occupied: AtomicBool,

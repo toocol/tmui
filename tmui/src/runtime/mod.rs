@@ -62,12 +62,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     // Create the [`Backend`] based on the backend type specified by the user.
     let backend: Box<dyn Backend>;
     match backend_type {
-        BackendType::Raster => {
-            backend = RasterBackend::new(platform.width() as i32, platform.height() as i32)
-        }
-        BackendType::OpenGL => {
-            backend = OpenGLBackend::new(platform.width() as i32, platform.height() as i32)
-        }
+        BackendType::Raster => backend = RasterBackend::new(platform.bitmap()),
+        BackendType::OpenGL => backend = OpenGLBackend::new(platform.bitmap()),
     }
 
     // Prepare ApplicationWindow env: Create the `Board`.
@@ -99,6 +95,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     let mut frame_cnt = 0;
     let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
     let mut log_instant = Instant::now();
+
+    Application::<T, M>::set_app_started();
 
     loop {
         if APP_STOPPED.load(Ordering::Relaxed) {
@@ -153,7 +151,7 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
         tlib::r#async::async_callbacks();
 
         if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
-            if evt.type_() == EventType::Resize {
+            if evt.event_type() == EventType::Resize {
                 let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
 
                 if resize_evt.width() > 0 && resize_evt.height() > 0 {
@@ -167,7 +165,10 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
             }
 
             cpu_balance.add_payload(evt.payload_wieght());
-            window.dispatch_event(evt);
+            let evt = window.dispatch_event(evt);
+            if let Some(ref evt) = evt {
+                Application::<T, M>::send_event_ipc(&evt);
+            }
         }
 
         if let Some(ref on_user_event_receive) = on_user_event_receive {
