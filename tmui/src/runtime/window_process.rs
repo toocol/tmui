@@ -1,7 +1,7 @@
 use crate::{
     cursor::Cursor,
     platform::PlatformContext,
-    primitive::Message,
+    primitive::{Message, cpu_balance::CpuBalance},
     runtime::runtime_track::RuntimeTrack,
     winit::{
         self,
@@ -22,7 +22,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock, ipc_event::IpcEvent};
+use tipc::{ipc_event::IpcEvent, ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
@@ -32,7 +32,7 @@ use tlib::{
     winit::{
         event::{ElementState, MouseScrollDelta},
         keyboard::{Key, ModifiersState},
-    },
+    }, payload::PayloadWeight,
 };
 
 pub(crate) struct WindowProcess;
@@ -356,7 +356,7 @@ impl WindowProcess {
         ipc_slave: Arc<RwLock<IpcSlave<T, M>>>,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) {
-        let _input_sender = platform_context.input_sender();
+        let input_sender = platform_context.input_sender();
 
         let ipc_slave_clone = ipc_slave.clone();
 
@@ -375,20 +375,30 @@ impl WindowProcess {
             })
             .unwrap();
 
+        let mut cpu_balance = CpuBalance::new();
+
         'main: loop {
+            cpu_balance.loop_start();
+
             let mut user_events = vec![];
             let ipc_slave = ipc_slave.read();
+
             while ipc_slave.has_event() {
                 let evt = ipc_slave.try_recv().unwrap();
+
+                cpu_balance.add_payload(evt.payload_wieght());
+
                 match evt {
                     IpcEvent::Exit => {
                         unsafe { EXIT.store(true, Ordering::SeqCst) };
                         break 'main;
                     }
                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                    _ => {}
+                    IpcEvent::ResizeEvent(..) => {}
+                    evt => input_sender.send(Message::Event(evt.into())).unwrap(),
                 }
             }
+
             if user_events.len() > 0 {
                 if let Some(ref sender) = user_ipc_event_sender {
                     // Send events receiveed from master to the ui main thread.
@@ -396,8 +406,8 @@ impl WindowProcess {
                 }
             }
 
-            std::thread::park_timeout(Duration::from_micros(10));
-            // std::thread::yield_now();
+            cpu_balance.payload_check();
+            cpu_balance.sleep(false);
         }
     }
 }

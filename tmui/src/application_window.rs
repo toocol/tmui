@@ -256,18 +256,19 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn dispatch_event(&mut self, mut event: Event) -> Event {
-        match event.event_type() {
+    pub(crate) fn dispatch_event(&mut self, evt: Event) -> Option<Event> {
+        let mut event: Option<Event> = None;
+        match evt.event_type() {
             // Window Resize.
             EventType::Resize => {
-                let evt = downcast_event::<ResizeEvent>(event).unwrap();
+                let evt = downcast_event::<ResizeEvent>(evt).unwrap();
                 self.resize(Some(evt.width()), Some(evt.height()));
-                event = evt;
+                event = Some(evt);
             }
 
             // Mouse pressed.
             EventType::MouseButtonPress => {
-                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -279,15 +280,18 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_pressed(evt.as_ref());
                         widget.on_mouse_pressed(evt.as_ref());
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
                         break;
                     }
                 }
-                event = evt;
             }
 
             // Mouse released.
             EventType::MouseButtonRelease => {
-                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -299,16 +303,18 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_released(evt.as_ref());
                         widget.on_mouse_released(evt.as_ref());
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
                         break;
                     }
                 }
-
-                event = evt;
             }
 
             // Mouse moved.
             EventType::MouseMove => {
-                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -323,16 +329,18 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_move(evt.as_ref());
                         widget.on_mouse_move(evt.as_ref());
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
                         break;
                     }
                 }
-
-                event = evt;
             }
 
             // Mouse wheeled.
             EventType::MouseWhell => {
-                let mut evt = downcast_event::<MouseEvent>(event).unwrap();
+                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
                 let pos = evt.position().into();
 
@@ -344,20 +352,22 @@ impl ApplicationWindow {
                         evt.set_position((widget_point.x(), widget_point.y()));
                         widget.inner_mouse_wheel(evt.as_ref());
                         widget.on_mouse_wheel(evt.as_ref());
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
                         break;
                     }
                 }
-
-                event = evt;
             }
 
-            EventType::MouseEnter => {}
+            EventType::MouseEnter => event = Some(evt),
 
-            EventType::MouseLeave => {}
+            EventType::MouseLeave => event = Some(evt),
 
             // Key pressed.
             EventType::KeyPress => {
-                let evt = downcast_event::<KeyEvent>(event).unwrap();
+                let evt = downcast_event::<KeyEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -366,16 +376,18 @@ impl ApplicationWindow {
                     if widget.id() == self.focused_widget {
                         widget.inner_key_pressed(&evt);
                         widget.on_key_pressed(&evt);
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
                         break;
                     }
                 }
-
-                event = evt;
             }
 
             // Key released.
             EventType::KeyRelease => {
-                let evt = downcast_event::<KeyEvent>(event).unwrap();
+                let evt = downcast_event::<KeyEvent>(evt).unwrap();
                 let widgets_map = Self::widgets_of(self.id());
 
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -384,15 +396,17 @@ impl ApplicationWindow {
                     if widget.id() == self.focused_widget {
                         widget.inner_key_released(&evt);
                         widget.on_key_released(&evt);
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
                         break;
                     }
                 }
-
-                event = evt;
             }
 
-            EventType::FocusIn => {}
-            EventType::FocusOut => {}
+            EventType::FocusIn => event = Some(evt),
+            EventType::FocusOut => event = Some(evt),
             EventType::Moved => {}
             EventType::DroppedFile => {}
             EventType::HoveredFile => {}

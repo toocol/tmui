@@ -164,7 +164,9 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
 
             cpu_balance.add_payload(evt.payload_wieght());
             let evt = window.dispatch_event(evt);
-            Application::<T, M>::send_event_ipc(evt);
+            if let Some(ref evt) = evt {
+                Application::<T, M>::send_event_ipc(&evt);
+            }
         }
 
         if let Some(ref on_user_event_receive) = on_user_event_receive {

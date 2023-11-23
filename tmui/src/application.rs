@@ -262,7 +262,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     #[inline]
-    pub(crate) fn send_event_ipc(evt: Event) {
+    pub(crate) fn send_event_ipc(evt: &Event) {
         SHARED_CHANNEL.with(|s| {
             if let Some(channel) = s.borrow().as_ref() {
                 let sender = &channel

@@ -1,5 +1,11 @@
 use std::time::Instant;
-use tlib::{prelude::SystemCursorShape, figure::Point};
+use tlib::{
+    events::{DeltaType, Event, EventType, FocusEvent, KeyEvent, MouseEvent, ResizeEvent},
+    figure::Point,
+    global::{to_static, SemanticExt},
+    namespace::{KeyCode, KeyboardModifier, MouseButton},
+    prelude::SystemCursorShape, payload::PayloadWeight,
+};
 
 pub const IPC_KEY_EVT_SIZE: usize = 8;
 pub const IPC_TEXT_EVT_SIZE: usize = 4096;
@@ -25,8 +31,8 @@ pub enum IpcEvent<T: 'static + Copy> {
     MouseLeaveEvent(u32, Instant),
     /// (x, y, modifier, timestamp)
     MouseMoveEvent(i32, i32, u32, Instant),
-    /// (x, y, delta, modifier, timestamp)
-    MouseWheelEvent(i32, i32, Point, u32, Instant),
+    /// (x, y, delta, delta_type, modifier, timestamp)
+    MouseWheelEvent(i32, i32, Point, DeltaType, u32, Instant),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, Instant),
     /// (system_cursor_shape)
@@ -61,7 +67,7 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     /// (x, y, modifier, timestamp)
     MouseMoveEvent(i32, i32, u32, Instant),
     /// (x, y, delta, modifier, timestamp)
-    MouseWheelEvent(i32, i32, Point, u32, Instant),
+    MouseWheelEvent(i32, i32, Point, DeltaType, u32, Instant),
     /// (is_focus, timestamp)
     RequestFocusEvent(bool, Instant),
     /// (system_cursor_shape)
@@ -114,7 +120,9 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
             Self::MouseEnterEvent(a, b, c, d) => InnerIpcEvent::MouseEnterEvent(a, b, c, d),
             Self::MouseLeaveEvent(a, b) => InnerIpcEvent::MouseLeaveEvent(a, b),
             Self::MouseMoveEvent(a, b, c, d) => InnerIpcEvent::MouseMoveEvent(a, b, c, d),
-            Self::MouseWheelEvent(a, b, c, d, e) => InnerIpcEvent::MouseWheelEvent(a, b, c, d, e),
+            Self::MouseWheelEvent(a, b, c, d, e, f) => {
+                InnerIpcEvent::MouseWheelEvent(a, b, c, d, e, f)
+            }
             Self::RequestFocusEvent(a, b) => InnerIpcEvent::RequestFocusEvent(a, b),
             Self::SetCursorShape(a) => InnerIpcEvent::SetCursorShape(a),
             Self::TextEvent(a, b) => {
@@ -163,7 +171,7 @@ impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
             Self::MouseEnterEvent(a, b, c, d) => IpcEvent::MouseEnterEvent(a, b, c, d),
             Self::MouseLeaveEvent(a, b) => IpcEvent::MouseLeaveEvent(a, b),
             Self::MouseMoveEvent(a, b, c, d) => IpcEvent::MouseMoveEvent(a, b, c, d),
-            Self::MouseWheelEvent(a, b, c, d, e) => IpcEvent::MouseWheelEvent(a, b, c, d, e),
+            Self::MouseWheelEvent(a, b, c, d, e, f) => IpcEvent::MouseWheelEvent(a, b, c, d, e, f),
             Self::RequestFocusEvent(a, b) => IpcEvent::RequestFocusEvent(a, b),
             Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
             Self::TextEvent(a, b) => {
@@ -173,6 +181,116 @@ impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
                 IpcEvent::TextEvent(str, b)
             }
             Self::UserEvent(a, b) => IpcEvent::UserEvent(a, b),
+        }
+    }
+}
+
+impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
+    fn into(self) -> Event {
+        match self {
+            Self::ResizeEvent(w, h, _time) => ResizeEvent::new(w, h).boxed(),
+            Self::KeyPressedEvent(ch, key_code, modifier, _time) => {
+                let key_code = KeyCode::from(key_code);
+                let modifier = KeyboardModifier::from(modifier);
+                KeyEvent::new(EventType::KeyPress, key_code, modifier, to_static(ch)).boxed()
+            }
+            Self::KeyReleasedEvent(ch, key_code, modifier, _time) => {
+                let key_code = KeyCode::from(key_code);
+                let modifier = KeyboardModifier::from(modifier);
+                KeyEvent::new(EventType::KeyRelease, key_code, modifier, to_static(ch)).boxed()
+            }
+            Self::MousePressedEvent(n_press, x, y, button, modifier, _time) => {
+                let button = MouseButton::from(button);
+                let modifier = KeyboardModifier::from(modifier);
+                MouseEvent::new(
+                    EventType::MouseButtonPress,
+                    (x, y),
+                    button,
+                    modifier,
+                    n_press,
+                    Point::default(),
+                    DeltaType::default(),
+                )
+                .boxed()
+            }
+            Self::MouseReleaseEvent(x, y, button, modifier, _time) => {
+                let button = MouseButton::from(button);
+                let modifier = KeyboardModifier::from(modifier);
+                MouseEvent::new(
+                    EventType::MouseButtonRelease,
+                    (x, y),
+                    button,
+                    modifier,
+                    1,
+                    Point::default(),
+                    DeltaType::default(),
+                )
+                .boxed()
+            }
+            Self::MouseEnterEvent(x, y, modifier, _time) => {
+                let modifier = KeyboardModifier::from(modifier);
+                MouseEvent::new(
+                    EventType::MouseEnter,
+                    (x, y),
+                    MouseButton::NoButton,
+                    modifier,
+                    0,
+                    Point::default(),
+                    DeltaType::default(),
+                )
+                .boxed()
+            }
+            Self::MouseLeaveEvent(modifier, _time) => {
+                let modifier = KeyboardModifier::from(modifier);
+                MouseEvent::new(
+                    EventType::MouseLeave,
+                    (0, 0),
+                    MouseButton::NoButton,
+                    modifier,
+                    0,
+                    Point::default(),
+                    DeltaType::default(),
+                )
+                .boxed()
+            }
+            Self::MouseMoveEvent(x, y, modifier, _time) => {
+                let modifier = KeyboardModifier::from(modifier);
+                MouseEvent::new(
+                    EventType::MouseMove,
+                    (x, y),
+                    MouseButton::NoButton,
+                    modifier,
+                    0,
+                    Point::default(),
+                    DeltaType::default(),
+                )
+                .boxed()
+            }
+            Self::MouseWheelEvent(x, y, delta, delta_type, modifier, _time) => {
+                let modifier = KeyboardModifier::from(modifier);
+                MouseEvent::new(
+                    EventType::MouseWhell,
+                    (x, y),
+                    MouseButton::NoButton,
+                    modifier,
+                    0,
+                    delta,
+                    delta_type,
+                )
+                .boxed()
+            }
+            Self::RequestFocusEvent(is_focus, _time) => FocusEvent::new(is_focus).boxed(),
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl<T: 'static + Copy> PayloadWeight for IpcEvent<T> {
+    fn payload_wieght(&self) -> f32 {
+        match self {
+            Self::ResizeEvent(..) => 10.,
+            Self::MouseMoveEvent(..) => 0.2,
+            _ => 1.,
         }
     }
 }

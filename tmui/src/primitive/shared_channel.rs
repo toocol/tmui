@@ -80,7 +80,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> SharedSen
     }
 
     #[inline]
-    pub(crate) fn send_event_ipc(&self, event: Event) {
+    pub(crate) fn send_event_ipc(&self, event: &Event) {
         match self.ty {
             SharedType::Master => self
                 .master

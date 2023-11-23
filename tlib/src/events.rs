@@ -21,6 +21,11 @@ pub fn downcast_event<T: EventTrait>(evt: Event) -> Result<Box<T>, Box<dyn Any>>
     evt.as_any_boxed().downcast::<T>()
 }
 
+#[inline]
+pub fn downcast_event_ref<T: EventTrait>(evt: &Event) -> Option<&T> {
+    evt.as_ref().as_any().downcast_ref::<T>()
+}
+
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum EventType {

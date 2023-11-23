@@ -145,10 +145,15 @@ impl Bitmap {
     }
 
     #[inline]
-    pub fn update_raw_pointer(&mut self, n_raw_pointer: *mut c_void, old_shmem: Shmem, w: u32, h: u32) {
+    pub fn update_raw_pointer(
+        &mut self,
+        n_raw_pointer: *mut c_void,
+        old_shmem: Shmem,
+        w: u32,
+        h: u32,
+    ) {
         match self {
             Self::Shared {
-                ty,
                 raw_pointer,
                 rentention,
                 shmem_info,
@@ -159,9 +164,7 @@ impl Bitmap {
                 ..
             } => {
                 *raw_pointer = NonNull::new(n_raw_pointer);
-                if *ty == IpcType::Master {
-                    rentention.push_back(old_shmem)
-                }
+                rentention.push_back(old_shmem);
                 let shmem_info = shmem_info!(shmem_info);
                 shmem_info.prepared.store(false, Ordering::Release);
                 *total_bytes = (w * h * 4) as usize;
@@ -255,10 +258,7 @@ impl Bitmap {
     pub fn prepared(&mut self) {
         match self {
             Self::Direct { prepared, .. } => *prepared = true,
-            Self::Shared {
-                shmem_info,
-                ..
-            } => shmem_info!(shmem_info)
+            Self::Shared { shmem_info, .. } => shmem_info!(shmem_info)
                 .prepared
                 .store(true, Ordering::Release),
         }
@@ -268,10 +268,9 @@ impl Bitmap {
     pub fn is_prepared(&self) -> bool {
         match self {
             Self::Direct { prepared, .. } => *prepared,
-            Self::Shared {
-                shmem_info,
-                ..
-            } => shmem_info!(shmem_info).prepared.load(Ordering::Acquire),
+            Self::Shared { shmem_info, .. } => {
+                shmem_info!(shmem_info).prepared.load(Ordering::Acquire)
+            }
         }
     }
 
@@ -290,12 +289,14 @@ impl Bitmap {
                 let shmem_info = shmem_info!(shmem_info);
 
                 match ty {
-                    IpcType::Master => shmem_info.master_release_idx.fetch_add(1, Ordering::Release),
+                    IpcType::Master => shmem_info
+                        .master_release_idx
+                        .fetch_add(1, Ordering::Release),
                     IpcType::Slave => shmem_info.slave_release_idx.fetch_add(1, Ordering::Release),
                 };
-                
+
                 if *ty == IpcType::Slave {
-                    return
+                    return;
                 }
 
                 shmem_info
