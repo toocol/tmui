@@ -8,7 +8,7 @@ use crate::{
         event::{Event, WindowEvent},
         event_loop::EventLoop,
         window::Window,
-    }, application::Application,
+    }, application::{Application, self},
 };
 use log::{debug, info};
 use once_cell::sync::Lazy;
@@ -68,6 +68,10 @@ impl WindowProcess {
                 }
             } else {
                 control_flow.set_wait_timeout(Duration::from_millis(10));
+            }
+
+            if application::is_high_load() {
+                control_flow.set_poll();
             }
 
             if let Some(master) = ipc_master.clone() {
@@ -409,6 +413,9 @@ impl WindowProcess {
             }
 
             cpu_balance.payload_check();
+            if application::is_high_load() {
+                cpu_balance.request_high_load();
+            }
             cpu_balance.sleep(false);
         }
     }

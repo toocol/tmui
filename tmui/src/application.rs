@@ -43,6 +43,7 @@ pub(crate) static PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
 pub(crate) static APP_STARTED: AtomicBool = AtomicBool::new(false);
 pub(crate) static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 pub(crate) static IS_SHARED: AtomicBool = AtomicBool::new(false);
+pub(crate) static HIGH_LOAD: AtomicBool = AtomicBool::new(false);
 static ONCE: Once = Once::new();
 
 /// ### The main application of tmui. <br>
@@ -501,6 +502,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         CpuBalance::set_payload_threshold(threshold);
         self
     }
+}
+
+#[inline]
+pub fn request_high_load(high_load: bool) {
+    HIGH_LOAD.store(high_load, Ordering::Release)
+}
+
+#[inline]
+pub fn is_high_load() -> bool {
+    HIGH_LOAD.load(Ordering::Acquire)
 }
 
 ///////////////////////////////////////////////////////////////////////
