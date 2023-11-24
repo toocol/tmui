@@ -29,8 +29,8 @@ pub enum IpcEvent<T: 'static + Copy> {
     MouseEnterEvent(i32, i32, u32, Instant),
     /// (modifier, timestamp)
     MouseLeaveEvent(u32, Instant),
-    /// (x, y, modifier, timestamp)
-    MouseMoveEvent(i32, i32, u32, Instant),
+    /// (x, y, button, modifier, timestamp)
+    MouseMoveEvent(i32, i32, u32, u32, Instant),
     /// (x, y, delta, delta_type, modifier, timestamp)
     MouseWheelEvent(i32, i32, Point, DeltaType, u32, Instant),
     /// (is_focus, timestamp)
@@ -64,8 +64,8 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     MouseEnterEvent(i32, i32, u32, Instant),
     /// (modifier, timestamp)
     MouseLeaveEvent(u32, Instant),
-    /// (x, y, modifier, timestamp)
-    MouseMoveEvent(i32, i32, u32, Instant),
+    /// (x, y, button, modifier, timestamp)
+    MouseMoveEvent(i32, i32, u32, u32, Instant),
     /// (x, y, delta, modifier, timestamp)
     MouseWheelEvent(i32, i32, Point, DeltaType, u32, Instant),
     /// (is_focus, timestamp)
@@ -119,7 +119,7 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
             }
             Self::MouseEnterEvent(a, b, c, d) => InnerIpcEvent::MouseEnterEvent(a, b, c, d),
             Self::MouseLeaveEvent(a, b) => InnerIpcEvent::MouseLeaveEvent(a, b),
-            Self::MouseMoveEvent(a, b, c, d) => InnerIpcEvent::MouseMoveEvent(a, b, c, d),
+            Self::MouseMoveEvent(a, b, c, d, e) => InnerIpcEvent::MouseMoveEvent(a, b, c, d, e),
             Self::MouseWheelEvent(a, b, c, d, e, f) => {
                 InnerIpcEvent::MouseWheelEvent(a, b, c, d, e, f)
             }
@@ -170,7 +170,7 @@ impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
             Self::MouseReleaseEvent(a, b, c, d, e) => IpcEvent::MouseReleaseEvent(a, b, c, d, e),
             Self::MouseEnterEvent(a, b, c, d) => IpcEvent::MouseEnterEvent(a, b, c, d),
             Self::MouseLeaveEvent(a, b) => IpcEvent::MouseLeaveEvent(a, b),
-            Self::MouseMoveEvent(a, b, c, d) => IpcEvent::MouseMoveEvent(a, b, c, d),
+            Self::MouseMoveEvent(a, b, c, d, e) => IpcEvent::MouseMoveEvent(a, b, c, d, e),
             Self::MouseWheelEvent(a, b, c, d, e, f) => IpcEvent::MouseWheelEvent(a, b, c, d, e, f),
             Self::RequestFocusEvent(a, b) => IpcEvent::RequestFocusEvent(a, b),
             Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
@@ -253,12 +253,13 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::MouseMoveEvent(x, y, modifier, _time) => {
+            Self::MouseMoveEvent(x, y, button, modifier, _time) => {
+                let button = MouseButton::from(button);
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
                     EventType::MouseMove,
                     (x, y),
-                    MouseButton::NoButton,
+                    button,
                     modifier,
                     0,
                     Point::default(),

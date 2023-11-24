@@ -1,7 +1,7 @@
 use std::time::Instant;
 use tipc::ipc_event::IpcEvent;
 use tlib::{
-    events::{Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent, downcast_event_ref},
+    events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
     namespace::AsNumeric,
     payload::PayloadWeight,
     prelude::SystemCursorShape,
@@ -76,7 +76,13 @@ pub(crate) fn convert_event<T: 'static + Copy + Sync + Send>(evt: &Event) -> Ipc
         MouseMove => {
             let evt = downcast_event_ref::<MouseEvent>(evt).unwrap();
             let pos = evt.position();
-            IpcEvent::MouseMoveEvent(pos.0, pos.1, evt.modifier().as_numeric(), Instant::now())
+            IpcEvent::MouseMoveEvent(
+                pos.0,
+                pos.1,
+                evt.mouse_button().as_numeric(),
+                evt.modifier().as_numeric(),
+                Instant::now(),
+            )
         }
         MouseWhell => {
             let evt = downcast_event_ref::<MouseEvent>(evt).unwrap();
