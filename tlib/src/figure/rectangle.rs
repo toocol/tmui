@@ -4,7 +4,10 @@ use crate::{
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Value,
 };
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::{
+    ops::{Add, Div, Mul, Sub},
+    sync::atomic::{AtomicI32, Ordering},
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Rect
@@ -335,7 +338,7 @@ impl Rect {
     #[inline]
     pub fn contains(&self, point: &Point) -> bool {
         if !self.is_valid() {
-            return false
+            return false;
         }
         point.x() >= self.x()
             && point.y() >= self.y()
@@ -526,6 +529,62 @@ impl ToValue for Rect {
 impl FromValue for Rect {
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+impl Add for Rect {
+    type Output = Rect;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x + rhs.x,
+            self.y + rhs.y,
+            self.width + rhs.width,
+            self.height + rhs.height,
+        )
+    }
+}
+
+impl Sub for Rect {
+    type Output = Rect;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x - rhs.x,
+            self.y - rhs.y,
+            self.width - rhs.width,
+            self.height - rhs.height,
+        )
+    }
+}
+
+impl Mul for Rect {
+    type Output = Rect;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x * rhs.x,
+            self.y * rhs.y,
+            self.width * rhs.width,
+            self.height * rhs.height,
+        )
+    }
+}
+
+impl Div for Rect {
+    type Output = Rect;
+
+    #[inline]
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x / rhs.x,
+            self.y / rhs.y,
+            self.width / rhs.width,
+            self.height / rhs.height,
+        )
     }
 }
 
@@ -1024,6 +1083,62 @@ impl FromValue for FRect {
     }
 }
 
+impl Add for FRect {
+    type Output = FRect;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x + rhs.x,
+            self.y + rhs.y,
+            self.width + rhs.width,
+            self.height + rhs.height,
+        )
+    }
+}
+
+impl Sub for FRect {
+    type Output = FRect;
+
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x - rhs.x,
+            self.y - rhs.y,
+            self.width - rhs.width,
+            self.height - rhs.height,
+        )
+    }
+}
+
+impl Mul for FRect {
+    type Output = FRect;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x * rhs.x,
+            self.y * rhs.y,
+            self.width * rhs.width,
+            self.height * rhs.height,
+        )
+    }
+}
+
+impl Div for FRect {
+    type Output = FRect;
+
+    #[inline]
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x / rhs.x,
+            self.y / rhs.y,
+            self.width / rhs.width,
+            self.height / rhs.height,
+        )
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// AtomicRect
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1109,7 +1224,7 @@ impl AtomicRect {
         self.y.store(y, Ordering::Release)
     }
 
-        #[inline]
+    #[inline]
     pub fn width_mut(&mut self) -> &mut AtomicI32 {
         &mut self.width
     }
@@ -1274,7 +1389,7 @@ impl AtomicRect {
     #[inline]
     pub fn contains(&self, point: &Point) -> bool {
         if !self.is_valid() {
-            return false
+            return false;
         }
         point.x() >= self.x()
             && point.y() >= self.y()

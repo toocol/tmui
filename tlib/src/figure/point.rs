@@ -3,7 +3,7 @@ use crate::{
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Type, Value,
 };
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul, Div};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Point
@@ -71,6 +71,30 @@ impl Sub for Point {
         Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
+        }
+    }
+}
+
+impl Mul for Point {
+    type Output = Point;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
+impl Div for Point {
+    type Output = Point;
+
+    #[inline]
+    fn div(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
         }
     }
 }
@@ -260,6 +284,30 @@ impl Sub for FPoint {
         Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
+        }
+    }
+}
+
+impl Mul for FPoint {
+    type Output = FPoint;
+
+    #[inline]
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
+impl Div for FPoint {
+    type Output = FPoint;
+
+    #[inline]
+    fn div(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
         }
     }
 }

@@ -1,3 +1,4 @@
+pub mod animation;
 pub mod application_window;
 pub mod application;
 pub mod primitive;
