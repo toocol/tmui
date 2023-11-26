@@ -5,6 +5,27 @@ use syn::{parse::Parser, DeriveInput, Ident};
 pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
 
+    let mut run_after = false;
+
+    for attr in ast.attrs.iter() {
+        if let Some(attr_ident) = attr.path.get_ident() {
+            if attr_ident.to_string() == "run_after" {
+                run_after = true;
+                break;
+            }
+        }
+    }
+
+    let run_after_clause = if run_after {
+        quote!(
+            ApplicationWindow::run_afters_of(self.window_id()).push(
+                std::ptr::NonNull::new(self)
+            );
+        )
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
     let set_shared_id_clause = match id {
         Some(id) => quote!(
             self.set_shared_id(#id);
@@ -80,9 +101,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #set_shared_id_clause
-                        ApplicationWindow::run_afters_of(self.window_id()).push(
-                            std::ptr::NonNull::new(self)
-                        );
+                        #run_after_clause
                     }
                 }
 

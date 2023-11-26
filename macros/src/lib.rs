@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+mod animation;
 mod cast;
 mod extend_attr;
 mod extend_container;
@@ -44,7 +45,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
 
     match extend_attr.check() {
         Err(e) => return e.to_compile_error().into(),
-        _ => {},
+        _ => {}
     }
 
     let extend_str = extend_attr.extend.to_string();
@@ -125,7 +126,7 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// The widget annotated `[run_after]` will execute the [`WidgetImpl::run_after()`] function
 /// after the application was started.
-/// 
+///
 /// ### Only taing effect when struct annotated `#[extends(Widget)]`
 #[proc_macro_attribute]
 pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -206,4 +207,9 @@ pub fn stack_impl(input: TokenStream) -> TokenStream {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
+}
+
+#[proc_macro_attribute]
+pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
 }

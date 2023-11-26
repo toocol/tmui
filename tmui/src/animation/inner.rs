@@ -94,8 +94,11 @@ pub enum AnimationsHolder {
 
 macro_rules! interpolation {
     ( $inner_animation:expr, $t:expr, $start:expr, $end:expr, $hold:expr ) => {
-        let res = $inner_animation.interpolation($t, *$start, *$end);
-        *nonnull_mut!($hold) = res;
+        if $t.0 == 1. {
+            *nonnull_mut!($hold) = *$end;
+        } else {
+            *nonnull_mut!($hold) = $inner_animation.interpolation($t, *$start, *$end);
+        }
     };
 }
 

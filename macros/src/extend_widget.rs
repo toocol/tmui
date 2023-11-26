@@ -1,4 +1,4 @@
-use crate::{extend_element, extend_object, layout};
+use crate::{animation, extend_element, extend_object, layout};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{
@@ -10,20 +10,31 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
     let name = &ast.ident;
 
     let mut run_after = false;
+    let mut animation = false;
+
     for attr in ast.attrs.iter() {
         if let Some(attr_ident) = attr.path.get_ident() {
             if attr_ident.to_string() == "run_after" {
                 run_after = true;
-                break;
+            }
+            if attr_ident.to_string() == "animatable" {
+                animation = true;
             }
         }
     }
+
     let run_after_clause = if run_after {
         quote!(
             ApplicationWindow::run_afters_of(self.window_id()).push(
                 std::ptr::NonNull::new(self)
             );
         )
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    let animation_clause = if animation {
+        animation::generate_animation(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
@@ -36,6 +47,12 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub widget: Widget
                     })?);
+
+                    if animation {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            pub animation: AnimationModel
+                        })?);
+                    }
 
                     // If field with attribute `#[child]`,
                     // add attribute `#[derivative(Default(value = "Object::new(&[])"))]` to it,
@@ -121,6 +138,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 #element_trait_impl_clause
 
                 #widget_trait_impl_clause
+
+                #animation_clause
 
                 impl WidgetAcquire for #name {}
 
