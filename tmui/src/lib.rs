@@ -22,6 +22,7 @@ pub mod shared_widget;
 pub mod split_pane;
 pub mod system;
 pub mod stack;
+pub mod tree_view;
 pub mod vbox;
 pub mod hbox;
 pub mod image;

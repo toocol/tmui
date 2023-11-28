@@ -320,7 +320,7 @@ impl ScrollBar {
         self.update();
     }
 
-    pub(crate) fn scroll_by_delta(&mut self, modifier: KeyboardModifier, delta: i32, delta_type: DeltaType) -> bool {
+    pub fn scroll_by_delta(&mut self, modifier: KeyboardModifier, delta: i32, delta_type: DeltaType) -> bool {
         let steps_to_scroll;
         let dividend = match delta_type {
             DeltaType::Line => 1.,

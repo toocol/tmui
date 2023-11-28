@@ -4,13 +4,14 @@ use crate::{
         ContainerScaleCalculate, ReflectSizeUnifiedAdjust, StaticContainerScaleCalculate,
         SCALE_DISMISS,
     },
+    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
     tlib::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl, graphics::painter::Painter,
+    widget::WidgetImpl,
 };
 use log::debug;
 use std::{collections::HashMap, mem::size_of, ptr::NonNull};
@@ -77,7 +78,7 @@ impl ContainerImplExt for SplitPane {
 
 impl Layout for SplitPane {
     fn composition(&self) -> Composition {
-        SplitPane::static_composition()
+        SplitPane::static_composition(self)
     }
 
     fn position_layout(
@@ -104,7 +105,7 @@ macro_rules! split_from {
 }
 
 impl ContainerLayout for SplitPane {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::FixedContainer
     }
 
@@ -379,6 +380,5 @@ impl StaticContainerScaleCalculate for SplitPane {
 }
 
 impl ChildContainerDiffRender for SplitPane {
-    fn container_diff_render(&mut self, _painter: &mut Painter) {
-    }
+    fn container_diff_render(&mut self, _painter: &mut Painter) {}
 }

@@ -1,4 +1,4 @@
-use crate::{extend_element, extend_object, extend_widget};
+use crate::{extend_element, extend_object, extend_widget, scroll_area::generate_scroll_area_inner_init};
 use quote::quote;
 use syn::{
     parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Pound, Attribute, DeriveInput,
@@ -11,6 +11,7 @@ pub(crate) fn expand(
     has_content_alignment: bool,
     is_split_pane: bool,
     is_stack: bool,
+    is_scroll_area: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
 
@@ -62,6 +63,15 @@ pub(crate) fn expand(
                     if is_stack {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             current_index: usize
+                        })?);
+                    }
+                    if is_scroll_area {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #[derivative(Default(value = "Object::new(&[])"))]
+                            scroll_bar: Box<ScrollBar>
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            area: Option<Box<dyn WidgetImpl>>
                         })?);
                     }
 
@@ -154,6 +164,18 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
+            let reflect_scroll_area = if is_scroll_area {
+                quote!(type_registry.register::<#name, ReflectScrollAreaExt>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let scroll_area_inner_init = if is_scroll_area {
+                generate_scroll_area_inner_init()?
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
             Ok(quote!(
                 #[derive(Derivative)]
                 #[derivative(Default)]
@@ -186,11 +208,13 @@ pub(crate) fn expand(
                         #reflect_content_alignment
                         #reflect_split_infos_getter
                         #reflect_stack_trait
+                        #reflect_scroll_area
                     }
 
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
+                        #scroll_area_inner_init
                     }
                 }
 

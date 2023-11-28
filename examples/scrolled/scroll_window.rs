@@ -27,20 +27,22 @@ impl ObjectImpl for ScrollWindow {
         // label.height_request(40);
         label.set_content_halign(Align::End);
         label.set_content_valign(Align::End);
+        label.set_hexpand(true);
+        label.set_vexpand(true);
         label.set_size(30);
 
         connect!(label, mouse_wheel(), self, when_laebl_receive_wheel(MouseEvent));
 
         let mut scroll_area: Box<ScrollArea> = Object::new(&[]);
         scroll_area.set_area(label);
-        scroll_area.width_request(400);
-        scroll_area.height_request(300);
+        // scroll_area.width_request(400);
+        // scroll_area.height_request(300);
         scroll_area.set_halign(Align::End);
         scroll_area.set_valign(Align::End);
-        // scroll_area.set_hexpand(true);
-        // scroll_area.set_vexpand(true);
-        // scroll_area.set_hscale(0.7);
-        // scroll_area.set_vscale(0.7);
+        scroll_area.set_hexpand(true);
+        scroll_area.set_vexpand(true);
+        scroll_area.set_hscale(0.7);
+        scroll_area.set_vscale(0.7);
         scroll_area.set_background(Color::RED);
         scroll_area.set_scroll_bar_position(ScrollBarPosition::End);
 

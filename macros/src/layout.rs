@@ -1,21 +1,22 @@
 use crate::{
     extend_container,
     split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
-    stack::{generate_stack_add_child, generate_stack_impl},
+    stack::{generate_stack_add_child, generate_stack_impl}, scroll_area::{generate_scroll_area_add_child, generate_scroll_area_get_children, generate_scroll_area_impl},
 };
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
 
-const SUPPORTED_LAYOUTS: [&'static str; 4] = ["Stack", "VBox", "HBox", "SplitPane"];
+const SUPPORTED_LAYOUTS: [&'static str; 5] = ["Stack", "VBox", "HBox", "SplitPane", "ScrollArea"];
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
+    internal: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     if SUPPORTED_LAYOUTS.contains(&layout) {
-        gen_layout_clause(ast, layout)
+        gen_layout_clause(ast, layout, internal)
     } else {
         Err(syn::Error::new_spanned(
             layout_meta,
@@ -48,13 +49,20 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
     children_idents
 }
 
-fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_macro2::TokenStream> {
+fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
     let is_split_pane = layout == "SplitPane";
     let is_stack = layout == "Stack";
+    let is_scroll_area = layout == "ScrollArea";
 
-    let mut token =
-        extend_container::expand(ast, false, has_content_alignment, is_split_pane, is_stack)?;
+    let mut token = extend_container::expand(
+        ast,
+        false,
+        has_content_alignment,
+        is_split_pane,
+        is_stack,
+        is_scroll_area,
+    )?;
 
     let name = &ast.ident;
     let span = ast.span();
@@ -108,8 +116,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         proc_macro2::TokenStream::new()
     };
 
-    let add_child_clause = match (is_split_pane, is_stack) {
-        (false, false) => {
+    let add_child_clause = match (is_split_pane, is_stack, is_scroll_area) {
+        (false, false, false) => {
             quote! {
                 use tmui::application_window::ApplicationWindow;
                 child.set_parent(self);
@@ -118,25 +126,16 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
                 self.update();
             }
         }
-        (true, false) => generate_split_pane_add_child()?,
-        (false, true) => generate_stack_add_child()?,
+        (true, false, false) => generate_split_pane_add_child()?,
+        (false, true, false) => generate_stack_add_child()?,
+        (false, false, true) => generate_scroll_area_add_child(name)?,
         _ => unreachable!(),
     };
 
-    let impl_split_pane = if is_split_pane {
-        generate_split_pane_impl(name, "tmui")?
+    let get_children_clause = if is_scroll_area {
+        generate_scroll_area_get_children()?
     } else {
-        proc_macro2::TokenStream::new()
-    };
-
-    let impl_stack_trait = if is_stack {
-        generate_stack_impl(name, "tmui")?
-    } else {
-        proc_macro2::TokenStream::new()
-    };
-
-    token.extend(quote!(
-        impl ContainerImpl for #name {
+        quote!(
             fn children(&self) -> Vec<&dyn WidgetImpl> {
                 let mut children: Vec<&dyn WidgetImpl> = self.container.children.iter().map(|c| c.as_ref()).collect();
                 #(
@@ -152,6 +151,32 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
                 )*
                 children
             }
+        )
+    };
+
+    let use_prefix = if internal { "crate" } else { "tmui" };
+
+    let impl_split_pane = if is_split_pane {
+        generate_split_pane_impl(name, use_prefix)?
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    let impl_stack_trait = if is_stack {
+        generate_stack_impl(name, use_prefix)?
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    let impl_scroll_area = if is_scroll_area {
+        generate_scroll_area_impl(name, use_prefix)?
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    token.extend(quote!(
+        impl ContainerImpl for #name {
+            #get_children_clause
         }
 
         impl ContainerImplExt for #name {
@@ -165,7 +190,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
 
         impl Layout for #name {
             fn composition(&self) -> Composition {
-                #layout::static_composition()
+                #layout::static_composition(self)
             }
 
             fn position_layout(
@@ -207,6 +232,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str) -> syn::Result<proc_ma
         #impl_split_pane
 
         #impl_stack_trait
+
+        #impl_scroll_area
 
         impl ChildContainerDiffRender for #name {
             fn container_diff_render(&mut self, painter: &mut Painter) {

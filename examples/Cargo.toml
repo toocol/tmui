@@ -51,6 +51,10 @@ name = "run_after"
 path = "run_after/main.rs"
 
 [[bin]]
+name = "scroll_area_layout"
+path = "scroll_area_layout/main.rs"
+
+[[bin]]
 name = "scrolled"
 path = "scrolled/main.rs"
 

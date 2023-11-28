@@ -128,9 +128,10 @@ impl SkiaPaint {
         painter.set_font(Font::with_family(FAMILY).to_skia_font());
         painter.draw_text(TEXT, (0., 200.));
 
-        painter.draw_paragraph(REP, (0., 300.), 0., 1024.);
+        painter.draw_paragraph(REP, (0., 300.), 0., 100., None, true);
+        painter.draw_paragraph(REP, (0., 325.), 0., 100., Some(1), false);
         painter.set_color(Color::RED);
-        painter.draw_paragraph(REP, (0., 350.), 5., 1024.);
+        painter.draw_paragraph(REP, (0., 350.), 5., 1024., None, true);
     }
 
     fn draw_region_1(&mut self, painter: &mut Painter) {

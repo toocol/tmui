@@ -20,6 +20,7 @@ pub use crate::label::LabelSignal;
 pub use crate::layout::{
     Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment,
 };
+pub use crate::scroll_area::{ScrollAreaExt, ScrollAreaGenericExt, ReflectScrollAreaExt};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::shared_widget::{SharedWidget, SharedWidgetExt};
 pub use crate::split_pane::{

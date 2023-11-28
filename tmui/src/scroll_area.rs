@@ -12,7 +12,7 @@ use tlib::{
     events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
-    prelude::extends,
+    prelude::extends, ptr_mut,
 };
 
 #[extends(Container)]
@@ -24,7 +24,7 @@ pub struct ScrollArea {
 
 /////////////////////////////////////////// Start: ScrollArea self implementations ///////////////////////////////////////////
 #[reflect_trait]
-pub trait ScrollAreaExt {
+pub trait ScrollAreaExt: WidgetImpl {
     fn get_area(&self) -> Option<&dyn WidgetImpl>;
 
     fn get_area_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
@@ -32,6 +32,22 @@ pub trait ScrollAreaExt {
     fn get_scroll_bar(&self) -> &ScrollBar;
 
     fn get_scroll_bar_mut(&mut self) -> &mut ScrollBar;
+
+    fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition);
+
+    fn set_orientation(&mut self, orientation: Orientation);
+
+    fn scroll(&mut self, delta: i32, delta_type: DeltaType);
+
+    fn adjust_area_layout(&mut self, size: Size);
+}
+
+pub trait ScrollAreaGenericExt {
+    fn set_area<T: WidgetImpl>(&mut self, area: Box<T>);
+
+    fn get_area_cast<T: WidgetImpl + ObjectSubclass>(&self) -> Option<&T>;
+
+    fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T>;
 }
 
 impl ScrollAreaExt for ScrollArea {
@@ -54,11 +70,45 @@ impl ScrollAreaExt for ScrollArea {
     fn get_scroll_bar_mut(&mut self) -> &mut ScrollBar {
         &mut self.scroll_bar
     }
+
+    #[inline]
+    fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition) {
+        self.scroll_bar.set_scroll_bar_position(scroll_bar_position);
+        self.update();
+    }
+
+    #[inline]
+    fn set_orientation(&mut self, orientation: Orientation) {
+        self.scroll_bar.set_orientation(orientation);
+        self.update();
+    }
+
+    /// Scroll the widget. </br>
+    /// delta was positive value when scroll down/right.
+    #[inline]
+    fn scroll(&mut self, delta: i32, delta_type: DeltaType) {
+        self.scroll_bar
+            .scroll_by_delta(KeyboardModifier::NoModifier, delta, delta_type);
+    }
+
+    #[inline]
+    fn adjust_area_layout(&mut self, size: Size) {
+        if size.width() == 0 || size.height() == 0 {
+            debug!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
+            return;
+        }
+
+        if let Some(area) = self.get_area_mut() {
+            area.set_vexpand(true);
+            area.set_hexpand(true);
+            area.set_hscale(size.width() as f32 - 10.);
+        }
+    }
 }
 
-impl ScrollArea {
+impl ScrollAreaGenericExt for ScrollArea {
     #[inline]
-    pub fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
+    fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
         area.set_parent(self);
         area.set_vexpand(true);
         area.set_hexpand(true);
@@ -70,45 +120,13 @@ impl ScrollArea {
     }
 
     #[inline]
-    pub fn get_area_cast<T: WidgetImpl + ObjectSubclass>(&self) -> Option<&T> {
+    fn get_area_cast<T: WidgetImpl + ObjectSubclass>(&self) -> Option<&T> {
         self.area.as_ref().and_then(|w| w.downcast_ref::<T>())
     }
 
     #[inline]
-    pub fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T> {
+    fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T> {
         self.area.as_mut().and_then(|w| w.downcast_mut::<T>())
-    }
-
-    #[inline]
-    pub fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition) {
-        self.scroll_bar.set_scroll_bar_position(scroll_bar_position)
-    }
-
-    #[inline]
-    pub fn set_orientation(&mut self, orientation: Orientation) {
-        self.scroll_bar.set_orientation(orientation)
-    }
-
-    /// Scroll the widget. </br>
-    /// delta was positive value when scroll down/right.
-    #[inline]
-    pub fn scroll(&mut self, delta: i32, delta_type: DeltaType) {
-        self.scroll_bar
-            .scroll_by_delta(KeyboardModifier::NoModifier, delta, delta_type);
-    }
-
-    #[inline]
-    pub(crate) fn adjust_area_layout(&mut self, size: Size) {
-        if size.width() == 0 || size.height() == 0 {
-            debug!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
-            return;
-        }
-
-        if let Some(area) = self.get_area_mut() {
-            area.set_vexpand(true);
-            area.set_hexpand(true);
-            area.set_hscale(size.width() as f32 - 10.);
-        }
     }
 }
 /////////////////////////////////////////// End: ScrollArea self implementations ///////////////////////////////////////////
@@ -171,10 +189,7 @@ impl ContainerImplExt for ScrollArea {
 
 impl Layout for ScrollArea {
     fn composition(&self) -> Composition {
-        match self.scroll_bar.orientation() {
-            Orientation::Horizontal => Composition::VerticalArrange,
-            Orientation::Vertical => Composition::HorizontalArrange,
-        }
+        Self::static_composition(self)
     }
 
     fn position_layout(
@@ -183,16 +198,38 @@ impl Layout for ScrollArea {
         parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(self, previous, parent, manage_by_container);
+        Self::container_position_layout(self, previous, parent, manage_by_container);
+    }
+}
+
+impl ContainerLayout for ScrollArea {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition {
+        let widget = cast!(widget as ScrollAreaExt).unwrap();
+        match widget.get_scroll_bar().orientation() {
+            Orientation::Horizontal => Composition::VerticalArrange,
+            Orientation::Vertical => Composition::HorizontalArrange,
+        }
+    }
+
+    fn container_position_layout<T: WidgetImpl + ContainerImpl>(
+        widget: &mut T,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
+        manage_by_container: bool,
+    ) {
+        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+
+        let widget = cast_mut!(widget as ScrollAreaExt).unwrap();
 
         // Deal with the area and scroll bar's position:
-        let rect = self.rect();
-        let scroll_bar = &mut self.scroll_bar;
+        let rect = widget.rect();
+        let scroll_bar = ptr_mut!(widget as *mut dyn ScrollAreaExt).get_scroll_bar_mut();
         match scroll_bar.scroll_bar_position() {
             ScrollBarPosition::Start => {
                 scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
                 scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
-                if let Some(ref mut area) = self.area {
+
+                if let Some(area) = widget.get_area_mut() {
                     let scroll_bar_rect = scroll_bar.rect();
                     area.set_fixed_x(
                         scroll_bar_rect.x() + scroll_bar_rect.width() + area.margin_left(),
@@ -203,7 +240,7 @@ impl Layout for ScrollArea {
                 }
             }
             ScrollBarPosition::End => {
-                if let Some(ref mut area) = self.area {
+                if let Some(area) = widget.get_area_mut() {
                     area.set_fixed_x(rect.x() + area.margin_left());
                     area.set_fixed_y(rect.y() + area.margin_top());
 
@@ -214,7 +251,7 @@ impl Layout for ScrollArea {
                     );
                     scroll_bar.set_fixed_y(area_rect.y() + scroll_bar.margin_top());
                 } else {
-                    scroll_bar.set_fixed_x(
+                    widget.get_scroll_bar_mut().set_fixed_x(
                         rect.x() + rect.width() + scroll_bar.margin_left()
                             - DEFAULT_SCROLL_BAR_WIDTH,
                     );

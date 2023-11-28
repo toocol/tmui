@@ -299,6 +299,8 @@ impl<'a> Painter<'a> {
         origin: T,
         letter_spacing: f32,
         width_layout: f32,
+        max_lines: Option<usize>,
+        ellipsis: bool,
     ) {
         if let Some(font) = self.font.as_ref() {
             // create font manager
@@ -316,6 +318,12 @@ impl<'a> Painter<'a> {
             // set text style
             self.text_style.set_letter_spacing(letter_spacing);
             self.paragraph_style.set_text_style(&self.text_style);
+            self.paragraph_style.set_max_lines(max_lines);
+            if ellipsis {
+                self.paragraph_style.set_ellipsis("\u{2026}");
+            } else {
+                self.paragraph_style.set_ellipsis("");
+            }
 
             // layout the paragraph
             let mut paragraph_builder =
@@ -326,7 +334,8 @@ impl<'a> Painter<'a> {
 
             let mut origin: Point = origin.into();
             origin.offset((self.x_offset, self.y_offset));
-            paragraph.paint(&mut self.canvas, origin)
+
+            paragraph.paint(&mut self.canvas, origin);
         } else {
             error!("The `font` of `Painter` is None.")
         }
@@ -439,6 +448,13 @@ impl<'a> Painter<'a> {
         point.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_point(point, &self.paint);
+    }
+
+    #[inline]
+    pub fn clip_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
+        let mut rect: skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+        self.canvas.clip_rect(rect, op, false);
     }
 
     /// Clip the region to draw.

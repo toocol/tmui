@@ -56,7 +56,7 @@ impl ContainerImplExt for VBox {
 
 impl Layout for VBox {
     fn composition(&self) -> Composition {
-        VBox::static_composition()
+        VBox::static_composition(self)
     }
 
     fn position_layout(
@@ -70,7 +70,7 @@ impl Layout for VBox {
 }
 
 impl ContainerLayout for VBox {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::VerticalArrange
     }
 

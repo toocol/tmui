@@ -186,8 +186,9 @@ pub(crate) fn expand_with_layout(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
+    internal: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout)
+    layout::expand(ast, layout_meta, layout, internal)
 }
 
 pub(crate) fn gen_widget_trait_impl_clause(

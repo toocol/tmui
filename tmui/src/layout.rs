@@ -33,7 +33,7 @@ pub trait Layout {
 }
 
 pub trait ContainerLayout {
-    fn static_composition() -> Composition;
+    fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition;
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,

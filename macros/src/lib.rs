@@ -10,6 +10,7 @@ mod extend_shared_widget;
 mod extend_widget;
 mod layout;
 mod reflect_trait;
+mod scroll_area;
 mod split_pane;
 mod stack;
 mod tasync;
@@ -38,6 +39,7 @@ use trait_info::TraitInfo;
 ///     - VBox
 ///     - HBox
 ///     - SplitPane
+///     - ScrollArea
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
@@ -63,6 +65,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 &mut ast,
                 extend_attr.layout_meta.as_ref().unwrap(),
                 layout,
+                extend_attr.internal
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
@@ -76,7 +79,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false, false) {
+        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },

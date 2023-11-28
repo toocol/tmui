@@ -53,7 +53,7 @@ impl ContainerImplExt for HBox {
 
 impl Layout for HBox {
     fn composition(&self) -> Composition {
-        HBox::static_composition()
+        HBox::static_composition(self)
     }
 
     fn position_layout(
@@ -67,7 +67,7 @@ impl Layout for HBox {
 }
 
 impl ContainerLayout for HBox {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::HorizontalArrange
     }
 
