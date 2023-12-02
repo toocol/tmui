@@ -26,8 +26,8 @@ lazy_static! {
 
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
-    timers: RefCell<Box<HashMap<u16, Option<NonNull<Timer>>>>>,
-    once_timers: RefCell<Box<HashMap<u16, Box<Timer>>>>,
+    timers: RefCell<Box<HashMap<ObjectId, Option<NonNull<Timer>>>>>,
+    once_timers: RefCell<Box<HashMap<ObjectId, Box<Timer>>>>,
 }
 
 impl TimerHub {
@@ -47,7 +47,7 @@ impl TimerHub {
         }
     }
 
-    fn contains_timer(id: u16) -> bool {
+    fn contains_timer(id: ObjectId) -> bool {
         Self::instance().timers.borrow().contains_key(&id)
     }
 
@@ -103,7 +103,7 @@ impl TimerHub {
         })
     }
 
-    fn delete_timer(&self, id: u16) {
+    fn delete_timer(&self, id: ObjectId) {
         self.timers.borrow_mut().remove(&id);
     }
 }

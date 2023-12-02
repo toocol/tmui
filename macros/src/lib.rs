@@ -52,7 +52,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let extend_str = extend_attr.extend.to_string();
     match extend_str.as_str() {
-        "Object" => match extend_object::expand(&mut ast) {
+        "Object" => match extend_object::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },

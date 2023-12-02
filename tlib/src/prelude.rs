@@ -10,7 +10,7 @@ pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{
     InnerInitializer, Object, ObjectAcquire, ObjectChildrenConstruct, ObjectExt, ObjectImpl,
     ObjectImplExt, ObjectOperation, ReflectObjectChildrenConstruct, ReflectObjectImpl,
-    ReflectObjectImplExt, ReflectObjectOperation, SuperType,
+    ReflectObjectImplExt, ReflectObjectOperation, SuperType, ObjectId
 };
 pub use crate::r#async::{async_tasks, tokio_runtime, AsyncTask};
 pub use crate::reflect::{FromType, Reflect, ReflectTrait, TypeRegistry};

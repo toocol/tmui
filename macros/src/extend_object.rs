@@ -2,7 +2,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -23,9 +23,17 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             let object_trait_impl_clause =
                 gen_object_trait_impl_clause(name, "object", vec!["object"], false)?;
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             return Ok(quote! {
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause
@@ -91,7 +99,7 @@ pub(crate) fn gen_object_trait_impl_clause(
 
         impl ObjectOperation for #name {
             #[inline]
-            fn id(&self) -> u16 {
+            fn id(&self) -> ObjectId {
                 self.#(#object_path).*.id()
             }
 

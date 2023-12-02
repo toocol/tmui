@@ -26,7 +26,7 @@ use tlib::{
 };
 
 thread_local! {
-    pub(crate) static WINDOW_ID: RefCell<u16> = RefCell::new(0);
+    pub(crate) static WINDOW_ID: RefCell<ObjectId> = RefCell::new(0);
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
 }
 
@@ -42,7 +42,7 @@ pub struct ApplicationWindow {
     run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
     base_offset: Point,
 
-    focused_widget: u16,
+    focused_widget: ObjectId,
     high_load_request: bool,
 }
 
@@ -105,34 +105,34 @@ impl ApplicationWindow {
 
     /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
-    pub(crate) fn windows() -> &'static mut Box<HashMap<u16, ApplicationWindowContext>> {
-        static mut WINDOWS: Lazy<Box<HashMap<u16, ApplicationWindowContext>>> =
+    pub(crate) fn windows() -> &'static mut Box<HashMap<ObjectId, ApplicationWindowContext>> {
+        static mut WINDOWS: Lazy<Box<HashMap<ObjectId, ApplicationWindowContext>>> =
             Lazy::new(|| Box::new(HashMap::new()));
         unsafe { &mut WINDOWS }
     }
 
     #[inline]
     pub(crate) fn widgets_of(
-        id: u16,
+        id: ObjectId,
     ) -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>> {
         let window = Self::window_of(id);
         &mut window.widgets
     }
 
     #[inline]
-    pub(crate) fn layout_of(id: u16) -> &'static mut LayoutManager {
+    pub(crate) fn layout_of(id: ObjectId) -> &'static mut LayoutManager {
         let window = Self::window_of(id);
         &mut window.layout_manager
     }
 
     #[inline]
-    pub fn run_afters_of(id: u16) -> &'static mut Vec<Option<NonNull<dyn WidgetImpl>>> {
+    pub fn run_afters_of(id: ObjectId) -> &'static mut Vec<Option<NonNull<dyn WidgetImpl>>> {
         let window = Self::window_of(id);
         &mut window.run_afters
     }
 
     #[inline]
-    pub fn window_of(id: u16) -> &'static mut ApplicationWindow {
+    pub fn window_of(id: ObjectId) -> &'static mut ApplicationWindow {
         let current_thread_id = thread::current().id();
         let (thread_id, window) = Self::windows()
             .get_mut(&id)
@@ -144,12 +144,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn send_message_with_id(id: u16, message: Message) {
+    pub fn send_message_with_id(id: ObjectId, message: Message) {
         Self::window_of(id).send_message(message)
     }
 
     #[inline]
-    pub fn finds<'a, T>(id: u16) -> Vec<&'a T>
+    pub fn finds<'a, T>(id: ObjectId) -> Vec<&'a T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
@@ -164,7 +164,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_mut<'a, T>(id: u16) -> Vec<&'a mut T>
+    pub fn finds_mut<'a, T>(id: ObjectId) -> Vec<&'a mut T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
@@ -199,12 +199,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn set_focused_widget(&mut self, id: u16) {
+    pub(crate) fn set_focused_widget(&mut self, id: ObjectId) {
         self.focused_widget = id
     }
 
     #[inline]
-    pub(crate) fn focused_widget(&self) -> u16 {
+    pub(crate) fn focused_widget(&self) -> ObjectId {
         self.focused_widget
     }
 
@@ -464,11 +464,11 @@ impl ApplicationWindow {
 
 /// Get window id in current ui thread.
 #[inline]
-pub fn current_window_id() -> u16 {
+pub fn current_window_id() -> ObjectId {
     WINDOW_ID.with(|id| *id.borrow())
 }
 
-fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: u16) {
+fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId) {
     let board = ApplicationWindow::window_of(window_id).board();
     let type_registry = TypeRegistry::instance();
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();

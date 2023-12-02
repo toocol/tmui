@@ -46,7 +46,7 @@ pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::R
         }
 
         impl SplitInfosGetter for #name {
-            fn split_infos(&mut self) -> &mut std::collections::HashMap<u16, Box<SplitInfo>> {
+            fn split_infos(&mut self) -> &mut std::collections::HashMap<ObjectId, Box<SplitInfo>> {
                 &mut self.split_infos
             }
 
@@ -57,26 +57,26 @@ pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::R
 
         impl SplitPaneExt for #name {
             #[inline]
-            fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
+            fn split_left<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
                 self.split(id, widget, SplitType::SplitLeft)
             }
 
             #[inline]
-            fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
+            fn split_up<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
                 self.split(id, widget, SplitType::SplitUp)
             }
 
             #[inline]
-            fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
+            fn split_right<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
                 self.split(id, widget, SplitType::SplitRight)
             }
 
             #[inline]
-            fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>) {
+            fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
                 self.split(id, widget, SplitType::SplitDown)
             }
 
-            fn close_pane(&mut self, id: u16) {
+            fn close_pane(&mut self, id: ObjectId) {
                 use #use_prefix::application_window::ApplicationWindow;
                 use #use_prefix::{split_widget, split_from};
                 use #use_prefix::tlib::nonnull_mut;
@@ -144,7 +144,7 @@ pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::R
                 }
             }
 
-            fn split<T: WidgetImpl>(&mut self, id: u16, mut widget: Box<T>, ty: SplitType) {
+            fn split<T: WidgetImpl>(&mut self, id: ObjectId, mut widget: Box<T>, ty: SplitType) {
                 use #use_prefix::application_window::ApplicationWindow;
                 use #use_prefix::{split_widget, split_from};
                 use #use_prefix::tlib::nonnull_mut;

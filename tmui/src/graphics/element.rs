@@ -10,7 +10,7 @@ use tlib::{
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends(Object)]
 pub struct Element {
-    window_id: u16,
+    window_id: ObjectId,
     old_rect: Rect,
     rect: Rect,
     /// The region rect of element's coordinate was `Widget`.
@@ -40,12 +40,12 @@ pub trait ElementExt: 'static {
     /// Set the application window id which the element belongs to.
     ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
-    fn set_window_id(&mut self, id: u16);
+    fn set_window_id(&mut self, id: ObjectId);
 
     /// Get the application window id which the element belongs to.
     ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
-    fn window_id(&self) -> u16;
+    fn window_id(&self) -> ObjectId;
 
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     ///
@@ -129,12 +129,12 @@ pub trait ElementExt: 'static {
 
 impl ElementExt for Element {
     #[inline]
-    fn set_window_id(&mut self, id: u16) {
+    fn set_window_id(&mut self, id: ObjectId) {
         self.window_id = id
     }
 
     #[inline]
-    fn window_id(&self) -> u16 {
+    fn window_id(&self) -> ObjectId {
         self.window_id
     }
 

@@ -75,12 +75,12 @@ pub(crate) fn gen_element_trait_impl_clause(
     Ok(quote!(
         impl ElementExt for #name {
             #[inline]
-            fn set_window_id(&mut self, id: u16) {
+            fn set_window_id(&mut self, id: ObjectId) {
                 self.#(#element_path).*.set_window_id(id)
             }
 
             #[inline]
-            fn window_id(&self) -> u16 {
+            fn window_id(&self) -> ObjectId {
                 self.#(#element_path).*.window_id()
             }
 

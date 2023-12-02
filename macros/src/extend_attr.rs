@@ -10,6 +10,7 @@ pub(crate) struct ExtendAttr {
     pub(crate) layout: Option<String>,
 
     pub(crate) internal: bool,
+    pub(crate) ignore_default: bool,
 
     pub(crate) id_meta: Option<Meta>,
     pub(crate) id: Option<String>,
@@ -52,6 +53,7 @@ impl Parse for ExtendAttr {
             layout_meta: None,
             layout: None,
             internal: false,
+            ignore_default: false,
             id_meta: None,
             id: None,
         };
@@ -118,6 +120,14 @@ impl Parse for ExtendAttr {
                                     extend_attr.internal = lit_bool.value();
                                 }
                                 _ => return Self::error(meta, "Value of `internal` should be bool.")
+                            }
+                        }
+                        "ignore_default" => {
+                            match lit {
+                                syn::Lit::Bool(lit_bool) => {
+                                    extend_attr.ignore_default = lit_bool.value();
+                                }
+                                _ => return Self::error(meta, "Value of `ignore_default` should be bool.")
                             }
                         }
                         s => {

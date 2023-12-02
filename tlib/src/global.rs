@@ -132,6 +132,7 @@ macro_rules! impl_as_any {
         }
     };
 }
+impl_as_any!(String);
 
 #[macro_export]
 macro_rules! nonnull_ref {

@@ -54,7 +54,7 @@ pub(crate) fn expand(
                     }
                     if is_split_pane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            split_infos: std::collections::HashMap<u16, Box<SplitInfo>>
+                            split_infos: std::collections::HashMap<ObjectId, Box<SplitInfo>>
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>

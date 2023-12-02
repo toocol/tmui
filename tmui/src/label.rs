@@ -4,15 +4,12 @@ use crate::{
 use log::debug;
 use tlib::{
     emit,
-    figure::FontTypeface,
     object::{ObjectImpl, ObjectSubclass},
     signals,
     skia_safe::textlayout::{
         FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
     },
 };
-
-const DEFAULT_FONT_FAMILY: &'static str = "Arial";
 
 #[extends(Widget)]
 pub struct Label {
@@ -106,6 +103,8 @@ impl WidgetImpl for Label {
             (Some(1), true)
         };
 
+        painter.save();
+        painter.clip_rect(content_rect, tlib::skia_safe::ClipOp::Intersect);
         painter.draw_paragraph(
             &self.label,
             draw_point,
@@ -114,6 +113,7 @@ impl WidgetImpl for Label {
             lines,
             ellipsis,
         );
+        painter.restore();
     }
 
     fn font_changed(&mut self) {
@@ -168,8 +168,6 @@ impl Label {
     #[inline]
     pub fn new(text: Option<&str>) -> Box<Self> {
         let mut label: Box<Self> = Object::new(&[]);
-        let typeface = FontTypeface::builder().family(DEFAULT_FONT_FAMILY).build();
-        label.font_mut().set_typeface(typeface);
         if let Some(text) = text {
             label.label = text.to_string();
 
