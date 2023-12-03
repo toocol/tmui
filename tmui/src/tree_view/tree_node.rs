@@ -11,7 +11,6 @@ use tlib::{
     figure::Rect,
     nonnull_mut,
     object::ObjectSubclass,
-    signals,
     types::StaticType,
     values::{FromValue, ToValue},
 };
@@ -32,21 +31,6 @@ pub struct TreeNode {
 
     cells: Vec<Cell>,
 }
-
-pub trait TreeNodeSignals: ActionExt {
-    signals!(
-        TreeNodeSignals:
-
-        /// @param: id of TreeNode [`u32`]
-        /// @param: whther is selected [`bool`]
-        selected();
-
-        /// @param: id of TreeNode [`u32`]
-        /// param: whther is expanded [`bool`]
-        expanded();
-    );
-}
-impl TreeNodeSignals for TreeNode {}
 
 impl TreeNode {
     pub fn add_node(&mut self, obj: &dyn TreeViewObject) {
@@ -206,6 +190,19 @@ impl TreeNode {
         }
     }
 
+    pub(crate) fn notify_grand_child_remove(&mut self, id: ObjectId) {
+        if self.parent.is_some() {
+            let parent = nonnull_mut!(self.parent);
+            if parent.is_root {
+                return;
+            }
+
+            parent.children_id_holder.retain(|i| *i != id);
+
+            parent.notify_grand_child_remove(id);
+        }
+    }
+
     pub(crate) fn initialize_buffer(
         &mut self,
         buffer: &mut Vec<Option<NonNull<TreeNode>>>,
@@ -233,6 +230,8 @@ impl Drop for TreeNode {
             for (i, c) in parent.children.iter_mut().enumerate() {
                 c.idx = i;
             }
+
+            self.notify_grand_child_remove(self.id());
         }
     }
 }

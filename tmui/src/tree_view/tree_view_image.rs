@@ -6,7 +6,12 @@ use crate::{
     widget::WidgetImpl,
 };
 use std::ptr::NonNull;
-use tlib::{nonnull_ref, run_after, skia_safe::textlayout::{TypefaceFontProvider, FontCollection, ParagraphStyle, TextStyle, ParagraphBuilder}};
+use tlib::{
+    nonnull_ref, run_after,
+    skia_safe::textlayout::{
+        FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+    },
+};
 
 const REPCHAR: &'static str = concat!(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ",

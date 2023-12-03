@@ -1,10 +1,9 @@
 #![allow(dead_code)]
 use std::fmt::Debug;
-
 use crate::graphics::painter::Painter;
 use derivative::Derivative;
 use tlib::{
-    figure::{Color, Rect, Font},
+    figure::{Color, Rect},
     namespace::BorderStyle,
     Value,
 };
