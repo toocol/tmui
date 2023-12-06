@@ -1,15 +1,12 @@
 #![allow(dead_code)]
-use std::fmt::Debug;
 use crate::graphics::painter::Painter;
 use derivative::Derivative;
+use std::fmt::Debug;
 use tlib::{
     figure::{Color, Rect},
     namespace::BorderStyle,
-    Value,
+    Value, skia_safe::ClipOp,
 };
-
-pub const DEFAULT_CELL_BACKGROUND: Color = Color::WHITE;
-pub const DEFAULT_CELL_FOREGROUND: Color = Color::BLACK;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CellRenderType {
@@ -32,27 +29,23 @@ pub trait CellRender: Debug {
 
     fn set_border_radius(&mut self, radius: f32);
 
-    fn background(&self) -> Color;
+    fn background(&self) -> Option<Color>;
 
     fn set_background(&mut self, background: Color);
-
-    fn foreground(&self) -> Color;
-
-    fn set_foreground(&mut self, foreground: Color);
 
     fn ty(&self) -> CellRenderType;
 }
 
 macro_rules! cell_render_struct {
-    ( $cell:ident, $builder:ident, $render_type:ident ) => {
+    ( $cell:ident, $builder:ident, $render_type:ident $(, $field:ident:$ty:tt)* ) => {
         #[derive(Debug)]
         pub struct $cell {
             border: (f32, f32, f32, f32),
             border_style: BorderStyle,
             border_radius: f32,
-            background: Color,
-            foreground: Color,
+            background: Option<Color>,
             ty: CellRenderType,
+            $($field: $ty),*
         }
         #[derive(Derivative)]
         #[derivative(Default)]
@@ -60,10 +53,8 @@ macro_rules! cell_render_struct {
             border: (f32, f32, f32, f32),
             border_style: BorderStyle,
             border_radius: f32,
-            #[derivative(Default(value = "DEFAULT_CELL_BACKGROUND"))]
-            background: Color,
-            #[derivative(Default(value = "DEFAULT_CELL_FOREGROUND"))]
-            foreground: Color,
+            background: Option<Color>,
+            $($field: $ty),*
         }
         impl $cell {
             #[inline]
@@ -92,15 +83,17 @@ macro_rules! cell_render_struct {
 
             #[inline]
             pub fn background(mut self, background: Color) -> Self {
-                self.background = background;
+                self.background = Some(background);
                 self
             }
 
+            $(
             #[inline]
-            pub fn foreground(mut self, foreground: Color) -> Self {
-                self.foreground = foreground;
+            pub fn $field(mut self, $field: $ty) -> Self {
+                self.$field = $field;
                 self
             }
+            )*
 
             #[inline]
             pub fn build(self) -> Box<dyn CellRender> {
@@ -109,8 +102,10 @@ macro_rules! cell_render_struct {
                     border_style: self.border_style,
                     border_radius: self.border_radius,
                     background: self.background,
-                    foreground: self.foreground,
                     ty: CellRenderType::$render_type,
+                    $(
+                    $field: self.$field
+                    ),*
                 })
             }
         }
@@ -150,23 +145,13 @@ macro_rules! impl_cell_render_common {
         }
 
         #[inline]
-        fn background(&self) -> Color {
+        fn background(&self) -> Option<Color> {
             self.background
         }
 
         #[inline]
         fn set_background(&mut self, background: Color) {
-            self.background = background
-        }
-
-        #[inline]
-        fn foreground(&self) -> Color {
-            self.foreground
-        }
-
-        #[inline]
-        fn set_foreground(&mut self, foreground: Color) {
-            self.foreground = foreground
+            self.background = Some(background)
         }
 
         #[inline]
@@ -176,19 +161,55 @@ macro_rules! impl_cell_render_common {
     };
 }
 
-cell_render_struct!(TextCellRender, TextCellRenderBuilder, Text);
+cell_render_struct!(TextCellRender, TextCellRenderBuilder, Text, color:Color, letter_spacing:f32);
 cell_render_struct!(ImageCellRender, ImageCellRenderBuilder, Image);
 
 impl CellRender for TextCellRender {
     fn render(&self, painter: &mut Painter, geometry: Rect, val: &Value) {
+        painter.save();
+        painter.save_pen();
+        painter.clip_rect(geometry, ClipOp::Intersect);
+
+        painter.set_color(self.color);
+
+        if let Some(background) = self.background {
+            painter.fill_rect(geometry, background);
+        } 
+
+        let text = val.get::<String>();
+        let origin = geometry.top_left();
+        painter.draw_paragraph(&text, origin, self.letter_spacing, geometry.width() as f32, Some(1), true);
+
+        painter.restore_pen();
+        painter.restore();
     }
 
     impl_cell_render_common!();
 }
+impl TextCellRender {
+    #[inline]
+    pub fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
+
+    #[inline]
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
+    #[inline]
+    pub fn set_letter_spacing(&mut self, letter_spacing: f32) {
+        self.letter_spacing = letter_spacing;
+    }
+
+    #[inline]
+    pub fn letter_spacing(&self) -> f32 {
+        self.letter_spacing
+    }
+}
 
 impl CellRender for ImageCellRender {
-    fn render(&self, painter: &mut Painter, geometry: Rect, val: &Value) {
-    }
+    fn render(&self, painter: &mut Painter, geometry: Rect, val: &Value) {}
 
     impl_cell_render_common!();
 }

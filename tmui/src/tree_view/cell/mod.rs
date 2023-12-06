@@ -1,7 +1,7 @@
 pub mod cell_render;
 
 use crate::graphics::painter::Painter;
-use tlib::{figure::Rect, types::StaticType, values::ToValue, Type, Value};
+use tlib::{figure::{Rect, Color}, types::StaticType, values::ToValue, Type, Value};
 use self::cell_render::{CellRender, CellRenderType, CellRenderType::*};
 
 /// The data cell of a TreeNode, one TreeNode represents one row of an image, 

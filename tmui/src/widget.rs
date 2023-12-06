@@ -168,6 +168,11 @@ pub trait WidgetSignals: ActionExt {
         ///
         /// @param [`ReceiveCharacterEvent`]
         receive_character();
+
+        /// Emit when widget's background changed.
+        /// 
+        /// @param [`Color`]
+        background_changed();
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
@@ -1301,7 +1306,8 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_background(&mut self, color: Color) {
         self.set_rerender_styles(true);
-        self.background = color
+        self.background = color;
+        emit!(Widget::set_background => self.background_changed(), color);
     }
 
     #[inline]
@@ -1918,6 +1924,8 @@ pub trait WidgetImpl:
     fn on_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
+    /// 
+    /// The widget does not track mouse movement by default. If need, call function [`set_mouse_tracking`](WidgetExt::set_mouse_tracking)
     fn on_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.
