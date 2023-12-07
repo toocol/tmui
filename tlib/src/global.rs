@@ -132,6 +132,18 @@ macro_rules! impl_as_any {
         }
     };
 }
+impl_as_any!(i8);
+impl_as_any!(u8);
+impl_as_any!(i16);
+impl_as_any!(u16);
+impl_as_any!(i32);
+impl_as_any!(u32);
+impl_as_any!(i64);
+impl_as_any!(u64);
+impl_as_any!(i128);
+impl_as_any!(u128);
+impl_as_any!(f32);
+impl_as_any!(f64);
 impl_as_any!(String);
 
 #[macro_export]

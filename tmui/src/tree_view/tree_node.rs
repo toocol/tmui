@@ -4,23 +4,24 @@ use super::{
     tree_store::TreeStore,
     tree_view_object::TreeViewObject,
 };
-use crate::graphics::painter::Painter;
-use crate::prelude::*;
+use crate::{application::is_ui_thread, prelude::*};
+use crate::{graphics::painter::Painter, tree_view::tree_store::TreeStoreSignals};
 use log::warn;
-use std::ptr::NonNull;
+use std::{ptr::NonNull, sync::atomic::Ordering};
 use tlib::{
     figure::Rect,
     global::SemanticExt,
     nonnull_mut,
-    object::ObjectSubclass,
-    signals,
+    object::IdGenerator,
     types::StaticType,
     values::{FromValue, ToValue},
 };
 
-#[extends(Object)]
+static TREE_NODE_ID_INCREMENT: IdGenerator = IdGenerator::new(1);
+
 pub struct TreeNode {
-    pub(crate) store: Option<NonNull<TreeStore>>,
+    id: ObjectId,
+    pub(crate) store: ObjectId,
 
     parent: Option<NonNull<TreeNode>>,
     is_root: bool,
@@ -36,24 +37,31 @@ pub struct TreeNode {
     node_render: NodeRender,
 }
 
-pub trait TreeNodeSignals: ActionExt {
-    signals!(
-        TreeNode:
-
-        hover_changed();
-
-        selection_changed();
-    );
-}
-impl TreeNodeSignals for TreeNode {}
+/// Implement the [Send] trait to enable the creation of a TreeNode from another thread.
+unsafe impl Send for TreeNode {}
 
 impl TreeNode {
+    pub fn create(store_id: ObjectId, level: i32, obj: &dyn TreeViewObject) -> Box<TreeNode> {
+        let mut node = Self::create_from_obj(obj);
+
+        node.store = store_id;
+        node.level = level;
+
+        Box::new(node)
+    }
+
     pub fn add_node(&mut self, obj: &dyn TreeViewObject) -> Option<&mut TreeNode> {
         let mut node = Self::create_from_obj(obj);
 
-        node.store = self.store.clone();
+        node.store = self.store;
 
         self.add_node_inner(node.boxed())
+    }
+
+    pub fn add_node_directly(&mut self, mut node: Box<TreeNode>) -> Option<&mut TreeNode> {
+        node.store = self.store;
+
+        self.add_node_directly_inner(node)
     }
 
     pub fn remove(&mut self) {
@@ -119,6 +127,27 @@ impl TreeNode {
     }
 
     #[inline]
+    pub fn id(&self) -> ObjectId {
+        self.id
+    }
+
+    #[inline]
+    pub fn level(&self) -> i32 {
+        self.level
+    }
+
+    #[inline]
+    pub fn is_root(&self) -> bool {
+        self.is_root
+    }
+
+    #[inline]
+    pub fn notify_update(&self) {
+        let store = TreeStore::store_ref(self.store).unwrap();
+        emit!(store.notify_update())
+    }
+
+    #[inline]
     pub fn is_extensible(&self) -> bool {
         self.extensible
     }
@@ -150,8 +179,8 @@ impl TreeNode {
     #[inline]
     pub(crate) fn empty() -> Self {
         Self {
-            object: Object::default(),
-            store: None,
+            id: TREE_NODE_ID_INCREMENT.fetch_add(1, Ordering::Acquire),
+            store: 0,
             parent: None,
             is_root: true,
             extensible: true,
@@ -169,8 +198,8 @@ impl TreeNode {
     #[inline]
     pub(crate) fn create_from_obj(obj: &dyn TreeViewObject) -> Self {
         Self {
-            object: Object::default(),
-            store: None,
+            id: TREE_NODE_ID_INCREMENT.fetch_add(1, Ordering::Acquire),
+            store: 0,
             parent: None,
             is_root: false,
             extensible: obj.extensible(),
@@ -214,32 +243,67 @@ impl TreeNode {
             return None;
         }
 
-        debug_assert!(node.store.is_some());
+        debug_assert!(node.store != 0);
 
         node.parent = NonNull::new(self);
         node.idx = self.children.len();
         node.level = self.level + 1;
 
-        let store = nonnull_mut!(self.store);
+        let store = TreeStore::store_mut(self.store).unwrap();
         store.add_node_cache(&mut node);
 
-        let id = node.id();
-        self.children_id_holder.push(id);
-        self.notify_grand_child_add(id);
+        let id = node.id;
+        let ids = vec![id];
+
+        self.children_id_holder.extend_from_slice(&ids);
+        self.notify_grand_child_add(&ids);
 
         self.children.push(node);
+
+        if is_ui_thread() {
+            store.node_added(self, id, &ids);
+        }
 
         store.get_node_mut(id)
     }
 
-    pub(crate) fn notify_grand_child_add(&mut self, id: ObjectId) {
+    pub(crate) fn add_node_directly_inner(
+        &mut self,
+        mut node: Box<TreeNode>,
+    ) -> Option<&mut TreeNode> {
+        if !self.extensible {
+            return None;
+        }
+
+        debug_assert!(node.store != 0);
+
+        node.parent = NonNull::new(self);
+        node.idx = self.children.len();
+
+        let store = TreeStore::store_mut(self.store).unwrap();
+        store.add_node_cache(&mut node);
+
+        let id = node.id;
+        let mut ids = vec![id];
+        ids.extend_from_slice(&node.children_id_holder);
+
+        self.children_id_holder.extend_from_slice(&ids);
+        self.notify_grand_child_add(&ids);
+
+        self.children.push(node);
+
+        if is_ui_thread() {
+            store.node_added(self, id, &ids);
+        }
+
+        store.get_node_mut(id)
+    }
+
+    pub(crate) fn notify_grand_child_add(&mut self, id: &Vec<ObjectId>) {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
-            if parent.is_root {
-                return;
-            }
 
-            parent.children_id_holder.push(id);
+            parent.children_id_holder.extend_from_slice(id);
 
             parent.notify_grand_child_add(id);
         }
@@ -248,7 +312,8 @@ impl TreeNode {
     pub(crate) fn notify_grand_child_remove(&mut self, ids: Vec<ObjectId>) {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
-            if parent.is_root {
+
+            if parent.children_id_holder.len() == 0 {
                 return;
             }
 
@@ -276,9 +341,6 @@ impl TreeNode {
             return;
         }
         let parent = nonnull_mut!(self.parent);
-        if parent.is_root {
-            return;
-        }
 
         let mut idx = 0;
         for (i, c) in parent.children_id_holder.iter().enumerate() {
@@ -304,7 +366,9 @@ impl TreeNode {
             debug_assert!(parent.children.len() > self.idx);
             parent.children.remove(self.idx);
 
-            nonnull_mut!(self.store).remove_node_cache(self.id());
+            TreeStore::store_mut(self.store)
+                .unwrap()
+                .remove_node_cache(self.id());
 
             for (i, c) in parent.children.iter_mut().enumerate() {
                 c.idx = i;
@@ -316,26 +380,10 @@ impl TreeNode {
         }
     }
 
-    pub(crate) fn initialize_buffer(&mut self, buffer: &mut Vec<Option<NonNull<TreeNode>>>) {
-        if !self.is_root {
-            buffer.push(NonNull::new(self));
-        }
-        if self.expanded {
-            for c in self.children.iter_mut() {
-                c.initialize_buffer(buffer)
-            }
-        }
-    }
-
     pub(crate) fn set_status(&mut self, status: Status) {
         self.status = status
     }
 }
-
-impl ObjectSubclass for TreeNode {
-    const NAME: &'static str = "TreeViewNode";
-}
-impl ObjectImpl for TreeNode {}
 
 #[repr(u8)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

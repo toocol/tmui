@@ -4,7 +4,12 @@ use super::{
 };
 use crate::prelude::*;
 use log::warn;
-use std::{collections::HashMap, ptr::NonNull};
+use once_cell::sync::Lazy;
+use std::{
+    collections::HashMap,
+    ptr::NonNull,
+    sync::atomic::{AtomicPtr, Ordering},
+};
 use tlib::{
     global::SemanticExt,
     nonnull_mut, nonnull_ref,
@@ -14,7 +19,7 @@ use tlib::{
 
 #[extends(Object, ignore_default = true)]
 pub struct TreeStore {
-    root: TreeNode,
+    root: Box<TreeNode>,
 
     nodes_buffer: Vec<Option<NonNull<TreeNode>>>,
     nodes_cache: HashMap<ObjectId, Option<NonNull<TreeNode>>>,
@@ -45,6 +50,27 @@ impl Default for TreeStore {
 }
 
 impl TreeStore {
+    #[inline]
+    pub(crate) fn store_map() -> &'static mut HashMap<ObjectId, AtomicPtr<TreeStore>> {
+        static mut STORE_MAP: Lazy<HashMap<ObjectId, AtomicPtr<TreeStore>>> =
+            Lazy::new(|| HashMap::new());
+        unsafe { &mut STORE_MAP }
+    }
+
+    #[inline]
+    pub(crate) fn store_ref(id: ObjectId) -> Option<&'static TreeStore> {
+        Self::store_map()
+            .get(&id)
+            .and_then(|ptr| unsafe { ptr.load(Ordering::Acquire).as_ref() })
+    }
+
+    #[inline]
+    pub(crate) fn store_mut(id: ObjectId) -> Option<&'static mut TreeStore> {
+        Self::store_map()
+            .get(&id)
+            .and_then(|ptr| unsafe { ptr.load(Ordering::Acquire).as_mut() })
+    }
+
     /// add the child node to the node with the specified `parent_id`.
     ///
     /// if success, return the mutable reference of the child node.
@@ -57,7 +83,7 @@ impl TreeStore {
         if self.nodes_cache.contains_key(&parent_id) {
             let mut tree_node = TreeNode::create_from_obj(obj);
 
-            tree_node.store = NonNull::new(self);
+            tree_node.store = self.id();
 
             nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap())
                 .add_node_inner(tree_node.boxed())
@@ -83,12 +109,12 @@ impl TreeStore {
 
     #[inline]
     pub fn root(&self) -> &TreeNode {
-        &self.root
+        self.root.as_ref()
     }
 
     #[inline]
     pub fn root_mut(&mut self) -> &mut TreeNode {
-        &mut self.root
+        self.root.as_mut()
     }
 
     #[inline]
@@ -111,10 +137,10 @@ impl TreeStore {
     pub(crate) fn new() -> Self {
         let mut nodes_map = HashMap::new();
 
-        let mut root = TreeNode::empty();
-        nodes_map.insert(root.id(), NonNull::new(&mut root));
+        let mut root = Box::new(TreeNode::empty());
+        nodes_map.insert(root.id(), NonNull::new(root.as_mut()));
 
-        Self {
+        let mut store = Self {
             object: Default::default(),
             root,
             nodes_buffer: vec![],
@@ -123,7 +149,16 @@ impl TreeStore {
             current_line: 0,
             hovered_node: None,
             selected_node: None,
-        }
+        };
+
+        store.root_mut().store = store.id();
+
+        store
+    }
+
+    #[inline]
+    pub(crate) fn prepare_store(&mut self) {
+        Self::store_map().insert(self.id(), AtomicPtr::new(self));
     }
 
     #[inline]
@@ -134,15 +169,6 @@ impl TreeStore {
     #[inline]
     pub(crate) fn remove_node_cache(&mut self, id: ObjectId) {
         self.nodes_cache.remove(&id);
-    }
-
-    #[inline]
-    pub(crate) fn initialize_buffer(&mut self) {
-        let mut buffer = vec![];
-
-        self.root_mut().initialize_buffer(&mut buffer);
-
-        self.nodes_buffer = buffer;
     }
 
     #[inline]
@@ -160,9 +186,49 @@ impl TreeStore {
         end - start
     }
 
+    pub(crate) fn node_added(
+        &mut self,
+        node: &TreeNode,
+        child_id: ObjectId,
+        added: &Vec<ObjectId>,
+    ) {
+        if !self.root().get_children_ids().contains(&child_id) {
+            return;
+        }
+
+        let children = node.get_children_ids();
+        let mut anchor = 0;
+        for (i, n) in children.iter().enumerate() {
+            if *n == added[0] {
+                if i == 0 {
+                    anchor = children[0]
+                } else {
+                    anchor = children[i - 1]
+                }
+            }
+        }
+
+        let mut idx = 0;
+        for c in self.nodes_buffer.iter() {
+            idx += 1;
+            if nonnull_ref!(c).id() == anchor {
+                break;
+            }
+        }
+
+        let insert: Vec<Option<NonNull<TreeNode>>> = added
+            .iter()
+            .map(|id| *self.nodes_cache.get(id).unwrap())
+            .collect();
+
+        self.nodes_buffer.splice(idx..idx, insert);
+
+        emit!(self.notify_update_rect(), idx);
+    }
+
     pub(crate) fn node_expanded(&mut self, node: &TreeNode) {
         if !node.is_extensible() {
-            return
+            return;
         }
         let expanded = node.is_expanded();
         let children = node.get_children_ids();
@@ -187,6 +253,10 @@ impl TreeStore {
 
             start_idx = idx;
         } else {
+            if children.len() == 0 {
+                return;
+            }
+
             let mut idx = 0;
             for (i, c) in self.nodes_buffer.iter().enumerate() {
                 idx = i;
@@ -196,7 +266,7 @@ impl TreeStore {
                 }
             }
 
-            self.nodes_buffer.drain(idx..idx+children.len());
+            self.nodes_buffer.drain(idx..idx + children.len());
         }
 
         emit!(self.notify_update_rect(), start_idx);

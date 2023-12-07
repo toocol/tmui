@@ -11,9 +11,10 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
-static ID_INCREMENT: AtomicU32 = AtomicU32::new(1);
-
+pub type IdGenerator = AtomicU32;
 pub type ObjectId = u32;
+
+static ID_INCREMENT: IdGenerator = IdGenerator::new(1);
 
 /// Super type of object system, every subclass object should extends this struct by proc-marco `[extends_object]`,
 /// and impl `ObjectSubclass, ObjectImpl`

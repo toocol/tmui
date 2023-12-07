@@ -3,14 +3,17 @@ use crate::{
     prelude::*,
     scroll_bar::ScrollBar,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl, tree_view::tree_store::TreeStoreSignals,
+    tree_view::tree_store::TreeStoreSignals,
+    widget::WidgetImpl,
 };
 use std::ptr::NonNull;
 use tlib::{
+    connect,
+    events::MouseEvent,
     nonnull_ref, run_after,
     skia_safe::textlayout::{
         FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-    }, events::MouseEvent, connect,
+    },
 };
 
 const REPCHAR: &'static str = concat!(
@@ -40,7 +43,7 @@ impl ObjectImpl for TreeViewImage {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.store.root_mut().store = NonNull::new(self.store.as_mut())
+        self.store.prepare_store();
     }
 }
 
@@ -54,10 +57,15 @@ impl WidgetImpl for TreeViewImage {
 
         self.calculate_window_lines();
 
-        self.store.initialize_buffer();
+        // self.store.initialize_buffer();
 
         connect!(self.store, notify_update(), self, update());
-        connect!(self.store, notify_update_rect(), self, notify_update_rect(usize));
+        connect!(
+            self.store,
+            notify_update_rect(),
+            self,
+            notify_update_rect(usize)
+        );
     }
 
     fn paint(&mut self, mut painter: Painter) {
