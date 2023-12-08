@@ -70,7 +70,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         let field = task.field.as_ref().unwrap();
 
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            pub #field: Option<#task_name>
+                            #field: Option<#task_name>
                         })?);
                     }
 

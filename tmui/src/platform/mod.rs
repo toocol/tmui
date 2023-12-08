@@ -1,8 +1,8 @@
-pub(crate) mod platform_ipc;
-pub(crate) mod platform_macos;
-pub(crate) mod platform_wayland;
-pub(crate) mod platform_win32;
-pub(crate) mod platform_x11;
+pub(crate) mod windows;
+pub(crate) mod macos;
+pub(crate) mod ipc;
+pub(crate) mod linux;
+pub(crate) mod logic_window;
 
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
@@ -15,15 +15,15 @@ use crate::runtime::window_context::WindowContext;
 use tipc::RwLock;
 use tlib::{figure::Rect, winit::window::Window};
 
-pub(crate) use platform_ipc::*;
+pub(crate) use ipc::*;
 #[cfg(macos_platform)]
-pub(crate) use platform_macos::*;
+pub(crate) use macos::*;
 #[cfg(wayland_platform)]
-pub(crate) use platform_wayland::*;
+pub(crate) use linux::wayland::*;
 #[cfg(x11_platform)]
-pub(crate) use platform_x11::*;
+pub(crate) use linux::x11::*;
 #[cfg(windows_platform)]
-pub(crate) use platform_win32::*;
+pub(crate) use windows::*;
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -70,7 +70,7 @@ pub(crate) trait PlatformContext: 'static {
     fn set_input_sender(&mut self, input_sender: Sender<Message>);
 
     /// Get the `input_sender` to transfer user input.
-    fn input_sender(&self) -> &Sender<Message>;
+    // fn input_sender(&self) -> &Sender<Message>;
 
     /// Create the window and event loop of the specific platform.
     fn create_window(&mut self) -> WindowContext;
