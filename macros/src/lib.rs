@@ -1,6 +1,8 @@
 extern crate proc_macro;
 
 mod animation;
+mod async_task;
+mod r#async;
 mod cast;
 mod extend_attr;
 mod extend_container;
@@ -13,15 +15,14 @@ mod reflect_trait;
 mod scroll_area;
 mod split_pane;
 mod stack;
-mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
+use r#async::AsyncDoParser;
 use syn::{self, parse_macro_input, DeriveInput};
-use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
 
 /// Let struct to extend specific type.<br>
@@ -65,7 +66,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 &mut ast,
                 extend_attr.layout_meta.as_ref().unwrap(),
                 layout,
-                extend_attr.internal
+                extend_attr.internal,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
@@ -164,7 +165,12 @@ pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn tasync(input: TokenStream) -> TokenStream {
-    parse_macro_input!(input as AsyncTaskParser).expand().into()
+    parse_macro_input!(input as AsyncDoParser).expand().into()
+}
+
+#[proc_macro_attribute]
+pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
 }
 
 #[proc_macro]

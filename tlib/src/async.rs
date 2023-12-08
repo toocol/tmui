@@ -80,20 +80,3 @@ impl<'a> AsyncTask<'a> {
         self
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::{any::Any, ptr::NonNull, sync::atomic::AtomicPtr};
-    use tokio::task::JoinHandle;
-    use crate::{global::SemanticExt, prelude::AsAny};
-
-    struct Node {
-        parent: Option<NonNull<Node>>,
-    }
-    unsafe impl Send for Node {}
-
-    #[test]
-    fn test_async() {
-        let join = tokio::spawn(async { Node { parent: None } });
-    }
-}

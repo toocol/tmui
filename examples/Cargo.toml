@@ -19,6 +19,10 @@ name = "animation"
 path = "animation/main.rs"
 
 [[bin]]
+name = "async_task"
+path = "async_task/main.rs"
+
+[[bin]]
 name = "box_layout"
 path = "box_layout/main.rs"
 

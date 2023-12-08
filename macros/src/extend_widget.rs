@@ -1,4 +1,4 @@
-use crate::{animation, extend_element, extend_object, layout};
+use crate::{animation, extend_element, extend_object, layout, async_task::AsyncTask};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{
@@ -11,14 +11,21 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
     let mut run_after = false;
     let mut animation = false;
+    let mut is_async_task = false;
+    let mut async_task = None;
 
     for attr in ast.attrs.iter() {
         if let Some(attr_ident) = attr.path.get_ident() {
-            if attr_ident.to_string() == "run_after" {
-                run_after = true;
-            }
-            if attr_ident.to_string() == "animatable" {
-                animation = true;
+            let attr_str = attr_ident.to_string();
+
+            match attr_str.as_str() {
+                "run_after" => run_after = true,
+                "animatable" => animation = true,
+                "async_task" => {
+                    is_async_task = true;
+                    async_task = AsyncTask::parse_attr(attr);
+                }
+                _ => {}
             }
         }
     }
@@ -51,6 +58,19 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     if animation {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             pub animation: AnimationModel
+                        })?);
+                    }
+
+                    if is_async_task {
+                        if async_task.is_none() {
+                            return Err(syn::Error::new_spanned(ast, "proc_macro `async_task` format error."))
+                        }
+                        let task = async_task.as_ref().unwrap();
+                        let task_name = task.name.as_ref().unwrap();
+                        let field = task.field.as_ref().unwrap();
+
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            pub #field: Option<#task_name>
                         })?);
                     }
 
@@ -128,6 +148,12 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 None => proc_macro2::TokenStream::new(),
             };
 
+            let async_task_clause = if is_async_task {
+                async_task.as_ref().unwrap().expand(ast)?
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
             Ok(quote! {
                 #[derive(Derivative)]
                 #[derivative(Default)]
@@ -140,6 +166,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 #widget_trait_impl_clause
 
                 #animation_clause
+
+                #async_task_clause
 
                 impl WidgetAcquire for #name {}
 
