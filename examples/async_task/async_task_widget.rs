@@ -19,3 +19,10 @@ impl ObjectImpl for AsyncTaskWidget {
 }
 
 impl WidgetImpl for AsyncTaskWidget {}
+
+impl AsyncTaskWidget {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
+    }
+}

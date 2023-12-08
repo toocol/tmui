@@ -1,8 +1,7 @@
 use proc_macro2::Ident;
-use quote::{quote, ToTokens};
+use quote::quote;
 use syn::{
-    parse::{Parse, Parser},
-    Attribute, DeriveInput, Meta, MetaNameValue,
+    Attribute, DeriveInput, Meta, MetaList, MetaNameValue, NestedMeta,
 };
 
 pub(crate) struct AsyncTask {
@@ -21,34 +20,43 @@ impl AsyncTask {
             field: None,
         };
 
-        while let Ok(meta) = attr.parse_meta() {
+        if let Ok(meta) = attr.parse_meta() {
             match meta {
-                Meta::NameValue(MetaNameValue {
-                    ref path, ref lit, ..
-                }) => {
-                    let ident = path.get_ident().unwrap();
+                Meta::List(MetaList { nested, .. }) => {
+                    for meta in nested {
+                        match meta {
+                            NestedMeta::Meta(Meta::NameValue(MetaNameValue {
+                                ref path,
+                                ref lit,
+                                ..
+                            })) => {
+                                let ident = path.get_ident().unwrap();
 
-                    match ident.to_string().as_str() {
-                        "name" => match lit {
-                            syn::Lit::Str(lit) => {
-                                let name = lit.value();
-                                let ident = Ident::new(&name, lit.span());
-                                res.name = Some(ident);
-                                res.field = Some(Ident::new(&format!(
-                                    "task_{}",
-                                    to_snake_case(&name),
-                                ), lit.span()));
+                                match ident.to_string().as_str() {
+                                    "name" => match lit {
+                                        syn::Lit::Str(lit) => {
+                                            let name = lit.value();
+                                            let ident = Ident::new(&name, lit.span());
+                                            res.name = Some(ident);
+                                            res.field = Some(Ident::new(
+                                                &format!("task_{}", to_snake_case(&name),),
+                                                lit.span(),
+                                            ));
+                                        }
+                                        _ => return None,
+                                    },
+                                    "value" => match lit {
+                                        syn::Lit::Str(lit) => {
+                                            let ident = Ident::new(&lit.value(), lit.span());
+                                            res.value = Some(ident)
+                                        }
+                                        _ => return None,
+                                    },
+                                    _ => return None,
+                                }
                             }
                             _ => return None,
-                        },
-                        "value" => match lit {
-                            syn::Lit::Str(lit) => {
-                                let ident = Ident::new(&lit.value(), lit.span());
-                                res.value = Some(ident)
-                            }
-                            _ => return None,
-                        },
-                        _ => return None,
+                        }
                     }
                 }
                 _ => {}

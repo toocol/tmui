@@ -1,5 +1,6 @@
 mod async_task_widget;
 
+use async_task_widget::AsyncTaskWidget;
 use tmui::{
    prelude::*,
    application::Application,
@@ -21,4 +22,5 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
+    window.child(AsyncTaskWidget::new())
 }
