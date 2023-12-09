@@ -7,7 +7,7 @@ use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::{logic_window::LogicWindow, PlatformType},
+    platform::logic_window::LogicWindow,
     prelude::*,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
 };
@@ -20,14 +20,15 @@ use tlib::{
     timer::TimerHub,
 };
 
-pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
-    platform_type: PlatformType,
-    mut logic_window: LogicWindow<T, M>,
-    backend_type: BackendType,
-    on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-    on_user_event_receive: Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
-    on_request_receive: Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>,
-) {
+pub(crate) fn ui_runtime<T, M>(mut logic_window: LogicWindow<T, M>)
+where
+    T: 'static + Copy + Sync + Send,
+    M: 'static + Copy + Sync + Send,
+{
+    let on_activate = logic_window.on_activate.take();
+    let on_user_event_receive = logic_window.on_user_event_receive.take();
+    let on_request_receive = logic_window.on_request_receive.take();
+
     let context = logic_window.context.take().unwrap();
     let (input_receiver, output_sender) = (context.input_receiver.0, context.output_sender);
 
@@ -58,7 +59,7 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
 
     // Create the [`Backend`] based on the backend type specified by the user.
     let backend: Box<dyn Backend>;
-    match backend_type {
+    match logic_window.backend_type {
         BackendType::Raster => backend = RasterBackend::new(bitmap),
         BackendType::OpenGL => backend = OpenGLBackend::new(bitmap),
     }
@@ -66,7 +67,8 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     // Prepare ApplicationWindow env: Create the `Board`.
     let mut board = Box::new(Board::new(logic_window.bitmap(), backend));
 
-    let mut window = ApplicationWindow::new(platform_type, width as i32, height as i32);
+    let mut window =
+        ApplicationWindow::new(logic_window.platform_type, width as i32, height as i32);
     window.set_board(board.as_mut());
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());

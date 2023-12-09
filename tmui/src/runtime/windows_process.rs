@@ -3,7 +3,7 @@ use crate::{
     cursor::Cursor,
     platform::{
         ipc_window::IpcWindow,
-        physical_window::PhysicalWindow,
+        physical_window::{PhysWindow, PhysicalWindow},
     },
     primitive::{cpu_balance::CpuBalance, Message},
     runtime::{
@@ -19,10 +19,10 @@ use log::{debug, info};
 use once_cell::sync::Lazy;
 use std::{
     marker::PhantomData,
-    ops::DerefMut,
+    ops::{Add, DerefMut},
     sync::atomic::{AtomicBool, Ordering},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 use tipc::{ipc_event::IpcEvent, IpcNode};
 use tlib::{
@@ -34,6 +34,7 @@ use tlib::{
     prelude::SystemCursorShape,
     winit::{
         event::{ElementState, MouseScrollDelta},
+        event_loop::ControlFlow,
         keyboard::{Key, ModifiersState, PhysicalKey},
     },
 };
@@ -53,327 +54,344 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
     }
 
     pub fn process(&self, physical_window: PhysicalWindow<T, M>) {
-        let window = match physical_window {
+        match physical_window {
             PhysicalWindow::Ipc(window) => {
                 self.event_handle_ipc(window);
-                None
             }
 
             #[cfg(windows_platform)]
-            PhysicalWindow::Win32(window) => Some(window),
+            PhysicalWindow::Win32(window) => self.event_handle(window),
+        };
+    }
+
+    pub fn event_handle(&self, mut window: PhysWindow<T, M>) {
+        static mut RUNTIME_TRACK: Lazy<RuntimeTrack> = Lazy::new(|| RuntimeTrack::new());
+        let runtime_track = unsafe { RUNTIME_TRACK.deref_mut() };
+
+        let (winit_window, event_loop, input_sender) = match window.context.take().unwrap() {
+            PhysicalWindowContext::Default(a, b, c) => match b {
+                OutputReceiver::EventLoop(d) => (a, d, c.0),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
         };
 
-        if let Some(mut window) = window {
-            static mut RUNTIME_TRACK: Lazy<RuntimeTrack> = Lazy::new(|| RuntimeTrack::new());
-            let runtime_track = unsafe { RUNTIME_TRACK.deref_mut() };
+        event_loop
+            .run(move |event, target| {
+                // Adjusting CPU usage based on vsync signals.
+                if let Some(ins) = runtime_track.vsync_rec {
+                    if ins.elapsed().as_millis() >= 500 {
+                        if runtime_track.update_cnt < 15 {
+                            target.set_control_flow(ControlFlow::WaitUntil(
+                                Instant::now().add(Duration::from_millis(10)),
+                            ));
+                            runtime_track.vsync_rec = None;
+                        } else {
+                            target.set_control_flow(ControlFlow::Poll);
+                            runtime_track.vsync_rec = Some(Instant::now());
+                        }
+                        runtime_track.update_cnt = 0;
+                    }
+                } else {
+                    target.set_control_flow(ControlFlow::WaitUntil(
+                        Instant::now().add(Duration::from_millis(10)),
+                    ));
+                }
 
-            let (winit_window, event_loop, input_sender) = match window.context.take().unwrap() {
-                PhysicalWindowContext::Default(a, b, c) => {
-                    match b {
-                        OutputReceiver::EventLoop(d) => (a, d, c.0),
-                        _ => unreachable!(),
+                if let Some(master) = window.master.clone() {
+                    let mut user_events = vec![];
+                    for evt in master.read().try_recv_vec() {
+                        match evt {
+                            IpcEvent::VSync(ins) => {
+                                info!(
+                                    "Ipc vsync track: {}ms",
+                                    ins.elapsed().as_micros() as f64 / 1000.
+                                );
+                                window.request_redraw(&winit_window);
+                                if runtime_track.vsync_rec.is_none() {
+                                    runtime_track.vsync_rec = Some(Instant::now());
+                                }
+                                runtime_track.update_cnt += 1;
+                            }
+                            IpcEvent::SetCursorShape(cursor) => match cursor {
+                                SystemCursorShape::BlankCursor => {
+                                    winit_window.set_cursor_visible(false)
+                                }
+                                _ => {
+                                    winit_window.set_cursor_visible(true);
+                                    winit_window.set_cursor_icon(cursor.into())
+                                }
+                            },
+                            IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
+                            _ => {}
+                        }
+                    }
+                    if user_events.len() > 0 {
+                        if let Some(ref sender) = window.user_ipc_event_sender {
+                            sender.send(user_events).unwrap();
+                        }
                     }
                 }
-                _ => unreachable!(),
-            };
 
-            event_loop
-                .run(move |event, target| {
-                    if let Some(master) = window.master.clone() {
-                        let mut user_events = vec![];
-                        for evt in master.read().try_recv_vec() {
-                            match evt {
-                                IpcEvent::VSync(ins) => {
-                                    info!(
-                                        "Ipc vsync track: {}ms",
-                                        ins.elapsed().as_micros() as f64 / 1000.
-                                    );
-                                    window.request_redraw(&winit_window);
-                                    if runtime_track.vsync_rec.is_none() {
-                                        runtime_track.vsync_rec = Some(Instant::now());
-                                    }
-                                    runtime_track.update_cnt += 1;
-                                }
-                                IpcEvent::SetCursorShape(cursor) => match cursor {
-                                    SystemCursorShape::BlankCursor => {
-                                        winit_window.set_cursor_visible(false)
-                                    }
-                                    _ => {
-                                        winit_window.set_cursor_visible(true);
-                                        winit_window.set_cursor_icon(cursor.into())
-                                    }
-                                },
-                                IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                                _ => {}
-                            }
+                // let input_sender = platform_context.input_sender();
+                match event {
+                    // Window resized event.
+                    Event::WindowEvent {
+                        event: WindowEvent::Resized(size),
+                        ..
+                    } => {
+                        if !Application::<T, M>::is_app_started() {
+                            return;
                         }
-                        if user_events.len() > 0 {
-                            if let Some(ref sender) = window.user_ipc_event_sender {
-                                sender.send(user_events).unwrap();
-                            }
-                        }
+                        let evt = ResizeEvent::new(size.width as i32, size.height as i32);
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
                     }
 
-                    // let input_sender = platform_context.input_sender();
-                    match event {
-                        // Window resized event.
-                        Event::WindowEvent {
-                            event: WindowEvent::Resized(size),
-                            ..
-                        } => {
-                            if !Application::<T, M>::is_app_started() {
-                                return;
+                    // Window close event.
+                    Event::WindowEvent {
+                        event: WindowEvent::CloseRequested,
+                        ..
+                    } => {
+                        println!("The close button was pressed; stopping");
+                        if let Some(master) = window.master.clone() {
+                            let master_guard = master.read();
+                            master_guard.try_send(IpcEvent::Exit).unwrap();
+                            master_guard.wait();
+                        }
+                        target.exit()
+                    }
+
+                    // Window destroy event.
+                    Event::WindowEvent {
+                        event: WindowEvent::Destroyed,
+                        ..
+                    } => {}
+
+                    // Modifier change event.
+                    Event::WindowEvent {
+                        event: WindowEvent::ModifiersChanged(modifier),
+                        ..
+                    } => convert_modifier(&mut runtime_track.modifier, modifier.state()),
+
+                    // Mouse enter window event.
+                    Event::WindowEvent {
+                        event: WindowEvent::CursorEntered { .. },
+                        ..
+                    } => {}
+
+                    // Mouse leave window event.
+                    Event::WindowEvent {
+                        event: WindowEvent::CursorLeft { .. },
+                        ..
+                    } => {}
+
+                    // Mouse moved event.
+                    Event::WindowEvent {
+                        event: WindowEvent::CursorMoved { position, .. },
+                        ..
+                    } => {
+                        let evt = MouseEvent::new(
+                            EventType::MouseMove,
+                            (position.x as i32, position.y as i32),
+                            runtime_track.mouse_button_state(),
+                            runtime_track.modifier,
+                            0,
+                            Point::default(),
+                            DeltaType::default(),
+                        );
+
+                        let pos = evt.position();
+                        runtime_track.mouse_position = (pos.0, pos.1);
+                        Cursor::set_position(pos);
+
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
+
+                    // Mouse wheel event.
+                    Event::WindowEvent {
+                        event: WindowEvent::MouseWheel { delta, .. },
+                        ..
+                    } => {
+                        let (point, delta_type) = match delta {
+                            MouseScrollDelta::PixelDelta(pos) => {
+                                (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel)
                             }
-                            let evt = ResizeEvent::new(size.width as i32, size.height as i32);
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
-
-                        // Window close event.
-                        Event::WindowEvent {
-                            event: WindowEvent::CloseRequested,
-                            ..
-                        } => {
-                            println!("The close button was pressed; stopping");
-                            if let Some(master) = window.master.clone() {
-                                let master_guard = master.read();
-                                master_guard.try_send(IpcEvent::Exit).unwrap();
-                                master_guard.wait();
+                            MouseScrollDelta::LineDelta(x, y) => {
+                                (Point::new(x as i32, y as i32), DeltaType::Line)
                             }
-                            target.exit()
-                        }
+                        };
+                        let evt = MouseEvent::new(
+                            EventType::MouseWhell,
+                            (
+                                runtime_track.mouse_position.0,
+                                runtime_track.mouse_position.1,
+                            ),
+                            runtime_track.mouse_button_state(),
+                            runtime_track.modifier,
+                            0,
+                            point,
+                            delta_type,
+                        );
 
-                        // Window destroy event.
-                        Event::WindowEvent {
-                            event: WindowEvent::Destroyed,
-                            ..
-                        } => {}
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
 
-                        // Modifier change event.
-                        Event::WindowEvent {
-                            event: WindowEvent::ModifiersChanged(modifier),
-                            ..
-                        } => convert_modifier(&mut runtime_track.modifier, modifier.state()),
-
-                        // Mouse enter window event.
-                        Event::WindowEvent {
-                            event: WindowEvent::CursorEntered { .. },
-                            ..
-                        } => {}
-
-                        // Mouse leave window event.
-                        Event::WindowEvent {
-                            event: WindowEvent::CursorLeft { .. },
-                            ..
-                        } => {}
-
-                        // Mouse moved event.
-                        Event::WindowEvent {
-                            event: WindowEvent::CursorMoved { position, .. },
-                            ..
-                        } => {
-                            let evt = MouseEvent::new(
-                                EventType::MouseMove,
-                                (position.x as i32, position.y as i32),
-                                runtime_track.mouse_button_state(),
-                                runtime_track.modifier,
-                                0,
-                                Point::default(),
-                                DeltaType::default(),
-                            );
-
-                            let pos = evt.position();
-                            runtime_track.mouse_position = (pos.0, pos.1);
-                            Cursor::set_position(pos);
-
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
-
-                        // Mouse wheel event.
-                        Event::WindowEvent {
-                            event: WindowEvent::MouseWheel { delta, .. },
-                            ..
-                        } => {
-                            let (point, delta_type) = match delta {
-                                MouseScrollDelta::PixelDelta(pos) => {
-                                    (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel)
-                                }
-                                MouseScrollDelta::LineDelta(x, y) => {
-                                    (Point::new(x as i32, y as i32), DeltaType::Line)
-                                }
-                            };
-                            let evt = MouseEvent::new(
-                                EventType::MouseWhell,
-                                (
-                                    runtime_track.mouse_position.0,
-                                    runtime_track.mouse_position.1,
-                                ),
-                                runtime_track.mouse_button_state(),
-                                runtime_track.modifier,
-                                0,
-                                point,
-                                delta_type,
-                            );
-
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
-
-                        // Mouse pressed event.
-                        Event::WindowEvent {
-                            event:
-                                WindowEvent::MouseInput {
-                                    state: ElementState::Pressed,
-                                    button,
-                                    ..
-                                },
-                            ..
-                        } => {
-                            let mouse_button: MouseButton = button.into();
-                            runtime_track.receive_mouse_click(mouse_button);
-
-                            let evt = MouseEvent::new(
-                                EventType::MouseButtonPress,
-                                (
-                                    runtime_track.mouse_position.0,
-                                    runtime_track.mouse_position.1,
-                                ),
-                                mouse_button,
-                                runtime_track.modifier,
-                                runtime_track.click_count(),
-                                Point::default(),
-                                DeltaType::default(),
-                            );
-
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
-
-                        // Mouse release event.
-                        Event::WindowEvent {
-                            event:
-                                WindowEvent::MouseInput {
-                                    state: ElementState::Released,
-                                    button,
-                                    ..
-                                },
-                            ..
-                        } => {
-                            let button: MouseButton = button.into();
-                            runtime_track.receive_mouse_release(button);
-
-                            let evt = MouseEvent::new(
-                                EventType::MouseButtonRelease,
-                                (
-                                    runtime_track.mouse_position.0,
-                                    runtime_track.mouse_position.1,
-                                ),
+                    // Mouse pressed event.
+                    Event::WindowEvent {
+                        event:
+                            WindowEvent::MouseInput {
+                                state: ElementState::Pressed,
                                 button,
-                                runtime_track.modifier,
-                                1,
-                                Point::default(),
-                                DeltaType::default(),
-                            );
+                                ..
+                            },
+                        ..
+                    } => {
+                        let mouse_button: MouseButton = button.into();
+                        runtime_track.receive_mouse_click(mouse_button);
 
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
+                        let evt = MouseEvent::new(
+                            EventType::MouseButtonPress,
+                            (
+                                runtime_track.mouse_position.0,
+                                runtime_track.mouse_position.1,
+                            ),
+                            mouse_button,
+                            runtime_track.modifier,
+                            runtime_track.click_count(),
+                            Point::default(),
+                            DeltaType::default(),
+                        );
 
-                        // Key pressed event.
-                        Event::WindowEvent {
-                            event:
-                                WindowEvent::KeyboardInput {
-                                    event:
-                                        winit::event::KeyEvent {
-                                            physical_key,
-                                            logical_key,
-                                            state: ElementState::Pressed,
-                                            ..
-                                        },
-                                    ..
-                                },
-                            ..
-                        } => {
-                            let mut key_code = KeyCode::default();
-                            match physical_key {
-                                PhysicalKey::Code(physical_key) => key_code = physical_key.into(),
-                                _ => {}
-                            }
-                            let text = match logical_key {
-                                Key::Character(str) => to_static(str.to_string()),
-                                _ => "",
-                            };
-                            let evt = KeyEvent::new(
-                                EventType::KeyPress,
-                                key_code,
-                                runtime_track.modifier,
-                                text,
-                            );
-
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
-
-                        // Key released event.
-                        Event::WindowEvent {
-                            event:
-                                WindowEvent::KeyboardInput {
-                                    event:
-                                        winit::event::KeyEvent {
-                                            physical_key,
-                                            logical_key,
-                                            state: ElementState::Released,
-                                            ..
-                                        },
-                                    ..
-                                },
-                            ..
-                        } => {
-                            let mut key_code = KeyCode::default();
-                            match physical_key {
-                                PhysicalKey::Code(physical_key) => key_code = physical_key.into(),
-                                _ => {}
-                            }
-                            let text = match logical_key {
-                                Key::Character(str) => to_static(str.to_string()),
-                                _ => "",
-                            };
-                            let evt = KeyEvent::new(
-                                EventType::KeyRelease,
-                                key_code,
-                                runtime_track.modifier,
-                                text,
-                            );
-
-                            input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        }
-
-                        // VSync event.
-                        Event::UserEvent(Message::VSync(ins)) => {
-                            debug!(
-                                "vscyn track: {}ms",
-                                ins.elapsed().as_micros() as f64 / 1000.
-                            );
-                            window.request_redraw(&winit_window);
-                        }
-
-                        // SetCursorShape event.
-                        Event::UserEvent(Message::SetCursorShape(cursor)) => match cursor {
-                            SystemCursorShape::BlankCursor => winit_window.set_cursor_visible(false),
-                            _ => {
-                                winit_window.set_cursor_visible(true);
-                                winit_window.set_cursor_icon(cursor.into())
-                            }
-                        },
-
-                        // Redraw event.
-                        Event::WindowEvent {
-                            event: WindowEvent::RedrawRequested { .. },
-                            ..
-                        } => {
-                            window.redraw();
-                        }
-
-                        _ => (),
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
                     }
-                })
-                .unwrap();
-        }
+
+                    // Mouse release event.
+                    Event::WindowEvent {
+                        event:
+                            WindowEvent::MouseInput {
+                                state: ElementState::Released,
+                                button,
+                                ..
+                            },
+                        ..
+                    } => {
+                        let button: MouseButton = button.into();
+                        runtime_track.receive_mouse_release(button);
+
+                        let evt = MouseEvent::new(
+                            EventType::MouseButtonRelease,
+                            (
+                                runtime_track.mouse_position.0,
+                                runtime_track.mouse_position.1,
+                            ),
+                            button,
+                            runtime_track.modifier,
+                            1,
+                            Point::default(),
+                            DeltaType::default(),
+                        );
+
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
+
+                    // Key pressed event.
+                    Event::WindowEvent {
+                        event:
+                            WindowEvent::KeyboardInput {
+                                event:
+                                    winit::event::KeyEvent {
+                                        physical_key,
+                                        logical_key,
+                                        state: ElementState::Pressed,
+                                        ..
+                                    },
+                                ..
+                            },
+                        ..
+                    } => {
+                        let mut key_code = KeyCode::default();
+                        match physical_key {
+                            PhysicalKey::Code(physical_key) => key_code = physical_key.into(),
+                            _ => {}
+                        }
+                        let text = match logical_key {
+                            Key::Character(str) => to_static(str.to_string()),
+                            _ => "",
+                        };
+                        let evt = KeyEvent::new(
+                            EventType::KeyPress,
+                            key_code,
+                            runtime_track.modifier,
+                            text,
+                        );
+
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
+
+                    // Key released event.
+                    Event::WindowEvent {
+                        event:
+                            WindowEvent::KeyboardInput {
+                                event:
+                                    winit::event::KeyEvent {
+                                        physical_key,
+                                        logical_key,
+                                        state: ElementState::Released,
+                                        ..
+                                    },
+                                ..
+                            },
+                        ..
+                    } => {
+                        let mut key_code = KeyCode::default();
+                        match physical_key {
+                            PhysicalKey::Code(physical_key) => key_code = physical_key.into(),
+                            _ => {}
+                        }
+                        let text = match logical_key {
+                            Key::Character(str) => to_static(str.to_string()),
+                            _ => "",
+                        };
+                        let evt = KeyEvent::new(
+                            EventType::KeyRelease,
+                            key_code,
+                            runtime_track.modifier,
+                            text,
+                        );
+
+                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    }
+
+                    // VSync event.
+                    Event::UserEvent(Message::VSync(ins)) => {
+                        debug!(
+                            "vscyn track: {}ms",
+                            ins.elapsed().as_micros() as f64 / 1000.
+                        );
+                        window.request_redraw(&winit_window);
+                    }
+
+                    // SetCursorShape event.
+                    Event::UserEvent(Message::SetCursorShape(cursor)) => match cursor {
+                        SystemCursorShape::BlankCursor => winit_window.set_cursor_visible(false),
+                        _ => {
+                            winit_window.set_cursor_visible(true);
+                            winit_window.set_cursor_icon(cursor.into())
+                        }
+                    },
+
+                    // Redraw event.
+                    Event::WindowEvent {
+                        event: WindowEvent::RedrawRequested { .. },
+                        ..
+                    } => {
+                        window.redraw();
+                    }
+
+                    _ => (),
+                }
+            })
+            .unwrap();
     }
 
     pub fn event_handle_ipc(&self, window: IpcWindow<T, M>) {
@@ -435,6 +453,8 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
             }
             cpu_balance.sleep(false);
         }
+
+        window.slave.read().signal();
     }
 }
 

@@ -92,47 +92,36 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
     /// Start to run this application.
     pub fn run(&self) {
-        // let (input_sender, input_receiver) = channel::<Message>();
-
         let mut platform_mut = self.platform_context.borrow_mut();
         let platform_context = platform_mut.as_mut().unwrap();
 
-        let backend_type = self.backend_type;
+        // Create the window
+        let (mut logic_window, physical_window) = platform_context.create_window();
+
+        // Get the customize event handle functions.
         let on_activate = self.on_activate.borrow_mut().take();
-        *self.on_activate.borrow_mut() = None;
-
-        let (logic_window, physical_window) = platform_context.create_window();
-
-        // Ipc shared user events and request process function.
         let on_user_event_receive = self.on_user_event_receive.borrow_mut().take();
         let on_request_receive = self.on_request_receive.borrow_mut().take();
 
-        let platform_type = self.platform_type;
+        // Set the fields of logic windows.
+        logic_window.platform_type = self.platform_type;
+        logic_window.backend_type = self.backend_type;
+
+        logic_window.on_activate = on_activate;
+        logic_window.on_user_event_receive = on_user_event_receive;
+        logic_window.on_request_receive = on_request_receive;
 
         // Create the `UI` main thread.
         let join = thread::Builder::new()
             .name("tmui-main".to_string())
             .stack_size(self.ui_stack_size)
-            .spawn(move || {
-                ui_runtime::<T, M>(
-                    platform_type,
-                    logic_window,
-                    backend_type,
-                    on_activate,
-                    on_user_event_receive,
-                    on_request_receive,
-                )
-            })
+            .spawn(move || ui_runtime::<T, M>(logic_window))
             .unwrap();
 
         WindowsProcess::<T, M>::new().process(physical_window);
 
         APP_STOPPED.store(true, Ordering::SeqCst);
         join.join().unwrap();
-
-        if self.platform_type == PlatformType::Ipc {
-            platform_context.signal();
-        }
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>

@@ -172,20 +172,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             )),
         )
     }
-
-    #[inline]
-    fn wait(&self) {
-        if let Some(ref master) = self.master {
-            master.read().wait()
-        }
-    }
-
-    #[inline]
-    fn signal(&self) {
-        if let Some(ref master) = self.master {
-            master.read().signal()
-        }
-    }
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcMaster<T, M>

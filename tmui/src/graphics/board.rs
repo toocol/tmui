@@ -101,7 +101,7 @@ impl Board {
                 // when program was under cross process rendering.
                 let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
 
-                // The parent elements always at the end of `element_list`.
+                // The parent elements always at the begining of `element_list`.
                 // We should renderer the parent elements first.
                 for element in self.element_list.borrow_mut().iter_mut() {
                     let element = nonnull_mut!(element);

@@ -17,11 +17,6 @@ pub(crate) struct LogicWindowContext {
     pub input_receiver: InputReceiver,
 }
 
-// pub(crate) enum WindowContext {
-//     Default(Window, EventLoop<Message>, Option<OutputSender>),
-//     Ipc(OutputReceiver, Option<OutputSender>),
-// }
-
 pub(crate) enum OutputSender {
     EventLoopProxy(EventLoopProxy<Message>),
     Sender(Sender<Message>),

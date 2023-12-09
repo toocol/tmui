@@ -144,20 +144,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             )),
         )
     }
-
-    #[inline]
-    fn wait(&self) {
-        if let Some(ref slave) = self.slave {
-            slave.read().wait()
-        }
-    }
-
-    #[inline]
-    fn signal(&self) {
-        if let Some(ref slave) = self.slave {
-            slave.read().signal()
-        }
-    }
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>

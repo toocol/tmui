@@ -7,10 +7,10 @@ use tlib::ptr_ref;
 
 use crate::{
     primitive::{bitmap::Bitmap, shared_channel::SharedChannel},
-    runtime::window_context::LogicWindowContext,
+    runtime::window_context::LogicWindowContext, application_window::ApplicationWindow, backend::BackendType,
 };
 
-use super::ipc_bridge::{IpcBridge, IpcBridgeModel};
+use super::{ipc_bridge::{IpcBridge, IpcBridgeModel}, PlatformType};
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     bitmap: Arc<RwLock<Bitmap>>,
@@ -18,9 +18,16 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     shared_widget_id: Option<&'static str>,
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
 
+    pub platform_type: PlatformType,
+    pub backend_type: BackendType,
+
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     pub shared_channel: Option<SharedChannel<T, M>>,
     pub context: Option<LogicWindowContext>,
+
+    pub on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+    pub on_user_event_receive: Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
+    pub on_request_receive: Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>,
 }
 
 unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Send
@@ -39,9 +46,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             bitmap,
             shared_widget_id: None,
             slave: None,
+            platform_type: PlatformType::default(),
+            backend_type: BackendType::default(),
             master,
             shared_channel,
             context: Some(context),
+            on_activate: None,
+            on_user_event_receive: None,
+            on_request_receive: None,
         }
     }
 
@@ -56,9 +68,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             bitmap,
             shared_widget_id: Some(shared_widget_id),
             slave,
+            platform_type: PlatformType::default(),
+            backend_type: BackendType::default(),
             master: None,
             shared_channel,
             context: Some(context),
+            on_activate: None,
+            on_user_event_receive: None,
+            on_request_receive: None,
         }
     }
 

@@ -1,4 +1,4 @@
-pub(crate) mod windows;
+pub(crate) mod win32;
 pub(crate) mod macos;
 pub(crate) mod ipc;
 pub(crate) mod linux;
@@ -21,7 +21,7 @@ pub(crate) use linux::wayland::*;
 #[cfg(x11_platform)]
 pub(crate) use linux::x11::*;
 #[cfg(windows_platform)]
-pub(crate) use windows::*;
+pub(crate) use win32::*;
 
 use self::logic_window::LogicWindow;
 use self::physical_window::PhysicalWindow;
@@ -61,22 +61,6 @@ pub(crate) trait PlatformContext<T: 'static + Copy + Sync + Send, M: 'static + C
     /// Get current effective `Bitmap` of platform context.
     fn bitmap(&self) -> Arc<RwLock<Bitmap>>;
 
-    /// Set the `input_sender` to transfer user input.
-    // fn set_input_sender(&mut self, input_sender: Sender<Message>);
-
-    /// Get the `input_sender` to transfer user input.
-    // fn input_sender(&self) -> &Sender<Message>;
-
     /// Create the window and event loop of the specific platform.
     fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);
-
-    /// Only avalid on shared_memory was opened.
-    ///
-    /// wait until another process was invoke [`PlatformContext::signal`]
-    fn wait(&self);
-
-    /// Only avalid on shared_memory was opened.
-    ///
-    /// sginal the process which invoke [`PlatformContext::wait`] to carry on.
-    fn signal(&self);
 }
