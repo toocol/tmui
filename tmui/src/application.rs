@@ -11,17 +11,15 @@ use crate::{
     backend::BackendType,
     event_hints::event_hints,
     platform::{PlatformContext, PlatformIpc, PlatformType},
-    primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel, Message},
-    runtime::{ui_runtime, window_context::WindowContext},
+    primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
+    runtime::{ui_runtime, windows_process::WindowsProcess},
 };
 use std::{
     any::Any,
     cell::RefCell,
     marker::PhantomData,
-    ptr::null_mut,
     sync::{
-        atomic::{AtomicBool, AtomicPtr, Ordering},
-        mpsc::channel,
+        atomic::{AtomicBool, Ordering},
         Once,
     },
     thread,
@@ -38,8 +36,6 @@ pub const FRAME_INTERVAL: u128 = 16000;
 
 const INVALID_GENERIC_PARAM_ERROR: &'static str =
     "Invalid generic parameters, please use generic parameter defined on Application.";
-pub(crate) static PLATFORM_CONTEXT: AtomicPtr<Box<dyn PlatformContext>> =
-    AtomicPtr::new(null_mut());
 pub(crate) static APP_STARTED: AtomicBool = AtomicBool::new(false);
 pub(crate) static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 pub(crate) static IS_SHARED: AtomicBool = AtomicBool::new(false);
@@ -63,7 +59,7 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
     platform_type: PlatformType,
     backend_type: BackendType,
 
-    platform_context: RefCell<Option<Box<dyn PlatformContext>>>,
+    platform_context: RefCell<Option<Box<dyn PlatformContext<T, M>>>>,
 
     on_activate: RefCell<Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
     on_user_event_receive: RefCell<Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>>,
@@ -96,23 +92,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
     /// Start to run this application.
     pub fn run(&self) {
-        let (input_sender, input_receiver) = channel::<Message>();
+        // let (input_sender, input_receiver) = channel::<Message>();
 
         let mut platform_mut = self.platform_context.borrow_mut();
         let platform_context = platform_mut.as_mut().unwrap();
-        platform_context.set_input_sender(input_sender);
 
         let backend_type = self.backend_type;
         let on_activate = self.on_activate.borrow_mut().take();
         *self.on_activate.borrow_mut() = None;
 
-        let mut window_context = platform_context.create_window();
-        let output_sender = match window_context {
-            WindowContext::Ipc(.., ref mut output) => output.take().unwrap(),
-            WindowContext::Default(.., ref mut output) => output.take().unwrap(),
-        };
-
-        let shared_channel = self.shared_channel.borrow_mut().take();
+        let (logic_window, physical_window) = platform_context.create_window();
 
         // Ipc shared user events and request process function.
         let on_user_event_receive = self.on_user_event_receive.borrow_mut().take();
@@ -127,10 +116,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             .spawn(move || {
                 ui_runtime::<T, M>(
                     platform_type,
+                    logic_window,
                     backend_type,
-                    output_sender,
-                    input_receiver,
-                    shared_channel,
                     on_activate,
                     on_user_event_receive,
                     on_request_receive,
@@ -138,11 +125,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             })
             .unwrap();
 
-        platform_context.platform_main(window_context);
+        WindowsProcess::<T, M>::new().process(physical_window);
+
         APP_STOPPED.store(true, Ordering::SeqCst);
         join.join().unwrap();
 
-        PLATFORM_CONTEXT.store(null_mut(), Ordering::SeqCst);
         if self.platform_type == PlatformType::Ipc {
             platform_context.signal();
         }
@@ -242,9 +229,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         };
         self.platform_context = RefCell::new(Some(platform_context));
         self.shared_channel = RefCell::new(shared_channel);
-        let ptr =
-            self.platform_context.borrow_mut().as_mut().unwrap() as *mut Box<dyn PlatformContext>;
-        PLATFORM_CONTEXT.store(ptr, Ordering::SeqCst);
     }
 
     #[inline]

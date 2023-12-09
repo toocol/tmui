@@ -1,32 +1,34 @@
+pub(crate) mod ipc_bridge;
+pub(crate) mod ipc_window;
 
-use super::PlatformContext;
+use self::ipc_window::IpcWindow;
+
+use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext};
 use crate::{
     primitive::{
         bitmap::Bitmap,
         shared_channel::{self, SharedChannel},
         Message,
     },
-    runtime::{
-        window_context::{OutputSender, WindowContext},
-        window_process,
-    },
+    runtime::window_context::{
+            InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
+            PhysicalWindowContext,
+        },
 };
 use std::sync::{
     mpsc::{channel, Sender},
     Arc,
 };
 use tipc::{
-    ipc_slave::IpcSlave, lock_api::RwLockWriteGuard, IpcNode, RawRwLock, RwLock, WithIpcSlave,
+    ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave,
 };
-use tlib::{figure::Rect, ptr_ref};
+use tlib::figure::Rect;
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
     region: Rect,
 
     bitmap: Option<Arc<RwLock<Bitmap>>>,
-
-    input_sender: Option<Sender<Message>>,
 
     /// Shared memory ipc slave
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
@@ -43,7 +45,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
             title: title.to_string(),
             region,
             bitmap: None,
-            input_sender: None,
             slave: None,
             user_ipc_event_sender: None,
             shared_widget_id: None,
@@ -52,7 +53,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
 
     // Wrap trait `PlatfomContext` with [`Box`].
     #[inline]
-    pub fn wrap(self) -> Box<dyn PlatformContext> {
+    pub fn wrap(self) -> Box<dyn PlatformContext<T, M>> {
         Box::new(self)
     }
 
@@ -69,7 +70,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformIpc<T, M>
 {
     fn initialize(&mut self) {
@@ -106,65 +107,43 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn region(&self) -> Rect {
-        self.region
-    }
-
-    #[inline]
-    fn resize(&mut self, width: u32, height: u32) {
-        let bitmap = self.bitmap();
-        let mut guard = bitmap.write();
-        let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
-
-        let mut slave = self.slave.as_ref().unwrap().write();
-        let old_shmem = slave.resize(width, height);
-
-        self.region = slave
-            .region(self.shared_widget_id.unwrap())
-            .expect("The `SharedWidget` with id `{}` was not exist.");
-
-        guard.update_raw_pointer(
-            slave.buffer_raw_pointer(),
-            old_shmem,
-            slave.width(),
-            slave.height(),
-        )
-    }
-
-    #[inline]
     fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
         self.bitmap.as_ref().unwrap().clone()
     }
 
     #[inline]
-    fn set_input_sender(&mut self, input_sender: Sender<Message>) {
-        self.input_sender = Some(input_sender);
-    }
-
-    #[inline]
-    fn create_window(&mut self) -> WindowContext {
+    fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+        let (input_sender, input_receiver) = channel::<Message>();
         let (output_sender, output_receiver) = channel::<Message>();
-        WindowContext::Ipc(output_receiver, Some(OutputSender::Sender(output_sender)))
-    }
 
-    fn platform_main(&mut self, window_context: WindowContext) {
-        if let WindowContext::Ipc(output_receiver, _) = window_context {
-            window_process::WindowProcess::new().event_handle_ipc::<T, M>(
-                output_receiver,
+        // Create the shared channel
+        let (user_ipc_event_sender, user_ipc_event_receiver) = channel();
+        let shared_channel = shared_channel::slave_channel(
+            self.slave.as_ref().unwrap().clone(),
+            user_ipc_event_receiver,
+        );
+
+        (
+            LogicWindow::slave(
+                self.bitmap(),
+                self.shared_widget_id.unwrap(),
+                self.slave.clone(),
+                Some(shared_channel),
+                LogicWindowContext {
+                    output_sender: OutputSender::Sender(output_sender),
+                    input_receiver: InputReceiver(input_receiver),
+                },
+            ),
+            PhysicalWindow::Ipc(IpcWindow::new(
                 self.slave.as_ref().unwrap().clone(),
-                self.user_ipc_event_sender.take(),
-                self.input_sender.take().unwrap()
-            )
-        } else {
-            panic!("Invalid window context.")
-        }
+                PhysicalWindowContext::Ipc(
+                    OutputReceiver::Receiver(output_receiver),
+                    InputSender(input_sender),
+                ),
+                user_ipc_event_sender,
+            )),
+        )
     }
-
-    #[inline]
-    fn request_redraw(&mut self, _window: &tlib::winit::window::Window) {}
-
-    #[inline]
-    fn redraw(&mut self) {}
 
     #[inline]
     fn wait(&self) {
@@ -179,9 +158,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             slave.read().signal()
         }
     }
-
-    #[inline]
-    fn add_shared_region(&self, _: &'static str, _: Rect) {}
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> WithIpcSlave<T, M>

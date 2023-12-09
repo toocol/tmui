@@ -1,45 +1,38 @@
 pub(crate) mod runtime_track;
 pub(crate) mod window_context;
-pub(crate) mod window_process;
+pub(crate) mod windows_process;
 
-use self::window_context::OutputSender;
 use crate::{
-    application::{
-        Application, APP_STOPPED, FRAME_INTERVAL, IS_UI_MAIN_THREAD, PLATFORM_CONTEXT,
-        SHARED_CHANNEL,
-    },
+    application::{Application, APP_STOPPED, FRAME_INTERVAL, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
-    platform::PlatformType,
+    platform::{logic_window::LogicWindow, PlatformType},
     prelude::*,
-    primitive::{cpu_balance::CpuBalance, frame::Frame, shared_channel::SharedChannel, Message},
+    primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
 };
 use log::debug;
-use std::{
-    sync::{atomic::Ordering, mpsc::Receiver},
-    time::Instant,
-};
+use std::{sync::atomic::Ordering, time::Instant};
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
     payload::PayloadWeight,
-    ptr_mut,
     r#async::tokio_runtime,
     timer::TimerHub,
 };
 
 pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>(
     platform_type: PlatformType,
+    mut logic_window: LogicWindow<T, M>,
     backend_type: BackendType,
-    output_sender: OutputSender,
-    input_receiver: Receiver<Message>,
-    shared_channel: Option<SharedChannel<T, M>>,
     on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
     on_user_event_receive: Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
     on_request_receive: Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>,
 ) {
+    let context = logic_window.context.take().unwrap();
+    let (input_receiver, output_sender) = (context.input_receiver.0, context.output_sender);
+
     // Set up the ipc shared channel.
-    if let Some(shared_channel) = shared_channel {
+    if let Some(shared_channel) = logic_window.shared_channel.take() {
         SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
     }
 
@@ -49,8 +42,6 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     // Setup the tokio async runtime
     let _guard = tokio_runtime().enter();
 
-    let platform = ptr_mut!(PLATFORM_CONTEXT.load(Ordering::SeqCst));
-
     // Create and initialize the `ActionHub`.
     let mut action_hub = ActionHub::new();
     action_hub.initialize();
@@ -59,23 +50,26 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
     let mut timer_hub = TimerHub::new();
     timer_hub.initialize();
 
+    let bitmap = logic_window.bitmap();
+    let read_guard = bitmap.read();
+    let width = read_guard.width();
+    let height = read_guard.height();
+    drop(read_guard);
+
     // Create the [`Backend`] based on the backend type specified by the user.
     let backend: Box<dyn Backend>;
     match backend_type {
-        BackendType::Raster => backend = RasterBackend::new(platform.bitmap()),
-        BackendType::OpenGL => backend = OpenGLBackend::new(platform.bitmap()),
+        BackendType::Raster => backend = RasterBackend::new(bitmap),
+        BackendType::OpenGL => backend = OpenGLBackend::new(bitmap),
     }
 
     // Prepare ApplicationWindow env: Create the `Board`.
-    let mut board = Box::new(Board::new(platform.bitmap(), backend));
+    let mut board = Box::new(Board::new(logic_window.bitmap(), backend));
 
-    let mut window = ApplicationWindow::new(
-        platform_type,
-        platform.width() as i32,
-        platform.height() as i32,
-    );
+    let mut window = ApplicationWindow::new(platform_type, width as i32, height as i32);
     window.set_board(board.as_mut());
-    window.register_window(output_sender);
+    window.register_output(output_sender);
+    window.set_ipc_bridge(logic_window.create_ipc_bridge());
 
     if let Some(on_activate) = on_activate {
         on_activate(&mut window);
@@ -108,7 +102,7 @@ pub(crate) fn ui_runtime<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sy
 
         update = if elapsed.as_micros() >= FRAME_INTERVAL || Board::is_force_update() {
             if resized {
-                platform.resize(size_record.0, size_record.1);
+                logic_window.resize(size_record.0, size_record.1);
                 board.resize();
                 resized = false;
             }

@@ -1,9 +1,8 @@
 use lazy_static::lazy_static;
-use std::sync::atomic::Ordering;
 use tlib::connect;
 
 use crate::{
-    application::{self, PLATFORM_CONTEXT},
+    application,
     platform::PlatformType,
     prelude::*,
     tlib::{
@@ -61,8 +60,10 @@ impl WidgetImpl for SharedWidget {
         }
         self.parent_run_after();
 
-        let platform_context = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
-        platform_context.add_shared_region(self.shared_id(), self.rect());
+        self.window()
+            .ipc_bridge()
+            .unwrap()
+            .add_shared_region(self.shared_id(), self.rect());
     }
 }
 
@@ -89,8 +90,10 @@ impl SharedWidgetExt for SharedWidget {
 impl SharedWidget {
     #[inline]
     fn on_geometry_changed(&self, _: Rect) {
-        let platform_context = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
-        platform_context.add_shared_region(self.shared_id(), self.rect());
+        self.window()
+            .ipc_bridge()
+            .unwrap()
+            .add_shared_region(self.shared_id(), self.rect());
     }
 
     #[inline]

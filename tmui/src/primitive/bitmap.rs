@@ -71,6 +71,8 @@ pub(crate) enum Bitmap {
     },
 }
 
+unsafe impl Send for Bitmap {}
+
 impl Bitmap {
     /// Constructer to create the `Bitmap`.
     #[inline]

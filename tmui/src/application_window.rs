@@ -1,8 +1,10 @@
 use crate::{
-    application::PLATFORM_CONTEXT,
     graphics::{board::Board, element::HierachyZ},
     layout::LayoutManager,
-    platform::PlatformType,
+    platform::{
+        ipc_bridge::IpcBridge,
+        PlatformType,
+    },
     prelude::*,
     primitive::Message,
     runtime::window_context::OutputSender,
@@ -14,7 +16,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     ptr::NonNull,
-    sync::{atomic::Ordering, Once},
+    sync::Once,
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -35,6 +37,8 @@ static INIT: Once = Once::new();
 #[extends(Widget)]
 pub struct ApplicationWindow {
     platform_type: PlatformType,
+    ipc_bridge: Option<Box<dyn IpcBridge>>,
+
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
@@ -67,9 +71,7 @@ impl ObjectImpl for ApplicationWindow {
         emit!(ApplicationWindow::initialize => self.size_changed(), self.size());
 
         if self.platform_type == PlatformType::Ipc {
-            let platform_context =
-                unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
-            self.base_offset = platform_context.region().top_left();
+            self.base_offset = self.ipc_bridge.as_ref().unwrap().region().top_left();
         }
 
         self.set_initialized(true);
@@ -184,6 +186,16 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_ipc_bridge(&mut self, ipc_bridge: Option<Box<dyn IpcBridge>>) {
+        self.ipc_bridge = ipc_bridge
+    }
+
+    #[inline]
+    pub(crate) fn ipc_bridge(&self) -> Option<&Box<dyn IpcBridge>> {
+        self.ipc_bridge.as_ref()
+    }
+
+    #[inline]
     pub fn high_load_request(&mut self, high_load: bool) {
         self.high_load_request = high_load
     }
@@ -239,7 +251,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn register_window(&mut self, sender: OutputSender) {
+    pub(crate) fn register_output(&mut self, sender: OutputSender) {
         self.output_sender = Some(sender)
     }
 

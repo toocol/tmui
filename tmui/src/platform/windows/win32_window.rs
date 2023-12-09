@@ -1,19 +1,39 @@
 #![cfg(windows_platform)]
-use std::{ffi::c_void, mem::size_of, sync::Arc};
-use tipc::RwLock;
+use crate::{primitive::bitmap::Bitmap, runtime::window_context::PhysicalWindowContext};
+use std::{
+    ffi::c_void,
+    mem::size_of,
+    sync::{mpsc::Sender, Arc},
+};
+use tipc::{RwLock, ipc_master::IpcMaster};
 use tlib::winit::window::Window;
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
-use crate::primitive::bitmap::Bitmap;
-pub struct PhysicalWindow {
+pub(crate) struct Win32Window<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {
     hwnd: HWND,
     bitmap: Arc<RwLock<Bitmap>>,
+
+    pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
+    pub context: Option<PhysicalWindowContext>,
+    pub user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
-impl PhysicalWindow {
+impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Window<T, M> {
     #[inline]
-    pub fn new(hwnd: HWND, bitmap: Arc<RwLock<Bitmap>>) -> Self {
-        Self { hwnd, bitmap }
+    pub fn new(
+        hwnd: HWND,
+        bitmap: Arc<RwLock<Bitmap>>,
+        master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
+        context: PhysicalWindowContext,
+        user_ipc_event_sender: Option<Sender<Vec<T>>>,
+    ) -> Self {
+        Self {
+            hwnd,
+            bitmap,
+            master,
+            context: Some(context),
+            user_ipc_event_sender,
+        }
     }
 
     /// Request to redraw the window.
