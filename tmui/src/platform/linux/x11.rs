@@ -40,11 +40,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformX
     pub fn wrap(self) -> Box<dyn PlatformContext> {
         Box::new(self)
     }
-
-    #[inline]
-    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
-        todo!()
-    }
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext

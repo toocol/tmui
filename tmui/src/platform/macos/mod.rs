@@ -80,13 +80,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
     pub fn wrap(self) -> Box<dyn PlatformContext> {
         Box::new(self)
     }
-
-    #[inline]
-    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
-        let (sender, receiver) = channel();
-        self.user_ipc_event_sender = Some(sender);
-        shared_channel::master_channel(self.master.as_ref().unwrap().clone(), receiver)
-    }
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext

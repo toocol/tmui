@@ -18,17 +18,12 @@ use crate::{
 use crate::{
     primitive::{
         bitmap::Bitmap,
-        shared_channel::{self, SharedChannel},
+        shared_channel::{self},
     },
     runtime::window_context::OutputSender,
 };
-use std::sync::{
-        mpsc::{channel, Sender},
-        Arc,
-    };
-use tipc::{
-    ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster,
-};
+use std::sync::{mpsc::channel, Arc};
+use tipc::{ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster};
 use tlib::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::Win32::Foundation::HWND;
 
@@ -44,7 +39,6 @@ pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Co
 
     /// Shared memory ipc
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
-    user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformWin32<T, M> {
@@ -57,7 +51,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
             bitmap: None,
             hwnd: None,
             master: None,
-            user_ipc_event_sender: None,
         }
     }
 
@@ -65,13 +58,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
     #[inline]
     pub fn wrap(self) -> Box<dyn PlatformContext<T, M>> {
         Box::new(self)
-    }
-
-    #[inline]
-    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
-        let (sender, receiver) = channel();
-        self.user_ipc_event_sender = Some(sender);
-        shared_channel::master_channel(self.master.as_ref().unwrap().clone(), receiver)
     }
 }
 

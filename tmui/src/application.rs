@@ -68,7 +68,6 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
 
     shared_mem_name: Option<&'static str>,
     shared_widget_id: Option<&'static str>,
-    shared_channel: RefCell<Option<SharedChannel<T, M>>>,
 }
 
 impl Application<(), ()> {
@@ -153,7 +152,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let width = self.width;
         let height = self.height;
         let title = &self.title;
-        let mut shared_channel = None;
         // Create the [`PlatformContext`] based on the platform type specified by the user.
         let platform_context = match self.platform_type {
             PlatformType::Ipc => {
@@ -167,7 +165,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.set_shared_widget_id(shared_widget_id);
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
-                shared_channel = Some(platform_context.shared_channel());
 
                 // Ipc slave app's size was determined by the main program:
                 self.width = platform_context.width();
@@ -180,7 +177,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, self.width, self.height);
-                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -190,7 +186,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let mut platform_context = PlatformX11::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, width, height);
-                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -200,7 +195,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let mut platform_context = PlatformWayland::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, width, height);
-                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -210,14 +204,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name, width, height);
-                    shared_channel = Some(platform_context.shared_channel());
                 }
                 platform_context.initialize();
                 platform_context.wrap()
             }
         };
         self.platform_context = RefCell::new(Some(platform_context));
-        self.shared_channel = RefCell::new(shared_channel);
     }
 
     #[inline]
@@ -394,7 +386,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             on_activate: Default::default(),
             shared_mem_name: Default::default(),
             shared_widget_id: Default::default(),
-            shared_channel: Default::default(),
             on_user_event_receive: Default::default(),
             on_request_receive: Default::default(),
         };

@@ -7,7 +7,7 @@ use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, Platform
 use crate::{
     primitive::{
         bitmap::Bitmap,
-        shared_channel::{self, SharedChannel},
+        shared_channel::{self},
         Message,
     },
     runtime::window_context::{
@@ -16,7 +16,7 @@ use crate::{
         },
 };
 use std::sync::{
-    mpsc::{channel, Sender},
+    mpsc::channel,
     Arc,
 };
 use tipc::{
@@ -32,7 +32,6 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
 
     /// Shared memory ipc slave
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
-    user_ipc_event_sender: Option<Sender<Vec<T>>>,
 
     shared_widget_id: Option<&'static str>,
 }
@@ -46,7 +45,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
             region,
             bitmap: None,
             slave: None,
-            user_ipc_event_sender: None,
             shared_widget_id: None,
         }
     }
@@ -55,13 +53,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
     #[inline]
     pub fn wrap(self) -> Box<dyn PlatformContext<T, M>> {
         Box::new(self)
-    }
-
-    #[inline]
-    pub fn shared_channel(&mut self) -> SharedChannel<T, M> {
-        let (sender, receiver) = channel();
-        self.user_ipc_event_sender = Some(sender);
-        shared_channel::slave_channel(self.slave.as_ref().unwrap().clone(), receiver)
     }
 
     #[inline]
