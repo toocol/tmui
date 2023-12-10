@@ -83,12 +83,49 @@ impl AsyncTask {
                     struct #task {
                         join_handler: Option<tlib::tokio::task::JoinHandle<#value>>,
                         timer: Box<tlib::timer::Timer>,
+                        then: Option<Box<dyn FnOnce(#value)>>,
                     }
 
                     impl ObjectSubclass for #task {
                         const NAME: &'static str = "AsyncTask";
                     }
                     impl ObjectImpl for #task {}
+
+                    impl #task {
+                        #[inline]
+                        pub fn new(join: tlib::tokio::task::JoinHandle<#value>) -> Box<Self> {
+                            let mut task = Box::new(Self {
+                                object: Default::default(),
+                                join_handler: Some(join),
+                                timer: tlib::timer::Timer::new(),
+                                then: None,
+                            });
+
+                            tlib::connect!(task.timer, timeout(), task, check());
+                            task.timer.start(std::time::Duration::from_millis(1));
+
+                            task
+                        }
+
+                        #[inline]
+                        pub fn then<F: FnOnce(#value) + 'static>(mut self: Box<Self>, then: F) -> Box<Self> {
+                            self.then = Some(Box::new(then));
+                            self
+                        }
+
+                        pub fn check(&mut self) {
+                            let join_handler = self.join_handler.as_mut().unwrap();
+                            if join_handler.is_finished() {
+                                self.timer.disconnect_all();
+                                self.timer.stop();
+
+                                let result = tokio_runtime().block_on(join_handler).unwrap();
+                                if let Some(then) = self.then.take() {
+                                    then(result);
+                                }
+                            }
+                        }
+                    }
                 ))
             }
             _ => {

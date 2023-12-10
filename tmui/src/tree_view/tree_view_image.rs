@@ -66,6 +66,7 @@ impl WidgetImpl for TreeViewImage {
             self,
             notify_update_rect(usize)
         );
+        connect!(self, size_changed(), self, when_size_changed(Size));
     }
 
     fn paint(&mut self, mut painter: Painter) {
@@ -168,6 +169,11 @@ impl TreeViewImage {
 }
 
 impl TreeViewImage {
+    #[inline]
+    pub(crate) fn when_size_changed(&mut self, _size: Size) {
+        self.calculate_window_lines()
+    }
+
     #[inline]
     pub(crate) fn calculate_window_lines(&mut self) {
         let size = self.size();
