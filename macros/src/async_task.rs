@@ -6,6 +6,7 @@ use syn::{
 
 pub(crate) struct AsyncTask {
     pub(crate) name: Option<Ident>,
+    pub(crate) name_snake: Option<Ident>,
 
     pub(crate) value: Option<Ident>,
 
@@ -16,6 +17,7 @@ impl AsyncTask {
     pub(crate) fn parse_attr(attr: &Attribute) -> Option<Self> {
         let mut res = Self {
             name: None,
+            name_snake: None,
             value: None,
             field: None,
         };
@@ -38,8 +40,12 @@ impl AsyncTask {
                                             let name = lit.value();
                                             let ident = Ident::new(&name, lit.span());
                                             res.name = Some(ident);
+
+                                            let snake_name = to_snake_case(&name);
+
+                                            res.name_snake = Some(Ident::new(&snake_name, lit.span()));
                                             res.field = Some(Ident::new(
-                                                &format!("task_{}", to_snake_case(&name),),
+                                                &format!("task_{}", snake_name),
                                                 lit.span(),
                                             ));
                                         }
@@ -73,6 +79,9 @@ impl AsyncTask {
                 "`async_task` should have both attribute `name` and `value` defined.",
             ));
         }
+
+        let widget = &ast.ident;
+
         match &ast.data {
             syn::Data::Struct(..) => {
                 let task = self.name.as_ref().unwrap();
@@ -83,7 +92,8 @@ impl AsyncTask {
                     struct #task {
                         join_handler: Option<tlib::tokio::task::JoinHandle<#value>>,
                         timer: Box<tlib::timer::Timer>,
-                        then: Option<Box<dyn FnOnce(#value)>>,
+                        then: Option<Box<dyn FnOnce(&'static mut #widget, #value)>>,
+                        widget: Option<std::ptr::NonNull<#widget>>,
                     }
 
                     impl ObjectSubclass for #task {
@@ -93,12 +103,13 @@ impl AsyncTask {
 
                     impl #task {
                         #[inline]
-                        pub fn new(join: tlib::tokio::task::JoinHandle<#value>) -> Box<Self> {
+                        pub fn new(widget: &mut #widget, join: tlib::tokio::task::JoinHandle<#value>) -> Box<Self> {
                             let mut task = Box::new(Self {
                                 object: Default::default(),
                                 join_handler: Some(join),
                                 timer: tlib::timer::Timer::new(),
                                 then: None,
+                                widget: std::ptr::NonNull::new(widget),
                             });
 
                             tlib::connect!(task.timer, timeout(), task, check());
@@ -108,7 +119,7 @@ impl AsyncTask {
                         }
 
                         #[inline]
-                        pub fn then<F: FnOnce(#value) + 'static>(mut self: Box<Self>, then: F) -> Box<Self> {
+                        pub fn then<F: FnOnce(&'static mut #widget, #value) + 'static>(mut self: Box<Self>, then: F) -> Box<Self> {
                             self.then = Some(Box::new(then));
                             self
                         }
@@ -119,9 +130,9 @@ impl AsyncTask {
                                 self.timer.disconnect_all();
                                 self.timer.stop();
 
-                                let result = tokio_runtime().block_on(join_handler).unwrap();
+                                let result = tlib::r#async::tokio_runtime().block_on(join_handler).unwrap();
                                 if let Some(then) = self.then.take() {
-                                    then(result);
+                                    then(tlib::nonnull_mut!(self.widget), result);
                                 }
                             }
                         }
@@ -135,6 +146,35 @@ impl AsyncTask {
                 ))
             }
         }
+    }
+
+    pub(crate) fn expand_method(&self, ast: &DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+        if self.name.is_none() || self.value.is_none() {
+            return Err(syn::Error::new_spanned(
+                ast,
+                "`async_task` should have both attribute `name` and `value` defined.",
+            ));
+        }
+        let widget = &ast.ident;
+        let name = self.name.as_ref().unwrap();
+        let name_snake = self.name_snake.as_ref().unwrap();
+        let value = self.value.as_ref().unwrap();
+        let field = self.field.as_ref().unwrap();
+
+        Ok(quote!(
+            fn #name_snake<F, T>(&mut self, future: F, then: Option<T>)
+            where
+                F: std::future::Future<Output = #value> + Send + 'static,
+                T: FnOnce(&'static mut #widget, #value) + 'static,
+            {
+                let join = tlib::tokio::spawn(future);
+                let mut task = #name::new(self, join);
+                if let Some(then) = then {
+                    task = task.then(then);
+                }
+                self.#field = Some(task);
+            }
+        ))
     }
 }
 

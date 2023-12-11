@@ -1,6 +1,6 @@
-use std::time::Duration;
 use lazy_static::lazy_static;
 use log::debug;
+use std::time::Duration;
 use tlib::{
     connect, disconnect,
     object::{ObjectImpl, ObjectSubclass},
@@ -53,6 +53,6 @@ impl TestWidget {
         self.set_background(COLORS[self.idx]);
         self.update();
 
-        tasync!({ debug!("timeout async") });
+        async_do!({ debug!("timeout async") });
     }
 }

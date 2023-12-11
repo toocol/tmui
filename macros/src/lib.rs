@@ -1,8 +1,8 @@
 extern crate proc_macro;
 
 mod animation;
+mod async_do;
 mod async_task;
-mod r#async;
 mod cast;
 mod extend_attr;
 mod extend_container;
@@ -21,7 +21,7 @@ use cast::CastInfo;
 use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use r#async::AsyncDoParser;
+use async_do::AsyncDoParser;
 use syn::{self, parse_macro_input, DeriveInput};
 use trait_info::TraitInfo;
 
@@ -164,7 +164,7 @@ pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// });
 /// ```
 #[proc_macro]
-pub fn tasync(input: TokenStream) -> TokenStream {
+pub fn async_do(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as AsyncDoParser).expand().into()
 }
 

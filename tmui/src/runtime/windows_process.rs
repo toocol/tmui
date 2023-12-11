@@ -16,10 +16,9 @@ use crate::{
     },
 };
 use log::{debug, info};
-use once_cell::sync::Lazy;
 use std::{
     marker::PhantomData,
-    ops::{Add, DerefMut},
+    ops::Add,
     sync::atomic::{AtomicBool, Ordering},
     thread,
     time::{Duration, Instant},
@@ -65,8 +64,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
     }
 
     pub fn event_handle(&self, mut window: PhysWindow<T, M>) {
-        static mut RUNTIME_TRACK: Lazy<RuntimeTrack> = Lazy::new(|| RuntimeTrack::new());
-        let runtime_track = unsafe { RUNTIME_TRACK.deref_mut() };
+        let mut runtime_track = RuntimeTrack::new();
 
         let (winit_window, event_loop, input_sender) = match window.context.take().unwrap() {
             PhysicalWindowContext::Default(a, b, c) => match b {

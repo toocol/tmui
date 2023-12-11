@@ -1,4 +1,4 @@
-use crate::{animation, extend_element, extend_object, layout, async_task::AsyncTask};
+use crate::{animation, async_task::AsyncTask, extend_element, extend_object, layout};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{
@@ -12,7 +12,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
     let mut run_after = false;
     let mut animation = false;
     let mut is_async_task = false;
-    let mut async_task = None;
+    let mut async_tasks = vec![];
 
     for attr in ast.attrs.iter() {
         if let Some(attr_ident) = attr.path.get_ident() {
@@ -23,7 +23,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 "animatable" => animation = true,
                 "async_task" => {
                     is_async_task = true;
-                    async_task = AsyncTask::parse_attr(attr);
+                    async_tasks.push(AsyncTask::parse_attr(attr));
                 }
                 _ => {}
             }
@@ -62,16 +62,21 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     }
 
                     if is_async_task {
-                        if async_task.is_none() {
-                            return Err(syn::Error::new_spanned(ast, "proc_macro `async_task` format error."))
-                        }
-                        let task = async_task.as_ref().unwrap();
-                        let task_name = task.name.as_ref().unwrap();
-                        let field = task.field.as_ref().unwrap();
+                        for async_task in async_tasks.iter() {
+                            if async_task.is_none() {
+                                return Err(syn::Error::new_spanned(
+                                    ast,
+                                    "proc_macro `async_task` format error.",
+                                ));
+                            }
+                            let task = async_task.as_ref().unwrap();
+                            let task_name = task.name.as_ref().unwrap();
+                            let field = task.field.as_ref().unwrap();
 
-                        fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            #field: Option<#task_name>
-                        })?);
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #field: Option<Box<#task_name>>
+                            })?);
+                        }
                     }
 
                     // If field with attribute `#[child]`,
@@ -149,7 +154,21 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             };
 
             let async_task_clause = if is_async_task {
-                async_task.as_ref().unwrap().expand(ast)?
+                let mut clause = proc_macro2::TokenStream::new();
+                for async_task in async_tasks.iter() {
+                    clause.extend(async_task.as_ref().unwrap().expand(ast)?)
+                }
+                clause
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let async_method_clause = if is_async_task {
+                let mut clause = proc_macro2::TokenStream::new();
+                for async_task in async_tasks.iter() {
+                    clause.extend(async_task.as_ref().unwrap().expand_method(ast)?)
+                }
+                clause
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -200,6 +219,10 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     fn point_effective(&self, point: &Point) -> bool {
                         self.widget.point_effective(point)
                     }
+                }
+
+                impl #name {
+                    #async_method_clause
                 }
             })
         }
