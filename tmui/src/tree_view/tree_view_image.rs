@@ -10,7 +10,7 @@ use std::ptr::NonNull;
 use tlib::{
     connect,
     events::MouseEvent,
-    nonnull_ref, run_after,
+    nonnull_mut, nonnull_ref, run_after,
     skia_safe::textlayout::{
         FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
     },
@@ -57,14 +57,24 @@ impl WidgetImpl for TreeViewImage {
 
         self.calculate_window_lines();
 
-        // self.store.initialize_buffer();
-
         connect!(self.store, notify_update(), self, update());
         connect!(
             self.store,
             notify_update_rect(),
             self,
             notify_update_rect(usize)
+        );
+        connect!(
+            self.store,
+            buffer_len_changed(),
+            self,
+            when_nodes_buffer_changed(usize)
+        );
+        connect!(
+            nonnull_mut!(self.scroll_bar),
+            value_changed(),
+            self,
+            scroll_bar_value_changed(i32)
         );
         connect!(self, size_changed(), self, when_size_changed(Size));
     }
@@ -125,6 +135,12 @@ impl WidgetImpl for TreeViewImage {
     }
 
     fn on_mouse_move(&mut self, event: &MouseEvent) {
+        let scroll_bar = nonnull_mut!(self.scroll_bar);
+        if scroll_bar.slider_pressed() {
+            scroll_bar.on_mouse_move(event);
+            return;
+        }
+
         let (_, y) = event.position();
         let idx = self.index_node(y);
 
@@ -136,6 +152,10 @@ impl WidgetImpl for TreeViewImage {
         let idx = self.index_node(y);
 
         self.store.click_node(idx);
+    }
+
+    fn on_mouse_wheel(&mut self, event: &MouseEvent) {
+        nonnull_mut!(self.scroll_bar).on_mouse_wheel(event)
     }
 }
 
@@ -178,7 +198,11 @@ impl TreeViewImage {
     pub(crate) fn calculate_window_lines(&mut self) {
         let size = self.size();
         let window_lines = size.height() / (self.line_height + self.line_spacing);
-        self.store.set_window_lines(window_lines)
+        self.store.set_window_lines(window_lines);
+
+        let scroll_bar = nonnull_mut!(self.scroll_bar);
+        scroll_bar.set_single_step(1);
+        scroll_bar.set_page_step(window_lines);
     }
 
     #[inline]
@@ -191,6 +215,11 @@ impl TreeViewImage {
         let size = self.size();
         let x = 0;
         let y = start_idx as i32 * (self.line_height + self.line_spacing);
+
+        if y >= size.height() {
+            return;
+        }
+
         let width = size.width();
         let height = size.height() - y as i32;
 
@@ -198,6 +227,18 @@ impl TreeViewImage {
 
         if rect.is_valid() {
             self.update_rect(rect)
+        }
+    }
+
+    pub(crate) fn when_nodes_buffer_changed(&mut self, buffer_len: usize) {
+        let scroll_bar = nonnull_mut!(self.scroll_bar);
+
+        scroll_bar.set_range(0, buffer_len as i32 - self.store.get_window_lines());
+    }
+
+    pub(crate) fn scroll_bar_value_changed(&mut self, value: i32) {
+        if self.store.scroll_to(value) {
+            self.update()
         }
     }
 }

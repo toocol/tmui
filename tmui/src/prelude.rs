@@ -9,6 +9,7 @@ pub use crate::container::{
     ContainerScaleCalculate, ReflectContainerImpl, StaticContainerScaleCalculate, SizeUnifiedAdjust, ReflectSizeUnifiedAdjust
 };
 pub use crate::graphics::board::Board;
+pub use crate::graphics::border::Border;
 pub use crate::graphics::painter::Painter;
 pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::render_difference::{ChildContainerDiffRender, ReflectChildContainerDiffRender};

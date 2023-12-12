@@ -1,13 +1,10 @@
 use crate::{
     graphics::{board::Board, element::HierachyZ},
     layout::LayoutManager,
-    platform::{
-        ipc_bridge::IpcBridge,
-        PlatformType,
-    },
+    platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
     primitive::Message,
-    runtime::window_context::OutputSender,
+    runtime::{wed, window_context::OutputSender},
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
 };
 use log::debug;
@@ -21,7 +18,7 @@ use std::{
 };
 use tlib::{
     connect, emit,
-    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
+    events::Event,
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
@@ -47,6 +44,8 @@ pub struct ApplicationWindow {
     base_offset: Point,
 
     focused_widget: ObjectId,
+    pressed_widget: ObjectId,
+    mouse_over_widget: Option<NonNull<dyn WidgetImpl>>,
     high_load_request: bool,
 }
 
@@ -64,6 +63,8 @@ impl ObjectImpl for ApplicationWindow {
     fn initialize(&mut self) {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
         debug!("Initialize-phase start.");
+
+        Self::widgets_of(self.id()).insert(self.name(), NonNull::new(self));
 
         connect!(self, size_changed(), self, when_size_change(Size));
         let window_id = self.id();
@@ -221,6 +222,26 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_pressed_widget(&mut self, id: ObjectId) {
+        self.pressed_widget = id
+    }
+
+    #[inline]
+    pub(crate) fn pressed_widget(&self) -> ObjectId {
+        self.pressed_widget
+    }
+
+    #[inline]
+    pub(crate) fn mouse_over_widget(&self) -> Option<NonNull<dyn WidgetImpl>> {
+        self.mouse_over_widget
+    }
+
+    #[inline]
+    pub(crate) fn set_mouse_over_widget(&mut self, widget: Option<NonNull<dyn WidgetImpl>>) {
+        self.mouse_over_widget = widget
+    }
+
+    #[inline]
     pub fn platform_type(&self) -> PlatformType {
         self.platform_type
     }
@@ -269,166 +290,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn dispatch_event(&mut self, evt: Event) -> Option<Event> {
-        let mut event: Option<Event> = None;
-        match evt.event_type() {
-            // Window Resize.
-            EventType::Resize => {
-                let evt = downcast_event::<ResizeEvent>(evt).unwrap();
-                self.resize(Some(evt.width()), Some(evt.height()));
-                event = Some(evt);
-            }
-
-            // Mouse pressed.
-            EventType::MouseButtonPress => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-                let pos = evt.position().into();
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.point_effective(&pos) {
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.inner_mouse_pressed(evt.as_ref());
-                        widget.on_mouse_pressed(evt.as_ref());
-
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // Mouse released.
-            EventType::MouseButtonRelease => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-                let pos = evt.position().into();
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.point_effective(&pos) {
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.inner_mouse_released(evt.as_ref());
-                        widget.on_mouse_released(evt.as_ref());
-
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // Mouse moved.
-            EventType::MouseMove => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-                let pos = evt.position().into();
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.point_effective(&evt.position().into()) {
-                        if !widget.mouse_tracking() {
-                            break;
-                        }
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.inner_mouse_move(evt.as_ref());
-                        widget.on_mouse_move(evt.as_ref());
-
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // Mouse wheeled.
-            EventType::MouseWhell => {
-                let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-                let pos = evt.position().into();
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.point_effective(&evt.position().into()) {
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
-                        widget.inner_mouse_wheel(evt.as_ref());
-                        widget.on_mouse_wheel(evt.as_ref());
-
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            EventType::MouseEnter => event = Some(evt),
-
-            EventType::MouseLeave => event = Some(evt),
-
-            // Key pressed.
-            EventType::KeyPress => {
-                let evt = downcast_event::<KeyEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.id() == self.focused_widget {
-                        widget.inner_key_pressed(&evt);
-                        widget.on_key_pressed(&evt);
-
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // Key released.
-            EventType::KeyRelease => {
-                let evt = downcast_event::<KeyEvent>(evt).unwrap();
-                let widgets_map = Self::widgets_of(self.id());
-
-                for (_name, widget_opt) in widgets_map.iter_mut() {
-                    let widget = nonnull_mut!(widget_opt);
-
-                    if widget.id() == self.focused_widget {
-                        widget.inner_key_released(&evt);
-                        widget.on_key_released(&evt);
-
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            EventType::FocusIn => event = Some(evt),
-            EventType::FocusOut => event = Some(evt),
-            EventType::Moved => {}
-            EventType::DroppedFile => {}
-            EventType::HoveredFile => {}
-            EventType::HoveredFileCancelled => {}
-            EventType::ReceivedCharacter => {}
-            EventType::InputMethod => {}
-            EventType::None => {}
-        }
-
-        event
+        wed::win_evt_dispatch(self, evt)
     }
 
     /// Should set the parent of widget before use this function.

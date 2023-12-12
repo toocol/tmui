@@ -218,16 +218,18 @@ impl TreeNode {
     pub(crate) fn render_node(
         &self,
         painter: &mut Painter,
-        mut geometry: Rect,
+        geometry: Rect,
         background: Color,
         ident_length: i32,
     ) {
+        let mut geometry: FRect = geometry.into();
+
         self.node_render
             .render(painter, geometry, background, self.status);
 
         let tl = geometry.top_left();
-        geometry.set_x(tl.x() + ident_length * self.level);
-        geometry.set_width(geometry.width() - ident_length * self.level);
+        geometry.set_x(tl.x() + (ident_length * self.level) as f32);
+        geometry.set_width(geometry.width() - (ident_length * self.level) as f32);
         for cell in self.cells.iter() {
             cell.render_cell(painter, geometry);
         }

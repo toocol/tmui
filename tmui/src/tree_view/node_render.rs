@@ -1,15 +1,14 @@
+use crate::graphics::{border::Border, painter::Painter};
 use derivative::Derivative;
 use tlib::{
-    figure::{Color, Rect},
-    skia_safe::ClipOp,
+    figure::{Color, FRect},
+    skia_safe::ClipOp, namespace::BorderStyle,
 };
-use crate::graphics::painter::Painter;
 
 use super::tree_node::Status;
 
 const DEFAULT_SELECTION: Color = Color::from_rgb(51, 167, 255);
 const DEFAULT_HOVER: Color = Color::from_rgb(190, 190, 190);
-
 
 #[derive(Derivative)]
 #[derivative(Default)]
@@ -18,8 +17,7 @@ pub struct NodeRender {
     selection_color: Color,
     #[derivative(Default(value = "DEFAULT_HOVER"))]
     hover_color: Color,
-    border: (f32, f32, f32, f32),
-    border_radius: f32,
+    pub(crate) border: Border,
 }
 
 impl NodeRender {
@@ -30,7 +28,13 @@ impl NodeRender {
 }
 
 impl NodeRender {
-    pub(crate) fn render(&self, painter: &mut Painter, geometry: Rect, background: Color, status: Status) {
+    pub(crate) fn render(
+        &self,
+        painter: &mut Painter,
+        mut geometry: FRect,
+        background: Color,
+        status: Status,
+    ) {
         painter.save();
         painter.clip_rect(geometry, ClipOp::Intersect);
 
@@ -40,7 +44,20 @@ impl NodeRender {
             Status::Hovered => self.hover_color,
         };
 
-        painter.fill_rect(geometry, background);
+        if self.border.border_radius > 0. {
+            painter.fill_rect(geometry, background)
+        } else {
+            painter.fill_round_rect(geometry, self.border.border_radius, background)
+        }
+
+        let (top, right, bottom, left) = self.border.width;
+
+        geometry.set_x(geometry.x() + left);
+        geometry.set_y(geometry.y() + top );
+        geometry.set_width(geometry.width() - left - right);
+        geometry.set_height(geometry.height() - top - bottom);
+
+        self.border.render(painter, geometry);
 
         painter.restore();
     }
@@ -53,8 +70,7 @@ pub struct NodeRenderBuilder {
     selection_color: Color,
     #[derivative(Default(value = "DEFAULT_HOVER"))]
     hover_color: Color,
-    border: (f32, f32, f32, f32),
-    border_radius: f32,
+    border: Border,
 }
 
 impl NodeRenderBuilder {
@@ -71,14 +87,74 @@ impl NodeRenderBuilder {
     }
 
     #[inline]
-    pub fn border(mut self, border: (f32, f32, f32, f32)) -> Self {
-        self.border = border;
+    pub fn border_style(mut self, style: BorderStyle) -> Self {
+        self.border.style = style;
+        self
+    }
+
+    #[inline]
+    pub fn border(mut self, border: f32) -> Self {
+        self.border.width = (border, border, border, border);
+        self
+    }
+
+    #[inline]
+    pub fn border_top(mut self, border: f32) -> Self {
+        self.border.width.0 = border;
+        self
+    }
+
+    #[inline]
+    pub fn border_right(mut self, border: f32) -> Self {
+        self.border.width.1 = border;
+        self
+    }
+
+    #[inline]
+    pub fn border_bottom(mut self, border: f32) -> Self {
+        self.border.width.2 = border;
+        self
+    }
+
+    #[inline]
+    pub fn border_left(mut self, border: f32) -> Self {
+        self.border.width.3 = border;
+        self
+    }
+
+    #[inline]
+    pub fn border_color(mut self, border_color: Color) -> Self {
+        self.border.border_color = (border_color, border_color, border_color, border_color);
+        self
+    }
+
+    #[inline]
+    pub fn border_top_color(mut self, border_color: Color) -> Self {
+        self.border.border_color.0 = border_color;
+        self
+    }
+
+    #[inline]
+    pub fn border_right_color(mut self, border_color: Color) -> Self {
+        self.border.border_color.1 = border_color;
+        self
+    }
+
+    #[inline]
+    pub fn border_bottom_color(mut self, border_color: Color) -> Self {
+        self.border.border_color.2 = border_color;
+        self
+    }
+
+    #[inline]
+    pub fn border_left_color(mut self, border_color: Color) -> Self {
+        self.border.border_color.3 = border_color;
         self
     }
 
     #[inline]
     pub fn border_radius(mut self, radius: f32) -> Self {
-        self.border_radius = radius;
+        self.border.border_radius = radius;
         self
     }
 
@@ -88,7 +164,6 @@ impl NodeRenderBuilder {
             selection_color: self.selection_color,
             hover_color: self.hover_color,
             border: self.border,
-            border_radius: self.border_radius,
         }
     }
 }

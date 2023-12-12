@@ -242,12 +242,33 @@ impl<'a> Painter<'a> {
     pub fn fill_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
         self.paint
-            .set_style(crate::skia_safe::PaintStyle::StrokeAndFill);
+            .set_style(crate::skia_safe::PaintStyle::Fill);
 
         let mut rect: crate::skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        if let Some(color) = self.color {
+            self.paint.set_color(color);
+        }
+    }
+
+    #[inline]
+    pub fn fill_round_rect<T: Into<crate::skia_safe::Rect>>(
+        &mut self,
+        rect: T,
+        border_radius: f32,
+        color: Color,
+    ) {
+        self.paint.set_color(color);
+        self.paint
+            .set_style(crate::skia_safe::PaintStyle::Fill);
+
+        let mut rect: crate::skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
+        self.canvas.draw_rrect(rrect, &self.paint);
         if let Some(color) = self.color {
             self.paint.set_color(color);
         }
@@ -263,6 +284,24 @@ impl<'a> Painter<'a> {
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
+    }
+
+    /// Strike the specified rect with border radius and offset.
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_round_rect<T: Into<crate::skia_safe::Rect>>(
+        &mut self,
+        rect: T,
+        border_radius: f32,
+    ) {
+        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
+        let mut rect: crate::skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
+        self.canvas.draw_rrect(rrect, &self.paint);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 

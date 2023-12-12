@@ -627,6 +627,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn border_ref(&self) -> &Border {
+                self.#(#widget_path).*.border_ref()
+            }
+
+            #[inline]
             fn set_borders(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
                 self.#(#widget_path).*.set_borders(top, right, bottom, left)
             }
@@ -642,7 +647,27 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn borders(&self) -> [f32; 4] {
+            fn set_border_top_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_top_color(color)
+            }
+
+            #[inline]
+            fn set_border_right_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_right_color(color)
+            }
+
+            #[inline]
+            fn set_border_bottom_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_bottom_color(color)
+            }
+
+            #[inline]
+            fn set_border_left_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_left_color(color)
+            }
+
+            #[inline]
+            fn borders(&self) -> (f32, f32, f32, f32) {
                 self.#(#widget_path).*.borders()
             }
 
@@ -652,7 +677,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn border_color(&self) -> Color {
+            fn border_color(&self) -> (Color, Color, Color, Color) {
                 self.#(#widget_path).*.border_color()
             }
 
@@ -789,6 +814,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn set_repaint_when_resize(&mut self, repaint: bool) {
                 self.#(#widget_path).*.set_repaint_when_resize(repaint)
+            }
+
+            #[inline]
+            fn is_pressed(&self) -> bool {
+                self.#(#widget_path).*.is_pressed()
             }
         }
 

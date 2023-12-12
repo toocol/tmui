@@ -3,7 +3,7 @@ use crate::graphics::painter::Painter;
 use derivative::Derivative;
 use std::fmt::Debug;
 use tlib::{
-    figure::{Color, Rect},
+    figure::{Color, FRect},
     namespace::BorderStyle,
     Value, skia_safe::ClipOp,
 };
@@ -15,7 +15,7 @@ pub enum CellRenderType {
 }
 
 pub trait CellRender: Debug {
-    fn render(&self, painter: &mut Painter, geometry: Rect, val: &Value);
+    fn render(&self, painter: &mut Painter, geometry: FRect, val: &Value);
 
     fn border(&self) -> (f32, f32, f32, f32);
 
@@ -165,7 +165,7 @@ cell_render_struct!(TextCellRender, TextCellRenderBuilder, Text, color:Color, le
 cell_render_struct!(ImageCellRender, ImageCellRenderBuilder, Image);
 
 impl CellRender for TextCellRender {
-    fn render(&self, painter: &mut Painter, geometry: Rect, val: &Value) {
+    fn render(&self, painter: &mut Painter, geometry: FRect, val: &Value) {
         painter.save();
         painter.save_pen();
         painter.clip_rect(geometry, ClipOp::Intersect);
@@ -209,7 +209,7 @@ impl TextCellRender {
 }
 
 impl CellRender for ImageCellRender {
-    fn render(&self, painter: &mut Painter, geometry: Rect, val: &Value) {}
+    fn render(&self, _painter: &mut Painter, _geometry: FRect, _val: &Value) {}
 
     impl_cell_render_common!();
 }

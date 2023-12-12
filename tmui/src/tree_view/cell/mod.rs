@@ -1,8 +1,8 @@
 pub mod cell_render;
 
-use crate::graphics::painter::Painter;
-use tlib::{figure::Rect, types::StaticType, values::ToValue, Type, Value};
 use self::cell_render::{CellRender, CellRenderType, CellRenderType::*};
+use crate::graphics::painter::Painter;
+use tlib::{figure::FRect, types::StaticType, values::ToValue, Type, Value};
 
 /// The data cell of a TreeNode, one TreeNode represents one row of an image, 
 /// and one Cell corresponds to one column of the image.
@@ -26,7 +26,7 @@ pub enum Cell {
 }
 
 impl Cell {
-    pub(crate) fn render_cell(&self, painter: &mut Painter, geometry: Rect) {
+    pub(crate) fn render_cell(&self, painter: &mut Painter, geometry: FRect) {
         match self {
             Self::String { val, render, .. } => {
                 render.render(painter, geometry, val);

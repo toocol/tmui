@@ -17,6 +17,8 @@ use tmui::{
     widget::{WidgetImpl, WidgetImplExt},
 };
 
+const DATA_SIZE: i32 = 100;
+
 #[extends(Widget)]
 #[derive(Childable)]
 pub struct TreeViewHolder {
@@ -58,7 +60,7 @@ impl ObjectImpl for TreeViewHolder {
             }
 
             if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
-                for i in 0..300000 {
+                for i in 0..DATA_SIZE {
                     let content = format!("sub_content_{}", i);
                     group2.add_node(&Content { val: content });
                 }
@@ -70,7 +72,7 @@ impl ObjectImpl for TreeViewHolder {
             }
 
             if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
-                for i in 0..300000 {
+                for i in 0..DATA_SIZE {
                     let content = format!("sub_content_{}", i);
                     group3.add_node(&Content { val: content });
                 }
@@ -189,7 +191,13 @@ impl TreeViewObject for Group {
 
     #[inline]
     fn node_render(&self) -> NodeRender {
-        NodeRender::default()
+        NodeRender::builder()
+            .border_style(BorderStyle::Dotted)
+            .border_top(2.)
+            .border_right(2.)
+            .border_bottom(2.)
+            .border_left(2.)
+            .build()
     }
 }
 

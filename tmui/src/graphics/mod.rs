@@ -1,4 +1,5 @@
 pub mod board;
+pub mod border;
 pub mod drawing_context;
 pub mod element;
 pub mod painter;

@@ -53,6 +53,12 @@ impl Rect {
     }
 
     #[inline]
+    pub fn set_point(&mut self, point: &Point) {
+        self.x = point.x();
+        self.y = point.y();
+    }
+
+    #[inline]
     pub fn point(&self) -> Point {
         Point::new(self.x, self.y)
     }
@@ -631,6 +637,12 @@ impl FRect {
     }
 
     #[inline]
+    pub fn set_point(&mut self, point: &FPoint) {
+        self.x = point.x();
+        self.y = point.y();
+    }
+
+    #[inline]
     pub fn point(&self) -> FPoint {
         FPoint::new(self.x, self.y)
     }
@@ -1174,6 +1186,12 @@ impl AtomicRect {
             self.width.load(Ordering::Acquire),
             self.height.load(Ordering::Acquire),
         )
+    }
+
+    #[inline]
+    pub fn set_point(&mut self, point: &Point) {
+        self.x.store(point.x(), Ordering::Release);
+        self.y.store(point.y(), Ordering::Release);
     }
 
     #[inline]

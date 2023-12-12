@@ -39,6 +39,8 @@ impl WidgetImpl for SkiaPaint {
 
         self.draw_layer(&mut painter);
 
+        self.draw_round_rect(&mut painter);
+
         println!("cnt: {}", painter.save_count());
     }
 }
@@ -206,5 +208,9 @@ impl SkiaPaint {
         painter.fill_rect(rect, Color::RED);
         painter.clear(Color::TRANSPARENT);
         painter.restore();
+    }
+
+    fn draw_round_rect(&mut self, painter: &mut Painter) {
+        painter.fill_round_rect(Rect::new(600, 0, 100, 40), 10., Color::CYAN);
     }
 }

@@ -1,6 +1,7 @@
 pub(crate) mod runtime_track;
 pub(crate) mod window_context;
 pub(crate) mod windows_process;
+pub(crate) mod wed;
 
 use crate::{
     application::{Application, APP_STOPPED, FRAME_INTERVAL, IS_UI_MAIN_THREAD, SHARED_CHANNEL},

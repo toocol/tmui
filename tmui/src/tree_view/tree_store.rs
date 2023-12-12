@@ -38,6 +38,8 @@ pub trait TreeStoreSignals: ActionExt {
         notify_update();
 
         notify_update_rect();
+
+        buffer_len_changed();
     );
 }
 impl TreeStoreSignals for TreeStore {}
@@ -223,6 +225,7 @@ impl TreeStore {
 
         self.nodes_buffer.splice(idx..idx, insert);
 
+        emit!(self.buffer_len_changed(), self.nodes_buffer.len());
         emit!(self.notify_update_rect(), idx);
     }
 
@@ -269,12 +272,18 @@ impl TreeStore {
             self.nodes_buffer.drain(idx..idx + children.len());
         }
 
+        emit!(self.buffer_len_changed(), self.nodes_buffer.len());
         emit!(self.notify_update_rect(), start_idx);
     }
 
     #[inline]
     pub(crate) fn set_window_lines(&mut self, window_lines: i32) {
         self.window_lines = window_lines;
+    }
+
+    #[inline]
+    pub(crate) fn get_window_lines(&self) -> i32 {
+        self.window_lines
     }
 
     #[inline]
@@ -340,6 +349,18 @@ impl TreeStore {
         self.node_expanded(node);
 
         emit!(self.notify_update());
+    }
+
+    #[inline]
+    pub(crate) fn scroll_to(&mut self, value: i32) -> bool {
+        if self.current_line == value {
+            return false
+        }
+        // if value was 0, scroll to the begining, first node index was 0
+        // scroll to 1, first node index was 1
+        self.current_line = value;
+
+        true
     }
 }
 

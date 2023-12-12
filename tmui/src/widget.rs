@@ -4,7 +4,7 @@ use crate::{
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
-        render_difference::RenderDiffence,
+        render_difference::RenderDiffence, border::Border,
     },
     layout::LayoutManager,
     prelude::*,
@@ -52,10 +52,7 @@ pub struct Widget {
     font_family: String,
     margins: [i32; 4],
     paddings: [i32; 4],
-    borders: [f32; 4],
-    border_style: BorderStyle,
-    #[derivative(Default(value = "Color::BLACK"))]
-    border_color: Color,
+    border: Border,
 
     width_request: i32,
     height_request: i32,
@@ -344,21 +341,9 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             self.set_image_rect_record(self.image_rect());
 
             // Draw the border of the Widget.
-            let borders = self.borders();
-            let _style = self.border_style();
-            painter.set_color(self.border_color());
-            if borders[0] > 0. {
-                painter.set_line_width(borders[0]);
-            }
-            if borders[1] > 0. {
-                painter.set_line_width(borders[1]);
-            }
-            if borders[2] > 0. {
-                painter.set_line_width(borders[2]);
-            }
-            if borders[3] > 0. {
-                painter.set_line_width(borders[3]);
-            }
+            let mut geometry = self.rect();
+            geometry.set_point(&self.map_to_widget(&geometry.point()));
+            self.border_ref().render(&mut painter, geometry.into());
 
             self.set_first_rendered();
             self.set_rerender_styles(false);
@@ -726,6 +711,11 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_padding_left) (Defined in [`WidgetExt`])
     fn set_padding_left(&mut self, val: i32);
 
+    /// Get the refrence of [`Border`].
+    ///
+    /// Go to[`Function defination`](WidgetExt::border_ref) (Defined in [`WidgetExt`])
+    fn border_ref(&self) -> &Border;
+
     /// Set the borders of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_borders) (Defined in [`WidgetExt`])
@@ -736,15 +726,35 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_border_style) (Defined in [`WidgetExt`])
     fn set_border_style(&mut self, style: BorderStyle);
 
-    /// Set the border color of the widget.
+    /// Set the border color(all directions) of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_border_color) (Defined in [`WidgetExt`])
     fn set_border_color(&mut self, color: Color);
 
+    /// Set the top border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_top_color) (Defined in [`WidgetExt`])
+    fn set_border_top_color(&mut self, color: Color);
+
+    /// Set the right border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_right_color) (Defined in [`WidgetExt`])
+    fn set_border_right_color(&mut self, color: Color);
+
+    /// Set the bottom border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_bottom_color) (Defined in [`WidgetExt`])
+    fn set_border_bottom_color(&mut self, color: Color);
+
+    /// Set the left border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_left_color) (Defined in [`WidgetExt`])
+    fn set_border_left_color(&mut self, color: Color);
+
     /// Get the borders of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::borders) (Defined in [`WidgetExt`])
-    fn borders(&self) -> [f32; 4];
+    fn borders(&self) -> (f32, f32, f32, f32);
 
     /// Get the border style of the widget.
     ///
@@ -754,7 +764,7 @@ pub trait WidgetExt {
     /// Get the border color of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::border_color) (Defined in [`WidgetExt`])
-    fn border_color(&self) -> Color;
+    fn border_color(&self) -> (Color, Color, Color, Color);
 
     /// Set the system cursor shape.
     ///
@@ -894,6 +904,9 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::set_repaint_when_resize) (Defined in [`WidgetExt`])
     fn set_repaint_when_resize(&mut self, repaint: bool);
+
+    /// Go to[`Function defination`](WidgetExt::is_pressed) (Defined in [`WidgetExt`])
+    fn is_pressed(&self) -> bool;
 }
 
 impl WidgetExt for Widget {
@@ -1482,6 +1495,11 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
+    fn border_ref(&self) -> &Border {
+        &self.border
+    }
+
+    #[inline]
     fn set_borders(&mut self, mut top: f32, mut right: f32, mut bottom: f32, mut left: f32) {
         if top < 0. {
             top = 0.;
@@ -1495,35 +1513,55 @@ impl WidgetExt for Widget {
         if left < 0. {
             left = 0.;
         }
-        self.borders[0] = top;
-        self.borders[1] = right;
-        self.borders[2] = bottom;
-        self.borders[3] = left;
+        self.border.width.0 = top;
+        self.border.width.1 = right;
+        self.border.width.2 = bottom;
+        self.border.width.3 = left;
     }
 
     #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
-        self.border_style = style;
+        self.border.style = style;
     }
 
     #[inline]
     fn set_border_color(&mut self, color: Color) {
-        self.border_color = color;
+        self.border.border_color = (color, color, color, color);
     }
 
     #[inline]
-    fn borders(&self) -> [f32; 4] {
-        self.borders
+    fn set_border_top_color(&mut self, color: Color) {
+        self.border.border_color.0 = color;
+    }
+
+    #[inline]
+    fn set_border_right_color(&mut self, color: Color) {
+        self.border.border_color.1 = color;
+    }
+
+    #[inline]
+    fn set_border_bottom_color(&mut self, color: Color) {
+        self.border.border_color.2 = color;
+    }
+
+    #[inline]
+    fn set_border_left_color(&mut self, color: Color) {
+        self.border.border_color.3 = color;
+    }
+
+    #[inline]
+    fn borders(&self) -> (f32, f32, f32, f32) {
+        self.border.width
     }
 
     #[inline]
     fn border_style(&self) -> BorderStyle {
-        self.border_style
+        self.border.style
     }
 
     #[inline]
-    fn border_color(&self) -> Color {
-        self.border_color
+    fn border_color(&self) -> (Color, Color, Color, Color) {
+        self.border.border_color
     }
 
     #[inline]
@@ -1673,6 +1711,11 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_repaint_when_resize(&mut self, repaint: bool) {
         self.repaint_when_resize = repaint
+    }
+
+    #[inline]
+    fn is_pressed(&self) -> bool {
+        self.id() == self.window().pressed_widget()
     }
 }
 
@@ -1829,11 +1872,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
         if self.enable_focus() {
             self.set_focus(true)
         }
+        self.window().set_pressed_widget(self.id());
         emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
     }
 
     #[inline]
     fn inner_mouse_released(&mut self, event: &MouseEvent) {
+        self.window().set_pressed_widget(0);
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
     }
 
