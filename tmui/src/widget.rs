@@ -1,10 +1,11 @@
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
+        border::Border,
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
-        render_difference::RenderDiffence, border::Border,
+        render_difference::RenderDiffence,
     },
     layout::LayoutManager,
     prelude::*,
@@ -167,7 +168,7 @@ pub trait WidgetSignals: ActionExt {
         receive_character();
 
         /// Emit when widget's background changed.
-        /// 
+        ///
         /// @param [`Color`]
         background_changed();
     }
@@ -319,10 +320,11 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         let mut painter = Painter::new(cr.canvas(), self);
 
-        let contents_rect = self.contents_rect(Some(Coordinate::Widget));
-        if contents_rect.width() <= 0 || contents_rect.height() <= 0 {
+        let mut geometry = self.rect();
+        if geometry.width() == 0 || geometry.height() == 0 {
             return;
         }
+        geometry.set_point(&(0, 0).into());
 
         let is_shared_widget = self.super_type().is_a(SharedWidget::static_type());
 
@@ -331,9 +333,17 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
                 // Draw the background color of the Widget.
                 if self.rerender_difference() && self.first_rendered() && !self.window().minimized()
                 {
+                    let mut border_rect: FRect = self.rect_record().into();
+                    border_rect.set_point(&(0, 0).into());
+                    self.border_ref().clear_border(
+                        &mut painter,
+                        border_rect,
+                        self.background(),
+                    );
+
                     self.render_difference(&mut painter);
                 } else {
-                    painter.fill_rect(contents_rect, self.background());
+                    painter.fill_rect(geometry, self.background());
                 }
             }
 
@@ -341,8 +351,6 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             self.set_image_rect_record(self.image_rect());
 
             // Draw the border of the Widget.
-            let mut geometry = self.rect();
-            geometry.set_point(&self.map_to_widget(&geometry.point()));
             self.border_ref().render(&mut painter, geometry.into());
 
             self.set_first_rendered();
@@ -1969,7 +1977,7 @@ pub trait WidgetImpl:
     fn on_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
-    /// 
+    ///
     /// The widget does not track mouse movement by default. If need, call function [`set_mouse_tracking`](WidgetExt::set_mouse_tracking)
     fn on_mouse_move(&mut self, event: &MouseEvent) {}
 

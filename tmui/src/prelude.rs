@@ -3,7 +3,7 @@ pub use tlib::prelude::*;
 pub use tlib::signal;
 
 pub use crate::application_window::{current_window_id, ApplicationWindow};
-pub use crate::animation::{Animatable, AnimationModel, Animations, inner::AnimationsHolder};
+pub use crate::animation::{Animatable, AnimationModel, Animations, inner::AnimationsHolder, ReflectAnimatable};
 pub use crate::container::{
     Container, ContainerAcquire, ContainerImpl, ContainerImplExt, ContainerPointEffective,
     ContainerScaleCalculate, ReflectContainerImpl, StaticContainerScaleCalculate, SizeUnifiedAdjust, ReflectSizeUnifiedAdjust

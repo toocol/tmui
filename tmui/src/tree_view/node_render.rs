@@ -2,7 +2,8 @@ use crate::graphics::{border::Border, painter::Painter};
 use derivative::Derivative;
 use tlib::{
     figure::{Color, FRect},
-    skia_safe::ClipOp, namespace::BorderStyle,
+    namespace::BorderStyle,
+    skia_safe::ClipOp,
 };
 
 use super::tree_node::Status;
@@ -31,7 +32,7 @@ impl NodeRender {
     pub(crate) fn render(
         &self,
         painter: &mut Painter,
-        mut geometry: FRect,
+        geometry: FRect,
         background: Color,
         status: Status,
     ) {
@@ -49,13 +50,6 @@ impl NodeRender {
         } else {
             painter.fill_round_rect(geometry, self.border.border_radius, background)
         }
-
-        let (top, right, bottom, left) = self.border.width;
-
-        geometry.set_x(geometry.x() + left);
-        geometry.set_y(geometry.y() + top );
-        geometry.set_width(geometry.width() - left - right);
-        geometry.set_height(geometry.height() - top - bottom);
 
         self.border.render(painter, geometry);
 

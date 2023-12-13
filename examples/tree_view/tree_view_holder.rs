@@ -192,7 +192,6 @@ impl TreeViewObject for Group {
     #[inline]
     fn node_render(&self) -> NodeRender {
         NodeRender::builder()
-            .border_style(BorderStyle::Dotted)
             .border_top(2.)
             .border_right(2.)
             .border_bottom(2.)

@@ -109,6 +109,11 @@ impl AnimationModel {
     pub fn animation(&self) -> Animations {
         self.animation
     }
+
+    #[inline]
+    pub fn is_playing(&self) -> bool {
+        self.state == AnimationState::Playing
+    }
 }
 
 #[reflect_trait]

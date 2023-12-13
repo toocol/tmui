@@ -34,6 +34,7 @@ impl ObjectImpl for SelfAdaptionWidget {
         label.set_content_valign(Align::Center);
         label.set_padding_left(20);
         label.set_margin_top(50);
+        label.set_borders(2., 2., 2., 2.);
 
         self.child(label)
     }

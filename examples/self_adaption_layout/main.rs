@@ -23,5 +23,7 @@ fn main() {
 
 fn build_ui(window: &mut ApplicationWindow) {
     let widget = SelfAdaptionWidget::new();
-    window.child(widget)
+    window.child(widget);
+
+    window.set_borders(2., 2., 2., 2.);
 }

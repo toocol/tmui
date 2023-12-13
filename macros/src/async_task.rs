@@ -1,4 +1,5 @@
-use proc_macro2::Ident;
+use std::str::FromStr;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
     Attribute, DeriveInput, Meta, MetaList, MetaNameValue, NestedMeta,
@@ -8,7 +9,7 @@ pub(crate) struct AsyncTask {
     pub(crate) name: Option<Ident>,
     pub(crate) name_snake: Option<Ident>,
 
-    pub(crate) value: Option<Ident>,
+    pub(crate) value: Option<syn::Type>,
 
     pub(crate) field: Option<Ident>,
 }
@@ -53,8 +54,9 @@ impl AsyncTask {
                                     },
                                     "value" => match lit {
                                         syn::Lit::Str(lit) => {
-                                            let ident = Ident::new(&lit.value(), lit.span());
-                                            res.value = Some(ident)
+                                            let token = TokenStream::from_str(&lit.value()).expect("`async_task` value parse error.");
+                                            let ty = syn::parse2::<syn::Type>(token).expect("`async_task` value parse error.");
+                                            res.value = Some(ty)
                                         }
                                         _ => return None,
                                     },

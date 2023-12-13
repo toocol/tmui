@@ -9,6 +9,7 @@ use tmui::{
 #[extends(Widget)]
 #[async_task(name = "AsyncTask", value = "i32")]
 #[async_task(name = "AsyncTask2", value = "f32")]
+#[async_task(name = "AsyncTask3", value = "()")]
 pub struct AsyncTaskWidget {}
 
 impl ObjectSubclass for AsyncTaskWidget {
@@ -35,6 +36,8 @@ impl ObjectImpl for AsyncTaskWidget {
             println!("{} => then 2", thread::current().name().unwrap());
             assert_eq!(val, 3.1)
         }));
+
+        self.async_task3(async {}, Some(|_, _val| {}));
     }
 }
 

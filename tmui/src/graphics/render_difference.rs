@@ -5,7 +5,9 @@ use tlib::skia_safe::{self, ClipOp};
 
 pub trait RenderDiffence: WidgetImpl + ChildWidgetDiffRender {
     fn render_difference(&mut self, painter: &mut Painter) {
-        let contents_rect = self.contents_rect(Some(Coordinate::Widget));
+        let mut widget_rect = self.rect();
+        widget_rect.set_point(&(0, 0).into());
+
         let rect: skia_safe::IRect = self.rect().into();
         let old_rect: skia_safe::IRect = self.rect_record().into();
 
@@ -15,7 +17,7 @@ pub trait RenderDiffence: WidgetImpl + ChildWidgetDiffRender {
 
         painter.save();
         painter.clip_region(region, ClipOp::Intersect);
-        painter.fill_rect(contents_rect, self.background());
+        painter.fill_rect(widget_rect, self.background());
         painter.restore();
 
         let is_container = self.super_type().is_a(Container::static_type());

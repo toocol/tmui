@@ -230,7 +230,15 @@ impl TreeNode {
         let tl = geometry.top_left();
         geometry.set_x(tl.x() + (ident_length * self.level) as f32);
         geometry.set_width(geometry.width() - (ident_length * self.level) as f32);
-        for cell in self.cells.iter() {
+
+        let gapping = geometry.width() / self.cells.len() as f32;
+
+        for (i, cell) in self.cells.iter().enumerate() {
+            let mut cell_rect = geometry.clone();
+
+            cell_rect.set_x(gapping * i as f32);
+            cell_rect.set_width(gapping);
+
             cell.render_cell(painter, geometry);
         }
     }
