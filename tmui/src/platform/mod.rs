@@ -32,10 +32,11 @@ pub enum PlatformType {
     #[cfg(windows_platform)]
     #[default]
     Win32,
-    #[cfg(free_unix)]
+    #[cfg(x11_platform)]
     #[default]
     LinuxX11,
-    #[cfg(free_unix)]
+    #[cfg(wayland_platform)]
+    #[default]
     LinuxWayland,
     #[cfg(macos_platform)]
     #[default]

@@ -1,14 +1,10 @@
 #![cfg(free_unix)]
-use super::PlatformContext;
 use crate::{
-    primitive::{
-        bitmap::Bitmap,
-        shared_channel::SharedChannel,
-    },
-    runtime::window_context::WindowContext,
+    platform::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext},
+    primitive::bitmap::Bitmap,
 };
 use std::sync::{mpsc::Sender, Arc};
-use tipc::{ipc_master::IpcMaster, WithIpcMaster, RwLock};
+use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
 
 pub(crate) struct PlatformX11<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
@@ -37,12 +33,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformX
 
     // Wrap trait `PlatfomContext` with [`Box`].
     #[inline]
-    pub fn wrap(self) -> Box<dyn PlatformContext> {
+    pub fn wrap(self) -> Box<dyn PlatformContext<T, M>> {
         Box::new(self)
     }
 }
 
-impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformX11<T, M>
 {
     fn initialize(&mut self) {
@@ -61,49 +57,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn region(&self) -> tlib::figure::Rect {
-        todo!()
-    }
-
-    fn resize(&mut self, width: u32, height: u32) {
-        todo!()
-    }
-
     fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
         todo!()
     }
 
-    fn set_input_sender(&mut self, input_sender: Sender<super::Message>) {
-        todo!()
-    }
-
-    fn input_sender(&self) -> &Sender<super::Message> {
-        todo!()
-    }
-
-    fn create_window(&mut self) -> WindowContext {
-        todo!()
-    }
-
-    fn platform_main(&mut self, window_context: WindowContext) {
-        todo!()
-    }
-
-    fn request_redraw(&mut self, window: &tlib::winit::window::Window) {}
-
-    fn redraw(&mut self) {
-        todo!()
-    }
-
-    fn wait(&self) {
-        todo!()
-    }
-
-    fn signal(&self) {
-        todo!()
-    }
-
-    fn add_shared_region(&self, id: &'static str, rect: tlib::figure::Rect) {
+    fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         todo!()
     }
 }

@@ -181,7 +181,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.initialize();
                 platform_context.wrap()
             }
-            #[cfg(free_unix)]
+            #[cfg(x11_platform)]
             PlatformType::LinuxX11 => {
                 let mut platform_context = PlatformX11::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
@@ -190,7 +190,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.initialize();
                 platform_context.wrap()
             }
-            #[cfg(free_unix)]
+            #[cfg(wayland_platform)]
             PlatformType::LinuxWayland => {
                 let mut platform_context = PlatformWayland::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {

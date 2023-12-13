@@ -60,6 +60,12 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
             #[cfg(windows_platform)]
             PhysicalWindow::Win32(window) => self.event_handle(window),
+
+            #[cfg(x11_platform)]
+            PhysicalWindow::X11(window) => self.event_handle(window),
+
+            #[cfg(wayland_platform)]
+            PhysicalWindow::Wayland(window) => self.event_handle(window),
         };
     }
 
