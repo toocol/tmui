@@ -48,6 +48,8 @@ pub(crate) enum Bitmap {
         height: u32,
         /// Is this bitmap rendered.
         prepared: bool,
+        /// Only used on platform `macos`
+        resized: bool,
     },
 
     Shared {
@@ -68,6 +70,8 @@ pub(crate) enum Bitmap {
         width: u32,
         /// The height of `Bitmap`.
         height: u32,
+        /// Only used on platform `macos`
+        resized: bool,
     },
 }
 
@@ -85,6 +89,7 @@ impl Bitmap {
             width,
             height,
             prepared: false,
+            resized: false,
         }
     }
 
@@ -119,6 +124,7 @@ impl Bitmap {
             row_bytes: (width * 4) as usize,
             width,
             height,
+            resized: false,
         }
     }
 
@@ -133,6 +139,7 @@ impl Bitmap {
                 width,
                 height,
                 prepared,
+                resized,
             } => {
                 *retention = pixels.take();
                 *pixels = Some(vec![0u8; (w * h * 4) as usize].boxed());
@@ -141,6 +148,7 @@ impl Bitmap {
                 *width = w;
                 *height = h;
                 *prepared = false;
+                *resized = true;
             }
             _ => {}
         }
@@ -163,6 +171,7 @@ impl Bitmap {
                 row_bytes,
                 width,
                 height,
+                resized,
                 ..
             } => {
                 *raw_pointer = NonNull::new(n_raw_pointer);
@@ -173,6 +182,7 @@ impl Bitmap {
                 *row_bytes = (w * 4) as usize;
                 *width = w;
                 *height = h;
+                *resized = true;
             }
             _ => {}
         }
@@ -332,6 +342,24 @@ impl Bitmap {
         match self {
             Self::Direct { .. } => None,
             Self::Shared { lock, .. } => Some(lock.write()),
+        }
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn is_resized(&self) -> bool {
+        match self {
+            Self::Direct { resized, .. } => *resized,
+            Self::Shared { resized, .. } => *resized,
+        }
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub fn reset_resized(&mut self) {
+        match self {
+            Self::Direct { resized, .. } => *resized = false,
+            Self::Shared { resized, .. } => *resized = false,
         }
     }
 }

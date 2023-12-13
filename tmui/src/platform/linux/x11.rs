@@ -15,7 +15,6 @@ pub(crate) struct PlatformX11<T: 'static + Copy + Sync + Send, M: 'static + Copy
 
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
-    user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformX11<T, M> {
@@ -27,7 +26,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformX
             height,
             bitmap: None,
             master: None,
-            user_ipc_event_sender: None,
         }
     }
 

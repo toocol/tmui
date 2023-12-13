@@ -1,13 +1,18 @@
 use super::ipc_window::IpcWindow;
+#[cfg(windows_platform)]
+use super::win32_window::Win32Window;
+#[cfg(macos_platform)]
+use super::macos_window::MacosWindow;
 #[cfg(wayland_platform)]
 use super::linux::wayland_window::WaylandWindow;
 #[cfg(x11_platform)]
 use super::linux::x11_window::X11Window;
-#[cfg(windows_platform)]
-use super::win32_window::Win32Window;
 
 #[cfg(windows_platform)]
 pub(crate) type PhysWindow<T, M> = Win32Window<T, M>;
+
+#[cfg(macos_platform)]
+pub(crate) type PhysWindow<T, M> = MacosWindow<T, M>;
 
 #[cfg(wayland_platform)]
 pub(crate) type PhysWindow<T, M> = WaylandWindow<T, M>;
@@ -22,7 +27,7 @@ pub(crate) enum PhysicalWindow<T: 'static + Copy + Sync + Send, M: 'static + Cop
     Win32(PhysWindow<T, M>),
 
     #[cfg(macos_platform)]
-    Macos,
+    Macos(PhysWindow<T, M>),
 
     #[cfg(wayland_platform)]
     Wayland(PhysWindow<T, M>),
