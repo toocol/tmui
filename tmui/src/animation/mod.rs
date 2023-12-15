@@ -1,15 +1,17 @@
 pub mod inner;
+pub mod snapshot;
+pub mod state_holder;
 
 mod progress;
 
 use self::{inner::AnimationsHolder, progress::Progress};
 use std::time::Duration;
-use tlib::{prelude::*, reflect_trait, utils::TimeStamp};
+use tlib::{prelude::*, reflect_trait};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
-pub enum Animations {
+pub enum Animation {
     #[default]
-    None,
+    NoAnimation,
     Linear,
     EaseIn,
     EaseOut,
@@ -26,8 +28,10 @@ pub enum AnimationState {
     Paused,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Direction {
+    #[default]
+    NoDirection,
     LeftToRight,
     TopToBottom,
     RightToLeft,
@@ -38,10 +42,11 @@ pub enum Direction {
     RightBottomToLeftTop,
 }
 
-#[derive(Debug, Default, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct AnimationModel {
     state: AnimationState,
-    animation: Animations,
+    animation: Animation,
+    direction: Direction,
     animation_holder: Option<AnimationsHolder>,
 
     duration: Duration,
@@ -54,10 +59,11 @@ pub struct AnimationModel {
 
 impl AnimationModel {
     #[inline]
-    pub fn new(animation: Animations, duration: Duration) -> Self {
+    pub fn new(animation: Animation, direction: Direction, duration: Duration) -> Self {
         Self {
             state: AnimationState::Stopped,
             animation,
+            direction,
             animation_holder: None,
             duration,
             start_time: 0,
@@ -68,13 +74,13 @@ impl AnimationModel {
 
     /// This function will be processed by macros.
     #[inline]
-    pub fn start(&mut self, holder: AnimationsHolder) {
+    pub fn start(&mut self, start_time: u64, holder: AnimationsHolder) {
         if self.state != AnimationState::Stopped {
             return;
         }
 
         self.animation_holder = Some(holder);
-        self.start_time = TimeStamp::timestamp();
+        self.start_time = start_time;
         self.end_time = self.start_time + self.duration.as_millis() as u64;
         self.state = AnimationState::Playing;
     }
@@ -101,12 +107,12 @@ impl AnimationModel {
     }
 
     #[inline]
-    pub fn set_animation(&mut self, animation: Animations) {
+    pub fn set_animation(&mut self, animation: Animation) {
         self.animation = animation
     }
 
     #[inline]
-    pub fn animation(&self) -> Animations {
+    pub fn animation(&self) -> Animation {
         self.animation
     }
 
@@ -118,7 +124,11 @@ impl AnimationModel {
 
 #[reflect_trait]
 pub trait Animatable {
-    fn set_animation(&mut self, animation: Animations);
+    fn set_animation(&mut self, animation: Animation);
 
-    fn animation(&self) -> Animations;
+    fn animation(&self) -> Animation;
+
+    fn animation_model(&self) -> &AnimationModel;
+
+    fn animation_model_mut(&mut self) -> &mut AnimationModel;
 }

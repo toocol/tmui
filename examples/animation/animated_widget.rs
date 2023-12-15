@@ -5,7 +5,7 @@ use tmui::{
 };
 
 #[extends(Widget)]
-#[animatable]
+#[animatable(ty = "Linear", direction = "LeftToRight", duration = 300)]
 pub struct AnimatedWidget {}
 
 impl ObjectSubclass for AnimatedWidget {
@@ -16,7 +16,7 @@ impl ObjectImpl for AnimatedWidget {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_animation(Animations::EaseIn);
+        self.set_animation(Animation::EaseIn);
     }
 }
 

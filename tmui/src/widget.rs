@@ -20,7 +20,7 @@ use tlib::{
     figure::{Color, FPoint, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
-    ptr_mut, signals,
+    ptr_mut, signals, skia_safe::region::RegionOp,
 };
 
 /// Size hint for widget:
@@ -359,7 +359,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter.reset();
         painter.set_font(self.font().to_skia_font());
-        self.paint(painter);
+        self.paint(&mut painter);
     }
 }
 
@@ -1585,16 +1585,16 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn map_to_widget(&self, point: &Point) -> Point {
-        let contents_rect = self.contents_rect(None);
-        Point::new(point.x() - contents_rect.x(), point.y() - contents_rect.y())
+        let rect = self.rect();
+        Point::new(point.x() - rect.x(), point.y() - rect.y())
     }
 
     #[inline]
     fn map_to_global_f(&self, point: &FPoint) -> FPoint {
-        let contents_rect = self.contents_rect(None);
+        let rect = self.rect();
         FPoint::new(
-            point.x() + contents_rect.x() as f32,
-            point.y() + contents_rect.y() as f32,
+            point.x() + rect.x() as f32,
+            point.y() + rect.y() as f32,
         )
     }
 
@@ -1845,6 +1845,21 @@ impl PointEffective for Widget {
     }
 }
 
+////////////////////////////////////// ChildRegionAcquirer //////////////////////////////////////
+pub trait ChildRegionAcquirer {
+    fn child_region(&self) -> tlib::skia_safe::Region;
+}
+impl ChildRegionAcquirer for Widget {
+    fn child_region(&self) -> tlib::skia_safe::Region {
+        let mut region = tlib::skia_safe::Region::new();
+        if let Some(child) = self.get_child_ref() {
+            let rect: tlib::skia_safe::IRect = child.rect().into();
+            region.op_rect(rect, RegionOp::Intersect);
+        }
+        region
+    }
+}
+
 ////////////////////////////////////// InnerEventProcess //////////////////////////////////////
 pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse pressed event.
@@ -1943,6 +1958,7 @@ pub trait WidgetImpl:
     + Layout
     + InnerEventProcess
     + PointEffective
+    + ChildRegionAcquirer
     + ActionExt
 {
     /// Invoke this function when widget's size change.
@@ -1956,7 +1972,7 @@ pub trait WidgetImpl:
     }
 
     /// Invoke this function when renderering.
-    fn paint(&mut self, mut painter: Painter) {}
+    fn paint(&mut self, painter: &mut Painter) {}
 
     /// Invoke when widget's font was changed.
     fn font_changed(&mut self) {}

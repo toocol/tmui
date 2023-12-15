@@ -1,4 +1,9 @@
-use crate::{extend_element, extend_object, extend_widget, scroll_area::generate_scroll_area_inner_init, async_task::AsyncTask, animation};
+use crate::{
+    animation::Animation,
+    async_task::AsyncTask,
+    extend_element, extend_object, extend_widget,
+    scroll_area::generate_scroll_area_inner_init,
+};
 use quote::quote;
 use syn::{
     parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Pound, Attribute, DeriveInput,
@@ -16,7 +21,7 @@ pub(crate) fn expand(
     let name = &ast.ident;
 
     let mut run_after = false;
-    let mut animation = false;
+    let mut animation = None;
     let mut is_async_task = false;
     let mut async_tasks = vec![];
 
@@ -26,7 +31,7 @@ pub(crate) fn expand(
 
             match attr_str.as_str() {
                 "run_after" => run_after = true,
-                "animatable" => animation = true,
+                "animatable" => animation = Some(Animation::parse(attr)?),
                 "async_task" => {
                     is_async_task = true;
                     async_tasks.push(AsyncTask::parse_attr(attr));
@@ -46,8 +51,8 @@ pub(crate) fn expand(
         proc_macro2::TokenStream::new()
     };
 
-    let animation_clause = if animation {
-        animation::generate_animation(name)?
+    let animation_clause = if let Some(animation) = animation.as_ref() {
+        animation.generate_animation(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
@@ -93,7 +98,7 @@ pub(crate) fn expand(
                         })?);
                     }
 
-                    if animation {
+                    if animation.is_some() {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             pub animation: AnimationModel
                         })?);
@@ -288,6 +293,13 @@ pub(crate) fn expand(
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
                         self.container_point_effective(point)
+                    }
+                }
+
+                impl ChildRegionAcquirer for #name {
+                    #[inline]
+                    fn child_region(&self) -> tlib::skia_safe::Region {
+                        self.children_region()
                     }
                 }
 

@@ -57,19 +57,6 @@ impl Region {
     }
 
     #[inline]
-    pub fn intersects_rect(&self, other: &Rect) -> Region {
-        let mut region = Region::new();
-
-        for rect in self.regions.iter() {
-            if let Some(rect) = rect.intersects(other) {
-                region.add_rect(rect)
-            }
-        }
-
-        region
-    }
-
-    #[inline]
     pub fn regions(&self) -> &Vec<Rect> {
         &self.regions
     }

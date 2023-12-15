@@ -66,7 +66,7 @@ impl ObjectImpl for ScrollBar {
 }
 
 impl WidgetImpl for ScrollBar {
-    fn paint(&mut self, mut painter: Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
         painter.set_antialiasing(false);

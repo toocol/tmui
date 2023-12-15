@@ -79,7 +79,7 @@ impl WidgetImpl for TreeViewImage {
         connect!(self, size_changed(), self, when_size_changed(Size));
     }
 
-    fn paint(&mut self, mut painter: Painter) {
+    fn paint(&mut self, mut painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
             painter.fill_rect(*redraw_rect, self.background());
         }

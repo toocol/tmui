@@ -28,18 +28,18 @@ impl WidgetImpl for SkiaPaint {
         self.update()
     }
 
-    fn paint(&mut self, mut painter: tmui::graphics::painter::Painter) {
-        self.draw_text(&mut painter);
+    fn paint(&mut self, painter: &mut tmui::graphics::painter::Painter) {
+        self.draw_text(painter);
 
-        self.draw_region_1(&mut painter);
+        self.draw_region_1(painter);
 
-        self.draw_region_2(&mut painter);
+        self.draw_region_2(painter);
 
-        self.draw_region_3(&mut painter);
+        self.draw_region_3(painter);
 
-        self.draw_layer(&mut painter);
+        self.draw_layer(painter);
 
-        self.draw_round_rect(&mut painter);
+        self.draw_round_rect(painter);
 
         println!("cnt: {}", painter.save_count());
     }

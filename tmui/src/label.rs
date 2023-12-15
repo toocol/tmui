@@ -54,7 +54,7 @@ pub trait LabelSignal: ActionExt {
 impl LabelSignal for Label {}
 
 impl WidgetImpl for Label {
-    fn paint(&mut self, mut painter: Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         let content_rect: FRect = self.contents_rect(Some(Coordinate::Widget)).into();
 
         painter.reset();

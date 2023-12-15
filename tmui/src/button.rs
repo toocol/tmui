@@ -20,7 +20,7 @@ impl ObjectSubclass for Button {
 impl ObjectImpl for Button {}
 
 impl WidgetImpl for Button {
-    fn paint(&mut self, mut painter: Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         let rect = self.contents_rect(Some(Coordinate::Widget));
         painter.set_color(Color::BLACK);
         painter.set_line_width(1.);

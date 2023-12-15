@@ -41,6 +41,8 @@ pub struct ApplicationWindow {
     layout_manager: LayoutManager,
     widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
     run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
+
+    /// Effecting when application was under shared memory mode.
     base_offset: Point,
 
     focused_widget: ObjectId,
@@ -291,6 +293,26 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn dispatch_event(&mut self, evt: Event) -> Option<Event> {
         wed::win_evt_dispatch(self, evt)
+    }
+
+    pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect) {
+        for (_, w) in Self::widgets_of(self.id()) {
+            let widget = nonnull_mut!(w);
+
+            let rect: tlib::skia_safe::IRect = widget.rect().into();
+            let mut region = tlib::skia_safe::Region::new();
+            region.op_rect(rect, tlib::skia_safe::region::RegionOp::Intersect);
+            region.op_region(
+                &widget.child_region(),
+                tlib::skia_safe::region::RegionOp::Difference,
+            );
+
+            let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
+            if region.contains_rect(dirty_irect) {
+                widget.set_rerender_styles(true);
+                widget.update_rect(dirty_rect);
+            }
+        }
     }
 
     /// Should set the parent of widget before use this function.

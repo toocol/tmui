@@ -111,6 +111,13 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                         self.shared_widget.widget.point_effective(point)
                     }
                 }
+
+                impl ChildRegionAcquirer for #name {
+                    #[inline]
+                    fn child_region(&self) -> tlib::skia_safe::Region {
+                        self.shared_widget.widget.child_region()
+                    }
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(

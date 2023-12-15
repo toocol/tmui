@@ -3,7 +3,7 @@ use crate::{
     prelude::*,
     widget::{ScaleCalculate, WidgetImpl, WindowAcquire},
 };
-use tlib::object::{ObjectImpl, ObjectSubclass};
+use tlib::{object::{ObjectImpl, ObjectSubclass}, skia_safe::region::RegionOp};
 
 #[extends(Widget)]
 pub struct Container {
@@ -104,6 +104,20 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
         }
 
         true
+    }
+}
+
+pub trait ChildrenRegionAcquirer {
+    fn children_region(&self) -> tlib::skia_safe::Region;
+}
+impl<T: ContainerImpl> ChildrenRegionAcquirer for T {
+    fn children_region(&self) -> tlib::skia_safe::Region {
+        let mut region = tlib::skia_safe::Region::new();
+        for c in self.children() {
+            let rect: tlib::skia_safe::IRect = c.rect().into();
+            region.op_rect(rect, RegionOp::Intersect);
+        }
+        region
     }
 }
 
