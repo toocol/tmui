@@ -1,30 +1,16 @@
-use crate::{extend_element, extend_object, extend_widget};
+use crate::{extend_element, extend_object, extend_widget, general_attr::GeneralAttr};
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Ident};
 
-pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    id: Option<&String>,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
 
-    let mut run_after = false;
+    let general_attr = GeneralAttr::parse(ast)?;
 
-    for attr in ast.attrs.iter() {
-        if let Some(attr_ident) = attr.path.get_ident() {
-            if attr_ident.to_string() == "run_after" {
-                run_after = true;
-                break;
-            }
-        }
-    }
-
-    let run_after_clause = if run_after {
-        quote!(
-            ApplicationWindow::run_afters_of(self.window_id()).push(
-                std::ptr::NonNull::new(self)
-            );
-        )
-    } else {
-        proc_macro2::TokenStream::new()
-    };
+    let run_after_clause = &general_attr.run_after_clause;
 
     let set_shared_id_clause = match id {
         Some(id) => quote!(
@@ -40,6 +26,14 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub shared_widget: SharedWidget
                     })?);
+
+                    if general_attr.is_async_task {
+                        for async_field in general_attr.async_task_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #async_field
+                            })?);
+                        }
+                    }
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -70,6 +64,10 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
             let shared_widget_trait_impl_clause =
                 gen_shared_widget_trait_impl_clause(name, vec!["shared_widget"])?;
 
+            let async_task_clause = &general_attr.async_task_impl_clause;
+
+            let async_method_clause = &general_attr.async_task_method_clause;
+
             Ok(quote! {
                 #[derive(Derivative)]
                 #[derivative(Default)]
@@ -82,6 +80,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                 #widget_trait_impl_clause
 
                 #shared_widget_trait_impl_clause
+
+                #async_task_clause
 
                 impl WidgetAcquire for #name {}
 
@@ -117,6 +117,10 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.shared_widget.widget.child_region()
                     }
+                }
+
+                impl #name {
+                    #async_method_clause
                 }
             })
         }

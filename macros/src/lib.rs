@@ -8,8 +8,10 @@ mod extend_attr;
 mod extend_container;
 mod extend_element;
 mod extend_object;
+mod extend_popup;
 mod extend_shared_widget;
 mod extend_widget;
+mod general_attr;
 mod layout;
 mod reflect_trait;
 mod scroll_area;
@@ -35,6 +37,7 @@ use trait_info::TraitInfo;
 ///     - Widget
 ///     - SharedWidget
 ///     - Container
+///     - Popup
 /// - ### Supported layouts:
 ///     - Stack
 ///     - VBox
@@ -84,6 +87,10 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
+        "Popup" => match extend_popup::expand(&mut ast) {
+            Ok(tkn) => tkn.into(),
+            Err(e) => e.to_compile_error().into(),
+        }
         _ => syn::Error::new_spanned(
             ast,
             format!("`{}` was not supported to extends.", extend_str),
@@ -218,6 +225,13 @@ pub fn stack_impl(input: TokenStream) -> TokenStream {
     }
 }
 
+/// arguments:
+/// 
+/// `ty`: the type([`tmui::animation::Animation`]) of animation.
+/// 
+/// `direction`: the direction([`tmui::animation::Direction`]) of animation.
+/// 
+/// `duration`: the time duration of animation(millis).
 #[proc_macro_attribute]
 pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input

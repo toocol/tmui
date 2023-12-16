@@ -60,6 +60,30 @@ pub trait ContentAlignment {
     fn set_content_valign(&mut self, valign: Align);
 }
 
+trait RemainSize {
+    fn remain_size(&self) -> Size;
+}
+impl RemainSize for dyn WidgetImpl {
+    fn remain_size(&self) -> Size {
+        let widget = self;
+        if let Some(container) = cast!(widget as ContainerImpl) {
+            let mut size = container.size();
+            for c in container.children() {
+                let cs = c.size();
+                if c.fixed_width() {
+                    size.set_width(size.width() - cs.width());
+                }
+                if c.fixed_height() {
+                    size.set_height(size.height() - cs.height());
+                }
+            }
+            size
+        } else {
+            widget.size()
+        }
+    }
+}
+
 pub(crate) trait SizeCalculation {
     /// Widget has child:
     ///
@@ -98,7 +122,9 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
             }
         } else {
-            self.set_fixed_width(self.get_width_request())
+            if self.get_width_request() != 0 {
+                self.set_fixed_width(self.get_width_request())
+            }
         }
 
         if self.vexpand() && !self.fixed_height() {
@@ -117,7 +143,9 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
             }
         } else {
-            self.set_fixed_height(self.get_height_request())
+            if self.get_height_request() != 0 {
+                self.set_fixed_height(self.get_height_request())
+            }
         }
 
         if window_size.width() == 0 && self.size().width() != 0 {
@@ -139,7 +167,7 @@ impl SizeCalculation for dyn WidgetImpl {
             );
             emit!(SizeCalculation::pre_calc_size => self.size_changed(), self.size())
         }
-        self.size()
+        self.remain_size()
     }
 
     fn calc_node_size(&mut self, child_size: Size) {
@@ -202,7 +230,9 @@ impl SizeCalculation for dyn WidgetImpl {
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
                 }
             } else {
-                self.set_fixed_width(parent_size.width());
+                if self.size().width() == 0 {
+                    self.set_fixed_width(parent_size.width());
+                }
                 if self.size().width() == 0 {
                     self.set_fixed_width(window_size.width());
                 }
@@ -234,7 +264,9 @@ impl SizeCalculation for dyn WidgetImpl {
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 }
             } else {
-                self.set_fixed_height(parent_size.height());
+                if self.size().height() == 0 {
+                    self.set_fixed_height(parent_size.height());
+                }
                 if self.size().height() == 0 {
                     self.set_fixed_height(window_size.height());
                 }

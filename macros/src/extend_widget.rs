@@ -1,4 +1,4 @@
-use crate::{animation::Animation, async_task::AsyncTask, extend_element, extend_object, layout};
+use crate::{extend_element, extend_object, layout, general_attr::GeneralAttr};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{
@@ -9,42 +9,11 @@ use syn::{
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
 
-    let mut run_after = false;
-    let mut animation = None;
-    let mut is_async_task = false;
-    let mut async_tasks = vec![];
+    let general_attr = GeneralAttr::parse(ast)?;
 
-    for attr in ast.attrs.iter() {
-        if let Some(attr_ident) = attr.path.get_ident() {
-            let attr_str = attr_ident.to_string();
+    let run_after_clause = &general_attr.run_after_clause;
 
-            match attr_str.as_str() {
-                "run_after" => run_after = true,
-                "animatable" => animation = Some(Animation::parse(attr)?),
-                "async_task" => {
-                    is_async_task = true;
-                    async_tasks.push(AsyncTask::parse_attr(attr));
-                }
-                _ => {}
-            }
-        }
-    }
-
-    let run_after_clause = if run_after {
-        quote!(
-            ApplicationWindow::run_afters_of(self.window_id()).push(
-                std::ptr::NonNull::new(self)
-            );
-        )
-    } else {
-        proc_macro2::TokenStream::new()
-    };
-
-    let animation_clause = if let Some(animation) = animation.as_ref() {
-        animation.generate_animation(name)?
-    } else {
-        proc_macro2::TokenStream::new()
-    };
+    let animation_clause = &general_attr.animation_clause;
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -55,28 +24,19 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         pub widget: Widget
                     })?);
 
-                    if animation.is_some() {
-                        let default = animation.as_ref().unwrap().parse_default()?;
+                    if general_attr.is_animation {
+                        let default = general_attr.animation.as_ref().unwrap().parse_default()?;
+                        let field = &general_attr.animation_field;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #default
-                            pub animation: AnimationModel
+                            #field
                         })?);
                     }
 
-                    if is_async_task {
-                        for async_task in async_tasks.iter() {
-                            if async_task.is_none() {
-                                return Err(syn::Error::new_spanned(
-                                    ast,
-                                    "proc_macro `async_task` format error.",
-                                ));
-                            }
-                            let task = async_task.as_ref().unwrap();
-                            let task_name = task.name.as_ref().unwrap();
-                            let field = task.field.as_ref().unwrap();
-
+                    if general_attr.is_async_task {
+                        for async_field in general_attr.async_task_fields.iter() {
                             fields.named.push(syn::Field::parse_named.parse2(quote! {
-                                #field: Option<Box<#task_name>>
+                                #async_field
                             })?);
                         }
                     }
@@ -155,25 +115,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 None => proc_macro2::TokenStream::new(),
             };
 
-            let async_task_clause = if is_async_task {
-                let mut clause = proc_macro2::TokenStream::new();
-                for async_task in async_tasks.iter() {
-                    clause.extend(async_task.as_ref().unwrap().expand(ast)?)
-                }
-                clause
-            } else {
-                proc_macro2::TokenStream::new()
-            };
+            let async_task_clause = &general_attr.async_task_impl_clause;
 
-            let async_method_clause = if is_async_task {
-                let mut clause = proc_macro2::TokenStream::new();
-                for async_task in async_tasks.iter() {
-                    clause.extend(async_task.as_ref().unwrap().expand_method(ast)?)
-                }
-                clause
-            } else {
-                proc_macro2::TokenStream::new()
-            };
+            let async_method_clause = &general_attr.async_task_method_clause;
 
             Ok(quote! {
                 #[derive(Derivative)]

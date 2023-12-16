@@ -10,6 +10,7 @@ use crate::{
     layout::LayoutManager,
     prelude::*,
     primitive::Message,
+    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
@@ -20,7 +21,8 @@ use tlib::{
     figure::{Color, FPoint, FontTypeface, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
-    ptr_mut, signals, skia_safe::region::RegionOp,
+    ptr_mut, signals,
+    skia_safe::{region::RegionOp, ClipOp},
 };
 
 /// Size hint for widget:
@@ -335,11 +337,8 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
                 {
                     let mut border_rect: FRect = self.rect_record().into();
                     border_rect.set_point(&(0, 0).into());
-                    self.border_ref().clear_border(
-                        &mut painter,
-                        border_rect,
-                        self.background(),
-                    );
+                    self.border_ref()
+                        .clear_border(&mut painter, border_rect, self.background());
 
                     self.render_difference(&mut painter);
                 } else {
@@ -359,7 +358,30 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter.reset();
         painter.set_font(self.font().to_skia_font());
+
+        painter_clip(self, &mut painter);
+
         self.paint(&mut painter);
+
+        painter.restore();
+    }
+}
+
+pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter) {
+    painter.save();
+    let winr: skia_safe::IRect = widget.window().rect().into();
+    painter.canvas_mut().clip_irect(winr, ClipOp::Intersect);
+    painter.clip_rect(
+        widget.contents_rect(Some(Coordinate::Widget)),
+        ClipOp::Intersect,
+    );
+
+    for &r in widget.redraw_region().iter() {
+        painter.clip_rect(r, ClipOp::Intersect)
+    }
+
+    for &r in widget.redraw_region_f().iter() {
+        painter.clip_rect(r, ClipOp::Intersect)
     }
 }
 
@@ -1592,10 +1614,7 @@ impl WidgetExt for Widget {
     #[inline]
     fn map_to_global_f(&self, point: &FPoint) -> FPoint {
         let rect = self.rect();
-        FPoint::new(
-            point.x() + rect.x() as f32,
-            point.y() + rect.y() as f32,
-        )
+        FPoint::new(point.x() + rect.x() as f32, point.y() + rect.y() as f32)
     }
 
     #[inline]
@@ -1642,6 +1661,9 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn hscale(&self) -> f32 {
+        if self.fixed_width {
+            return 0.
+        }
         self.hscale
     }
 
@@ -1652,6 +1674,9 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn vscale(&self) -> f32 {
+        if self.fixed_height {
+            return 0.
+        }
         self.vscale
     }
 
