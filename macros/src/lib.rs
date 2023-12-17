@@ -13,6 +13,7 @@ mod extend_shared_widget;
 mod extend_widget;
 mod general_attr;
 mod layout;
+mod popupable;
 mod reflect_trait;
 mod scroll_area;
 mod split_pane;
@@ -175,6 +176,11 @@ pub fn async_do(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as AsyncDoParser).expand().into()
 }
 
+/// arguments:
+/// 
+/// `name`: Upper camel case needed, the name of async task struct, same as the async function.
+/// 
+/// `value``: General param of async block's return value
 #[proc_macro_attribute]
 pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
@@ -234,5 +240,11 @@ pub fn stack_impl(input: TokenStream) -> TokenStream {
 /// `duration`: the time duration of animation(millis).
 #[proc_macro_attribute]
 pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+
+#[proc_macro_attribute]
+pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

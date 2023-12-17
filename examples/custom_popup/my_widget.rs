@@ -4,8 +4,11 @@ use tmui::{
    widget::WidgetImpl,
 };
 
+use crate::custom_popup::CustomPopup;
+
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
+#[popupable]
 pub struct MyWidget {
     #[children]
     content_label: Box<Widget>,
@@ -26,6 +29,8 @@ impl ObjectImpl for MyWidget {
 
         self.set_hexpand(true);
         self.set_vexpand(true);
+
+        self.add_popup(CustomPopup::new());
 
         self.content_label.set_vexpand(true);
         self.content_label.set_hexpand(true);

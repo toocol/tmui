@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask};
+use crate::{animation::Animation, async_task::AsyncTask, popupable};
 
 pub(crate) struct GeneralAttr {
     // fields about `run_after`
@@ -19,6 +19,12 @@ pub(crate) struct GeneralAttr {
     pub(crate) async_task_fields: Vec<TokenStream>,
     pub(crate) async_task_impl_clause: TokenStream,
     pub(crate) async_task_method_clause: TokenStream,
+
+    // field about `popupable`
+    pub(crate) is_popupable: bool,
+    pub(crate) popupable_field_clause: TokenStream,
+    pub(crate) popupable_impl_clause: TokenStream,
+    pub(crate) popupable_reflect_clause: TokenStream,
 }
 
 impl GeneralAttr {
@@ -26,10 +32,14 @@ impl GeneralAttr {
         let name = &ast.ident;
 
         let mut is_run_after = false;
+
         let mut is_animation = false;
         let mut animation = None;
+
         let mut is_async_task = false;
         let mut async_tasks = vec![];
+
+        let mut is_popupable = false;
 
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
@@ -37,14 +47,17 @@ impl GeneralAttr {
 
                 match attr_str.as_str() {
                     "run_after" => is_run_after = true,
-                    "animatable" => animation = {
-                        is_animation = true;
-                        Some(Animation::parse(attr)?)
-                    },
+                    "animatable" => {
+                        animation = {
+                            is_animation = true;
+                            Some(Animation::parse(attr)?)
+                        }
+                    }
                     "async_task" => {
                         is_async_task = true;
                         async_tasks.push(AsyncTask::parse_attr(attr));
                     }
+                    "popupable" => is_popupable = true,
                     _ => {}
                 }
             }
@@ -115,6 +128,27 @@ impl GeneralAttr {
             proc_macro2::TokenStream::new()
         };
 
+        // Popupable
+        let popupable_field_clause = if is_popupable {
+            quote!(popup_field: Option<Box<dyn PopupImpl>>)
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let popupable_impl_clause = if is_popupable {
+            popupable::generate_popable_impl(ast)
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let popupable_reflect_clause = if is_popupable {
+            quote!(
+                type_registry.register::<#name, ReflectPopupable>();
+            )
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -125,6 +159,10 @@ impl GeneralAttr {
             async_task_fields,
             async_task_impl_clause,
             async_task_method_clause,
+            is_popupable,
+            popupable_field_clause,
+            popupable_impl_clause,
+            popupable_reflect_clause,
         })
     }
 }

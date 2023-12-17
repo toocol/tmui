@@ -24,6 +24,12 @@ pub(crate) fn expand(
 
     let animation_clause = &general_attr.animation_clause;
 
+    let async_task_clause = &general_attr.async_task_impl_clause;
+    let async_method_clause = &general_attr.async_task_method_clause;
+
+    let popupable_impl_clause = &general_attr.popupable_impl_clause;
+    let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -80,6 +86,13 @@ pub(crate) fn expand(
                                 #async_field
                             })?);
                         }
+                    }
+
+                    if general_attr.is_popupable {
+                        let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
                     }
 
                     // If field with attribute `#[children]`,
@@ -183,10 +196,6 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let async_task_clause = &general_attr.async_task_impl_clause;
-
-            let async_method_clause = &general_attr.async_task_method_clause;
-
             Ok(quote!(
                 #[derive(Derivative)]
                 #[derivative(Default)]
@@ -203,6 +212,8 @@ pub(crate) fn expand(
                 #animation_clause
 
                 #async_task_clause
+
+                #popupable_impl_clause
 
                 impl ContainerAcquire for #name {}
 
@@ -224,6 +235,7 @@ pub(crate) fn expand(
                         #reflect_split_infos_getter
                         #reflect_stack_trait
                         #reflect_scroll_area
+                        #popupable_reflect_clause
                     }
 
                     #[inline]

@@ -15,10 +15,17 @@ impl ObjectImpl for Popup {}
 
 impl WidgetImpl for Popup {}
 
-#[reflect_trait]
-pub trait PopupImpl: WidgetImpl {}
+pub trait PopupExt {
+    fn as_widget_impl(&self) -> &dyn WidgetImpl;
 
-pub trait Popupable {
+    fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl;
+}
+
+#[reflect_trait]
+pub trait PopupImpl: WidgetImpl + PopupExt {}
+
+#[reflect_trait]
+pub trait Popupable: WidgetImpl {
     /// Add the popup to the widget.
     /// 
     /// Only one popup can exist at the same time.
@@ -29,4 +36,8 @@ pub trait Popupable {
 
     /// Change the popup's visibility to false, show the popup.
     fn hide_popup(&mut self);
+
+    fn get_popup_ref(&self) -> Option<&dyn PopupImpl>;
+
+    fn get_popup_mut(&mut self) -> Option<&mut dyn PopupImpl>;
 }

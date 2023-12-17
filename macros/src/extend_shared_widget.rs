@@ -12,6 +12,12 @@ pub(crate) fn expand(
 
     let run_after_clause = &general_attr.run_after_clause;
 
+    let async_task_clause = &general_attr.async_task_impl_clause;
+    let async_method_clause = &general_attr.async_task_method_clause;
+
+    let popupable_impl_clause = &general_attr.popupable_impl_clause;
+    let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
+
     let set_shared_id_clause = match id {
         Some(id) => quote!(
             self.set_shared_id(#id);
@@ -33,6 +39,13 @@ pub(crate) fn expand(
                                 #async_field
                             })?);
                         }
+                    }
+
+                    if general_attr.is_popupable {
+                        let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
                     }
                 }
                 _ => {
@@ -64,10 +77,6 @@ pub(crate) fn expand(
             let shared_widget_trait_impl_clause =
                 gen_shared_widget_trait_impl_clause(name, vec!["shared_widget"])?;
 
-            let async_task_clause = &general_attr.async_task_impl_clause;
-
-            let async_method_clause = &general_attr.async_task_method_clause;
-
             Ok(quote! {
                 #[derive(Derivative)]
                 #[derivative(Default)]
@@ -83,6 +92,8 @@ pub(crate) fn expand(
 
                 #async_task_clause
 
+                #popupable_impl_clause
+
                 impl WidgetAcquire for #name {}
 
                 impl SuperType for #name {
@@ -96,6 +107,7 @@ pub(crate) fn expand(
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
+                        #popupable_reflect_clause
                     }
 
                     #[inline]

@@ -405,6 +405,13 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             children.push_back(child_ref.get_raw_child_mut());
         }
 
+        // Determine whether the widget is pupable.
+        if let Some(popupable) = cast_mut!(child_ref as Popupable) {
+            if let Some(popup) = popupable.get_popup_mut() {
+                children.push_back(Some(popup.as_widget_impl_mut().as_ptr_mut()));
+            }
+        }
+
         child = children.pop_front().take().map_or(None, |widget| unsafe {
             match widget {
                 None => None,

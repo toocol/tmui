@@ -15,6 +15,12 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
     let animation_clause = &general_attr.animation_clause;
 
+    let async_task_clause = &general_attr.async_task_impl_clause;
+    let async_method_clause = &general_attr.async_task_method_clause;
+
+    let popupable_impl_clause = &general_attr.popupable_impl_clause;
+    let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut child_field = None;
@@ -39,6 +45,13 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                                 #async_field
                             })?);
                         }
+                    }
+
+                    if general_attr.is_popupable {
+                        let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
                     }
 
                     // If field with attribute `#[child]`,
@@ -115,10 +128,6 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 None => proc_macro2::TokenStream::new(),
             };
 
-            let async_task_clause = &general_attr.async_task_impl_clause;
-
-            let async_method_clause = &general_attr.async_task_method_clause;
-
             Ok(quote! {
                 #[derive(Derivative)]
                 #[derivative(Default)]
@@ -134,6 +143,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 #async_task_clause
 
+                #popupable_impl_clause
+
                 impl WidgetAcquire for #name {}
 
                 impl SuperType for #name {
@@ -147,6 +158,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
+                        #popupable_reflect_clause
                     }
 
                     #[inline]

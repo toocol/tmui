@@ -33,3 +33,10 @@ impl WidgetImpl for CustomPopup {
 }
 
 impl PopupImpl for CustomPopup {}
+
+impl CustomPopup {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
+    }
+}
