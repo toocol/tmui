@@ -1,4 +1,5 @@
 pub mod inner;
+pub mod manager;
 pub mod snapshot;
 pub mod state_holder;
 
@@ -6,7 +7,7 @@ mod progress;
 
 use self::{inner::AnimationsHolder, progress::Progress};
 use std::time::Duration;
-use tlib::{prelude::*, reflect_trait};
+use tlib::{prelude::*, reflect_trait, utils::TimeStamp};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Animation {
@@ -74,13 +75,13 @@ impl AnimationModel {
 
     /// This function will be processed by macros.
     #[inline]
-    pub fn start(&mut self, start_time: u64, holder: AnimationsHolder) {
+    pub fn start(&mut self, holder: AnimationsHolder) {
         if self.state != AnimationState::Stopped {
             return;
         }
 
         self.animation_holder = Some(holder);
-        self.start_time = start_time;
+        self.start_time = TimeStamp::timestamp();
         self.end_time = self.start_time + self.duration.as_millis() as u64;
         self.state = AnimationState::Playing;
     }

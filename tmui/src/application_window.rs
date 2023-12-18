@@ -1,4 +1,5 @@
 use crate::{
+    animation::manager::AnimationManager,
     graphics::{board::Board, element::HierachyZ},
     layout::LayoutManager,
     platform::{ipc_bridge::IpcBridge, PlatformType},
@@ -341,20 +342,7 @@ impl ApplicationWindow {
             return;
         }
 
-        let parent = widget.get_parent_mut().unwrap();
-        let zindex = parent.z_index() + parent.z_index_step();
-        widget.set_z_index(zindex);
-
-        let board = window.board();
-        board.add_element(widget.as_element());
-        ApplicationWindow::widgets_of(window_id).insert(widget.name(), NonNull::new(widget));
-
-        let type_registry = TypeRegistry::instance();
-        widget.inner_type_register(type_registry);
-        widget.type_register(type_registry);
-
-        widget.set_initialized(true);
-        widget.initialize();
+        child_initialize(Some(widget), window_id);
     }
 }
 
@@ -367,14 +355,16 @@ pub fn current_window_id() -> ObjectId {
 fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId) {
     let board = ApplicationWindow::window_of(window_id).board();
     let type_registry = TypeRegistry::instance();
+
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
+
     while let Some(child_ref) = child {
+        board.add_element(child_ref.as_element());
+        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ref));
+
         let parent = child_ref.get_parent_mut().unwrap();
         let zindex = parent.z_index() + parent.z_index_step();
         child_ref.set_z_index(zindex);
-
-        board.add_element(child_ref.as_element());
-        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ref));
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
@@ -382,6 +372,10 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         child_ref.set_initialized(true);
         child_ref.inner_initialize();
         child_ref.initialize();
+
+        if let Some(snapshot) = cast_mut!(child_ref as Snapshot) {
+            AnimationManager::with(|m| m.borrow_mut().add_snapshot(snapshot))
+        }
 
         // Determine whether the widget is a container.
         let is_container = child_ref.super_type().is_a(Container::static_type());
@@ -402,13 +396,16 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
                 .iter_mut()
                 .for_each(|c| children.push_back(Some(*c)));
         } else {
-            children.push_back(child_ref.get_raw_child_mut());
+            let c_child = child_ref.get_raw_child_mut();
+            if c_child.is_some() {
+                children.push_back(c_child);
+            }
         }
 
-        // Determine whether the widget is pupable.
+        // Determine whether the widget is pupupable.
         if let Some(popupable) = cast_mut!(child_ref as Popupable) {
             if let Some(popup) = popupable.get_popup_mut() {
-                children.push_back(Some(popup.as_widget_impl_mut().as_ptr_mut()));
+                children.push_back(Some(popup.as_widget_impl_mut()));
             }
         }
 

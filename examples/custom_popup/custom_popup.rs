@@ -1,18 +1,23 @@
 use tlib::run_after;
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
+    label::Label,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Popup)]
 #[async_task(name = "TestAsyncTask", value = "()")]
 #[animatable(ty = "Linear", direction = "BottomToTop", duration = 500)]
+#[derive(Childable)]
 #[run_after]
-pub struct CustomPopup {}
+pub struct CustomPopup {
+    #[child]
+    label: Box<Label>,
+}
 
 impl ObjectSubclass for CustomPopup {
-   const NAME: &'static str = "CustomPopup";
+    const NAME: &'static str = "CustomPopup";
 }
 
 impl ObjectImpl for CustomPopup {
@@ -21,6 +26,12 @@ impl ObjectImpl for CustomPopup {
 
         self.set_hexpand(true);
         self.set_vexpand(true);
+
+        self.label.set_text("This is a popup.");
+
+        let label_size = self.label.size();
+        self.width_request(label_size.width());
+        self.height_request(label_size.height());
     }
 }
 
@@ -29,6 +40,10 @@ impl WidgetImpl for CustomPopup {
         self.parent_run_after();
 
         println!("CustomPopup run after.")
+    }
+
+    fn paint(&mut self, _: &mut Painter) {
+        println!("CustomPopup paint.")
     }
 }
 

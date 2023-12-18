@@ -32,8 +32,6 @@ thread_local! {
     pub(crate) static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
 }
 
-pub const FRAME_INTERVAL: u128 = 16000;
-
 const INVALID_GENERIC_PARAM_ERROR: &'static str =
     "Invalid generic parameters, please use generic parameter defined on Application.";
 pub(crate) static APP_STARTED: AtomicBool = AtomicBool::new(false);

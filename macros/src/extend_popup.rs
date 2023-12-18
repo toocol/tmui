@@ -118,6 +118,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
+                        self.hide();
                     }
                 }
 
@@ -134,6 +135,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         self.popup.widget.child_region()
                     }
                 }
+
+                impl BoardAddable for #name {}
 
                 impl #name {
                     #async_method_clause

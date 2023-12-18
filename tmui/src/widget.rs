@@ -400,7 +400,7 @@ pub trait WidgetExt {
     fn set_initialized(&mut self, initialized: bool);
 
     /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
-    fn as_element(&mut self) -> *mut dyn ElementImpl;
+    fn as_element(&mut self) -> &mut dyn ElementImpl;
 
     /// Go to[`Function defination`](WidgetExt::first_rendered) (Defined in [`WidgetExt`])
     fn first_rendered(&self) -> bool;
@@ -956,8 +956,8 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn as_element(&mut self) -> *mut dyn ElementImpl {
-        self as *mut Self as *mut dyn ElementImpl
+    fn as_element(&mut self) -> &mut dyn ElementImpl {
+        self
     }
 
     #[inline]
@@ -1115,6 +1115,7 @@ impl WidgetExt for Widget {
     #[inline]
     fn show(&mut self) {
         self.set_property("visible", true.to_value());
+        self.set_rerender_styles(true);
         self.update();
     }
 
@@ -1601,7 +1602,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn map_to_global(&self, point: &Point) -> Point {
-        let contents_rect = self.contents_rect(None);
+        let contents_rect = self.rect();
         Point::new(point.x() + contents_rect.x(), point.y() + contents_rect.y())
     }
 

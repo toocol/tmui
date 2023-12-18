@@ -1,5 +1,4 @@
 use std::ptr::NonNull;
-
 use super::{Animatable, Direction};
 use crate::{
     animation::state_holder::ReflectRectHolder, prelude::*, primitive::frame::Frame,
@@ -8,7 +7,11 @@ use crate::{
 
 #[reflect_trait]
 pub trait Snapshot: WidgetImpl + Animatable {
-    fn start(&mut self, frame: Frame) {
+    fn as_snapshot(&self) -> &dyn Snapshot;
+
+    fn as_snapshot_mut(&mut self) -> &mut dyn Snapshot;
+
+    fn start(&mut self) {
         match self.animation() {
             Animation::Linear => {
                 let mut start = self.rect();
@@ -35,10 +38,9 @@ pub trait Snapshot: WidgetImpl + Animatable {
                 let hold =
                     NonNull::new(cast_mut!(widget as RectHolder).unwrap().animated_rect_mut());
 
-                widget.animation_model_mut().start(
-                    frame.timestamp(),
-                    AnimationsHolder::Linear { start, end, hold },
-                );
+                widget
+                    .animation_model_mut()
+                    .start(AnimationsHolder::Linear { start, end, hold });
             }
             Animation::EaseIn => {}
             Animation::EaseOut => {}
@@ -62,6 +64,7 @@ pub trait Snapshot: WidgetImpl + Animatable {
             }
 
             widget.animation_model_mut().update(frame.timestamp());
+            widget.update();
         }
     }
 }

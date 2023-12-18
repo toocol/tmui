@@ -1,18 +1,17 @@
 use tipc::{RwLock, lock_api::RwLockWriteGuard, RawRwLock};
-use tlib::{nonnull_mut, ptr_ref};
+use tlib::{nonnull_mut, ptr_ref, object::ObjectId};
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
+use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap, widget::{WidgetImpl, WindowAcquire}};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
-    sync::{Once, Arc},
+    sync::Arc, collections::HashMap,
 };
 
 thread_local! {
     static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true);
     static FORCE_UPDATE: RefCell<bool> = RefCell::new(false);
 }
-static ONCE: Once = Once::new();
 
 /// Basic drawing Board with Skia surface.
 ///
@@ -25,16 +24,12 @@ pub struct Board {
     backend: Box<dyn Backend>,
     surface: RefCell<Surface>,
     element_list: RefCell<Vec<Option<NonNull<dyn ElementImpl>>>>,
+    index_record: HashMap<ObjectId, usize>,
 }
 
 impl Board {
     #[inline]
     pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>, backend: Box<dyn Backend>) -> Self {
-        if ONCE.is_completed() {
-            panic!("`Board can only construct once.`")
-        }
-        ONCE.call_once(|| {});
-
         let surface = backend.surface();
 
         Self {
@@ -42,6 +37,7 @@ impl Board {
             backend,
             surface: RefCell::new(surface),
             element_list: RefCell::new(vec![]),
+            index_record: HashMap::new(),
         }
     }
 
@@ -80,8 +76,17 @@ impl Board {
     }
 
     #[inline]
-    pub(crate) fn add_element(&self, element: *mut dyn ElementImpl) {
+    pub(crate) fn add_element(&self, element: &mut dyn ElementImpl) {
         self.element_list.borrow_mut().push(NonNull::new(element))
+    }
+
+    pub(crate) fn add_element_with_record(&mut self, element: &mut dyn ElementImpl) {
+        let mut list = self.element_list.borrow_mut();
+        let index = list.len();
+
+        list.push(NonNull::new(element));
+
+        self.index_record.insert(element.id(), index);
     }
 
     #[inline]
@@ -131,5 +136,12 @@ impl Board {
             }
             update
         })
+    }
+}
+
+pub trait BoardAddable: WidgetImpl + WindowAcquire {
+    #[inline]
+    fn add_to_board(&mut self) {
+        self.window().board().add_element_with_record(self.as_element())
     }
 }

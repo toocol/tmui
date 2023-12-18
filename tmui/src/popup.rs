@@ -1,7 +1,7 @@
 use crate::{
    prelude::*,
    tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
+   widget::WidgetImpl, graphics::board::BoardAddable,
 };
 
 #[extends(Widget)]
@@ -15,6 +15,8 @@ impl ObjectImpl for Popup {}
 
 impl WidgetImpl for Popup {}
 
+impl BoardAddable for Popup {}
+
 pub trait PopupExt {
     fn as_widget_impl(&self) -> &dyn WidgetImpl;
 
@@ -22,7 +24,12 @@ pub trait PopupExt {
 }
 
 #[reflect_trait]
-pub trait PopupImpl: WidgetImpl + PopupExt {}
+pub trait PopupImpl: WidgetImpl + PopupExt + BoardAddable {
+    /// Calculate the position of the component when it becomes visible.
+    fn calculate_position(&self, point: Point) -> Point {
+        point
+    }
+}
 
 #[reflect_trait]
 pub trait Popupable: WidgetImpl {
@@ -32,7 +39,9 @@ pub trait Popupable: WidgetImpl {
     fn add_popup(&mut self, popup: Box<dyn PopupImpl>);
 
     /// Change the popup's visibility to true, show the popup.
-    fn show_popup(&mut self);
+    /// 
+    /// basic_point: global coordinate point needed.
+    fn show_popup(&mut self, basic_point: Point);
 
     /// Change the popup's visibility to false, show the popup.
     fn hide_popup(&mut self);

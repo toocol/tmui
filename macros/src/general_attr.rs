@@ -82,7 +82,7 @@ impl GeneralAttr {
         };
         let animation_field = if animation.is_some() {
             quote!(
-                pub animation: AnimationModel
+                animation: AnimationModel
             )
         } else {
             proc_macro2::TokenStream::new()

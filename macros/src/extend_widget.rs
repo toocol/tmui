@@ -245,8 +245,8 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn as_element(&mut self) -> *mut dyn ElementImpl {
-                self as *mut Self as *mut dyn ElementImpl
+            fn as_element(&mut self) -> &mut dyn ElementImpl {
+                self
             }
 
             #[inline]

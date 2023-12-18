@@ -83,10 +83,11 @@ impl CpuBalance {
             return;
         }
 
-        if self.high_load || cost.as_millis() >= (FRAME_DURATION.as_millis() as f32 * 0.6) as u128 {
+        if self.high_load
+            || update
+            || cost.as_millis() >= (FRAME_DURATION.as_millis() as f32 * 0.6) as u128
+        {
             tlib::timer::sleep(MICROS_10_DURATION);
-        } else if update {
-            tlib::timer::sleep(FRAME_DURATION - cost);
         } else {
             std::thread::sleep(MILLIS_1_DURATION);
         }

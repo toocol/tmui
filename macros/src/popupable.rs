@@ -17,9 +17,12 @@ pub(crate) fn generate_popable_impl(ast: &DeriveInput) -> TokenStream {
             }
 
             #[inline]
-            fn show_popup(&mut self) {
+            fn show_popup(&mut self, basic_point: Point) {
                 if let Some(ref mut popup) = self.popup_field {
-                    popup.show()
+                    let pos = popup.calculate_position(basic_point);
+                    popup.set_fixed_x(pos.x());
+                    popup.set_fixed_y(pos.y());
+                    popup.show();
                 }
             }
 

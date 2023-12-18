@@ -13,7 +13,7 @@ pub use crate::container::{
     ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
     ReflectSizeUnifiedAdjust, SizeUnifiedAdjust, StaticContainerScaleCalculate,
 };
-pub use crate::graphics::board::Board;
+pub use crate::graphics::board::{Board, BoardAddable};
 pub use crate::graphics::border::Border;
 pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{

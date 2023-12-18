@@ -1,25 +1,26 @@
+pub(crate) mod frame_manager;
 pub(crate) mod runtime_track;
+pub(crate) mod wed;
 pub(crate) mod window_context;
 pub(crate) mod windows_process;
-pub(crate) mod wed;
 
 use crate::{
-    application::{Application, APP_STOPPED, FRAME_INTERVAL, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
+    application::{Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
     platform::logic_window::LogicWindow,
     prelude::*,
-    primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
+    primitive::{cpu_balance::CpuBalance, Message},
 };
-use log::debug;
-use std::{sync::atomic::Ordering, time::Instant};
+use std::sync::atomic::Ordering;
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
-    payload::PayloadWeight,
     r#async::tokio_runtime,
     timer::TimerHub,
 };
+
+use self::frame_manager::FrameManager;
 
 pub(crate) fn ui_runtime<T, M>(mut logic_window: LogicWindow<T, M>)
 where
@@ -84,14 +85,9 @@ where
     window.run_after();
 
     let mut cpu_balance = CpuBalance::new();
-    let mut frame = Frame::empty_frame();
-    let mut last_frame = Instant::now();
-    let mut update = true;
+    let mut frame_manager = FrameManager::new();
     let mut resized = false;
     let mut size_record = (0, 0);
-    let mut frame_cnt = 0;
-    let (mut time_17, mut time_17_20, mut time_20_25, mut time_25) = (0, 0, 0, 0);
-    let mut log_instant = Instant::now();
 
     Application::<T, M>::set_app_started();
 
@@ -101,47 +97,15 @@ where
         }
 
         cpu_balance.loop_start();
-        let elapsed = last_frame.elapsed();
 
-        update = if elapsed.as_micros() >= FRAME_INTERVAL || Board::is_force_update() {
-            if resized {
-                logic_window.resize(size_record.0, size_record.1);
-                board.resize();
-                resized = false;
-            }
-
-            last_frame = Instant::now();
-            let frame_time = elapsed.as_micros() as f32 / 1000.;
-            frame_cnt += 1;
-            match frame_time as i32 {
-                0..=16 => time_17 += 1,
-                17..=19 => time_17_20 += 1,
-                20..=24 => time_20_25 += 1,
-                _ => time_25 += 1,
-            }
-            if log_instant.elapsed().as_secs() >= 1 {
-                debug!(
-                    "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
-                    time_17 as f32 / frame_cnt as f32 * 100., time_17_20 as f32 / frame_cnt as f32 * 100., time_20_25 as f32 / frame_cnt as f32 * 100., time_25 as f32 / frame_cnt as f32 * 100., frame_time
-                    );
-                log_instant = Instant::now();
-            }
-
-            frame = frame.next();
-
-            let update = board.invalidate_visual();
-            if window.minimized() {
-                window.set_minimized(false);
-            }
-            if update {
-                let msg = Message::VSync(Instant::now());
-                cpu_balance.add_payload(msg.payload_wieght());
-                window.send_message(msg);
-            }
-            update
-        } else {
-            update
-        };
+        let update = frame_manager.process(
+            board.as_mut(),
+            window.as_mut(),
+            &mut logic_window,
+            &mut cpu_balance,
+            &mut resized,
+            &size_record,
+        );
 
         timer_hub.check_timers();
         action_hub.process_multi_thread_actions();

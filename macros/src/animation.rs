@@ -120,7 +120,17 @@ impl Animation {
                 }
             }
 
-            impl Snapshot for #name {}
+            impl Snapshot for #name {
+                #[inline]
+                fn as_snapshot(&self) -> &dyn Snapshot {
+                    self
+                }
+
+                #[inline]
+                fn as_snapshot_mut(&mut self) -> &mut dyn Snapshot {
+                    self
+                }
+            }
         );
 
         Ok(clause)
