@@ -1,14 +1,14 @@
 use crate::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Widget)]
 pub struct Popup {}
 
 impl ObjectSubclass for Popup {
-   const NAME: &'static str = "Popup";
+    const NAME: &'static str = "Popup";
 }
 
 impl ObjectImpl for Popup {}
@@ -24,7 +24,7 @@ pub trait PopupExt {
 #[reflect_trait]
 pub trait PopupImpl: WidgetImpl + PopupExt {
     /// Calculate the position of the component when it becomes visible.
-    /// 
+    ///
     /// @param: `base_rect` the rectangle of base widget.<br>
     /// @param: `point` the hitting point.
     fn calculate_position(&self, base_rect: Rect, mut point: Point) -> Point {
@@ -38,21 +38,58 @@ pub trait PopupImpl: WidgetImpl + PopupExt {
 #[reflect_trait]
 pub trait Popupable: WidgetImpl {
     /// Add the popup to the widget.
-    /// 
+    ///
     /// Only one popup can exist at the same time.
-    fn add_popup(&mut self, popup: Box<dyn PopupImpl>);
+    #[inline]
+    fn add_popup(&mut self, mut popup: Box<dyn PopupImpl>) {
+        popup.set_parent(self.as_widget_mut());
+
+        ApplicationWindow::initialize_dynamic_component(popup.as_widget_impl_mut());
+
+        self.set_popup(popup);
+    }
 
     /// Change the popup's visibility to true, show the popup.
-    /// 
+    ///
     /// basic_point: `global coordinate` point needed.
-    fn show_popup(&mut self, basic_point: Point);
+    fn show_popup(&mut self, basic_point: Point) {
+        let rect = self.rect();
+        if let Some(popup) = self.get_popup_mut() {
+            if popup.visible() {
+                return;
+            }
+
+            let pos = popup.calculate_position(rect, basic_point);
+            popup.set_fixed_x(pos.x());
+            popup.set_fixed_y(pos.y());
+            ApplicationWindow::window_of(popup.window_id())
+                .layout_change(popup.as_widget_impl_mut());
+            popup.show();
+        }
+    }
 
     /// Change the popup's visibility to false, hide the popup.
-    fn hide_popup(&mut self);
+    #[inline]
+    fn hide_popup(&mut self) {
+        if let Some(popup) = self.get_popup_mut() {
+            popup.hide()
+        }
+    }
+
+    /// Set the popup to widget.
+    /// 
+    /// use [`add_popup()`](Popupable::add_popup) instead, do not use this function directly.
+    fn set_popup(&mut self, popup: Box<dyn PopupImpl>);
 
     /// Get the refrence of popup.
     fn get_popup_ref(&self) -> Option<&dyn PopupImpl>;
 
     /// Get the mutable refrence of popup.
     fn get_popup_mut(&mut self) -> Option<&mut dyn PopupImpl>;
+
+    /// Cast to dyn WidgetImpl
+    fn as_widget(&self) -> &dyn WidgetImpl;
+
+    /// Cast to mutable dyn WidgetImpl
+    fn as_widget_mut(&mut self) -> &mut dyn WidgetImpl;
 }

@@ -57,7 +57,7 @@ impl GeneralAttr {
                         is_async_task = true;
                         async_tasks.push(AsyncTask::parse_attr(attr));
                     }
-                    "popupable" => popupable = Some(Popupable::parse(attr, ast)?),
+                    "popupable" => popupable = Some(Popupable::parse(ast)?),
                     _ => {}
                 }
             }
