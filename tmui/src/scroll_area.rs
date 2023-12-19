@@ -1,9 +1,10 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS},
+    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH}, graphics::painter::Painter,
+    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
 };
 use derivative::Derivative;
 use log::debug;
@@ -12,7 +13,8 @@ use tlib::{
     events::{DeltaType, MouseEvent},
     namespace::{KeyboardModifier, Orientation},
     object::ObjectSubclass,
-    prelude::extends, ptr_mut,
+    prelude::extends,
+    ptr_mut,
 };
 
 #[extends(Container)]
@@ -101,7 +103,7 @@ impl ScrollAreaExt for ScrollArea {
         if let Some(area) = self.get_area_mut() {
             area.set_vexpand(true);
             area.set_hexpand(true);
-            area.set_hscale(size.width() as f32 - 10.);
+            // area.set_hscale(size.width() as f32 - 10.);
         }
     }
 }
@@ -138,10 +140,10 @@ impl ObjectSubclass for ScrollArea {
 impl ObjectImpl for ScrollArea {
     fn construct(&mut self) {
         self.parent_construct();
-        self.set_rerender_difference(true);
 
         self.scroll_bar.set_vexpand(true);
-        self.scroll_bar.set_hscale(10.);
+        self.scroll_bar.width_request(10);
+        // self.scroll_bar.set_hscale(10.);
 
         let parent = self as *mut dyn WidgetImpl;
         self.scroll_bar.set_parent(parent);
@@ -278,13 +280,7 @@ impl StaticContainerScaleCalculate for ScrollArea {
     fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
         let scroll = cast!(c as ScrollAreaExt).unwrap();
         match scroll.get_area() {
-            Some(area) => {
-                let size = c.size();
-
-                // width * area_hscale / container_hscale = width - 10
-                // => container_hscale = (area_hscale * width) / (width - 10)
-                (area.hscale() * size.width() as f32) / (size.width() as f32 - 10.)
-            }
+            Some(area) => area.hscale(),
             None => SCALE_DISMISS,
         }
     }

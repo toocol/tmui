@@ -115,3 +115,6 @@ impl StaticContainerScaleCalculate for Overlay {
 impl ChildContainerDiffRender for Overlay {
     fn container_diff_render(&mut self, _painter: &mut Painter) {}
 }
+
+#[reflect_trait]
+pub trait Overlaid {}

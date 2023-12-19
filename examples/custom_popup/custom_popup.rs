@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use tlib::run_after;
 use tmui::{
     label::Label,
@@ -7,7 +9,7 @@ use tmui::{
 };
 
 #[extends(Popup)]
-#[async_task(name = "TestAsyncTask", value = "()")]
+#[async_task(name = "TestAsyncTask", value = "&'static str")]
 #[animatable(ty = "Linear", direction = "BottomToTop", duration = 500)]
 #[derive(Childable)]
 #[run_after]
@@ -27,11 +29,20 @@ impl ObjectImpl for CustomPopup {
         self.set_hexpand(true);
         self.set_vexpand(true);
 
-        self.label.set_text("This is a popup.");
+        self.width_request(100);
+        self.height_request(40);
+        self.label.set_halign(Align::Center);
+        self.label.set_valign(Align::Center);
 
-        let label_size = self.label.size();
-        self.width_request(label_size.width());
-        self.height_request(label_size.height());
+        self.test_async_task(
+            async {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                "This is a popup."
+            },
+            Some(|p: &mut CustomPopup, text| {
+                p.label.set_text(text);
+            }),
+        );
     }
 }
 

@@ -28,6 +28,7 @@ pub use crate::label::LabelSignal;
 pub use crate::layout::{
     Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment,
 };
+pub use crate::overlay::{Overlaid, ReflectOverlaid};
 pub use crate::popup::{Popup, PopupImpl, ReflectPopupImpl, Popupable, ReflectPopupable, PopupExt};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;

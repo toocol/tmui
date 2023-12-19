@@ -316,6 +316,7 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
+        println!("Onrender {}", self.name());
         if !self.visible() {
             return;
         }
@@ -1144,7 +1145,7 @@ impl WidgetExt for Widget {
             self.set_property("height", height.to_value());
         }
         if self.id() != self.window_id() {
-            if ApplicationWindow::is_initialize_phase() {
+            if !self.window().initialized() {
                 return;
             }
             self.window().layout_change(self);

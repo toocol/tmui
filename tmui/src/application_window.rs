@@ -185,11 +185,6 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn is_initialize_phase() -> bool {
-        INTIALIZE_PHASE.with(|p| *p.borrow())
-    }
-
-    #[inline]
     pub(crate) fn set_ipc_bridge(&mut self, ipc_bridge: Option<Box<dyn IpcBridge>>) {
         self.ipc_bridge = ipc_bridge
     }

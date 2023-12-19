@@ -161,6 +161,9 @@ impl WidgetImpl for Label {
             self.set_fixed_width(self.paragraph_width.round() as i32);
             self.set_fixed_height(self.paragraph_height.round() as i32);
         }
+        if self.window().initialized() {
+            self.window().layout_change(self);
+        }
     }
 }
 

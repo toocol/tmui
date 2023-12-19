@@ -78,9 +78,6 @@ impl Object {
     ) -> Box<T> {
         let mut obj = Box::new(T::default());
 
-        obj.pretreat_construct();
-        obj.construct();
-
         let default_name = format!("{}#{}", T::NAME, obj.id());
         obj.set_property("name", default_name.to_value());
 
@@ -88,6 +85,9 @@ impl Object {
         for (name, value) in properties {
             obj.set_property(*name, value.to_value())
         }
+
+        obj.pretreat_construct();
+        obj.construct();
 
         obj
     }

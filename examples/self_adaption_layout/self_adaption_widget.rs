@@ -35,6 +35,7 @@ impl ObjectImpl for SelfAdaptionWidget {
         label.set_padding_left(20);
         label.set_margin_top(50);
         label.set_borders(2., 2., 2., 2.);
+        println!("size {:?}", label.size());
 
         self.child(label)
     }

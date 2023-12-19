@@ -119,6 +119,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
                         type_registry.register::<#name, ReflectPopupImpl>();
+                        type_registry.register::<#name, ReflectOverlaid>();
                         #popupable_reflect_clause
                     }
 
@@ -147,6 +148,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         self.popup.widget.child_region()
                     }
                 }
+
+                impl Overlaid for #name {}
 
                 impl #name {
                     #async_method_clause

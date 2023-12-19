@@ -11,9 +11,16 @@ impl ObjectSubclass for Popup {
     const NAME: &'static str = "Popup";
 }
 
-impl ObjectImpl for Popup {}
+impl ObjectImpl for Popup {
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectOverlaid>();
+    }
+}
 
 impl WidgetImpl for Popup {}
+
+impl Overlaid for Popup {}
 
 pub trait PopupExt {
     fn as_widget_impl(&self) -> &dyn WidgetImpl;
@@ -62,8 +69,12 @@ pub trait Popupable: WidgetImpl {
             let pos = popup.calculate_position(rect, basic_point);
             popup.set_fixed_x(pos.x());
             popup.set_fixed_y(pos.y());
-            ApplicationWindow::window_of(popup.window_id())
-                .layout_change(popup.as_widget_impl_mut());
+
+            let window = ApplicationWindow::window_of(popup.window_id());
+            if window.initialized() {
+                window.layout_change(popup.as_widget_impl_mut());
+            }
+            
             popup.show();
         }
     }
@@ -77,7 +88,7 @@ pub trait Popupable: WidgetImpl {
     }
 
     /// Set the popup to widget.
-    /// 
+    ///
     /// use [`add_popup()`](Popupable::add_popup) instead, do not use this function directly.
     fn set_popup(&mut self, popup: Box<dyn PopupImpl>);
 
