@@ -1,7 +1,7 @@
 use crate::{
    prelude::*,
    tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl, graphics::board::BoardAddable,
+   widget::WidgetImpl,
 };
 
 #[extends(Widget)]
@@ -15,8 +15,6 @@ impl ObjectImpl for Popup {}
 
 impl WidgetImpl for Popup {}
 
-impl BoardAddable for Popup {}
-
 pub trait PopupExt {
     fn as_widget_impl(&self) -> &dyn WidgetImpl;
 
@@ -24,9 +22,15 @@ pub trait PopupExt {
 }
 
 #[reflect_trait]
-pub trait PopupImpl: WidgetImpl + PopupExt + BoardAddable {
+pub trait PopupImpl: WidgetImpl + PopupExt {
     /// Calculate the position of the component when it becomes visible.
-    fn calculate_position(&self, point: Point) -> Point {
+    /// 
+    /// @param: `base_rect` the rectangle of base widget.<br>
+    /// @param: `point` the hitting point.
+    fn calculate_position(&self, base_rect: Rect, mut point: Point) -> Point {
+        let size = self.size();
+        point.set_y(base_rect.y() - size.height() - 3);
+        point.set_x(point.x() - size.width() / 2);
         point
     }
 }
@@ -40,13 +44,15 @@ pub trait Popupable: WidgetImpl {
 
     /// Change the popup's visibility to true, show the popup.
     /// 
-    /// basic_point: global coordinate point needed.
+    /// basic_point: `global coordinate` point needed.
     fn show_popup(&mut self, basic_point: Point);
 
-    /// Change the popup's visibility to false, show the popup.
+    /// Change the popup's visibility to false, hide the popup.
     fn hide_popup(&mut self);
 
+    /// Get the refrence of popup.
     fn get_popup_ref(&self) -> Option<&dyn PopupImpl>;
 
+    /// Get the mutable refrence of popup.
     fn get_popup_mut(&mut self) -> Option<&mut dyn PopupImpl>;
 }

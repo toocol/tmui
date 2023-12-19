@@ -1109,7 +1109,7 @@ impl WidgetExt for Widget {
     #[inline]
     fn hide(&mut self) {
         self.set_property("visible", false.to_value());
-        self.update();
+        self.window().invalid_effected_widgets(self.image_rect());
     }
 
     #[inline]
@@ -1880,7 +1880,7 @@ impl ChildRegionAcquirer for Widget {
         let mut region = tlib::skia_safe::Region::new();
         if let Some(child) = self.get_child_ref() {
             let rect: tlib::skia_safe::IRect = child.rect().into();
-            region.op_rect(rect, RegionOp::Intersect);
+            region.op_rect(rect, RegionOp::Replace);
         }
         region
     }

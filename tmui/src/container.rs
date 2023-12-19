@@ -115,7 +115,7 @@ impl<T: ContainerImpl> ChildrenRegionAcquirer for T {
         let mut region = tlib::skia_safe::Region::new();
         for c in self.children() {
             let rect: tlib::skia_safe::IRect = c.rect().into();
-            region.op_rect(rect, RegionOp::Intersect);
+            region.op_rect(rect, RegionOp::Union);
         }
         region
     }

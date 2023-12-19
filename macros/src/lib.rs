@@ -4,6 +4,7 @@ mod animation;
 mod async_do;
 mod async_task;
 mod cast;
+mod childable;
 mod extend_attr;
 mod extend_container;
 mod extend_element;

@@ -302,14 +302,14 @@ impl ApplicationWindow {
 
             let rect: tlib::skia_safe::IRect = widget.rect().into();
             let mut region = tlib::skia_safe::Region::new();
-            region.op_rect(rect, tlib::skia_safe::region::RegionOp::Intersect);
+            region.op_rect(rect, tlib::skia_safe::region::RegionOp::Replace);
             region.op_region(
                 &widget.child_region(),
                 tlib::skia_safe::region::RegionOp::Difference,
             );
 
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
-            if region.contains_rect(dirty_irect) {
+            if region.intersects_rect(dirty_irect) {
                 widget.set_rerender_styles(true);
                 widget.update_rect(dirty_rect);
             }

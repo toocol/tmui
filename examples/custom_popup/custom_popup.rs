@@ -41,10 +41,6 @@ impl WidgetImpl for CustomPopup {
 
         println!("CustomPopup run after.")
     }
-
-    fn paint(&mut self, _: &mut Painter) {
-        println!("CustomPopup paint.")
-    }
 }
 
 impl PopupImpl for CustomPopup {}

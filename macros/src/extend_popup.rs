@@ -1,8 +1,9 @@
+use crate::{
+    childable::Childable, extend_element, extend_object, extend_widget, general_attr::GeneralAttr,
+};
 use proc_macro2::Ident;
 use quote::quote;
-use syn::{DeriveInput, parse::Parser};
-
-use crate::{general_attr::GeneralAttr, extend_object, extend_element, extend_widget};
+use syn::{parse::Parser, DeriveInput};
 
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
@@ -21,6 +22,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
+            let mut childable = Childable::new();
+
             match &mut struct_data.fields {
                 syn::Fields::Named(fields) => {
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
@@ -50,6 +53,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                             #field
                         })?);
                     }
+
+                    childable.parse_childable(fields)?;
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -78,6 +83,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             )?;
 
             let popup_trait_impl_clause = gen_popup_trait_impl_clause(name, vec!["popup"])?;
+
+            let child_ref_clause = childable.get_child_ref();
 
             Ok(quote! {
                 #[derive(Derivative)]
@@ -120,6 +127,11 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         #run_after_clause
                         self.hide();
                     }
+
+                    #[inline]
+                    fn pretreat_construct(&mut self) {
+                        #child_ref_clause
+                    }
                 }
 
                 impl PointEffective for #name {
@@ -135,8 +147,6 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         self.popup.widget.child_region()
                     }
                 }
-
-                impl BoardAddable for #name {}
 
                 impl #name {
                     #async_method_clause
@@ -154,7 +164,6 @@ pub(crate) fn gen_popup_trait_impl_clause(
     name: &Ident,
     _popup_path: Vec<&'static str>,
 ) -> syn::Result<proc_macro2::TokenStream> {
-
     Ok(quote!(
         impl PopupExt for #name {
             #[inline]

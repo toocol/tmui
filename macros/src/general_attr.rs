@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, popupable};
+use crate::{animation::Animation, async_task::AsyncTask, popupable::Popupable};
 
 pub(crate) struct GeneralAttr {
     // fields about `run_after`
@@ -39,7 +39,7 @@ impl GeneralAttr {
         let mut is_async_task = false;
         let mut async_tasks = vec![];
 
-        let mut is_popupable = false;
+        let mut popupable = None;
 
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
@@ -57,7 +57,7 @@ impl GeneralAttr {
                         is_async_task = true;
                         async_tasks.push(AsyncTask::parse_attr(attr));
                     }
-                    "popupable" => is_popupable = true,
+                    "popupable" => popupable = Some(Popupable::parse(attr, ast)?),
                     _ => {}
                 }
             }
@@ -129,22 +129,20 @@ impl GeneralAttr {
         };
 
         // Popupable
-        let popupable_field_clause = if is_popupable {
-            quote!(popup_field: Option<Box<dyn PopupImpl>>)
+        let popupable_field_clause = if let Some(popupable) = popupable.as_ref() {
+            popupable.popupable_field()
         } else {
             proc_macro2::TokenStream::new()
         };
 
-        let popupable_impl_clause = if is_popupable {
-            popupable::generate_popable_impl(ast)
+        let popupable_impl_clause = if let Some(popupable) = popupable.as_ref() {
+            popupable.popupable_impl()
         } else {
             proc_macro2::TokenStream::new()
         };
 
-        let popupable_reflect_clause = if is_popupable {
-            quote!(
-                type_registry.register::<#name, ReflectPopupable>();
-            )
+        let popupable_reflect_clause = if let Some(popupable) = popupable.as_ref() {
+            popupable.popupable_reflect()
         } else {
             proc_macro2::TokenStream::new()
         };
@@ -159,7 +157,7 @@ impl GeneralAttr {
             async_task_fields,
             async_task_impl_clause,
             async_task_method_clause,
-            is_popupable,
+            is_popupable: popupable.is_some(),
             popupable_field_clause,
             popupable_impl_clause,
             popupable_reflect_clause,

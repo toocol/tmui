@@ -158,8 +158,8 @@ impl WidgetImpl for Label {
         let size = self.size();
 
         if size.width() == 0 || size.height() == 0 {
-            self.set_fixed_width(self.paragraph_width as i32);
-            self.set_fixed_height(self.paragraph_height as i32);
+            self.set_fixed_width(self.paragraph_width.round() as i32);
+            self.set_fixed_height(self.paragraph_height.round() as i32);
         }
     }
 }

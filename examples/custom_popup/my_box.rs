@@ -9,7 +9,7 @@ use crate::my_widget::MyWidget;
 #[derive(Childrenable)]
 pub struct MyBox {
     #[children]
-    content_label: Box<Widget>,
+    content_widget: Box<Widget>,
 
     #[children]
     bottom_bar: Box<MyWidget>,
@@ -28,9 +28,9 @@ impl ObjectImpl for MyBox {
         self.set_hexpand(true);
         self.set_vexpand(true);
 
-        self.content_label.set_vexpand(true);
-        self.content_label.set_hexpand(true);
-        self.content_label.set_background(Color::RED);
+        self.content_widget.set_vexpand(true);
+        self.content_widget.set_hexpand(true);
+        self.content_widget.set_background(Color::RED);
 
         self.bottom_bar.height_request(25);
         self.bottom_bar.set_hexpand(true);

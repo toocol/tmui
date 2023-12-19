@@ -26,10 +26,11 @@ impl ObjectImpl for MyWidget {
 impl WidgetImpl for MyWidget {
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
         println!("MyWidget mouse pressed.");
-        self.show_popup(self.map_to_global(&event.position().into()));
-    }
 
-    fn on_mouse_released(&mut self, _: &MouseEvent) {
-
+        if self.get_popup_ref().unwrap().visible() {
+            self.hide_popup();
+        } else {
+            self.show_popup(self.map_to_global(&event.position().into()));
+        }
     }
 }
