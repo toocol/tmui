@@ -5,6 +5,7 @@ pub use tlib::signal;
 pub use crate::animation::{
     inner::AnimationsHolder,
     snapshot::{ReflectSnapshot, Snapshot},
+    state_holder::{RectHolder, ReflectRectHolder, ColorHolder, ReflectColorHolder},
     Animatable, Animation, AnimationModel, ReflectAnimatable, {self},
 };
 pub use crate::application_window::{current_window_id, ApplicationWindow};

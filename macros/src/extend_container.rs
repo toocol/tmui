@@ -23,6 +23,10 @@ pub(crate) fn expand(
     let run_after_clause = &general_attr.run_after_clause;
 
     let animation_clause = &general_attr.animation_clause;
+    let animation_reflect = &general_attr.animation_reflect;
+    let animation_state_holder_field = &general_attr.animation_state_holder_field;
+    let animation_state_holder_impl = &general_attr.animation_state_holder_impl;
+    let animation_state_holder_reflect = &general_attr.animation_state_holder_reflect;
 
     let async_task_clause = &general_attr.async_task_impl_clause;
     let async_method_clause = &general_attr.async_task_method_clause;
@@ -77,6 +81,9 @@ pub(crate) fn expand(
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #default
                             #field
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #animation_state_holder_field
                         })?);
                     }
 
@@ -210,6 +217,7 @@ pub(crate) fn expand(
                 #children_construct_clause
 
                 #animation_clause
+                #animation_state_holder_impl
 
                 #async_task_clause
 
@@ -236,6 +244,8 @@ pub(crate) fn expand(
                         #reflect_stack_trait
                         #reflect_scroll_area
                         #popupable_reflect_clause
+                        #animation_reflect
+                        #animation_state_holder_reflect
                     }
 
                     #[inline]

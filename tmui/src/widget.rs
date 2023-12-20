@@ -246,6 +246,13 @@ impl Widget {
             child.set_minimized(true)
         }
     }
+
+    #[inline]
+    fn notify_propagate_update(&mut self) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update();
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -304,6 +311,12 @@ impl ObjectImpl for Widget {
                     self.notify_minimized();
                 }
             }
+            "propagate_update" => {
+                let propagate_update = value.get::<bool>();
+                if propagate_update {
+                    self.notify_propagate_update();
+                }
+            }
             _ => {}
         }
     }
@@ -316,7 +329,6 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
-        println!("Onrender {}", self.name());
         if !self.visible() {
             return;
         }
@@ -517,7 +529,7 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::get_height_request) (Defined in [`WidgetExt`])
     fn get_height_request(&self) -> i32;
 
-    /// Update widget's geometry: size, layout...
+    /// Update widget's child image rect union.
     ///
     /// Go to[`Function defination`](WidgetExt::update_geometry) (Defined in [`WidgetExt`])
     fn update_geometry(&mut self);
@@ -938,6 +950,11 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::is_pressed) (Defined in [`WidgetExt`])
     fn is_pressed(&self) -> bool;
+
+    /// Invalidate this widget to update it, and also update the child widget..
+    /// 
+    /// Go to[`Function defination`](WidgetExt::propagate_update) (Defined in [`WidgetExt`])
+    fn propagate_update(&mut self);
 }
 
 impl WidgetExt for Widget {
@@ -1751,6 +1768,13 @@ impl WidgetExt for Widget {
     #[inline]
     fn is_pressed(&self) -> bool {
         self.id() == self.window().pressed_widget()
+    }
+
+    #[inline]
+    fn propagate_update(&mut self) {
+        self.update();
+
+        self.set_property("propagate_update", true.to_value());
     }
 }
 

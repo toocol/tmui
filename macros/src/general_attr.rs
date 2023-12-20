@@ -13,6 +13,10 @@ pub(crate) struct GeneralAttr {
     pub(crate) animation: Option<Animation>,
     pub(crate) animation_clause: TokenStream,
     pub(crate) animation_field: TokenStream,
+    pub(crate) animation_reflect: TokenStream,
+    pub(crate) animation_state_holder_field: TokenStream,
+    pub(crate) animation_state_holder_impl: TokenStream,
+    pub(crate) animation_state_holder_reflect: TokenStream,
 
     // field about `async_task`
     pub(crate) is_async_task: bool,
@@ -87,6 +91,20 @@ impl GeneralAttr {
         } else {
             proc_macro2::TokenStream::new()
         };
+        let animation_reflect = if let Some(animation) = animation.as_ref() {
+            animation.animation_reflect(name)?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+        let (
+            animation_state_holder_field,
+            animation_state_holder_impl,
+            animation_state_holder_reflect,
+        ) = if let Some(animation) = animation.as_ref() {
+            animation.animation_state_holder(name)?
+        } else {
+            (TokenStream::new(), TokenStream::new(), TokenStream::new())
+        };
 
         // Async task:
         let mut async_task_fields = vec![];
@@ -153,6 +171,10 @@ impl GeneralAttr {
             animation,
             animation_clause,
             animation_field,
+            animation_reflect,
+            animation_state_holder_field,
+            animation_state_holder_impl,
+            animation_state_holder_reflect,
             is_async_task,
             async_task_fields,
             async_task_impl_clause,

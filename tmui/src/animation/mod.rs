@@ -5,6 +5,8 @@ pub mod state_holder;
 
 mod progress;
 
+use crate::application_window::ApplicationWindow;
+
 use self::{inner::AnimationsHolder, progress::Progress};
 use std::time::Duration;
 use tlib::{prelude::*, reflect_trait, utils::TimeStamp};
@@ -45,6 +47,7 @@ pub enum Direction {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct AnimationModel {
+    win_id: ObjectId,
     state: AnimationState,
     animation: Animation,
     direction: Direction,
@@ -62,6 +65,7 @@ impl AnimationModel {
     #[inline]
     pub fn new(animation: Animation, direction: Direction, duration: Duration) -> Self {
         Self {
+            win_id: 0,
             state: AnimationState::Stopped,
             animation,
             direction,
@@ -75,11 +79,14 @@ impl AnimationModel {
 
     /// This function will be processed by macros.
     #[inline]
-    pub fn start(&mut self, holder: AnimationsHolder) {
+    pub fn start(&mut self, holder: AnimationsHolder, win_id: ObjectId) {
         if self.state != AnimationState::Stopped {
             return;
         }
 
+        ApplicationWindow::window_of(win_id).high_load_request(true);
+
+        self.win_id = win_id;
         self.animation_holder = Some(holder);
         self.start_time = TimeStamp::timestamp();
         self.end_time = self.start_time + self.duration.as_millis() as u64;
@@ -90,12 +97,18 @@ impl AnimationModel {
     pub fn update(&mut self, current_time: u64) -> bool {
         if let Some(ref mut holder) = self.animation_holder {
             self.progress = Progress(
-                ((current_time as f32 - self.start_time as f32)
-                    / (self.end_time as f32 - self.start_time as f32))
-                    .min(1.),
+                ((current_time as f64 - self.start_time as f64)
+                    / (self.end_time as f64 - self.start_time as f64))
+                    .min(1.) as f32,
             );
 
             holder.update(self.progress);
+
+            if self.progress.0 == 1. {
+                self.state = AnimationState::Stopped;
+                ApplicationWindow::window_of(self.win_id).high_load_request(false);
+                println!("Animation stopped.");
+            }
 
             return true;
         }
@@ -132,4 +145,14 @@ pub trait Animatable {
     fn animation_model(&self) -> &AnimationModel;
 
     fn animation_model_mut(&mut self) -> &mut AnimationModel;
+}
+
+#[test]
+fn test() {
+    let (current_time, start_time, end_time) = (1703062043983u64, 1703062043968u64, 1703062044468u64);
+    let progress = 
+                ((current_time as f64 - start_time as f64)
+                    / (end_time as f64 - start_time as f64))
+                    .min(1.);
+    println!("{}", progress)
 }

@@ -59,6 +59,14 @@ impl ObjectImpl for Container {
                     }
                 }
             }
+            "propagate_update" => {
+                let propagate_update = value.get::<bool>();
+                if propagate_update {
+                    for child in self.children.iter_mut() {
+                        child.propagate_update()
+                    }
+                }
+            }
             _ => {}
         }
     }

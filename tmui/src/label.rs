@@ -103,8 +103,6 @@ impl WidgetImpl for Label {
             (Some(1), true)
         };
 
-        painter.save();
-        painter.clip_rect(content_rect, tlib::skia_safe::ClipOp::Intersect);
         painter.draw_paragraph(
             &self.label,
             draw_point,
@@ -113,7 +111,6 @@ impl WidgetImpl for Label {
             lines,
             ellipsis,
         );
-        painter.restore();
     }
 
     fn font_changed(&mut self) {
@@ -161,7 +158,7 @@ impl WidgetImpl for Label {
             self.set_fixed_width(self.paragraph_width.round() as i32);
             self.set_fixed_height(self.paragraph_height.round() as i32);
         }
-        if self.window().initialized() {
+        if self.window_id() != 0 && self.window().initialized() {
             self.window().layout_change(self);
         }
     }
