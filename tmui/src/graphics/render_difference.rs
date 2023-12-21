@@ -22,8 +22,7 @@ pub trait RenderDiffence: WidgetImpl + ChildWidgetDiffRender {
 
         let is_container = self.super_type().is_a(Container::static_type());
         if is_container {
-            let widget = self;
-            cast_mut!(widget as ChildContainerDiffRender)
+            cast_mut!(self as ChildContainerDiffRender)
                 .unwrap()
                 .container_diff_render(painter);
         } else {

@@ -31,9 +31,8 @@ pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::R
             fn size_unified_adjust(&mut self) {
                 use #use_prefix::tlib::nonnull_mut;
                 use #use_prefix::split_widget;
-                let widget = self;
-                let parent_rect = widget.contents_rect(None);
-                let split_infos_getter = cast_mut!(widget as SplitInfosGetter).unwrap();
+                let parent_rect = self.contents_rect(None);
+                let split_infos_getter = cast_mut!(self as SplitInfosGetter).unwrap();
                 for split_info in split_infos_getter.split_infos_vec() {
                     nonnull_mut!(split_info).calculate_layout(parent_rect, false)
                 }

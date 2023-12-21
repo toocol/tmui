@@ -65,8 +65,7 @@ trait RemainSize {
 }
 impl RemainSize for dyn WidgetImpl {
     fn remain_size(&self) -> Size {
-        let widget = self;
-        if let Some(container) = cast!(widget as ContainerImpl) {
+        if let Some(container) = cast!(self as ContainerImpl) {
             let mut size = container.size();
             for c in container.children() {
                 let cs = c.size();
@@ -79,7 +78,7 @@ impl RemainSize for dyn WidgetImpl {
             }
             size
         } else {
-            widget.size()
+            self.size()
         }
     }
 }
@@ -100,7 +99,7 @@ pub(crate) trait SizeCalculation {
 }
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> Size {
-        if self.id() == self.window_id() {
+        if self.id() == self.window_id() || cast!(self as Overlaid).is_some() {
             return self.size();
         }
         let size = self.size();

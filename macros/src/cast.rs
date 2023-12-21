@@ -1,21 +1,43 @@
-use quote::quote;
-use syn::{parse::Parse, Ident, Token};
+use quote::{quote, ToTokens};
+use syn::{parse::Parse, Ident, Token, token};
 
 pub(crate) struct CastInfo {
-    obj: Ident,
+    obj: Obj,
     ty: Ident,
+}
+
+enum Obj {
+    SelfToken(token::SelfValue),
+    Ident(Ident),
+}
+
+impl ToTokens for Obj {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            Self::SelfToken(t) => t.to_tokens(tokens),
+            Self::Ident(i) => i.to_tokens(tokens),
+        }
+    }
 }
 
 impl Parse for CastInfo {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let obj_ident: Ident = input.parse()?;
+        let lookahead = input.lookahead1();
+
+        let obj = if lookahead.peek(Token![self]) {
+            Obj::SelfToken(input.parse()?)
+        } else if lookahead.peek(Ident) {
+            Obj::Ident(input.parse()?)
+        } else {
+            return Err(lookahead.error());
+        };
 
         input.parse::<Token!(as)>()?;
 
         let ty_ident: Ident = input.parse()?;
 
         Ok(Self {
-            obj: obj_ident,
+            obj: obj,
             ty: ty_ident,
         })
     }

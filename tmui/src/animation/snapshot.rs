@@ -41,11 +41,10 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
                 let end = self.rect();
 
-                let widget = self;
                 let hold =
-                    NonNull::new(cast_mut!(widget as RectHolder).unwrap().animated_rect_mut());
+                    NonNull::new(cast_mut!(self as RectHolder).unwrap().animated_rect_mut());
 
-                widget
+                self
                     .animation_model_mut()
                     .start(AnimationsHolder::Linear { start, end, hold }, win_id);
             }
@@ -60,33 +59,32 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
     fn snapshot(&mut self, frame: Frame) {
         if self.animation_model().is_playing() {
-            let widget = self;
-            if let Some(rect_holder) = cast!(widget as RectHolder) {
-                if let Some(_) = cast!(widget as PopupImpl) {
+            if let Some(rect_holder) = cast!(self as RectHolder) {
+                if let Some(_) = cast!(self as PopupImpl) {
                     let dirty_rect = rect_holder.animated_rect();
 
                     if dirty_rect.is_valid() {
-                        ApplicationWindow::window_of(widget.window_id())
+                        ApplicationWindow::window_of(self.window_id())
                             .invalid_effected_widgets(dirty_rect);
                     }
                 }
             }
 
-            widget.animation_model_mut().update(frame.timestamp());
+            self.animation_model_mut().update(frame.timestamp());
 
-            if let Some(rect_holder) = cast!(widget as RectHolder) {
+            if let Some(rect_holder) = cast!(self as RectHolder) {
                 let rect = rect_holder.animated_rect();
                 println!("{:?}", rect);
-                widget.set_fixed_x(rect.x());
-                widget.set_fixed_y(rect.y());
-                widget.set_fixed_width(rect.width());
-                widget.set_fixed_height(rect.height());
-                ApplicationWindow::window_of(widget.window_id())
-                    .layout_change(widget.as_widget_mut());
+                self.set_fixed_x(rect.x());
+                self.set_fixed_y(rect.y());
+                self.set_fixed_width(rect.width());
+                self.set_fixed_height(rect.height());
+                ApplicationWindow::window_of(self.window_id())
+                    .layout_change(self.as_widget_mut());
             }
-            if let Some(color_holder) = cast!(widget as ColorHolder) {}
+            if let Some(color_holder) = cast!(self as ColorHolder) {}
 
-            widget.propagate_update();
+            self.propagate_update();
         }
     }
 }

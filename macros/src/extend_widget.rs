@@ -289,8 +289,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn hide(&mut self) {
                 self.#(#widget_path).*.hide();
 
-                let widget = self;
-                if let Some(snapshot) = cast_mut!(widget as Snapshot) {
+                if let Some(snapshot) = cast_mut!(self as Snapshot) {
                     snapshot.start(false)
                 }
             }
@@ -299,8 +298,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn show(&mut self) {
                 self.#(#widget_path).*.show();
 
-                let widget = self;
-                if let Some(snapshot) = cast_mut!(widget as Snapshot) {
+                if let Some(snapshot) = cast_mut!(self as Snapshot) {
                     snapshot.start(true)
                 }
             }
