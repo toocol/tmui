@@ -1,3 +1,4 @@
+use super::progress::Progress;
 use std::{
     ops::{Add, Div, Mul, Sub},
     ptr::NonNull,
@@ -7,7 +8,6 @@ use tlib::{
     global::CreateBy,
     nonnull_mut,
 };
-use super::progress::Progress;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) enum InnerAnimations {
@@ -58,38 +58,20 @@ impl InnerAnimations {
 }
 
 /// Should not be used directly, this structure will be processed by macros.
+#[rustfmt::skip]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AnimationsHolder {
-    Linear {
-        start: Rect,
-        end: Rect,
-        hold: Option<NonNull<Rect>>,
-    },
-    EaseIn {
-        start: Rect,
-        end: Rect,
-        hold: Option<NonNull<Rect>>,
-    },
-    EaseOut {
-        start: Rect,
-        end: Rect,
-        hold: Option<NonNull<Rect>>,
-    },
-    FadeLinear {
-        start: Color,
-        end: Color,
-        hold: Option<NonNull<Color>>,
-    },
-    FadeEaseIn {
-        start: Color,
-        end: Color,
-        hold: Option<NonNull<Color>>,
-    },
-    FadeEaseOut {
-        start: Color,
-        end: Color,
-        hold: Option<NonNull<Color>>,
-    },
+    Linear { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
+
+    EaseIn { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
+
+    EaseOut { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
+
+    FadeLinear { start: Color, end: Color, hold: Option<NonNull<Color>> },
+
+    FadeEaseIn { start: Color, end: Color, hold: Option<NonNull<Color>> },
+
+    FadeEaseOut { start: Color, end: Color, hold: Option<NonNull<Color>> },
 }
 
 macro_rules! interpolation {

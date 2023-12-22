@@ -255,12 +255,17 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn window_layout_change(&mut self) {
-        Self::layout_of(self.id()).layout_change(self)
+        Self::layout_of(self.id()).layout_change(self, false)
     }
 
     #[inline]
     pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        Self::layout_of(self.id()).layout_change(widget)
+        Self::layout_of(self.id()).layout_change(widget, false)
+    }
+
+    #[inline]
+    pub(crate) fn animation_layout_change(&self, widget: &mut dyn WidgetImpl) {
+        Self::layout_of(self.id()).layout_change(widget, true)
     }
 
     #[inline]
@@ -291,9 +296,12 @@ impl ApplicationWindow {
         wed::win_evt_dispatch(self, evt)
     }
 
-    pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect) {
+    pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
         for (_, w) in Self::widgets_of(self.id()) {
             let widget = nonnull_mut!(w);
+            if widget.id() == id || widget.descendant_of(id) {
+                continue;
+            }
 
             let rect: tlib::skia_safe::IRect = widget.rect().into();
             let mut region = tlib::skia_safe::Region::new();

@@ -10,7 +10,7 @@ use tmui::{
 
 #[extends(Popup)]
 #[async_task(name = "TestAsyncTask", value = "&'static str")]
-#[animatable(ty = "Linear", direction = "BottomToTop", duration = 500)]
+#[animatable(ty = "Linear", direction = "BottomToTop", duration = 500, mode = "Flex")]
 #[derive(Childable)]
 #[run_after]
 pub struct CustomPopup {

@@ -28,7 +28,7 @@ pub enum AnimationState {
     #[default]
     Stopped,
     Playing,
-    Paused,
+    Pending,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -45,13 +45,22 @@ pub enum Direction {
     RightBottomToLeftTop,
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum AnimationMode {
+    #[default]
+    Stealth,
+    Flex,
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct AnimationModel {
+    mode: AnimationMode,
     win_id: ObjectId,
     state: AnimationState,
     animation: Animation,
     direction: Direction,
     animation_holder: Option<AnimationsHolder>,
+    shown: bool,
 
     duration: Duration,
     start_time: u64,
@@ -63,13 +72,15 @@ pub struct AnimationModel {
 
 impl AnimationModel {
     #[inline]
-    pub fn new(animation: Animation, direction: Direction, duration: Duration) -> Self {
+    pub fn new(mode: AnimationMode, animation: Animation, direction: Direction, duration: Duration) -> Self {
         Self {
+            mode,
             win_id: 0,
             state: AnimationState::Stopped,
             animation,
             direction,
             animation_holder: None,
+            shown: false,
             duration,
             start_time: 0,
             end_time: 0,
@@ -93,8 +104,9 @@ impl AnimationModel {
         self.state = AnimationState::Playing;
     }
 
+    /// Update the animation.
     #[inline]
-    pub fn update(&mut self, current_time: u64) -> bool {
+    pub fn update(&mut self, current_time: u64) {
         if let Some(ref mut holder) = self.animation_holder {
             self.progress = Progress(
                 ((current_time as f64 - self.start_time as f64)
@@ -105,19 +117,25 @@ impl AnimationModel {
             holder.update(self.progress);
 
             if self.progress.0 == 1. {
-                self.state = AnimationState::Stopped;
+                self.state = AnimationState::Pending;
                 ApplicationWindow::window_of(self.win_id).high_load_request(false);
-                println!("Animation stopped.");
             }
-
-            return true;
         }
-        false
+    }
+
+    #[inline]
+    pub fn mode(&self) -> AnimationMode {
+        self.mode
     }
 
     #[inline]
     pub fn state(&self) -> AnimationState {
         self.state
+    }
+
+    #[inline]
+    pub(crate) fn set_state(&mut self, state: AnimationState) {
+        self.state = state;
     }
 
     #[inline]
@@ -134,6 +152,16 @@ impl AnimationModel {
     pub fn is_playing(&self) -> bool {
         self.state == AnimationState::Playing
     }
+
+    #[inline]
+    pub fn shown(&self) -> bool {
+        self.shown
+    }
+
+    #[inline]
+    pub(crate) fn set_shown(&mut self, shown: bool) {
+        self.shown = shown
+    }
 }
 
 #[reflect_trait]
@@ -145,14 +173,4 @@ pub trait Animatable {
     fn animation_model(&self) -> &AnimationModel;
 
     fn animation_model_mut(&mut self) -> &mut AnimationModel;
-}
-
-#[test]
-fn test() {
-    let (current_time, start_time, end_time) = (1703062043983u64, 1703062043968u64, 1703062044468u64);
-    let progress = 
-                ((current_time as f64 - start_time as f64)
-                    / (end_time as f64 - start_time as f64))
-                    .min(1.);
-    println!("{}", progress)
 }

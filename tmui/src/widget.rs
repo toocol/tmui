@@ -253,6 +253,41 @@ impl Widget {
             child.propagate_update();
         }
     }
+
+    #[inline]
+    fn notify_propagate_update_rect(&mut self, rect: Rect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_rect(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_rect_f(&mut self, rect: FRect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_rect_f(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_global_rect(&mut self, rect: Rect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_global_rect(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_global_rect_f(&mut self, rect: FRect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_global_rect_f(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_animation_progressing(&mut self, is: bool) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_animation_progressing(is)
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -317,6 +352,26 @@ impl ObjectImpl for Widget {
                     self.notify_propagate_update();
                 }
             }
+            "propagate_update_rect" => {
+                let rect = value.get::<Rect>();
+                self.notify_propagate_update_rect(rect);
+            }
+            "propagate_update_rect_f" => {
+                let rect = value.get::<FRect>();
+                self.notify_propagate_update_rect_f(rect);
+            }
+            "propagate_update_global_rect" => {
+                let rect = value.get::<Rect>();
+                self.notify_propagate_update_global_rect(rect);
+            }
+            "propagate_update_global_rect_f" => {
+                let rect = value.get::<FRect>();
+                self.notify_propagate_update_global_rect_f(rect);
+            }
+            "animation_progressing" => {
+                let is = value.get::<bool>();
+                self.notify_propagate_animation_progressing(is);
+            }
             _ => {}
         }
     }
@@ -329,7 +384,7 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
-        if !self.visible() {
+        if !self.visible() && !self.is_animation_progressing() {
             return;
         }
 
@@ -342,6 +397,8 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         geometry.set_point(&(0, 0).into());
 
         let is_shared_widget = self.super_type().is_a(SharedWidget::static_type());
+
+        painter_clip(self, &mut painter);
 
         if !self.first_rendered() || self.rerender_styles() {
             if !is_shared_widget {
@@ -372,8 +429,6 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         painter.reset();
         painter.set_font(self.font().to_skia_font());
 
-        painter_clip(self, &mut painter);
-
         self.paint(&mut painter);
 
         painter.restore();
@@ -395,6 +450,14 @@ pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter) {
 
     for &r in widget.redraw_region_f().iter() {
         painter.clip_rect(r, ClipOp::Intersect)
+    }
+
+    for &r in widget.global_redraw_region().iter() {
+        painter.clip_rect_global(r, ClipOp::Intersect)
+    }
+
+    for &r in widget.global_redraw_region_f().iter() {
+        painter.clip_rect_global(r, ClipOp::Intersect)
     }
 }
 
@@ -952,9 +1015,46 @@ pub trait WidgetExt {
     fn is_pressed(&self) -> bool;
 
     /// Invalidate this widget to update it, and also update the child widget..
-    /// 
+    ///
     /// Go to[`Function defination`](WidgetExt::propagate_update) (Defined in [`WidgetExt`])
     fn propagate_update(&mut self);
+
+    /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`Widget`](tlib::namespace::Coordinate::Widget)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
+    fn propagate_update_rect(&mut self, rect: Rect);
+
+    /// Invalidate this widget with float dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`Widget`](tlib::namespace::Coordinate::Widget)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_rect_f) (Defined in [`WidgetExt`])
+    fn propagate_update_rect_f(&mut self, rect: FRect);
+
+    /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`World`](tlib::namespace::Coordinate::World)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_global_rect) (Defined in [`WidgetExt`])
+    fn propagate_update_global_rect(&mut self, rect: Rect);
+
+    /// Invalidate this widget with float dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`World`](tlib::namespace::Coordinate::World)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_global_rect_f) (Defined in [`WidgetExt`])
+    fn propagate_update_global_rect_f(&mut self, rect: FRect);
+
+    /// Check if the widget is a descendant of the widget represented by the specified id.
+    ///
+    /// Go to[`Function defination`](WidgetExt::descendant_of) (Defined in [`WidgetExt`])
+    fn descendant_of(&self, id: ObjectId) -> bool;
+
+    /// Propagate setting the property `animation_progressing`
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_animation_progressing) (Defined in [`WidgetExt`])
+    fn propagate_animation_progressing(&mut self, is: bool);
+
+    /// Go to[`Function defination`](WidgetExt::is_animation_progressing) (Defined in [`WidgetExt`])
+    fn is_animation_progressing(&mut self) -> bool;
 }
 
 impl WidgetExt for Widget {
@@ -1127,7 +1227,11 @@ impl WidgetExt for Widget {
     #[inline]
     fn hide(&mut self) {
         self.set_property("visible", false.to_value());
-        self.window().invalid_effected_widgets(self.image_rect());
+
+        if !self.is_animation_progressing() {
+            self.window()
+                .invalid_effected_widgets(self.image_rect(), self.id());
+        }
     }
 
     #[inline]
@@ -1681,7 +1785,7 @@ impl WidgetExt for Widget {
     #[inline]
     fn hscale(&self) -> f32 {
         if self.fixed_width {
-            return 0.
+            return 0.;
         }
         self.hscale
     }
@@ -1694,7 +1798,7 @@ impl WidgetExt for Widget {
     #[inline]
     fn vscale(&self) -> f32 {
         if self.fixed_height {
-            return 0.
+            return 0.;
         }
         self.vscale
     }
@@ -1775,6 +1879,60 @@ impl WidgetExt for Widget {
         self.update();
 
         self.set_property("propagate_update", true.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_rect(&mut self, rect: Rect) {
+        self.update_rect(rect);
+
+        self.set_property("propagate_update_rect", rect.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_rect_f(&mut self, rect: FRect) {
+        self.update_rect_f(rect);
+
+        self.set_property("propagate_update_rect_f", rect.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_global_rect(&mut self, rect: Rect) {
+        self.update_global_rect(rect);
+
+        self.set_property("propagate_update_global_rect", rect.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_global_rect_f(&mut self, rect: FRect) {
+        self.update_global_rect_f(rect);
+
+        self.set_property("propagate_update_global_rect_f", rect.to_value());
+    }
+
+    #[inline]
+    fn descendant_of(&self, id: ObjectId) -> bool {
+        let mut parent = self.get_parent_ref();
+        while let Some(p) = parent {
+            if p.id() == id {
+                return true;
+            }
+
+            parent = p.get_parent_ref();
+        }
+        false
+    }
+
+    #[inline]
+    fn propagate_animation_progressing(&mut self, is: bool) {
+        self.set_property("animation_progressing", is.to_value())
+    }
+
+    #[inline]
+    fn is_animation_progressing(&mut self) -> bool {
+        match self.get_property("animation_progressing") {
+            Some(p) => p.get::<bool>(),
+            None => false
+        }
     }
 }
 

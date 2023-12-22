@@ -165,8 +165,12 @@ impl<'a> Painter<'a> {
     /// Reset the painter to Initial state.
     #[inline]
     pub fn reset(&mut self) {
-        self.canvas.reset_matrix();
         self.paint.reset();
+    }
+
+    #[inline]
+    pub fn reset_matrix(&mut self) {
+        self.canvas.reset_matrix();
     }
 
     /// Set the antialiasing to true.
@@ -493,6 +497,12 @@ impl<'a> Painter<'a> {
     pub fn clip_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
         let mut rect: skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
+        self.canvas.clip_rect(rect, op, false);
+    }
+
+    #[inline]
+    pub fn clip_rect_global<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
+        let rect: skia_safe::Rect = rect.into();
         self.canvas.clip_rect(rect, op, false);
     }
 

@@ -255,7 +255,7 @@ impl SizeCalculation for dyn WidgetImpl {
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 }
-            } 
+            }
         }
 
         if window_size.width() == 0 && size.width() != 0 {
@@ -291,9 +291,11 @@ impl LayoutManager {
         self.window_size = new_size;
     }
 
-    pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        // Deal with the size first
-        Self::child_size_probe(self.window_size, widget.size(), widget);
+    pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl, is_animation: bool) {
+        if !is_animation {
+            // Deal with the size first
+            Self::child_size_probe(self.window_size, widget.size(), widget);
+        }
 
         // Deal with the position
         Self::child_position_probe(None, widget.get_raw_parent_mut(), Some(widget));

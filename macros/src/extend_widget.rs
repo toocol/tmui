@@ -287,20 +287,20 @@ pub(crate) fn gen_widget_trait_impl_clause(
 
             #[inline]
             fn hide(&mut self) {
-                self.#(#widget_path).*.hide();
-
                 if let Some(snapshot) = cast_mut!(self as Snapshot) {
-                    snapshot.start(false)
+                    snapshot.start(false);
                 }
+
+                self.#(#widget_path).*.hide();
             }
 
             #[inline]
             fn show(&mut self) {
-                self.#(#widget_path).*.show();
-
                 if let Some(snapshot) = cast_mut!(self as Snapshot) {
-                    snapshot.start(true)
+                    snapshot.start(true);
                 }
+
+                self.#(#widget_path).*.show();
             }
 
             #[inline]
@@ -758,6 +758,41 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn propagate_update(&mut self) {
                 self.#(#widget_path).*.propagate_update()
+            }
+
+            #[inline]
+            fn propagate_update_rect(&mut self, rect: Rect) {
+                self.#(#widget_path).*.propagate_update_rect(rect)
+            }
+
+            #[inline]
+            fn propagate_update_rect_f(&mut self, rect: FRect) {
+                self.#(#widget_path).*.propagate_update_rect_f(rect)
+            }
+
+            #[inline]
+            fn propagate_update_global_rect(&mut self, rect: Rect) {
+                self.#(#widget_path).*.propagate_update_global_rect(rect)
+            }
+
+            #[inline]
+            fn propagate_update_global_rect_f(&mut self, rect: FRect) {
+                self.#(#widget_path).*.propagate_update_global_rect_f(rect)
+            }
+
+            #[inline]
+            fn descendant_of(&self, id: ObjectId) -> bool {
+                self.#(#widget_path).*.descendant_of(id)
+            }
+
+            #[inline]
+            fn propagate_animation_progressing(&mut self, is: bool) {
+                self.#(#widget_path).*.propagate_animation_progressing(is)
+            }
+
+            #[inline]
+            fn is_animation_progressing(&mut self) -> bool {
+                self.#(#widget_path).*.is_animation_progressing()
             }
         }
 

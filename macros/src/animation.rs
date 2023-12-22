@@ -3,6 +3,7 @@ use quote::quote;
 use syn::{Attribute, Meta, MetaList, MetaNameValue, NestedMeta};
 
 pub(crate) struct Animation {
+    pub(crate) mode: Option<Ident>,
     pub(crate) ty: Option<Ident>,
     pub(crate) direction: Option<Ident>,
     pub(crate) duration: Option<i32>,
@@ -12,6 +13,7 @@ pub(crate) struct Animation {
 impl Animation {
     pub fn parse(attr: &Attribute) -> syn::Result<Self> {
         let mut animation = Self {
+            mode: None,
             ty: None,
             direction: None,
             duration: None,
@@ -31,6 +33,18 @@ impl Animation {
                                 let ident = path.get_ident().unwrap();
 
                                 match ident.to_string().as_str() {
+                                    "mode" => {
+                                        match lit {
+                                            syn::Lit::Str(lit) => {
+                                                let lit_str = lit.value();
+                                                animation.mode = Some(Ident::new(&lit_str, lit.span()));
+                                            }
+                                            _ => return Err(syn::Error::new_spanned(
+                                                attr,
+                                                "Proc-macro `animatable`: value of config `mode` should be literal.",
+                                            )),
+                                        }
+                                    }
                                     "ty" => {
                                         match lit {
                                             syn::Lit::Str(lit) => {
@@ -149,11 +163,16 @@ impl Animation {
     }
 
     pub(crate) fn parse_default(&self) -> syn::Result<proc_macro2::TokenStream> {
+        let mode = if let Some(mode) = self.mode.as_ref() {
+            format!("animation::AnimationMode::{}", mode.to_string())
+        } else {
+            "Default::default()".to_string()
+        };
         let ty = self.ty.as_ref().unwrap();
         let direction = self.direction.as_ref().unwrap();
         let duration = *self.duration.as_ref().unwrap();
 
-        let default = format!("animation::AnimationModel::new(animation::Animation::{}, animation::Direction::{}, std::time::Duration::from_millis({}))", ty.to_string(), direction.to_string(), duration);
+        let default = format!("animation::AnimationModel::new({}, animation::Animation::{}, animation::Direction::{}, std::time::Duration::from_millis({}))", mode, ty.to_string(), direction.to_string(), duration);
 
         Ok(quote!(
             #[derivative(Default(value = #default))]

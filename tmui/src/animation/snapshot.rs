@@ -1,7 +1,9 @@
-use super::{state_holder::ReflectColorHolder, Animatable, Direction};
+use super::{
+    state_holder::ReflectColorHolder, Animatable, AnimationMode, AnimationState, Direction,
+};
 use crate::{
-    animation::state_holder::ReflectRectHolder, prelude::*, primitive::frame::Frame,
-    widget::WidgetImpl,
+    animation::state_holder::ReflectRectHolder, prelude::*,
+    primitive::frame::Frame, widget::WidgetImpl,
 };
 use std::ptr::NonNull;
 
@@ -17,10 +19,14 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
     fn start(&mut self, show: bool) {
         let win_id = self.window_id();
+        let mut start = self.rect();
+        let end = self.rect();
+
+        self.animation_model_mut().set_shown(show);
+        self.propagate_animation_progressing(true);
+
         match self.animation() {
             Animation::Linear => {
-                let mut start = self.rect();
-
                 match self.animation_model().direction {
                     Direction::NoDirection => panic!("Animiation must specify direction."),
                     Direction::LeftToRight => start.set_width(0),
@@ -30,7 +36,7 @@ pub trait Snapshot: WidgetImpl + Animatable {
                         start.set_width(0);
                     }
                     Direction::BottomToTop => {
-                        // start.set_y(start.y() + start.height());
+                        start.set_y(start.y() + start.height());
                         start.set_height(0);
                     }
                     Direction::LeftTopToRightBottom => {}
@@ -39,13 +45,9 @@ pub trait Snapshot: WidgetImpl + Animatable {
                     _ => {}
                 };
 
-                let end = self.rect();
+                let hold = NonNull::new(cast_mut!(self as RectHolder).unwrap().animated_rect_mut());
 
-                let hold =
-                    NonNull::new(cast_mut!(self as RectHolder).unwrap().animated_rect_mut());
-
-                self
-                    .animation_model_mut()
+                self.animation_model_mut()
                     .start(AnimationsHolder::Linear { start, end, hold }, win_id);
             }
             Animation::EaseIn => {}
@@ -58,33 +60,63 @@ pub trait Snapshot: WidgetImpl + Animatable {
     }
 
     fn snapshot(&mut self, frame: Frame) {
-        if self.animation_model().is_playing() {
-            if let Some(rect_holder) = cast!(self as RectHolder) {
-                if let Some(_) = cast!(self as PopupImpl) {
-                    let dirty_rect = rect_holder.animated_rect();
+        match self.animation_model().state() {
 
-                    if dirty_rect.is_valid() {
-                        ApplicationWindow::window_of(self.window_id())
-                            .invalid_effected_widgets(dirty_rect);
+            AnimationState::Playing => {
+                if self.animation_model().is_playing() {
+                    self.handle_dirty_rect(false);
+
+                    self.animation_model_mut().update(frame.timestamp());
+
+                    if let Some(rect_holder) = cast!(self as RectHolder) {
+                        let rect = rect_holder.animated_rect();
+                        self.set_fixed_x(rect.x());
+                        self.set_fixed_y(rect.y());
+                        self.set_fixed_width(rect.width());
+                        self.set_fixed_height(rect.height());
+                        if self.animation_model().mode() == AnimationMode::Flex {
+                            ApplicationWindow::window_of(self.window_id())
+                                .animation_layout_change(self.as_widget_mut());
+                        }
                     }
+                    if let Some(color_holder) = cast!(self as ColorHolder) {}
+
+                    self.propagate_update_global_rect(self.rect());
+                    self.set_rerender_styles(true);
                 }
             }
 
-            self.animation_model_mut().update(frame.timestamp());
-
-            if let Some(rect_holder) = cast!(self as RectHolder) {
-                let rect = rect_holder.animated_rect();
-                println!("{:?}", rect);
-                self.set_fixed_x(rect.x());
-                self.set_fixed_y(rect.y());
-                self.set_fixed_width(rect.width());
-                self.set_fixed_height(rect.height());
-                ApplicationWindow::window_of(self.window_id())
-                    .layout_change(self.as_widget_mut());
+            AnimationState::Pending => {
+                if !self.animation_model().shown() {
+                    self.handle_dirty_rect(true)
+                }
+                self.propagate_animation_progressing(false);
+                self.animation_model_mut().set_state(AnimationState::Stopped);
             }
-            if let Some(color_holder) = cast!(self as ColorHolder) {}
 
-            self.propagate_update();
+            _ => {}
         }
     }
 }
+
+pub(crate) trait EffectedWidget: WidgetImpl {
+    fn handle_dirty_rect(&mut self, reset: bool) {
+        if let Some(_) = cast!(self as PopupImpl) {
+            let win_id = self.window_id();
+            let id = self.id();
+
+            if let Some(rect_holder) = cast_mut!(self as RectHolder) {
+                let dirty_rect = rect_holder.animated_rect();
+
+                if dirty_rect.is_valid() {
+                    ApplicationWindow::window_of(win_id).invalid_effected_widgets(dirty_rect, id);
+                }
+
+                if reset {
+                    rect_holder.animated_rect_mut().clear()
+                }
+            }
+        }
+    }
+}
+impl<T: ?Sized + Snapshot> EffectedWidget for T {}
