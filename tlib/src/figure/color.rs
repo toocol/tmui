@@ -127,6 +127,11 @@ impl Color {
         self.a
     }
 
+    #[inline]
+    pub fn set_transparency(&mut self, a: u8) {
+        self.a = a as i16
+    }
+
     pub const RED: Color = Color {
         r: 255,
         g: 0,

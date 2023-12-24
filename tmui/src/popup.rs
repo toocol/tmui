@@ -14,11 +14,26 @@ impl ObjectSubclass for Popup {
 impl ObjectImpl for Popup {
     #[inline]
     fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectPopupImpl>();
         type_registry.register::<Self, ReflectOverlaid>();
     }
 }
 
 impl WidgetImpl for Popup {}
+
+impl PopupExt for Popup {
+    #[inline]
+    fn as_widget_impl(&self) -> &dyn WidgetImpl {
+        self
+    }
+
+    #[inline]
+    fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl {
+        self
+    }
+}
+
+impl PopupImpl for Popup {}
 
 impl Overlaid for Popup {}
 
@@ -49,8 +64,6 @@ pub trait Popupable: WidgetImpl {
     /// Only one popup can exist at the same time.
     #[inline]
     fn add_popup(&mut self, mut popup: Box<dyn PopupImpl>) {
-        popup.set_parent(self.as_widget_mut());
-
         ApplicationWindow::initialize_dynamic_component(popup.as_widget_impl_mut());
 
         self.set_popup(popup);

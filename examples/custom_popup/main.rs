@@ -1,4 +1,4 @@
-mod custom_popup;
+mod popups;
 mod my_box;
 mod my_widget;
 

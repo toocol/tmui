@@ -13,6 +13,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
         // Window Resize.
         EventType::Resize => {
             let evt = downcast_event::<ResizeEvent>(evt).unwrap();
+            println!("window resize: {} {}", evt.width(), evt.height());
             window.resize(Some(evt.width()), Some(evt.height()));
             event = Some(evt);
         }

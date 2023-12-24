@@ -8,26 +8,24 @@ use tmui::{
     widget::WidgetImpl,
 };
 
+/// Transparency based animation popup.
 #[extends(Popup)]
 #[async_task(name = "TestAsyncTask", value = "&'static str")]
-#[animatable(ty = "Linear", direction = "BottomToTop", duration = 500, mode = "Flex")]
+#[animatable(ty = "FadeLinear", duration = 350)]
 #[derive(Childable)]
 #[run_after]
-pub struct CustomPopup {
+pub struct TbaPopup {
     #[child]
     label: Box<Label>,
 }
 
-impl ObjectSubclass for CustomPopup {
-    const NAME: &'static str = "CustomPopup";
+impl ObjectSubclass for TbaPopup {
+    const NAME: &'static str = "RbaPopup";
 }
 
-impl ObjectImpl for CustomPopup {
+impl ObjectImpl for TbaPopup {
     fn construct(&mut self) {
         self.parent_construct();
-
-        self.set_hexpand(true);
-        self.set_vexpand(true);
 
         self.width_request(100);
         self.height_request(40);
@@ -36,17 +34,17 @@ impl ObjectImpl for CustomPopup {
 
         self.test_async_task(
             async {
-                tokio::time::sleep(Duration::from_secs(5)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
                 "This is a popup."
             },
-            Some(|p: &mut CustomPopup, text| {
+            Some(|p: &mut TbaPopup, text| {
                 p.label.set_text(text);
             }),
         );
     }
 }
 
-impl WidgetImpl for CustomPopup {
+impl WidgetImpl for TbaPopup {
     fn run_after(&mut self) {
         self.parent_run_after();
 
@@ -54,9 +52,9 @@ impl WidgetImpl for CustomPopup {
     }
 }
 
-impl PopupImpl for CustomPopup {}
+impl PopupImpl for TbaPopup {}
 
-impl CustomPopup {
+impl TbaPopup {
     #[inline]
     pub fn new() -> Box<Self> {
         Object::new(&[])

@@ -12,6 +12,7 @@ use tlib::{
 };
 
 #[extends(Widget)]
+#[popupable]
 pub struct Label {
     label: String,
     content_halign: Align,
@@ -59,7 +60,10 @@ impl WidgetImpl for Label {
 
         painter.reset();
         painter.set_antialiasing(false);
-        painter.set_color(self.color);
+
+        let mut color = self.color;
+        color.set_transparency(self.transparency());
+        painter.set_color(color);
 
         let mut draw_point = content_rect.top_left();
         match self.content_halign {
@@ -149,14 +153,14 @@ impl WidgetImpl for Label {
         let mut paragraph = paragraph_builder.build();
         paragraph.layout(f32::MAX);
 
-        self.paragraph_width = paragraph.max_intrinsic_width();
-        self.paragraph_height = paragraph.height();
+        self.paragraph_width = paragraph.max_intrinsic_width().round();
+        self.paragraph_height = paragraph.height().round();
 
         let size = self.size();
 
         if size.width() == 0 || size.height() == 0 {
-            self.set_fixed_width(self.paragraph_width.round() as i32);
-            self.set_fixed_height(self.paragraph_height.round() as i32);
+            self.set_fixed_width(self.paragraph_width as i32);
+            self.set_fixed_height(self.paragraph_height as i32);
         }
         if self.window_id() != 0 && self.window().initialized() {
             self.window().layout_change(self);

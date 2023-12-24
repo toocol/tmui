@@ -398,6 +398,45 @@ impl Div<i32> for Progress {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////
+/// Implement arithmetic operations for Progress between [`u8`]
+////////////////////////////////////////////////////////////////////////////////////////////
+impl Add<u8> for Progress {
+    type Output = u8;
+
+    #[inline]
+    fn add(self, rhs: u8) -> Self::Output {
+        (self.0 + rhs as f32) as u8
+    }
+}
+
+impl Sub<u8> for Progress {
+    type Output = u8;
+
+    #[inline]
+    fn sub(self, rhs: u8) -> Self::Output {
+        (self.0 - rhs as f32) as u8
+    }
+}
+
+impl Mul<u8> for Progress {
+    type Output = u8;
+
+    #[inline]
+    fn mul(self, rhs: u8) -> Self::Output {
+        (self.0 * rhs as f32) as u8 
+    }
+}
+
+impl Div<u8> for Progress {
+    type Output = u8;
+
+    #[inline]
+    fn div(self, rhs: u8) -> Self::Output {
+        (self.0 / rhs as f32) as u8
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use tlib::figure::Color;

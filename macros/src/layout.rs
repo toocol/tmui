@@ -236,7 +236,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
         #impl_scroll_area
 
         impl ChildContainerDiffRender for #name {
-            fn container_diff_render(&mut self, painter: &mut Painter) {
+            fn container_diff_render(&mut self, painter: &mut Painter, background: Color) {
             }
         }
     ));

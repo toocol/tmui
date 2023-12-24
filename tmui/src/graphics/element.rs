@@ -319,6 +319,7 @@ pub trait ElementAcquire: ElementImpl + Default {}
 
 /// The hierarchy of widget on the z-axis, the higher the numerical value,
 /// the higher the widget position
+pub(crate) const TOP_Z_INDEX: u32 = 100000;
 pub(crate) trait HierachyZ {
     fn z_index(&self) -> u32;
 

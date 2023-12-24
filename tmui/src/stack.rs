@@ -147,6 +147,6 @@ impl Stack {
 }
 
 impl ChildContainerDiffRender for Stack {
-    fn container_diff_render(&mut self, _painter: &mut Painter) {
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
     }
 }

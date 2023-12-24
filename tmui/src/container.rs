@@ -97,6 +97,12 @@ impl ObjectImpl for Container {
                     child.propagate_animation_progressing(is)
                 }
             }
+            "propagate_transparency" => {
+                let transparency = value.get::<Transparency>();
+                for child in self.children.iter_mut() {
+                    child.propagate_set_transparency(transparency)
+                }
+            }
             _ => {}
         }
     }
@@ -152,6 +158,10 @@ impl<T: ContainerImpl> ChildrenRegionAcquirer for T {
     fn children_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
         for c in self.children() {
+            if !c.visible() || !c.is_animation_progressing() {
+                continue;
+            }
+
             let rect: tlib::skia_safe::IRect = c.rect().into();
             region.op_rect(rect, RegionOp::Union);
         }

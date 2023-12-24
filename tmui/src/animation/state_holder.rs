@@ -1,14 +1,14 @@
 use tlib::{
-    figure::{Color, Rect},
+    figure::Rect,
     prelude::*,
     reflect_trait,
 };
 
 #[reflect_trait]
-pub trait ColorHolder {
-    fn animated_color(&self) -> Color;
+pub trait TransparencyHolder {
+    fn animated_transparency(&self) -> i32;
 
-    fn animated_color_mut(&mut self) -> &mut Color;
+    fn animated_transparency_mut(&mut self) -> &mut i32;
 }
 
 #[reflect_trait]

@@ -4,7 +4,7 @@ use std::{
     ptr::NonNull,
 };
 use tlib::{
-    figure::{Color, Rect},
+    figure::Rect,
     global::CreateBy,
     nonnull_mut,
 };
@@ -67,11 +67,11 @@ pub enum AnimationsHolder {
 
     EaseOut { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
 
-    FadeLinear { start: Color, end: Color, hold: Option<NonNull<Color>> },
+    FadeLinear { start: i32, end: i32, hold: Option<NonNull<i32>> },
 
-    FadeEaseIn { start: Color, end: Color, hold: Option<NonNull<Color>> },
+    FadeEaseIn { start: i32, end: i32, hold: Option<NonNull<i32>> },
 
-    FadeEaseOut { start: Color, end: Color, hold: Option<NonNull<Color>> },
+    FadeEaseOut { start: i32, end: i32, hold: Option<NonNull<i32>> },
 }
 
 macro_rules! interpolation {

@@ -140,7 +140,6 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                     }
                 }
 
-                // let input_sender = platform_context.input_sender();
                 match event {
                     // Window resized event.
                     Event::WindowEvent {
@@ -150,6 +149,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         if !Application::<T, M>::is_app_started() {
                             return;
                         }
+                        println!("winit resize: {} {}", size.width, size.height);
                         let evt = ResizeEvent::new(size.width as i32, size.height as i32);
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
                     }

@@ -14,7 +14,7 @@ use crate::{
 };
 use derivative::Derivative;
 use log::error;
-use std::ptr::NonNull;
+use std::{ptr::NonNull, slice::Iter};
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
@@ -30,6 +30,8 @@ use tlib::{
 /// 1: normal size hint
 /// 2: maximum size hint
 pub type SizeHint = (Option<Size>, Option<Size>, Option<Size>);
+
+pub type Transparency = u8;
 
 #[extends(Element)]
 pub struct Widget {
@@ -288,6 +290,13 @@ impl Widget {
             child.propagate_animation_progressing(is)
         }
     }
+
+    #[inline]
+    fn notify_propagate_transparency(&mut self, transparency: Transparency) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_set_transparency(transparency)
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -372,6 +381,10 @@ impl ObjectImpl for Widget {
                 let is = value.get::<bool>();
                 self.notify_propagate_animation_progressing(is);
             }
+            "propagate_transparency" => {
+                let transparency = value.get::<Transparency>();
+                self.notify_propagate_transparency(transparency);
+            }
             _ => {}
         }
     }
@@ -396,24 +409,28 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         }
         geometry.set_point(&(0, 0).into());
 
-        let is_shared_widget = self.super_type().is_a(SharedWidget::static_type());
+        if self.super_type().is_a(SharedWidget::static_type())
+            || self.object_type().is_a(SharedWidget::static_type())
+        {
+            return;
+        }
 
         painter_clip(self, &mut painter);
 
         if !self.first_rendered() || self.rerender_styles() {
-            if !is_shared_widget {
-                // Draw the background color of the Widget.
-                if self.rerender_difference() && self.first_rendered() && !self.window().minimized()
-                {
-                    let mut border_rect: FRect = self.rect_record().into();
-                    border_rect.set_point(&(0, 0).into());
-                    self.border_ref()
-                        .clear_border(&mut painter, border_rect, self.background());
+            // Draw the background color of the Widget.
+            let mut background = self.background();
+            background.set_transparency(self.transparency());
 
-                    self.render_difference(&mut painter);
-                } else {
-                    painter.fill_rect(geometry, self.background());
-                }
+            if self.rerender_difference() && self.first_rendered() && !self.window().minimized() {
+                let mut border_rect: FRect = self.rect_record().into();
+                border_rect.set_point(&(0, 0).into());
+                self.border_ref()
+                    .clear_border(&mut painter, border_rect, background);
+
+                self.render_difference(&mut painter, background);
+            } else {
+                painter.fill_rect(geometry, background);
             }
 
             self.set_rect_record(self.rect());
@@ -429,35 +446,82 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         painter.reset();
         painter.set_font(self.font().to_skia_font());
 
+        painter.clip_rect(
+            self.contents_rect(Some(Coordinate::Widget)),
+            ClipOp::Intersect,
+        );
+
         self.paint(&mut painter);
 
         painter.restore();
     }
 }
 
+#[inline]
 pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter) {
     painter.save();
-    let winr: skia_safe::IRect = widget.window().rect().into();
-    painter.canvas_mut().clip_irect(winr, ClipOp::Intersect);
-    painter.clip_rect(
-        widget.contents_rect(Some(Coordinate::Widget)),
-        ClipOp::Intersect,
+
+    painter.clip_region(widget.child_region(), ClipOp::Difference);
+
+    handle_clip_redraw_region(widget, widget.redraw_region().iter(), painter, false);
+
+    handle_clip_redraw_region_f(widget, widget.redraw_region_f().iter(), painter, false);
+
+    handle_clip_redraw_region(widget, widget.global_redraw_region().iter(), painter, true);
+
+    handle_clip_redraw_region_f(
+        widget,
+        widget.global_redraw_region_f().iter(),
+        painter,
+        true,
     );
+}
 
-    for &r in widget.redraw_region().iter() {
-        painter.clip_rect(r, ClipOp::Intersect)
+#[inline]
+pub(crate) fn handle_clip_redraw_region(
+    widget: &dyn WidgetImpl,
+    iter: Iter<Rect>,
+    painter: &mut Painter,
+    global: bool,
+) {
+    let mut region = skia_safe::Region::new();
+    let mut op = false;
+    for &r in iter {
+        let mut r = r;
+        if !global {
+            r.set_point(&widget.map_to_global(&r.point()))
+        }
+
+        let r: skia_safe::IRect = r.into();
+        region.op_rect(r, RegionOp::Union);
+        op = true;
     }
-
-    for &r in widget.redraw_region_f().iter() {
-        painter.clip_rect(r, ClipOp::Intersect)
+    if op {
+        painter.clip_region(region, ClipOp::Intersect);
     }
+}
 
-    for &r in widget.global_redraw_region().iter() {
-        painter.clip_rect_global(r, ClipOp::Intersect)
+#[inline]
+pub(crate) fn handle_clip_redraw_region_f(
+    widget: &dyn WidgetImpl,
+    iter: Iter<FRect>,
+    painter: &mut Painter,
+    global: bool,
+) {
+    let mut region = skia_safe::Region::new();
+    let mut op = false;
+    for &r in iter {
+        let mut r = r;
+        if !global {
+            r.set_point(&widget.map_to_global_f(&r.point()))
+        }
+
+        let r: skia_safe::IRect = r.into();
+        region.op_rect(r, RegionOp::Union);
+        op = true;
     }
-
-    for &r in widget.global_redraw_region_f().iter() {
-        painter.clip_rect_global(r, ClipOp::Intersect)
+    if op {
+        painter.clip_region(region, ClipOp::Intersect);
     }
 }
 
@@ -1054,7 +1118,22 @@ pub trait WidgetExt {
     fn propagate_animation_progressing(&mut self, is: bool);
 
     /// Go to[`Function defination`](WidgetExt::is_animation_progressing) (Defined in [`WidgetExt`])
-    fn is_animation_progressing(&mut self) -> bool;
+    fn is_animation_progressing(&self) -> bool;
+
+    /// Getting the transparency of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
+    fn transparency(&self) -> Transparency;
+
+    /// Setting the transparency of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
+    fn set_transparency(&mut self, transparency: Transparency);
+
+    /// Propagate setting the transparency of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
+    fn propagate_set_transparency(&mut self, transparency: Transparency);
 }
 
 impl WidgetExt for Widget {
@@ -1928,11 +2007,31 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn is_animation_progressing(&mut self) -> bool {
+    fn is_animation_progressing(&self) -> bool {
         match self.get_property("animation_progressing") {
             Some(p) => p.get::<bool>(),
-            None => false
+            None => false,
         }
+    }
+
+    #[inline]
+    fn transparency(&self) -> Transparency {
+        match self.get_property("transparency") {
+            Some(t) => t.get::<Transparency>(),
+            None => 255,
+        }
+    }
+
+    #[inline]
+    fn set_transparency(&mut self, transparency: Transparency) {
+        self.set_property("transparency", transparency.to_value())
+    }
+
+    #[inline]
+    fn propagate_set_transparency(&mut self, transparency: Transparency) {
+        self.set_transparency(transparency);
+
+        self.set_property("propagate_transparency", transparency.to_value())
     }
 }
 
@@ -2062,8 +2161,10 @@ impl ChildRegionAcquirer for Widget {
     fn child_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
         if let Some(child) = self.get_child_ref() {
-            let rect: tlib::skia_safe::IRect = child.rect().into();
-            region.op_rect(rect, RegionOp::Replace);
+            if child.visible() || child.is_animation_progressing() {
+                let rect: tlib::skia_safe::IRect = child.rect().into();
+                region.op_rect(rect, RegionOp::Replace);
+            }
         }
         region
     }

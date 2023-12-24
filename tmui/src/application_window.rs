@@ -1,6 +1,9 @@
 use crate::{
     animation::manager::AnimationManager,
-    graphics::{board::Board, element::HierachyZ},
+    graphics::{
+        board::Board,
+        element::{HierachyZ, TOP_Z_INDEX},
+    },
     layout::LayoutManager,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
@@ -296,6 +299,7 @@ impl ApplicationWindow {
         wed::win_evt_dispatch(self, evt)
     }
 
+    /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
         for (_, w) in Self::widgets_of(self.id()) {
             let widget = nonnull_mut!(w);
@@ -314,7 +318,7 @@ impl ApplicationWindow {
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
             if region.intersects_rect(dirty_irect) {
                 widget.set_rerender_styles(true);
-                widget.update_rect(dirty_rect);
+                widget.update_global_rect(dirty_rect);
             }
         }
     }
@@ -365,12 +369,18 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         board.add_element(child_ref.as_element());
         ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ref));
 
-        let parent = child_ref.get_parent_mut().unwrap();
-        let zindex = parent.z_index() + parent.z_index_step();
-        child_ref.set_z_index(zindex);
-
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
+
+        if let Some(_pop) = cast!(child_ref as PopupImpl) {
+            child_ref.set_z_index(TOP_Z_INDEX);
+        } else {
+            let parent = child_ref
+                .get_parent_mut()
+                .expect("Fatal error: the child widget does not have parent.");
+            let zindex = parent.z_index() + parent.z_index_step();
+            child_ref.set_z_index(zindex);
+        }
 
         child_ref.set_initialized(true);
         child_ref.inner_initialize();

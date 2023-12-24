@@ -5,7 +5,7 @@ pub use tlib::signal;
 pub use crate::animation::{
     inner::AnimationsHolder,
     snapshot::{ReflectSnapshot, Snapshot},
-    state_holder::{RectHolder, ReflectRectHolder, ColorHolder, ReflectColorHolder},
+    state_holder::{RectHolder, ReflectRectHolder, ReflectTransparencyHolder, TransparencyHolder},
     Animatable, Animation, AnimationModel, ReflectAnimatable, {self},
 };
 pub use crate::application_window::{current_window_id, ApplicationWindow};
@@ -30,7 +30,7 @@ pub use crate::layout::{
     Composition, ContainerLayout, ContentAlignment, Layout, ReflectContentAlignment,
 };
 pub use crate::overlay::{Overlaid, ReflectOverlaid};
-pub use crate::popup::{Popup, PopupImpl, ReflectPopupImpl, Popupable, ReflectPopupable, PopupExt};
+pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::shared_widget::{SharedWidget, SharedWidgetExt};
@@ -40,8 +40,8 @@ pub use crate::split_pane::{
 pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
-    ChildRegionAcquirer, PointEffective, ReflectWidgetImpl, Widget, WidgetAcquire, WidgetExt,
-    WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
+    ChildRegionAcquirer, PointEffective, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire,
+    WidgetExt, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
 };
 pub use tlib::figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size};
 pub use tlib::tokio;

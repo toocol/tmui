@@ -15,7 +15,7 @@ use shared_memory::{Shmem, ShmemConf};
 use std::{
     error::Error,
     marker::PhantomData,
-    sync::{atomic::Ordering, Arc},
+    sync::{atomic::Ordering, Arc}, time::Duration,
 };
 use tlib::global::SemanticExt;
 
@@ -211,14 +211,16 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
 
     #[inline]
     fn wait(&self) {
-        let (evt, _) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true).unwrap() };
-        evt.wait(Timeout::Infinite).unwrap();
+        if let Ok((evt, _)) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true) } {
+            evt.wait(Timeout::Val(Duration::from_millis(2))).unwrap();
+        }
     }
 
     #[inline]
     fn signal(&self) {
-        let (evt, _) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()).unwrap() };
-        evt.set(EventState::Signaled).unwrap();
+        if let Ok((evt, _)) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()) } {
+            evt.set(EventState::Signaled).unwrap();
+        }
     }
 
     #[inline]

@@ -8,19 +8,48 @@ mod progress;
 use crate::application_window::ApplicationWindow;
 
 use self::{inner::AnimationsHolder, progress::Progress};
-use std::time::Duration;
-use tlib::{prelude::*, reflect_trait, utils::TimeStamp};
+use std::{ptr::NonNull, time::Duration};
+use tlib::{figure::Rect, prelude::*, reflect_trait, utils::TimeStamp};
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Animation {
-    #[default]
-    NoAnimation,
     Linear,
     EaseIn,
     EaseOut,
     FadeLinear,
     FadeEaseIn,
     FadeEaseOut,
+}
+impl Animation {
+    #[inline]
+    pub(crate) fn create_rect_holder(
+        &self,
+        start: Rect,
+        end: Rect,
+        hold: Option<NonNull<Rect>>,
+    ) -> AnimationsHolder {
+        match self {
+            Animation::Linear => AnimationsHolder::Linear { start, end, hold },
+            Animation::EaseIn => AnimationsHolder::EaseIn { start, end, hold },
+            Animation::EaseOut => AnimationsHolder::EaseIn { start, end, hold },
+            _ => panic!("Unexpected `Animation` type for creating rect holder."),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn create_transparency_holder(
+        &self,
+        start: i32,
+        end: i32,
+        hold: Option<NonNull<i32>>,
+    ) -> AnimationsHolder {
+        match self {
+            Animation::FadeLinear => AnimationsHolder::FadeLinear { start, end, hold },
+            Animation::FadeEaseIn => AnimationsHolder::FadeEaseIn { start, end, hold },
+            Animation::FadeEaseOut => AnimationsHolder::FadeEaseIn { start, end, hold },
+            _ => panic!("Unexpected `Animation` type for creating color holder."),
+        }
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -31,10 +60,8 @@ pub enum AnimationState {
     Pending,
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Direction {
-    #[default]
-    NoDirection,
     LeftToRight,
     TopToBottom,
     RightToLeft,
@@ -48,8 +75,15 @@ pub enum Direction {
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum AnimationMode {
     #[default]
-    Stealth,
     Flex,
+    Stealth,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum AnimationEffect {
+    #[default]
+    Appearance,
+    Slide,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -58,9 +92,13 @@ pub struct AnimationModel {
     win_id: ObjectId,
     state: AnimationState,
     animation: Animation,
-    direction: Direction,
+    direction: Option<Direction>,
+    effect: Option<AnimationEffect>,
+
     animation_holder: Option<AnimationsHolder>,
     shown: bool,
+    origin_rect: Option<Rect>,
+    origin_transparency: Option<i32>,
 
     duration: Duration,
     start_time: u64,
@@ -72,15 +110,24 @@ pub struct AnimationModel {
 
 impl AnimationModel {
     #[inline]
-    pub fn new(mode: AnimationMode, animation: Animation, direction: Direction, duration: Duration) -> Self {
+    pub fn new(
+        mode: AnimationMode,
+        animation: Animation,
+        duration: Duration,
+        direction: Option<Direction>,
+        effect: Option<AnimationEffect>,
+    ) -> Self {
         Self {
             mode,
             win_id: 0,
             state: AnimationState::Stopped,
             animation,
             direction,
+            effect,
             animation_holder: None,
             shown: false,
+            origin_rect: None,
+            origin_transparency: None,
             duration,
             start_time: 0,
             end_time: 0,
@@ -91,10 +138,6 @@ impl AnimationModel {
     /// This function will be processed by macros.
     #[inline]
     pub fn start(&mut self, holder: AnimationsHolder, win_id: ObjectId) {
-        if self.state != AnimationState::Stopped {
-            return;
-        }
-
         ApplicationWindow::window_of(win_id).high_load_request(true);
 
         self.win_id = win_id;
@@ -102,6 +145,7 @@ impl AnimationModel {
         self.start_time = TimeStamp::timestamp();
         self.end_time = self.start_time + self.duration.as_millis() as u64;
         self.state = AnimationState::Playing;
+        self.progress = Progress(0.);
     }
 
     /// Update the animation.
@@ -126,6 +170,11 @@ impl AnimationModel {
     #[inline]
     pub fn mode(&self) -> AnimationMode {
         self.mode
+    }
+
+    #[inline]
+    pub fn effect(&self) -> Option<AnimationEffect> {
+        self.effect
     }
 
     #[inline]
@@ -161,6 +210,32 @@ impl AnimationModel {
     #[inline]
     pub(crate) fn set_shown(&mut self, shown: bool) {
         self.shown = shown
+    }
+
+    #[inline]
+    pub(crate) fn origin_rect(&self) -> Option<Rect> {
+        self.origin_rect
+    }
+
+    #[inline]
+    pub(crate) fn set_origin_rect(&mut self, rect: Rect) {
+        self.origin_rect = Some(rect)
+    }
+
+    #[inline]
+    pub(crate) fn origin_transparency(&self) -> Option<i32> {
+        self.origin_transparency
+    }
+
+    #[inline]
+    pub(crate) fn set_origin_transparency(&mut self, transparency: i32) {
+        self.origin_transparency = Some(transparency)
+    }
+
+    #[inline]
+    pub(crate) fn pending_clear(&mut self) {
+        self.origin_rect = None;
+        self.origin_transparency = None;
     }
 }
 

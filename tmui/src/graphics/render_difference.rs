@@ -4,12 +4,16 @@ use tlib::skia_safe::region::RegionOp;
 use tlib::skia_safe::{self, ClipOp};
 
 pub trait RenderDiffence: WidgetImpl + ChildWidgetDiffRender {
-    fn render_difference(&mut self, painter: &mut Painter) {
+    fn render_difference(&mut self, painter: &mut Painter, background: Color) {
         let mut widget_rect = self.rect();
         widget_rect.set_point(&(0, 0).into());
 
         let rect: skia_safe::IRect = self.rect().into();
         let old_rect: skia_safe::IRect = self.rect_record().into();
+
+        if self.object_type().is_a(ApplicationWindow::static_type()) {
+            println!("render rect: {:?}", self.rect());
+        }
 
         let mut region = skia_safe::Region::new();
         region.op_rect(rect, RegionOp::Union);
@@ -17,23 +21,23 @@ pub trait RenderDiffence: WidgetImpl + ChildWidgetDiffRender {
 
         painter.save();
         painter.clip_region(region, ClipOp::Intersect);
-        painter.fill_rect(widget_rect, self.background());
+        painter.fill_rect(widget_rect, background);
         painter.restore();
 
         let is_container = self.super_type().is_a(Container::static_type());
         if is_container {
             cast_mut!(self as ChildContainerDiffRender)
                 .unwrap()
-                .container_diff_render(painter);
+                .container_diff_render(painter, background);
         } else {
-            self.widget_diff_render(painter);
+            self.widget_diff_render(painter, background);
         }
     }
 }
 impl<T: WidgetImpl> RenderDiffence for T {}
 
 pub trait ChildWidgetDiffRender: WidgetImpl {
-    fn widget_diff_render(&mut self, painter: &mut Painter) {
+    fn widget_diff_render(&mut self, painter: &mut Painter, background: Color) {
         if let Some(child) = self.get_child_ref() {
             // Handle child with margins:
             let rec_rect = child.image_rect_record();
@@ -52,7 +56,7 @@ pub trait ChildWidgetDiffRender: WidgetImpl {
 
                 painter.save();
                 painter.clip_region(clear_region, ClipOp::Intersect);
-                painter.fill_rect(rec_rect, self.background());
+                painter.fill_rect(rec_rect, background);
                 painter.restore();
             }
 
@@ -77,5 +81,5 @@ impl<T: WidgetImpl> ChildWidgetDiffRender for T {}
 
 #[reflect_trait]
 pub trait ChildContainerDiffRender {
-    fn container_diff_render(&mut self, painter: &mut Painter);
+    fn container_diff_render(&mut self, painter: &mut Painter, background: Color);
 }

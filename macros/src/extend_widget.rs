@@ -791,8 +791,23 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn is_animation_progressing(&mut self) -> bool {
+            fn is_animation_progressing(&self) -> bool {
                 self.#(#widget_path).*.is_animation_progressing()
+            }
+
+            #[inline]
+            fn transparency(&self) -> Transparency {
+                self.#(#widget_path).*.transparency()
+            }
+
+            #[inline]
+            fn set_transparency(&mut self, transparency: Transparency) {
+                self.#(#widget_path).*.set_transparency(transparency)
+            }
+
+            #[inline]
+            fn propagate_set_transparency(&mut self, transparency: Transparency) {
+                self.#(#widget_path).*.propagate_set_transparency(transparency)
             }
         }
 

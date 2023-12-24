@@ -2,10 +2,13 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Meta, MetaList, MetaNameValue, NestedMeta};
 
+static POSITION_BASED_ANIMATIONS: [&'static str; 3] = ["Linear", "EaseIn", "EaseOut"];
+
 pub(crate) struct Animation {
     pub(crate) mode: Option<Ident>,
     pub(crate) ty: Option<Ident>,
     pub(crate) direction: Option<Ident>,
+    pub(crate) effect: Option<Ident>,
     pub(crate) duration: Option<i32>,
     attr: Attribute,
 }
@@ -16,6 +19,7 @@ impl Animation {
             mode: None,
             ty: None,
             direction: None,
+            effect: None,
             duration: None,
             attr: attr.clone(),
         };
@@ -69,6 +73,18 @@ impl Animation {
                                             )),
                                         }
                                     }
+                                    "effect" => {
+                                        match lit {
+                                            syn::Lit::Str(lit) => {
+                                                let lit_str = lit.value();
+                                                animation.effect = Some(Ident::new(&lit_str, lit.span()));
+                                            }
+                                            _ => return Err(syn::Error::new_spanned(
+                                                attr,
+                                                "Proc-macro `animatable`: value of config `effect` should be literal.",
+                                            )),
+                                        }
+                                    }
                                     "duration" => {
                                         match lit {
                                             syn::Lit::Int(lit) => {
@@ -102,11 +118,31 @@ impl Animation {
             }
         }
 
-        if animation.ty.is_none() || animation.direction.is_none() || animation.duration.is_none() {
+        if animation.ty.is_none() || animation.duration.is_none() {
             return Err(syn::Error::new_spanned(
                 attr,
-                "Parse proc-macro `animatable` failed, only support config `ty = xxx, direction = xxx, duration = xxx`",
+                "Parse proc-macro `animatable` failed, attribute `ty`,`duration` can not be `None`",
             ));
+        }
+
+        let ty = animation.ty.as_ref().unwrap().to_string();
+        if POSITION_BASED_ANIMATIONS.contains(&ty.as_str()) {
+            if animation.direction.is_none() {
+                return Err(syn::Error::new_spanned(
+                    attr,
+                    "Position-based animations must assign direction.(Linear, EaseIn, EaseOut)",
+                ));
+            }
+        } else {
+            if animation.direction.is_some()
+                || animation.effect.is_some()
+                || animation.mode.is_some()
+            {
+                return Err(syn::Error::new_spanned(
+                    attr,
+                    "Unable to assign `direction`,`effect` and `mode` on transparency-based animations.(FadeLinear, FadeEaseIn, FadeEaseOut)",
+                ));
+            }
         }
 
         Ok(animation)
@@ -168,11 +204,20 @@ impl Animation {
         } else {
             "Default::default()".to_string()
         };
+        let effect = if let Some(effect) = self.effect.as_ref() {
+            format!("animation::AnimationEffect::{}", effect.to_string())
+        } else {
+            "Default::default()".to_string()
+        };
+        let direction = if let Some(direction) = self.direction.as_ref() {
+            format!("Some(animation::Direction::{})", direction.to_string())
+        } else {
+            "None".to_string()
+        };
         let ty = self.ty.as_ref().unwrap();
-        let direction = self.direction.as_ref().unwrap();
         let duration = *self.duration.as_ref().unwrap();
 
-        let default = format!("animation::AnimationModel::new({}, animation::Animation::{}, animation::Direction::{}, std::time::Duration::from_millis({}))", mode, ty.to_string(), direction.to_string(), duration);
+        let default = format!("animation::AnimationModel::new({}, animation::Animation::{}, std::time::Duration::from_millis({}), {}, Some({}))", mode, ty.to_string(), duration, direction, effect);
 
         Ok(quote!(
             #[derivative(Default(value = #default))]
@@ -194,9 +239,9 @@ impl Animation {
                 "Linear" => rect_holder(name),
                 "EaseIn" => rect_holder(name),
                 "EaseOut" => rect_holder(name),
-                "FadeLinear" => color_holder(name),
-                "FadeEaseIn" => color_holder(name),
-                "FadeEaseOut" => color_holder(name),
+                "FadeLinear" => transparency_holder(name),
+                "FadeEaseIn" => transparency_holder(name),
+                "FadeEaseOut" => transparency_holder(name),
                 str => Err(syn::Error::new_spanned(
                     self.attr.clone(),
                     format!("Unexpected animation type: {}", str),
@@ -234,26 +279,26 @@ fn rect_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, TokenStre
     ))
 }
 
-fn color_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
+fn transparency_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     Ok((
         quote!(
-            animated_color: Box<Color>
+            animated_transparency: Box<i32>
         ),
         quote!(
-            impl ColorHolder for #name {
+            impl TransparencyHolder for #name {
                 #[inline]
-                fn animated_color(&self) -> Color {
-                    *self.animated_color.as_ref()
+                fn animated_transparency(&self) -> i32 {
+                    *self.animated_transparency.as_ref()
                 }
 
                 #[inline]
-                fn animated_color_mut(&mut self) -> &mut Color {
-                    self.animated_color.as_mut()
+                fn animated_transparency_mut(&mut self) -> &mut i32 {
+                    self.animated_transparency.as_mut()
                 }
             }
         ),
         quote!(
-            type_registry.register::<#name, ReflectColorHolder>();
+            type_registry.register::<#name, ReflectTransparencyHolder>();
         ),
     ))
 }
