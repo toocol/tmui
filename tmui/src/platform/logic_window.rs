@@ -85,11 +85,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
 
     pub fn resize(&self, width: u32, height: u32) {
         let mut bitmap_guard = self.bitmap.write();
+        let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>)
+            .ipc_write();
 
         if let Some(ref slave) = self.slave {
-            let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>)
-                .ipc_write();
-
             let mut slave = slave.write();
             let old_shmem = slave.resize(width, height);
 
@@ -102,10 +101,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         } else {
             match self.master {
                 Some(ref master) => {
-                    let _guard =
-                        ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>)
-                            .ipc_write();
-
                     let mut master = master.write();
                     let old_shmem = master.resize(width, height);
 

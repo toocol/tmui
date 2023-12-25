@@ -20,6 +20,7 @@ use std::{
     sync::{atomic::Ordering, Arc}, time::Duration,
 };
 use tlib::global::SemanticExt;
+use log::error;
 
 pub(crate) struct MasterContext<T: 'static + Copy, M: 'static + Copy> {
     name: String,
@@ -222,14 +223,18 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     #[inline]
     fn wait(&self) {
         if let Ok((evt, _)) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true) } {
-            evt.wait(Timeout::Val(Duration::from_secs(2))).unwrap();
+            if let Err(e) = evt.wait(Timeout::Val(Duration::from_secs(2))) {
+                error!("Ipc => master context wait failed. {:?}", e)
+            }
         }
     }
 
     #[inline]
     fn signal(&self) {
         if let Ok((evt, _)) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()) } {
-            evt.set(EventState::Signaled).unwrap();
+            if let Err(e) = evt.set(EventState::Signaled) {
+                error!("Ipc => master context signal failed. {:?}", e)
+            }
         }
     }
 

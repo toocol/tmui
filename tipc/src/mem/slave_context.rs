@@ -6,6 +6,7 @@ use super::{
     IPC_MEM_LOCK_NAME, IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SIGNAL_EVT,
     IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
 };
+use log::error;
 use parking_lot::Mutex;
 use raw_sync::{
     events::{Event, EventInit, EventState},
@@ -212,14 +213,18 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
     #[inline]
     fn wait(&self) {
         if let Ok((evt, _)) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true) } {
-            evt.wait(Timeout::Val(Duration::from_millis(2))).unwrap();
+            if let Err(e) = evt.wait(Timeout::Val(Duration::from_secs(2))) {
+                error!("Ipc => slave context wait failed. {:?}", e)
+            }
         }
     }
 
     #[inline]
     fn signal(&self) {
         if let Ok((evt, _)) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()) } {
-            evt.set(EventState::Signaled).unwrap();
+            if let Err(e) = evt.set(EventState::Signaled) {
+                error!("Ipc => slave context signal failed. {:?}", e)
+            }
         }
     }
 

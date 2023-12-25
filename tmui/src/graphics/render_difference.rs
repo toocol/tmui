@@ -11,10 +11,6 @@ pub trait RenderDiffence: WidgetImpl + ChildWidgetDiffRender {
         let rect: skia_safe::IRect = self.rect().into();
         let old_rect: skia_safe::IRect = self.rect_record().into();
 
-        if self.object_type().is_a(ApplicationWindow::static_type()) {
-            println!("render rect: {:?}", self.rect());
-        }
-
         let mut region = skia_safe::Region::new();
         region.op_rect(rect, RegionOp::Union);
         region.op_rect(old_rect, RegionOp::Difference);
