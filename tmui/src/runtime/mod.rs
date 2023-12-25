@@ -14,6 +14,7 @@ use crate::{
     primitive::{cpu_balance::CpuBalance, Message},
 };
 use std::sync::atomic::Ordering;
+use tipc::IpcType;
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
     r#async::tokio_runtime,
@@ -35,8 +36,10 @@ where
     let (input_receiver, output_sender) = (context.input_receiver.0, context.output_sender);
 
     // Set up the ipc shared channel.
+    let mut is_shared_mem_app = false;
     if let Some(shared_channel) = logic_window.shared_channel.take() {
         SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
+        is_shared_mem_app = true;
     }
 
     // Set the UI thread to the `Main` thread.
@@ -113,7 +116,12 @@ where
 
         if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
             if evt.event_type() == EventType::Resize {
-                let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
+                let mut resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
+
+                if is_shared_mem_app && logic_window.ipc_type == IpcType::Slave {
+                    let size = window.ipc_bridge().as_ref().unwrap().size();
+                    resize_evt.set_size(size.0 as i32, size.1 as i32);
+                }
 
                 if resize_evt.width() > 0 && resize_evt.height() > 0 {
                     size_record = (resize_evt.width() as u32, resize_evt.height() as u32);
@@ -128,7 +136,9 @@ where
             cpu_balance.add_payload(evt.payload_wieght());
             let evt = window.dispatch_event(evt);
             if let Some(ref evt) = evt {
-                Application::<T, M>::send_event_ipc(&evt);
+                if logic_window.ipc_type == IpcType::Master {
+                    Application::<T, M>::send_event_ipc(&evt);
+                }
             }
         }
 

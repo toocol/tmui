@@ -1,12 +1,12 @@
-use tipc::{RwLock, lock_api::RwLockWriteGuard, RawRwLock};
-use tlib::{nonnull_mut, ptr_ref};
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use crate::{backend::Backend, skia_safe::Surface, primitive::bitmap::Bitmap};
+use crate::{backend::Backend, primitive::bitmap::Bitmap, skia_safe::Surface};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
     sync::Arc,
 };
+use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
+use tlib::{nonnull_mut, ptr_ref};
 
 thread_local! {
     static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true);
@@ -67,8 +67,7 @@ impl Board {
     #[inline]
     pub(crate) fn resize(&mut self) {
         self.surface().flush_submit_and_sync_cpu();
-        self.backend
-            .resize(self.bitmap.clone());
+        self.backend.resize(self.bitmap.clone());
 
         self.surface = RefCell::new(self.backend.surface());
     }
@@ -89,11 +88,13 @@ impl Board {
             let mut update = false;
             if *notify_update.borrow() {
                 let mut bitmap_guard = self.bitmap.write();
-                
-                // Invoke `ipc_write()` here, so that the following code can 
+
+                // Invoke `ipc_write()` here, so that the following code can
                 // be executed with cross process lock,
                 // when program was under cross process rendering.
-                let _guard = ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
+                let _guard =
+                    ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>)
+                        .ipc_write();
 
                 // The parent elements always at the begining of `element_list`.
                 // We should renderer the parent elements first.

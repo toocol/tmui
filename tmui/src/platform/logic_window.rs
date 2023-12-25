@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, lock_api::RwLockWriteGuard, IpcNode, RawRwLock,
-    RwLock,
+    RwLock, IpcType,
 };
 use tlib::ptr_ref;
 
@@ -20,6 +20,7 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
 
     pub platform_type: PlatformType,
     pub backend_type: BackendType,
+    pub ipc_type: IpcType,
 
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     pub shared_channel: Option<SharedChannel<T, M>>,
@@ -48,6 +49,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             slave: None,
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
+            ipc_type: IpcType::Master,
             master,
             shared_channel,
             context: Some(context),
@@ -70,6 +72,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             slave,
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
+            ipc_type: IpcType::Slave,
             master: None,
             shared_channel,
             context: Some(context),
@@ -90,7 +93,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
 
         if let Some(ref slave) = self.slave {
             let mut slave = slave.write();
-            let old_shmem = slave.resize(width, height);
+            let old_shmem = slave.resize(0, 0);
 
             bitmap_guard.update_raw_pointer(
                 slave.buffer_raw_pointer(),

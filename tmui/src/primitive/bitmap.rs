@@ -6,7 +6,7 @@ use std::{
     ptr::NonNull,
     slice,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering},
         Arc,
     },
 };
@@ -24,6 +24,12 @@ struct _ShmemInfo {
 
     master_release_idx: AtomicUsize,
     slave_release_idx: AtomicUsize,
+
+    master_width: AtomicU32,
+    master_height: AtomicU32,
+
+    slave_width: AtomicU32,
+    slave_height: AtomicU32,
 }
 
 macro_rules! shmem_info {
@@ -66,10 +72,6 @@ pub(crate) enum Bitmap {
         total_bytes: usize,
         /// Bytes number of a row.
         row_bytes: usize,
-        /// The width of `Bitmap`.
-        width: u32,
-        /// The height of `Bitmap`.
-        height: u32,
         /// Only used on platform `macos`
         resized: bool,
     },
@@ -114,6 +116,20 @@ impl Bitmap {
             IpcType::Slave => ShmemConf::new().os_id(address_name).open().unwrap(),
         };
 
+        {
+            let shmem_info = shmem_info!(shmem_info);
+            match ipc_type {
+                IpcType::Master => {
+                    shmem_info.master_width.store(width, Ordering::Release);
+                    shmem_info.master_height.store(height, Ordering::Release);
+                }
+                IpcType::Slave => {
+                    shmem_info.slave_width.store(width, Ordering::Release);
+                    shmem_info.slave_height.store(height, Ordering::Release);
+                }
+            }
+        }
+
         Self::Shared {
             ty: ipc_type,
             raw_pointer: NonNull::new(pointer),
@@ -122,8 +138,6 @@ impl Bitmap {
             lock: lock,
             total_bytes: (width * height * 4) as usize,
             row_bytes: (width * 4) as usize,
-            width,
-            height,
             resized: false,
         }
     }
@@ -164,13 +178,12 @@ impl Bitmap {
     ) {
         match self {
             Self::Shared {
+                ty,
                 raw_pointer,
                 rentention,
                 shmem_info,
                 total_bytes,
                 row_bytes,
-                width,
-                height,
                 resized,
                 ..
             } => {
@@ -180,9 +193,15 @@ impl Bitmap {
                 shmem_info.prepared.store(false, Ordering::Release);
                 *total_bytes = (w * h * 4) as usize;
                 *row_bytes = (w * 4) as usize;
-                *width = w;
-                *height = h;
                 *resized = true;
+
+                if *ty == IpcType::Master {
+                    shmem_info.master_width.store(w, Ordering::Release);
+                    shmem_info.master_height.store(h, Ordering::Release);
+                } else {
+                    shmem_info.slave_width.store(w, Ordering::Release);
+                    shmem_info.slave_height.store(h, Ordering::Release);
+                }
             }
             _ => {}
         }
@@ -246,7 +265,13 @@ impl Bitmap {
     pub fn width(&self) -> u32 {
         match self {
             Self::Direct { width, .. } => *width,
-            Self::Shared { width, .. } => *width,
+            Self::Shared { ty, shmem_info, .. } => {
+                if *ty == IpcType::Master {
+                    shmem_info!(shmem_info).master_width.load(Ordering::Acquire)
+                } else {
+                    shmem_info!(shmem_info).slave_width.load(Ordering::Acquire)
+                }
+            }
         }
     }
 
@@ -254,7 +279,15 @@ impl Bitmap {
     pub fn height(&self) -> u32 {
         match self {
             Self::Direct { height, .. } => *height,
-            Self::Shared { height, .. } => *height,
+            Self::Shared { ty, shmem_info, .. } => {
+                if *ty == IpcType::Master {
+                    shmem_info!(shmem_info)
+                        .master_height
+                        .load(Ordering::Acquire)
+                } else {
+                    shmem_info!(shmem_info).slave_height.load(Ordering::Acquire)
+                }
+            }
         }
     }
 

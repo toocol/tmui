@@ -11,6 +11,8 @@ pub(crate) trait IpcBridge {
     fn signal(&self);
 
     fn add_shared_region(&self, id: &'static str, rect: Rect);
+
+    fn size(&self) -> (u32, u32);
 }
 
 pub struct IpcBridgeModel<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -30,7 +32,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
             shared_widget_id,
             master,
             slave,
-        }.boxed()
+        }
+        .boxed()
     }
 }
 
@@ -83,5 +86,19 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
         if self.slave.is_some() {
             unreachable!()
         }
+    }
+
+    fn size(&self) -> (u32, u32) {
+        if let Some(ref master) = self.master {
+            let guard = master.read();
+            return (guard.width(), guard.height());
+        }
+
+        if let Some(ref slave) = self.slave {
+            let guard = slave.read();
+            return (guard.width(), guard.height());
+        }
+
+        unreachable!()
     }
 }
