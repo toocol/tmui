@@ -1,11 +1,14 @@
 use crate::{
-    application::{self, Application},
+    application::{self, Application, APP_STOPPED},
     cursor::Cursor,
     platform::{
         ipc_window::IpcWindow,
         physical_window::{PhysWindow, PhysicalWindow},
     },
-    primitive::{cpu_balance::CpuBalance, Message},
+    primitive::{
+        cpu_balance::CpuBalance,
+        Message,
+    },
     runtime::{
         runtime_track::RuntimeTrack,
         window_context::{OutputReceiver, PhysicalWindowContext},
@@ -15,11 +18,11 @@ use crate::{
         event::{Event, WindowEvent},
     },
 };
-use log::{debug, info};
+use log::debug;
 use std::{
     marker::PhantomData,
     ops::Add,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::Ordering,
     thread,
     time::{Duration, Instant},
 };
@@ -82,6 +85,55 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
             },
             _ => unreachable!(),
         };
+        let user_ipc_event_sender = window.user_ipc_event_sender.take();
+
+        let proxy = event_loop.create_proxy();
+        let join = if let Some(master) = window.master.clone() {
+            Some(
+                thread::Builder::new()
+                    .name("ipc-thread".to_string())
+                    .spawn(move || {
+                        let mut cpu_balance = CpuBalance::new();
+
+                        loop {
+                            if APP_STOPPED.load(Ordering::Acquire) {
+                                break;
+                            }
+                            cpu_balance.loop_start();
+
+                            let mut user_events = vec![];
+                            for evt in master.read().try_recv_vec() {
+                                cpu_balance.add_payload(evt.payload_wieght());
+
+                                match evt {
+                                    IpcEvent::VSync(ins) => {
+                                        proxy.send_event(Message::VSync(ins)).unwrap();
+                                    }
+                                    IpcEvent::SetCursorShape(cursor) => {
+                                        proxy.send_event(Message::SetCursorShape(cursor)).unwrap();
+                                    }
+                                    IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
+                                    _ => {}
+                                }
+                            }
+                            if user_events.len() > 0 {
+                                if let Some(ref sender) = user_ipc_event_sender {
+                                    sender.send(user_events).unwrap();
+                                }
+                            }
+
+                            cpu_balance.payload_check();
+                            if application::is_high_load() {
+                                cpu_balance.request_high_load();
+                            }
+                            cpu_balance.sleep(false);
+                        }
+                    })
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
 
         event_loop
             .run(move |event, target| {
@@ -103,41 +155,6 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                     target.set_control_flow(ControlFlow::WaitUntil(
                         Instant::now().add(Duration::from_millis(10)),
                     ));
-                }
-
-                if let Some(master) = window.master.clone() {
-                    let mut user_events = vec![];
-                    for evt in master.read().try_recv_vec() {
-                        match evt {
-                            IpcEvent::VSync(ins) => {
-                                info!(
-                                    "Ipc vsync track: {}ms",
-                                    ins.elapsed().as_micros() as f64 / 1000.
-                                );
-                                window.request_redraw(&winit_window);
-                                if runtime_track.vsync_rec.is_none() {
-                                    runtime_track.vsync_rec = Some(Instant::now());
-                                }
-                                runtime_track.update_cnt += 1;
-                            }
-                            IpcEvent::SetCursorShape(cursor) => match cursor {
-                                SystemCursorShape::BlankCursor => {
-                                    winit_window.set_cursor_visible(false)
-                                }
-                                _ => {
-                                    winit_window.set_cursor_visible(true);
-                                    winit_window.set_cursor_icon(cursor.into())
-                                }
-                            },
-                            IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                            _ => {}
-                        }
-                    }
-                    if user_events.len() > 0 {
-                        if let Some(ref sender) = window.user_ipc_event_sender {
-                            sender.send(user_events).unwrap();
-                        }
-                    }
                 }
 
                 match event {
@@ -164,7 +181,10 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                             master_guard.try_send(IpcEvent::Exit).unwrap();
                             master_guard.wait();
                         }
-                        target.exit()
+
+                        target.exit();
+
+                        APP_STOPPED.store(true, Ordering::SeqCst);
                     }
 
                     // Window destroy event.
@@ -398,6 +418,10 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                 }
             })
             .unwrap();
+
+        if let Some(join) = join {
+            join.join().unwrap()
+        }
     }
 
     pub fn event_handle_ipc(&self, window: IpcWindow<T, M>) {
@@ -409,14 +433,12 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
             _ => unreachable!(),
         };
 
-        static mut EXIT: AtomicBool = AtomicBool::new(false);
-
         let ipc_slave_clone = window.slave.clone();
         thread::Builder::new()
             .name("ipc-thread".to_string())
             .spawn(move || {
                 while let Ok(message) = output_receiver.recv() {
-                    if unsafe { EXIT.load(Ordering::SeqCst) } {
+                    if APP_STOPPED.load(Ordering::SeqCst) {
                         return;
                     }
                     // Send to master
@@ -440,7 +462,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                 match evt {
                     IpcEvent::Exit => {
-                        unsafe { EXIT.store(true, Ordering::SeqCst) };
+                        APP_STOPPED.store(true, Ordering::Release);
                         break 'main;
                     }
                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),

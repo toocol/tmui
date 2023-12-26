@@ -401,6 +401,12 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             return;
         }
 
+        if self.super_type().is_a(SharedWidget::static_type())
+            || self.object_type().is_a(SharedWidget::static_type())
+        {
+            return;
+        }
+
         let mut painter = Painter::new(cr.canvas(), self);
 
         let mut geometry = self.rect();
@@ -408,12 +414,6 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             return;
         }
         geometry.set_point(&(0, 0).into());
-
-        if self.super_type().is_a(SharedWidget::static_type())
-            || self.object_type().is_a(SharedWidget::static_type())
-        {
-            return;
-        }
 
         painter_clip(self, &mut painter);
 

@@ -117,7 +117,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         WindowsProcess::<T, M>::new().process(physical_window);
 
-        APP_STOPPED.store(true, Ordering::SeqCst);
         join.join().unwrap();
     }
 

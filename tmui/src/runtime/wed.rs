@@ -14,7 +14,6 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
         EventType::Resize => {
             let evt = downcast_event::<ResizeEvent>(evt).unwrap();
             window.resize(Some(evt.width()), Some(evt.height()));
-            event = Some(evt);
         }
 
         // Mouse pressed.

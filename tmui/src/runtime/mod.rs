@@ -17,8 +17,9 @@ use std::sync::atomic::Ordering;
 use tipc::IpcType;
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
+    global::SemanticExt,
     r#async::tokio_runtime,
-    timer::TimerHub,
+    timer::TimerHub, payload::PayloadWeight,
 };
 
 use self::frame_manager::FrameManager;
@@ -36,10 +37,8 @@ where
     let (input_receiver, output_sender) = (context.input_receiver.0, context.output_sender);
 
     // Set up the ipc shared channel.
-    let mut is_shared_mem_app = false;
     if let Some(shared_channel) = logic_window.shared_channel.take() {
         SHARED_CHANNEL.with(|s| *s.borrow_mut() = Some(Box::new(shared_channel)));
-        is_shared_mem_app = true;
     }
 
     // Set the UI thread to the `Main` thread.
@@ -90,7 +89,8 @@ where
     let mut cpu_balance = CpuBalance::new();
     let mut frame_manager = FrameManager::new();
     let mut resized = false;
-    let mut size_record = (0, 0);
+    let size = window.size();
+    let mut size_record = (size.width() as u32, size.height() as u32);
 
     Application::<T, M>::set_app_started();
 
@@ -116,12 +116,7 @@ where
 
         if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
             if evt.event_type() == EventType::Resize {
-                let mut resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
-
-                if is_shared_mem_app && logic_window.ipc_type == IpcType::Slave {
-                    let size = window.ipc_bridge().as_ref().unwrap().size();
-                    resize_evt.set_size(size.0 as i32, size.1 as i32);
-                }
+                let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
 
                 if resize_evt.width() > 0 && resize_evt.height() > 0 {
                     size_record = (resize_evt.width() as u32, resize_evt.height() as u32);
@@ -139,6 +134,21 @@ where
                 if logic_window.ipc_type == IpcType::Master {
                     Application::<T, M>::send_event_ipc(&evt);
                 }
+            }
+        }
+
+        if logic_window.ipc_type == IpcType::Slave {
+            let size = window.ipc_bridge().as_ref().unwrap().size();
+            if size_record != size {
+                size_record.0 = size.0;
+                size_record.1 = size.1;
+                resized = true;
+
+                let evt = ResizeEvent::new(size.0 as i32, size.1 as i32).boxed();
+
+                cpu_balance.add_payload(evt.payload_wieght());
+
+                window.dispatch_event(evt);
             }
         }
 

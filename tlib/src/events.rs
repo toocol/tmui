@@ -589,12 +589,6 @@ impl ResizeEvent {
     pub fn height(&self) -> i32 {
         self.size.height()
     }
-
-    #[inline]
-    pub fn set_size(&mut self, w: i32, h: i32) {
-        self.size.set_width(w);
-        self.size.set_height(h);
-    }
 }
 impl EventTrait for ResizeEvent {
     #[inline]
