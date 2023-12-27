@@ -2,10 +2,10 @@ use std::sync::Arc;
 use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
 use tlib::ptr_ref;
 
-use super::Backend;
+use super::{create_image_info, Backend};
 use crate::{
     primitive::bitmap::Bitmap,
-    skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo, Surface},
+    skia_safe::{ImageInfo, Surface},
 };
 
 /// Backend for Raster,
@@ -18,20 +18,10 @@ pub struct RasterBackend {
 
 impl RasterBackend {
     pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
-        #[cfg(windows_platform)]
-        let color_type = ColorType::BGRA8888;
-        #[cfg(not(windows_platform))]
-        let color_type = ColorType::RGBA8888;
-
         let mut guard = bitmap.write();
         let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
 
-        let image_info = ImageInfo::new(
-            (guard.width() as i32, guard.height() as i32),
-            color_type,
-            AlphaType::Premul,
-            ColorSpace::new_srgb(),
-        );
+        let image_info = create_image_info((guard.width() as i32, guard.height() as i32));
 
         // let surface = Surface::new_raster_n32_premul((width, height)).unwrap();
 
@@ -50,23 +40,13 @@ impl RasterBackend {
 
 impl Backend for RasterBackend {
     fn resize(&mut self, bitmap: Arc<RwLock<Bitmap>>) {
-        #[cfg(windows_platform)]
-        let color_type = ColorType::BGRA8888;
-        #[cfg(not(windows_platform))]
-        let color_type = ColorType::RGBA8888;
-
         let mut guard = bitmap.write();
         let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();
 
         let row_bytes = guard.row_bytes();
         let dimensitions = (guard.width() as i32, guard.height() as i32);
 
-        self.image_info = ImageInfo::new(
-            dimensitions,
-            color_type,
-            AlphaType::Premul,
-            ColorSpace::new_srgb(),
-        );
+        self.image_info = create_image_info(dimensitions);
 
         // let mut new_surface = self
         //     .surface

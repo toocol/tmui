@@ -49,6 +49,12 @@ impl Point {
     pub fn y_mut(&mut self) -> &mut i32 {
         &mut self.y
     }
+
+    #[inline]
+    pub fn offset(&mut self, x_off: i32, y_off: i32) {
+        self.x += x_off;
+        self.y += y_off;
+    }
 }
 
 impl Add for Point {

@@ -3,7 +3,10 @@ pub(crate) mod win32_window;
 
 use self::win32_window::Win32Window;
 
-use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext};
+use super::{
+    ipc_inner_agent::InnerAgent, logic_window::LogicWindow, physical_window::PhysicalWindow,
+    PlatformContext,
+};
 use crate::{
     primitive::Message,
     runtime::window_context::{
@@ -23,7 +26,7 @@ use crate::{
     runtime::window_context::OutputSender,
 };
 use std::sync::{mpsc::channel, Arc};
-use tipc::{ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster};
+use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
 use tlib::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::Win32::Foundation::HWND;
 
@@ -65,22 +68,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     for PlatformWin32<T, M>
 {
     fn initialize(&mut self) {
-        match self.master {
-            Some(ref master) => {
-                let guard = master.read();
-                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
-                    guard.buffer_raw_pointer(),
-                    self.width,
-                    self.height,
-                    guard.buffer_lock(),
-                    guard.name(),
-                    guard.ty(),
-                ))));
-            }
-            None => {
-                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::new(self.width, self.height))));
-            }
-        }
+        let release_agent = if self.master.is_some() {
+            let master = self.master.as_ref().unwrap().clone();
+            Some(InnerAgent::master(master))
+        } else {
+            None
+        };
+
+        self.bitmap = Some(Arc::new(RwLock::new(Bitmap::new(
+            self.width,
+            self.height,
+            release_agent,
+        ))));
     }
 
     #[inline]

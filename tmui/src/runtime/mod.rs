@@ -149,6 +149,8 @@ where
                 cpu_balance.add_payload(evt.payload_wieght());
 
                 window.dispatch_event(evt);
+
+                Board::force_update();
             }
         }
 

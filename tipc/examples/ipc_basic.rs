@@ -34,8 +34,6 @@ fn main() {
 fn ipc_master() {
     let master = IpcBuilder::<UserEvent, Request>::with_customize()
         .name(NAME)
-        .width(100)
-        .height(100)
         .master();
 
     let mut cnt = 0u64;
