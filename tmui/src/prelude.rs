@@ -33,7 +33,7 @@ pub use crate::overlay::{Overlaid, ReflectOverlaid};
 pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
-pub use crate::shared_widget::{SharedWidget, SharedWidgetExt};
+pub use crate::shared_widget::{SharedWidget, SharedWidgetExt, SharedWidgetImpl, ReflectSharedWidgetImpl};
 pub use crate::split_pane::{
     ReflectSplitInfosGetter, SplitInfo, SplitInfosGetter, SplitPane, SplitPaneExt, SplitType,
 };

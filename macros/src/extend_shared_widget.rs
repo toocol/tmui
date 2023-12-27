@@ -10,8 +10,6 @@ pub(crate) fn expand(
 
     let general_attr = GeneralAttr::parse(ast)?;
 
-    let run_after_clause = &general_attr.run_after_clause;
-
     let async_task_clause = &general_attr.async_task_impl_clause;
     let async_method_clause = &general_attr.async_task_method_clause;
 
@@ -107,13 +105,16 @@ pub(crate) fn expand(
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
+                        type_registry.register::<#name, ReflectSharedWidgetImpl>();
                         #popupable_reflect_clause
                     }
 
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #set_shared_id_clause
-                        #run_after_clause
+                        ApplicationWindow::run_afters_of(self.window_id()).push(
+                            std::ptr::NonNull::new(self)
+                        );
                     }
                 }
 
@@ -162,6 +163,11 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
             #[inline]
             fn set_shared_id(&mut self, id: &'static str) {
                 self.#(#shared_widget_path).*.set_shared_id(id)
+            }
+
+            #[inline]
+            fn image_info(&self) -> &tlib::skia_safe::ImageInfo {
+                self.#(#shared_widget_path).*.image_info()
             }
         }
 

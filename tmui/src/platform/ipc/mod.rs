@@ -1,27 +1,24 @@
 pub(crate) mod ipc_bridge;
+pub(crate) mod ipc_inner_agent;
 pub(crate) mod ipc_window;
 
 use self::ipc_window::IpcWindow;
 
 use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext};
 use crate::{
+    platform::ipc_inner_agent::InnerAgent,
     primitive::{
         bitmap::Bitmap,
         shared_channel::{self},
         Message,
     },
     runtime::window_context::{
-            InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
-            PhysicalWindowContext,
-        },
+        InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
+        PhysicalWindowContext,
+    },
 };
-use std::sync::{
-    mpsc::channel,
-    Arc,
-};
-use tipc::{
-    ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave,
-};
+use std::sync::{mpsc::channel, Arc};
+use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
 use tlib::figure::Rect;
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -65,14 +62,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     for PlatformIpc<T, M>
 {
     fn initialize(&mut self) {
+        debug_assert!(self.slave.is_some());
+
+        let slave_clone = self.slave.as_ref().unwrap().clone();
+        let release_agent = InnerAgent::slave(slave_clone);
+
         let slave = self.slave.as_ref().unwrap().read();
         let bitmap = Bitmap::from_raw_pointer(
             slave.buffer_raw_pointer(),
             slave.width(),
             slave.height(),
             slave.buffer_lock(),
-            slave.name(),
-            slave.ty(),
+            release_agent,
         );
 
         self.region = slave
@@ -118,7 +119,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             LogicWindow::slave(
                 self.bitmap(),
                 self.shared_widget_id.unwrap(),
-                self.slave.clone(),
+                self.slave.as_ref().unwrap().clone(),
                 Some(shared_channel),
                 LogicWindowContext {
                     output_sender: OutputSender::Sender(output_sender),

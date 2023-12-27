@@ -46,9 +46,6 @@ pub struct ApplicationWindow {
     widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
     run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
 
-    /// Effecting when application was under shared memory mode.
-    base_offset: Point,
-
     focused_widget: ObjectId,
     pressed_widget: ObjectId,
     mouse_over_widget: Option<NonNull<dyn WidgetImpl>>,
@@ -76,10 +73,6 @@ impl ObjectImpl for ApplicationWindow {
         let window_id = self.id();
         child_initialize(self.get_child_mut(), window_id);
         emit!(ApplicationWindow::initialize => self.size_changed(), self.size());
-
-        if self.platform_type == PlatformType::Ipc {
-            self.base_offset = self.ipc_bridge.as_ref().unwrap().region().top_left();
-        }
 
         self.set_initialized(true);
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
@@ -205,11 +198,6 @@ impl ApplicationWindow {
     #[inline]
     pub fn is_high_load_requested(&self) -> bool {
         self.high_load_request
-    }
-
-    #[inline]
-    pub(crate) fn base_offset(&self) -> Point {
-        self.base_offset
     }
 
     #[inline]

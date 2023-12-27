@@ -22,6 +22,8 @@ impl ObjectImpl for MasterSharedWidget {
 
 impl WidgetImpl for MasterSharedWidget {}
 
+impl SharedWidgetImpl for MasterSharedWidget {}
+
 impl MasterSharedWidget {
     pub fn new() -> Box<Self> {
         Object::new(&[])

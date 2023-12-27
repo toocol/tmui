@@ -1,5 +1,5 @@
-use crate::ipc_event::IpcEvent;
 use self::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
+use crate::ipc_event::IpcEvent;
 use shared_memory::Shmem;
 use std::{
     error::Error,
@@ -57,7 +57,11 @@ pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
 
     fn buffer_lock(&self) -> Arc<MemRwLock>;
 
-    fn resize(&mut self, width: u32, height: u32) -> Shmem;
+    fn pretreat_resize(&mut self, width: u32, height: u32);
+
+    fn create_buffer(&mut self, width: u32, height: u32);
+
+    fn recreate_buffer(&mut self) -> Option<Shmem>;
 }
 
 #[repr(C)]
@@ -91,6 +95,10 @@ pub(crate) struct SharedInfo<M: 'static + Copy> {
     pub(crate) request_side: RequestSide,
     pub(crate) request: M,
     pub(crate) response: Option<M>,
+
+    pub(crate) resized: AtomicBool,
+    pub(crate) release_idx: AtomicUsize,
+    pub(crate) prepared: AtomicBool,
 }
 
 #[derive(Debug)]

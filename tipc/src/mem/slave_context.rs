@@ -1,4 +1,3 @@
-use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use super::{
     mem_queue::{MemQueue, MemQueueBuilder, MemQueueError},
     mem_rw_lock::MemRwLock,
@@ -6,6 +5,7 @@ use super::{
     IPC_MEM_LOCK_NAME, IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SIGNAL_EVT,
     IPC_MEM_SLAVE_QUEUE, IPC_QUEUE_SIZE,
 };
+use crate::ipc_event::{InnerIpcEvent, IpcEvent};
 use log::error;
 use parking_lot::Mutex;
 use raw_sync::{
@@ -16,7 +16,8 @@ use shared_memory::{Shmem, ShmemConf};
 use std::{
     error::Error,
     marker::PhantomData,
-    sync::{atomic::Ordering, Arc}, time::Duration,
+    sync::{atomic::Ordering, Arc},
+    time::Duration,
 };
 use tlib::global::SemanticExt;
 
@@ -48,7 +49,6 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
             sinfo.height.load(Ordering::Acquire),
             sinfo.name_helper.load(Ordering::Acquire),
         );
-
         let buffer_name = format!(
             "{}{}{}{}_{}",
             name.to_string(),
@@ -233,29 +233,34 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
         self.buffer_lock.clone()
     }
 
-    fn resize(&mut self, _width: u32, _height: u32) -> Shmem {
+    fn pretreat_resize(&mut self, _width: u32, _height: u32){
+    }
+
+    fn create_buffer(&mut self, _: u32, _: u32) {
+        unreachable!()
+    }
+
+    fn recreate_buffer(&mut self) -> Option<Shmem> {
         let sinfo = unsafe {
             (self.shared_info.as_ptr() as *const SharedInfo<M>)
                 .as_ref()
                 .unwrap()
         };
-        let (width, height, name_helper) = (
-            sinfo.width.load(Ordering::Acquire),
-            sinfo.height.load(Ordering::Acquire),
-            sinfo.name_helper.load(Ordering::Acquire),
-        );
+        if !sinfo.resized.load(Ordering::Acquire) {
+            return None;
+        }
+
+        let name_helper = sinfo.name_helper.load(Ordering::Acquire);
 
         let buffer_name = format!(
-            "{}{}{}{}_{}",
+            "{}{}_{}",
             self.name.to_string(),
             IPC_MEM_BUFFER_NAME,
-            width,
-            height,
             name_helper
         );
 
         let buffer = ShmemConf::new().os_id(buffer_name).open().unwrap();
 
-        self.buffer.replace(buffer).unwrap()
+        self.buffer.replace(buffer)
     }
 }

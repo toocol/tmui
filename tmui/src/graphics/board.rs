@@ -1,12 +1,12 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use crate::{backend::Backend, primitive::bitmap::Bitmap, skia_safe::Surface};
+use crate::{backend::Backend, primitive::bitmap::Bitmap, skia_safe::Surface, shared_widget::ReflectSharedWidgetImpl};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
     sync::Arc,
 };
 use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
-use tlib::{nonnull_mut, ptr_ref};
+use tlib::{nonnull_mut, ptr_ref, cast_mut, prelude::*};
 
 thread_local! {
     static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true);
@@ -86,7 +86,7 @@ impl Board {
     pub(crate) fn invalidate_visual(&self) -> bool {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
-            if *notify_update.borrow() {
+            // if *notify_update.borrow() {
                 let mut bitmap_guard = self.bitmap.write();
 
                 // Invoke `ipc_write()` here, so that the following code can
@@ -100,7 +100,7 @@ impl Board {
                 // We should renderer the parent elements first.
                 for element in self.element_list.borrow_mut().iter_mut() {
                     let element = nonnull_mut!(element);
-                    if element.invalidate() {
+                    if element.invalidate() || cast_mut!(element as SharedWidgetImpl).is_some() {
                         let cr = DrawingContext::new(self);
                         element.on_renderer(&cr);
                         element.validate();
@@ -122,7 +122,7 @@ impl Board {
 
                 *notify_update.borrow_mut() = false;
                 FORCE_UPDATE.with(|force_update| *force_update.borrow_mut() = false);
-            }
+            // }
             update
         })
     }

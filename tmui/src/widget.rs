@@ -401,13 +401,15 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             return;
         }
 
+        let mut painter = Painter::new(cr.canvas(), self);
+
         if self.super_type().is_a(SharedWidget::static_type())
             || self.object_type().is_a(SharedWidget::static_type())
         {
+            let shared_widget = cast_mut!(self as SharedWidgetImpl).unwrap();
+            shared_widget.pixels_render(&mut painter);
             return;
         }
-
-        let mut painter = Painter::new(cr.canvas(), self);
 
         let mut geometry = self.rect();
         if geometry.width() == 0 || geometry.height() == 0 {

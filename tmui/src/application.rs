@@ -173,7 +173,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             PlatformType::Win32 => {
                 let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, self.width, self.height);
+                    platform_context.with_ipc_master(shared_mem_name);
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -182,7 +182,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             PlatformType::LinuxX11 => {
                 let mut platform_context = PlatformX11::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    platform_context.with_ipc_master(shared_mem_name);
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -191,7 +191,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             PlatformType::LinuxWayland => {
                 let mut platform_context = PlatformWayland::<T, M>::new(&title, width, height);
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    platform_context.with_ipc_master(shared_mem_name);
                 }
                 platform_context.initialize();
                 platform_context.wrap()
