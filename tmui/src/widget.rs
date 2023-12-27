@@ -403,10 +403,7 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         let mut painter = Painter::new(cr.canvas(), self);
 
-        if self.super_type().is_a(SharedWidget::static_type())
-            || self.object_type().is_a(SharedWidget::static_type())
-        {
-            let shared_widget = cast_mut!(self as SharedWidgetImpl).unwrap();
+        if let Some(shared_widget) = cast_mut!(self as SharedWidgetImpl) {
             shared_widget.pixels_render(&mut painter);
             return;
         }

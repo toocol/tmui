@@ -98,7 +98,7 @@ impl Board {
                 // when program was under cross process rendering.
                 //
                 // This lock only effect on slave side of shared memory application here,
-                // shared buffer will be locked in [`SharedWidgetImpl::pixels_render()`] on master side.
+                // shared buffer will be locked in [`SharedWidgetExt::pixels_render()`] on master side.
                 let _guard =
                     ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>)
                         .ipc_write();
