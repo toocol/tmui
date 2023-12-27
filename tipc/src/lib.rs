@@ -136,6 +136,10 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
     fn recreate_buffer(&mut self);
 
     fn release_retention(&mut self);
+
+    fn is_invalidate(&self) -> bool;
+
+    fn set_invalidate(&self, invalidate: bool);
 }
 
 lazy_static! {

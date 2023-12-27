@@ -1,12 +1,15 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
-use crate::{backend::Backend, primitive::bitmap::Bitmap, skia_safe::Surface, shared_widget::ReflectSharedWidgetImpl};
+use crate::{
+    backend::Backend, primitive::bitmap::Bitmap, shared_widget::ReflectSharedWidgetImpl,
+    skia_safe::Surface,
+};
 use std::{
     cell::{RefCell, RefMut},
     ptr::NonNull,
     sync::Arc,
 };
 use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
-use tlib::{nonnull_mut, ptr_ref, cast_mut, prelude::*};
+use tlib::{nonnull_mut, prelude::*, ptr_ref};
 
 thread_local! {
     static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true);
@@ -86,12 +89,16 @@ impl Board {
     pub(crate) fn invalidate_visual(&self) -> bool {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
-            // if *notify_update.borrow() {
-                let mut bitmap_guard = self.bitmap.write();
 
+            let mut bitmap_guard = self.bitmap.write();
+
+            if *notify_update.borrow() || bitmap_guard.is_shared_invalidate() {
                 // Invoke `ipc_write()` here, so that the following code can
                 // be executed with cross process lock,
                 // when program was under cross process rendering.
+                //
+                // This lock only effect on slave side of shared memory application here,
+                // shared buffer will be locked in [`SharedWidgetImpl::pixels_render()`] on master side.
                 let _guard =
                     ptr_ref!(&bitmap_guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>)
                         .ipc_write();
@@ -100,8 +107,19 @@ impl Board {
                 // We should renderer the parent elements first.
                 for element in self.element_list.borrow_mut().iter_mut() {
                     let element = nonnull_mut!(element);
-                    if element.invalidate() || cast_mut!(element as SharedWidgetImpl).is_some() {
+                    let shared_widget = cast!(element as SharedWidgetImpl);
+
+                    let need_render = element.invalidate()
+                        || (shared_widget.is_some()
+                            && shared_widget.as_ref().unwrap().is_shared_invalidate());
+
+                    if need_render {
                         let cr = DrawingContext::new(self);
+
+                        if let Some(shared_widget) = shared_widget {
+                            shared_widget.shared_validate();
+                        }
+
                         element.on_renderer(&cr);
                         element.validate();
                         element.clear_regions();
@@ -120,9 +138,12 @@ impl Board {
 
                 bitmap_guard.prepared();
 
+                // Only effected on slave side of shared memory application.
+                bitmap_guard.set_shared_invalidate(true);
+
                 *notify_update.borrow_mut() = false;
                 FORCE_UPDATE.with(|force_update| *force_update.borrow_mut() = false);
-            // }
+            }
             update
         })
     }

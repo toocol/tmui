@@ -27,6 +27,10 @@ pub(crate) trait IpcBridge {
     fn pretreat_resize(&self, width: i32, height: i32);
 
     fn wait_prepared(&self);
+
+    fn is_invalidate(&self) -> bool;
+
+    fn set_invalidate(&self, invalidate: bool);
 }
 
 pub struct IpcBridgeModel<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -156,9 +160,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
     #[inline]
     fn pretreat_resize(&self, width: i32, height: i32) {
         if let Some(ref master) = self.master {
-            let mut guard = master.write();
-            let _guard = self.lock.write();
-            guard.pretreat_resize(width as u32, height as u32);
+            master.write().pretreat_resize(width as u32, height as u32);
             return;
         }
 
@@ -169,6 +171,32 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
     fn wait_prepared(&self) {
         if let Some(ref master) = self.master {
             master.read().wait_prepared();
+            return;
+        }
+
+        unreachable!()
+    }
+
+    #[inline]
+    fn is_invalidate(&self) -> bool {
+        if let Some(ref master) = self.master {
+            return master.read().is_invalidate();
+        }
+        if let Some(ref slave) = self.slave {
+            return slave.read().is_invalidate();
+        }
+
+        unreachable!()
+    }
+
+    #[inline]
+    fn set_invalidate(&self, invalidate: bool) {
+        if let Some(ref master) = self.master {
+            master.write().set_invalidate(invalidate);
+            return;
+        }
+        if let Some(ref slave) = self.slave {
+            slave.write().set_invalidate(invalidate);
             return;
         }
 

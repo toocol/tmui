@@ -7,7 +7,7 @@ use tmui::{
     application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
 };
 
-pub const IPC_NAME: &'static str = "shmem_ipc124";
+pub const IPC_NAME: &'static str = "shmem_ipc125";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]

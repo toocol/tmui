@@ -39,8 +39,9 @@ pub(crate) enum Bitmap {
         prepared: bool,
         /// Only used on platform `macos`
         resized: bool,
-        /// Used when application has shared memory widget
-        release_agent: Option<Box<dyn IpcInnerAgent>>,
+        /// Used when application has shared memory widget, 
+        /// Inner ipc agent to access shared memory related methods
+        inner_agent: Option<Box<dyn IpcInnerAgent>>,
     },
 
     Shared {
@@ -58,17 +59,16 @@ pub(crate) enum Bitmap {
         row_bytes: usize,
         /// Only used on platform `macos`
         resized: bool,
-        /// Release agent for release shared memory.
-        release_agent: Box<dyn IpcInnerAgent>,
+        /// Inner ipc agent to access shared memory related methods.
+        inner_agent: Box<dyn IpcInnerAgent>,
     },
 }
 
 unsafe impl Send for Bitmap {}
 
 impl Bitmap {
-    /// Constructer to create the `Bitmap`.
     #[inline]
-    pub fn new(width: u32, height: u32, release_agent: Option<Box<dyn IpcInnerAgent>>) -> Self {
+    pub fn new(width: u32, height: u32, inner_agent: Option<Box<dyn IpcInnerAgent>>) -> Self {
         Self::Direct {
             pixels: Some(vec![0u8; (width * height * 4) as usize].boxed()),
             retention: None,
@@ -78,7 +78,7 @@ impl Bitmap {
             height,
             prepared: false,
             resized: false,
-            release_agent,
+            inner_agent,
         }
     }
 
@@ -88,7 +88,7 @@ impl Bitmap {
         width: u32,
         height: u32,
         lock: Arc<MemRwLock>,
-        release_agent: Box<dyn IpcInnerAgent>,
+        inner_agent: Box<dyn IpcInnerAgent>,
     ) -> Self {
         Self::Shared {
             raw_pointer: NonNull::new(pointer),
@@ -98,7 +98,7 @@ impl Bitmap {
             total_bytes: (width * height * 4) as usize,
             row_bytes: (width * 4) as usize,
             resized: false,
-            release_agent,
+            inner_agent,
         }
     }
 
@@ -226,7 +226,7 @@ impl Bitmap {
     pub fn prepared(&mut self) {
         match self {
             Self::Direct { prepared, .. } => *prepared = true,
-            Self::Shared { release_agent, .. } => release_agent.prepared(),
+            Self::Shared { inner_agent, .. } => inner_agent.prepared(),
         }
     }
 
@@ -243,17 +243,17 @@ impl Bitmap {
         match self {
             Self::Direct {
                 retention,
-                release_agent,
+                inner_agent,
                 ..
             } => {
                 retention.take();
 
-                if let Some(agent) = release_agent.as_ref() {
+                if let Some(agent) = inner_agent.as_ref() {
                     agent.release_retention();
                 }
             }
-            Self::Shared { release_agent, .. } => {
-                release_agent.release_retention();
+            Self::Shared { inner_agent, .. } => {
+                inner_agent.release_retention();
             }
         }
     }
@@ -291,6 +291,28 @@ impl Bitmap {
         match self {
             Self::Direct { resized, .. } => *resized = false,
             Self::Shared { resized, .. } => *resized = false,
+        }
+    }
+
+    #[inline]
+    pub fn is_shared_invalidate(&self) -> bool {
+        match self {
+            Self::Direct { inner_agent, .. } => {
+                if let Some(agent) = inner_agent {
+                    return agent.is_invalidate();
+                } else {
+                    return false;
+                }
+            }
+            Self::Shared { .. } => return false,
+        }
+    }
+
+    #[inline]
+    pub fn set_shared_invalidate(&self, invalidate: bool) {
+        match self {
+            Self::Shared { inner_agent, .. } => inner_agent.set_invalidate(invalidate),
+            _ => {}
         }
     }
 }

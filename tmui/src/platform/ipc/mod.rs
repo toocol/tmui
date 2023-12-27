@@ -65,7 +65,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         debug_assert!(self.slave.is_some());
 
         let slave_clone = self.slave.as_ref().unwrap().clone();
-        let release_agent = InnerAgent::slave(slave_clone);
+        let inner_agent = InnerAgent::slave(slave_clone);
 
         let slave = self.slave.as_ref().unwrap().read();
         let bitmap = Bitmap::from_raw_pointer(
@@ -73,7 +73,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             slave.width(),
             slave.height(),
             slave.buffer_lock(),
-            release_agent,
+            inner_agent,
         );
 
         self.region = slave

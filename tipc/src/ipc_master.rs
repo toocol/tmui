@@ -193,6 +193,16 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
             })
             .expect("Shared buffer release retention failed.");
     }
+
+    #[inline]
+    fn is_invalidate(&self) -> bool {
+        self.master_context.shared_info().invalidate.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn set_invalidate(&self, invalidate: bool) {
+        self.master_context.shared_info().invalidate.store(invalidate, Ordering::Release)
+    }
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {

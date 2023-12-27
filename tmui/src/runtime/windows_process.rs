@@ -106,9 +106,6 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                                 cpu_balance.add_payload(evt.payload_wieght());
 
                                 match evt {
-                                    IpcEvent::VSync(ins) => {
-                                        proxy.send_event(Message::VSync(ins)).unwrap();
-                                    }
                                     IpcEvent::SetCursorShape(cursor) => {
                                         proxy.send_event(Message::SetCursorShape(cursor)).unwrap();
                                     }

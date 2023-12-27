@@ -162,11 +162,30 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
 
         shmem_info.release_idx.fetch_add(1, Ordering::Release);
     }
+
+    #[inline]
+    fn is_invalidate(&self) -> bool {
+        self.slave_context
+            .shared_info()
+            .invalidate
+            .load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn set_invalidate(&self, invalidate: bool) {
+        self.slave_context
+            .shared_info()
+            .invalidate
+            .store(invalidate, Ordering::Release)
+    }
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
     #[inline]
     pub fn prepared(&self) {
-        self.slave_context.shared_info().prepared.store(true, Ordering::Release);
+        self.slave_context
+            .shared_info()
+            .prepared
+            .store(true, Ordering::Release);
     }
 }

@@ -81,6 +81,12 @@ pub trait SharedWidgetExt {
     fn set_shared_id(&mut self, id: &'static str);
 
     fn image_info(&self) -> &ImageInfo;
+
+    fn is_shared_invalidate(&self) -> bool;
+
+    fn shared_validate(&self);
+
+    fn pixels_render(&mut self, painter: &mut Painter);
 }
 
 impl SharedWidgetExt for SharedWidget {
@@ -99,6 +105,37 @@ impl SharedWidgetExt for SharedWidget {
     #[inline]
     fn image_info(&self) -> &ImageInfo {
         &self.image_info
+    }
+
+    #[inline]
+    fn is_shared_invalidate(&self) -> bool {
+        ApplicationWindow::window_of(self.window_id())
+            .ipc_bridge()
+            .unwrap()
+            .is_invalidate()
+    }
+
+    #[inline]
+    fn shared_validate(&self) {
+        ApplicationWindow::window_of(self.window_id())
+            .ipc_bridge()
+            .unwrap()
+            .set_invalidate(false)
+    }
+
+    fn pixels_render(&mut self, painter: &mut Painter) {
+        let bridge = ApplicationWindow::window_of(self.window_id())
+            .ipc_bridge()
+            .unwrap();
+
+        bridge.wait_prepared();
+
+        let (buffer, _guard) = bridge.buffer();
+
+        let size = self.size();
+        let row_bytes = size.width() as usize * 4;
+
+        painter.draw_pixels(self.image_info(), buffer, row_bytes, (0, 0));
     }
 }
 
@@ -135,19 +172,5 @@ impl SharedWidget {
 }
 
 #[reflect_trait]
-pub trait SharedWidgetImpl: WidgetImpl + SharedWidgetExt {
-    fn pixels_render(&mut self, painter: &mut Painter) {
-        let bridge = ApplicationWindow::window_of(self.window_id())
-            .ipc_bridge()
-            .unwrap();
-
-        bridge.wait_prepared();
-
-        let (buffer, _guard) = bridge.buffer();
-
-        let size = self.size();
-        let row_bytes = size.width() as usize * 4;
-
-        painter.draw_pixels(self.image_info(), buffer, row_bytes, (0, 0));
-    }
-}
+pub trait SharedWidgetImpl: WidgetImpl + SharedWidgetExt {}
+impl SharedWidgetImpl for SharedWidget {}

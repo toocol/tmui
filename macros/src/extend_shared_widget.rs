@@ -169,6 +169,21 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
             fn image_info(&self) -> &tlib::skia_safe::ImageInfo {
                 self.#(#shared_widget_path).*.image_info()
             }
+
+            #[inline]
+            fn is_shared_invalidate(&self) -> bool {
+                self.#(#shared_widget_path).*.is_shared_invalidate()
+            }
+
+            #[inline]
+            fn shared_validate(&self) {
+                self.#(#shared_widget_path).*.shared_validate()
+            }
+
+            #[inline]
+            fn pixels_render(&mut self, painter: &mut Painter) {
+                self.#(#shared_widget_path).*.pixels_render(painter)
+            }
         }
 
         impl IsA<SharedWidget> for #name {}

@@ -68,7 +68,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     for PlatformWin32<T, M>
 {
     fn initialize(&mut self) {
-        let release_agent = if self.master.is_some() {
+        let inner_agent = if self.master.is_some() {
             let master = self.master.as_ref().unwrap().clone();
             Some(InnerAgent::master(master))
         } else {
@@ -78,7 +78,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.bitmap = Some(Arc::new(RwLock::new(Bitmap::new(
             self.width,
             self.height,
-            release_agent,
+            inner_agent,
         ))));
     }
 

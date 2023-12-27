@@ -6,6 +6,10 @@ pub(crate) trait IpcInnerAgent {
     fn release_retention(&self);
 
     fn prepared(&self);
+
+    fn is_invalidate(&self) -> bool;
+
+    fn set_invalidate(&self, invalidate: bool);
 }
 
 pub(crate) struct InnerAgent<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -54,6 +58,32 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcInnerA
     fn prepared(&self) {
         if let Some(ref slave) = self.slave {
             slave.read().prepared();
+            return;
+        }
+
+        unreachable!()
+    }
+
+    #[inline]
+    fn is_invalidate(&self) -> bool {
+        if let Some(ref master) = self.master {
+            return master.read().is_invalidate();
+        }
+        if let Some(ref slave) = self.slave {
+            return slave.read().is_invalidate();
+        }
+
+        unreachable!()
+    }
+
+    #[inline]
+    fn set_invalidate(&self, invalidate: bool) {
+        if let Some(ref master) = self.master {
+            master.write().set_invalidate(invalidate);
+            return;
+        }
+        if let Some(ref slave) = self.slave {
+            slave.write().set_invalidate(invalidate);
             return;
         }
 

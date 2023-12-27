@@ -99,6 +99,7 @@ pub(crate) struct SharedInfo<M: 'static + Copy> {
     pub(crate) resized: AtomicBool,
     pub(crate) release_idx: AtomicUsize,
     pub(crate) prepared: AtomicBool,
+    pub(crate) invalidate: AtomicBool,
 }
 
 #[derive(Debug)]
