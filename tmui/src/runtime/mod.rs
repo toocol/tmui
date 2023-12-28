@@ -5,7 +5,7 @@ pub(crate) mod window_context;
 pub(crate) mod windows_process;
 
 use crate::{
-    application::{Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
+    application::{Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL, self},
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
@@ -126,6 +126,8 @@ where
                 }
 
                 evt = resize_evt;
+
+                application::request_high_load(true);
             }
 
             cpu_balance.add_payload(evt.payload_wieght());
@@ -151,6 +153,8 @@ where
                 window.dispatch_event(evt);
 
                 Board::force_update();
+
+                application::request_high_load(true);
             }
         }
 

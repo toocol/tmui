@@ -6,7 +6,6 @@ const PAYLOAD_INTERVAL: usize = 1;
 
 const FRAME_DURATION: Duration = Duration::from_millis(16);
 const PAYLOAD_RESET_DURATION: Duration = Duration::from_secs(PAYLOAD_INTERVAL as u64);
-const MICROS_10_DURATION: Duration = Duration::from_micros(10);
 const MILLIS_1_DURATION: Duration = Duration::from_millis(1);
 
 /// Execute the cpu sleep strategy depends on program status.
@@ -87,7 +86,7 @@ impl CpuBalance {
             || update
             || cost.as_millis() >= (FRAME_DURATION.as_millis() as f32 * 0.6) as u128
         {
-            tlib::timer::sleep(MICROS_10_DURATION);
+            std::thread::yield_now();
         } else {
             std::thread::sleep(MILLIS_1_DURATION);
         }

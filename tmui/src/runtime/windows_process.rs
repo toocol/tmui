@@ -134,20 +134,9 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
         event_loop
             .run(move |event, target| {
-                // Adjusting CPU usage based on vsync signals.
-                if let Some(ins) = runtime_track.vsync_rec {
-                    if ins.elapsed().as_millis() >= 500 {
-                        if runtime_track.update_cnt < 15 {
-                            target.set_control_flow(ControlFlow::WaitUntil(
-                                Instant::now().add(Duration::from_millis(10)),
-                            ));
-                            runtime_track.vsync_rec = None;
-                        } else {
-                            target.set_control_flow(ControlFlow::Poll);
-                            runtime_track.vsync_rec = Some(Instant::now());
-                        }
-                        runtime_track.update_cnt = 0;
-                    }
+                // Adjusting CPU usage based.
+                if application::is_high_load() {
+                    target.set_control_flow(ControlFlow::Poll)
                 } else {
                     target.set_control_flow(ControlFlow::WaitUntil(
                         Instant::now().add(Duration::from_millis(10)),
@@ -165,6 +154,8 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         }
                         let evt = ResizeEvent::new(size.width as i32, size.height as i32);
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        target.set_control_flow(ControlFlow::Poll);
+                        application::request_high_load(true);
                     }
 
                     // Window close event.
@@ -228,6 +219,8 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         Cursor::set_position(pos);
 
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // Mouse wheel event.
@@ -257,6 +250,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         );
 
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // Mouse pressed event.
@@ -286,6 +280,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         );
 
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // Mouse release event.
@@ -315,6 +310,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         );
 
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // Key pressed event.
@@ -349,6 +345,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         );
 
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // Key released event.
@@ -383,6 +380,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         );
 
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // VSync event.
@@ -392,6 +390,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                             ins.elapsed().as_micros() as f64 / 1000.
                         );
                         window.request_redraw(&winit_window);
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // SetCursorShape event.

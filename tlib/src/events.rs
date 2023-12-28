@@ -359,7 +359,7 @@ impl PayloadWeight for MouseEvent {
     #[inline]
     fn payload_wieght(&self) -> f32 {
         match self.type_ {
-            EventType::MouseMove => 0.2,
+            // EventType::MouseMove => 0.2,
             _ => 1.,
         }
     }
@@ -600,7 +600,7 @@ impl EventTrait for ResizeEvent {
 impl PayloadWeight for ResizeEvent {
     #[inline]
     fn payload_wieght(&self) -> f32 {
-        10.
+        40.
     }
 }
 

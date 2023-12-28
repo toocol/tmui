@@ -66,7 +66,7 @@ fn master() {
                 return;
             }
         }
-        tlib::timer::sleep(Duration::from_micros(10));
+        std::thread::yield_now();
     }
 }
 

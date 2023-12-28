@@ -289,7 +289,7 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
 impl<T: 'static + Copy> PayloadWeight for IpcEvent<T> {
     fn payload_wieght(&self) -> f32 {
         match self {
-            Self::ResizeEvent(..) => 10.,
+            Self::ResizeEvent(..) => 40.,
             Self::MouseMoveEvent(..) => 0.2,
             _ => 1.,
         }

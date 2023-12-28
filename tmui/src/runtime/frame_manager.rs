@@ -8,7 +8,7 @@ use crate::{
     graphics::board::Board,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
-    widget::WidgetExt,
+    widget::WidgetExt, application,
 };
 
 pub const FRAME_INTERVAL: u128 = 16000;
@@ -53,6 +53,7 @@ impl FrameManager {
                 logic_window.resize(size_record.0, size_record.1);
                 board.resize();
                 *resized = false;
+                application::request_high_load(false);
             }
 
             self.last_frame = Instant::now();

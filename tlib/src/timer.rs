@@ -15,7 +15,7 @@ use std::{
         atomic::{AtomicPtr, Ordering},
         Once,
     },
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, SystemTime},
 };
 
 static INIT: Once = Once::new();
@@ -193,26 +193,6 @@ impl ObjectSubclass for Timer {
 }
 
 impl ObjectImpl for Timer {}
-
-/// More accurate sleep, resulting in more CPU usage.
-#[inline]
-pub fn sleep(wait: Duration) {
-    let wait_until = Instant::now() + wait;
-
-    loop {
-        let now = Instant::now();
-        if now >= wait_until {
-            break;
-        }
-        let remaining_time = wait_until - now;
-
-        if remaining_time >= Duration::from_millis(10) {
-            std::thread::park_timeout(Duration::from_millis(1));
-        } else {
-            std::thread::yield_now();
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
