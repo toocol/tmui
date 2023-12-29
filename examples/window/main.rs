@@ -16,6 +16,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("window")
+        .transparent(true)
         .build();
 
     app.connect_activate(build_ui);
@@ -44,5 +45,9 @@ fn build_ui(window: &mut ApplicationWindow) {
     test_widget.set_valign(Align::Center);
 
     test_widget.child(label);
-    window.child(test_widget)
+    window.child(test_widget);
+
+    window.register_run_after(|win| {
+        win.propagate_set_transparency(100);
+    });
 }

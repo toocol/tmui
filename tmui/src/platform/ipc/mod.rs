@@ -4,7 +4,7 @@ pub(crate) mod ipc_window;
 
 use self::ipc_window::IpcWindow;
 
-use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext};
+use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, win_config::WindowConfig};
 use crate::{
     platform::ipc_inner_agent::InnerAgent,
     primitive::{
@@ -22,10 +22,7 @@ use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
 use tlib::figure::Rect;
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    title: String,
     region: Rect,
-
-    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     /// Shared memory ipc slave
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
@@ -35,12 +32,10 @@ pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformIpc<T, M> {
     #[inline]
-    pub fn new(title: &str, width: u32, height: u32) -> Self {
-        let region = Rect::new(0, 0, width as i32, height as i32);
+    pub fn new() -> Self {
+        let region = Rect::new(0, 0, 0, 0);
         Self {
-            title: title.to_string(),
             region,
-            bitmap: None,
             slave: None,
             shared_widget_id: None,
         }
@@ -64,47 +59,27 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {
         debug_assert!(self.slave.is_some());
 
+        let slave = self.slave.as_ref().unwrap().read();
+        self.region = slave
+            .region(self.shared_widget_id.unwrap())
+            .expect("The `SharedWidget` with id `{}` was not exist.");
+
+    }
+
+    #[inline]
+    fn create_window(&mut self, _: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let slave_clone = self.slave.as_ref().unwrap().clone();
         let inner_agent = InnerAgent::slave(slave_clone);
 
         let slave = self.slave.as_ref().unwrap().read();
-        let bitmap = Bitmap::from_raw_pointer(
+        let bitmap = Arc::new(RwLock::new(Bitmap::from_raw_pointer(
             slave.buffer_raw_pointer(),
             slave.width(),
             slave.height(),
             slave.buffer_lock(),
             inner_agent,
-        );
+        )));
 
-        self.region = slave
-            .region(self.shared_widget_id.unwrap())
-            .expect("The `SharedWidget` with id `{}` was not exist.");
-
-        self.bitmap = Some(Arc::new(RwLock::new(bitmap)));
-    }
-
-    #[inline]
-    fn title(&self) -> &str {
-        &self.title
-    }
-
-    #[inline]
-    fn width(&self) -> u32 {
-        self.region.width() as u32
-    }
-
-    #[inline]
-    fn height(&self) -> u32 {
-        self.region.height() as u32
-    }
-
-    #[inline]
-    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
-        self.bitmap.as_ref().unwrap().clone()
-    }
-
-    #[inline]
-    fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let (input_sender, input_receiver) = channel::<Message>();
         let (output_sender, output_receiver) = channel::<Message>();
 
@@ -117,7 +92,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         (
             LogicWindow::slave(
-                self.bitmap(),
+                bitmap,
                 self.shared_widget_id.unwrap(),
                 self.slave.as_ref().unwrap().clone(),
                 Some(shared_channel),

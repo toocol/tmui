@@ -67,7 +67,7 @@ pub trait ChildWidgetDiffRender: WidgetImpl {
 
                 painter.save();
                 painter.clip_region(clear_region, ClipOp::Intersect);
-                painter.fill_rect(rec_rect, self.background());
+                painter.fill_rect(rec_rect, background);
                 painter.restore();
             }
         }

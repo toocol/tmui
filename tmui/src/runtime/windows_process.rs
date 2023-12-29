@@ -134,7 +134,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
         event_loop
             .run(move |event, target| {
-                // Adjusting CPU usage based.
+                // Adjusting CPU usage.
                 if application::is_high_load() {
                     target.set_control_flow(ControlFlow::Poll)
                 } else {
@@ -154,6 +154,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         }
                         let evt = ResizeEvent::new(size.width as i32, size.height as i32);
                         input_sender.send(Message::Event(Box::new(evt))).unwrap();
+
                         target.set_control_flow(ControlFlow::Poll);
                         application::request_high_load(true);
                     }

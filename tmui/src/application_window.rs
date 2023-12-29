@@ -50,6 +50,8 @@ pub struct ApplicationWindow {
     pressed_widget: ObjectId,
     mouse_over_widget: Option<NonNull<dyn WidgetImpl>>,
     high_load_request: bool,
+
+    run_after: Option<Box<dyn FnOnce(&mut Self)>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -83,6 +85,9 @@ impl ObjectImpl for ApplicationWindow {
 impl WidgetImpl for ApplicationWindow {
     #[inline]
     fn run_after(&mut self) {
+        if let Some(run_after) = self.run_after.take() {
+            run_after(self)
+        }
         for widget in self.run_afters.iter_mut() {
             nonnull_mut!(widget).run_after()
         }
@@ -228,6 +233,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_mouse_over_widget(&mut self, widget: Option<NonNull<dyn WidgetImpl>>) {
         self.mouse_over_widget = widget
+    }
+
+    #[inline]
+    pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
+        self.run_after = Some(Box::new(run_after));
     }
 
     #[inline]

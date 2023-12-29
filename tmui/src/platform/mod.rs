@@ -1,3 +1,5 @@
+pub mod win_config;
+
 pub(crate) mod win32;
 pub(crate) mod macos;
 pub(crate) mod ipc;
@@ -8,10 +10,7 @@ pub(crate) mod physical_window;
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
-use std::sync::Arc;
-
-use crate::primitive::bitmap::Bitmap;
-use tipc::RwLock;
+use win_config::WindowConfig;
 
 pub(crate) use ipc::*;
 #[cfg(macos_platform)]
@@ -50,18 +49,6 @@ pub(crate) trait PlatformContext<T: 'static + Copy + Sync + Send, M: 'static + C
     /// Initialize the PlatformContext.
     fn initialize(&mut self);
 
-    /// Get the title of platfom.
-    fn title(&self) -> &str;
-
-    /// Get the width of the platform.
-    fn width(&self) -> u32;
-
-    /// Get the height of the platform.
-    fn height(&self) -> u32;
-
-    /// Get current effective `Bitmap` of platform context.
-    fn bitmap(&self) -> Arc<RwLock<Bitmap>>;
-
     /// Create the window and event loop of the specific platform.
-    fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);
+    fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);
 }

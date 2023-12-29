@@ -57,7 +57,7 @@ fn ipc_master() {
                 break;
             }
         }
-        tlib::timer::sleep(Duration::from_micros(10));
+        std::thread::yield_now();
     }
 
     let rec = Instant::now();

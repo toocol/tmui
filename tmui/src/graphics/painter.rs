@@ -4,6 +4,7 @@ use crate::{
     widget::WidgetImpl, tlib,
 };
 use log::{error, warn};
+use ::tlib::skia_safe::BlendMode;
 use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
@@ -43,9 +44,12 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
         let rect = widget.rect();
+        let mut paint = Paint::default();
+        paint.set_blend_mode(BlendMode::Src);
+
         Painter {
             canvas,
-            paint: Paint::default(),
+            paint,
             font: None,
             color: None,
             line_width: None,

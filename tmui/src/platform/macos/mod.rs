@@ -31,10 +31,6 @@ use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, Platform
 
 pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     title: String,
-    width: u32,
-    height: u32,
-
-    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     // Ipc shared memory context.
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
@@ -45,9 +41,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
     pub fn new(title: &str, width: u32, height: u32) -> Self {
         Self {
             title: title.to_string(),
-            width,
-            height,
-            bitmap: None,
             master: None,
         }
     }
@@ -86,22 +79,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         &self.title
     }
 
-    #[inline]
-    fn width(&self) -> u32 {
-        self.width
-    }
-
-    #[inline]
-    fn height(&self) -> u32 {
-        self.height
-    }
-
-    #[inline]
-    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
-        self.bitmap.as_ref().unwrap().clone()
-    }
-
-    fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let event_loop = EventLoopBuilder::<Message>::with_user_event()
             .build()
             .unwrap();

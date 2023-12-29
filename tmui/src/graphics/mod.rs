@@ -2,6 +2,7 @@ pub mod board;
 pub mod border;
 pub mod drawing_context;
 pub mod element;
+pub mod icon;
 pub mod painter;
 pub mod render_difference;
 

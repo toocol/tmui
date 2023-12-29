@@ -10,9 +10,9 @@ use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
     event_hints::event_hints,
-    platform::{PlatformContext, PlatformIpc, PlatformType},
+    platform::{win_config::{WindowConfig, WindowConfigBuilder}, PlatformContext, PlatformIpc, PlatformType},
     primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
-    runtime::{ui_runtime, windows_process::WindowsProcess},
+    runtime::{ui_runtime, windows_process::WindowsProcess}, graphics::icon::Icon,
 };
 use std::{
     any::Any,
@@ -25,7 +25,7 @@ use std::{
     thread,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
-use tlib::events::Event;
+use tlib::{events::Event, figure::Size, winit::window::WindowButtons};
 
 thread_local! {
     pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
@@ -49,10 +49,9 @@ static ONCE: Once = Once::new();
 /// `T`: Generic type for [`IpcEvent::UserEvent`](tipc::ipc_event::IpcEvent::UserEvent). <br>
 /// `M`: Generic type for blocked request with response in ipc communication.
 pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    width: u32,
-    height: u32,
-    title: String,
     ui_stack_size: usize,
+
+    win_config: RefCell<Option<WindowConfig>>,
 
     platform_type: PlatformType,
     backend_type: BackendType,
@@ -93,7 +92,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let platform_context = platform_mut.as_mut().unwrap();
 
         // Create the window
-        let (mut logic_window, physical_window) = platform_context.create_window();
+        let (mut logic_window, physical_window) = platform_context.create_window(self.win_config.borrow_mut().take().unwrap());
 
         // Get the customize event handle functions.
         let on_activate = self.on_activate.borrow_mut().take();
@@ -146,13 +145,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     fn startup_initialize(&mut self) {
-        let width = self.width;
-        let height = self.height;
-        let title = &self.title;
         // Create the [`PlatformContext`] based on the platform type specified by the user.
         let platform_context = match self.platform_type {
             PlatformType::Ipc => {
-                let mut platform_context = PlatformIpc::<T, M>::new(&title, width, height);
+                let mut platform_context = PlatformIpc::<T, M>::new();
                 let shared_mem_name = self.shared_mem_name.expect(
                     "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
                 );
@@ -163,15 +159,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 platform_context.with_ipc_slave(shared_mem_name);
                 platform_context.initialize();
 
-                // Ipc slave app's size was determined by the main program:
-                self.width = platform_context.width();
-                self.height = platform_context.height();
-
                 platform_context.wrap()
             }
             #[cfg(windows_platform)]
             PlatformType::Win32 => {
-                let mut platform_context = PlatformWin32::<T, M>::new(&title, width, height);
+                let mut platform_context = PlatformWin32::<T, M>::new();
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
@@ -180,7 +172,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             }
             #[cfg(x11_platform)]
             PlatformType::LinuxX11 => {
-                let mut platform_context = PlatformX11::<T, M>::new(&title, width, height);
+                let mut platform_context = PlatformX11::<T, M>::new();
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
@@ -189,7 +181,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             }
             #[cfg(wayland_platform)]
             PlatformType::LinuxWayland => {
-                let mut platform_context = PlatformWayland::<T, M>::new(&title, width, height);
+                let mut platform_context = PlatformWayland::<T, M>::new();
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
@@ -198,9 +190,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             }
             #[cfg(macos_platform)]
             PlatformType::Macos => {
-                let mut platform_context = PlatformMacos::<T, M>::new(&title, width, height);
+                let mut platform_context = PlatformMacos::<T, M>::new();
                 if let Some(shared_mem_name) = self.shared_mem_name {
-                    platform_context.with_ipc_master(shared_mem_name, width, height);
+                    platform_context.with_ipc_master(shared_mem_name);
                 }
                 platform_context.initialize();
                 platform_context.wrap()
@@ -343,9 +335,9 @@ pub(crate) fn is_shared() -> bool {
 pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     platform: Option<PlatformType>,
     backend: Option<BackendType>,
-    title: Option<String>,
     width: Option<u32>,
     height: Option<u32>,
+    win_cfg_bld: WindowConfigBuilder,
     ui_stack_size: usize,
     shared_mem_name: Option<&'static str>,
     shared_widget_id: Option<&'static str>,
@@ -355,14 +347,15 @@ pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> ApplicationBuilder<T, M> {
     // Private constructor.
+    #[inline]
     fn new(shared_mem_name: Option<&'static str>) -> Self {
         Self {
             platform: None,
             backend: None,
-            title: None,
             width: None,
             height: None,
             ui_stack_size: 8 * 1024 * 1024,
+            win_cfg_bld: WindowConfigBuilder::default(),
             shared_mem_name,
             shared_widget_id: None,
             _user_event: PhantomData::default(),
@@ -371,12 +364,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Build the [`Application`]
-    pub fn build(self) -> Application<T, M> {
+    pub fn build(mut self) -> Application<T, M> {
         let mut app = Application {
-            width: Default::default(),
-            height: Default::default(),
-            title: Default::default(),
             ui_stack_size: self.ui_stack_size,
+            win_config: Default::default(),
             platform_type: Default::default(),
             backend_type: Default::default(),
             platform_context: Default::default(),
@@ -387,15 +378,29 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             on_request_receive: Default::default(),
         };
 
-        if let Some(ref title) = self.title {
-            app.title = title.to_string()
+        if let Some(platform) = self.platform {
+            app.platform_type = platform
         }
+
         if let Some(width) = self.width {
-            app.width = width
+            self.win_cfg_bld = self.win_cfg_bld.width(width)
+        } else {
+            if app.platform_type == PlatformType::Ipc {
+                self.win_cfg_bld = self.win_cfg_bld.width(0)
+            } else {
+                panic!("Application window should specify the `width`.")
+            }
         }
         if let Some(height) = self.height {
-            app.height = height
+            self.win_cfg_bld = self.win_cfg_bld.height(height)
+        } else {
+            if app.platform_type == PlatformType::Ipc {
+                self.win_cfg_bld = self.win_cfg_bld.height(0)
+            } else {
+                panic!("Application window should specify the `height`.")
+            }
         }
+
         if let Some(shared_mem_name) = self.shared_mem_name {
             app.shared_mem_name = Some(shared_mem_name)
         }
@@ -403,9 +408,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             app.shared_widget_id = Some(shared_widget_id)
         }
 
-        if let Some(platform) = self.platform {
-            app.platform_type = platform
-        }
         if let Some(backend) = self.backend {
             app.backend_type = backend
         }
@@ -413,41 +415,153 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         if app.platform_type == PlatformType::Ipc && app.shared_widget_id.is_none() {
             panic!("Shared application with `PlatformIpc` should specified the `shared_widget_id`.")
         }
+        app.win_config = RefCell::new(Some(self.win_cfg_bld.build()));
 
         app.startup_initialize();
         app
     }
 
+    /// Set the platform type of application.
+    /// 
+    /// The default platform was os specified, the alternative platform was [`Ipc`](PlatformType::Ipc).
+    #[inline]
     pub fn platform(mut self, platform: PlatformType) -> Self {
         self.platform = Some(platform);
         self
     }
 
+    /// Set the render backend of application.
+    #[inline]
     pub fn backend(mut self, backend: BackendType) -> Self {
         self.backend = Some(backend);
         self
     }
 
+    /// Set the title of application main window.
+    #[inline]
     pub fn title(mut self, title: &'static str) -> Self {
-        self.title = Some(title.to_string());
+        self.win_cfg_bld = self.win_cfg_bld.title(title.to_string());
         self
     }
 
+    /// Set the width of application main window.
+    #[inline]
     pub fn width(mut self, width: u32) -> Self {
         self.width = Some(width);
         self
     }
 
+    /// Set the height of application main window.
+    #[inline]
     pub fn height(mut self, height: u32) -> Self {
         self.height = Some(height);
         self
     }
 
+    /// Set the maxmium size of application main window.
+    #[inline]
+    pub fn max_size<S: Into<Size>>(mut self, size: S) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.max_size(size);
+        self
+    }
+
+    /// Set the minimum size of application main window.
+    #[inline]
+    pub fn min_size<S: Into<Size>>(mut self, size: S) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.min_size(size);
+        self
+    }
+
+    /// Set the icon of application main window.
+    #[inline]
+    pub fn icon(mut self, icon: Icon) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.win_icon(icon);
+        self
+    }
+
+    /// Set whether the application main window should have a border, a title bar, etc.
+    /// 
+    /// The default value was `true`.
+    #[inline]
+    pub fn decoration(mut self, decoration: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.decoration(decoration);
+        self
+    }
+
+    /// Set whether the application main window will support transparency.
+    /// 
+    /// The default value was `false`.
+    #[inline]
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.transparent(transparent);
+        self
+    }
+
+    /// Whether the background of the application main window should be blurred by the system.
+    /// 
+    /// The default value was `false`.
+    #[inline]
+    pub fn blur(mut self, blur: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.blur(blur);
+        self
+    }
+
+    /// Set whether the application main window will be initially visible or hidden.
+    /// 
+    /// The default value was `true`.
+    #[inline]
+    pub fn visible(mut self, visible: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.visible(visible);
+        self
+    }
+
+    /// Set whether the application main window is resizable or not.
+    /// 
+    /// The default value was `true`.
+    #[inline]
+    pub fn resizable(mut self, resizable: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.resizable(resizable);
+        self
+    }
+
+    /// Request that the application main window is maximized upon creation.
+    /// 
+    /// The default value was `false`.
+    #[inline]
+    pub fn maximized(mut self, maximized: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.maximized(maximized);
+        self
+    }
+
+    /// Set whether the application main window will be initially focused or not.
+    /// 
+    /// The default value was `true`.
+    #[inline]
+    pub fn active(mut self, active: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.active(active);
+        self
+    }
+
+    /// Sets the enabled window buttons for application main window.
+    ///
+    /// The default is [`WindowButtons::all()`]
+    #[inline]
+    pub fn enable_buttons(mut self, enable_buttons: WindowButtons) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.enable_buttons(enable_buttons);
+        self
+    }
+
+    /// Set the thread stack size of each ui thread.
+    /// 
+    /// The default value was `8Mb`.
+    #[inline]
     pub fn ui_stack_size(mut self, size: usize) -> Self {
         self.ui_stack_size = size;
         self
     }
 
+    /// Set the shared widget id of shared memory(cross process render) application.
+    #[inline]
     pub fn shared_widget_id(mut self, id: &'static str) -> Self {
         self.shared_widget_id = Some(id);
         self
@@ -459,6 +573,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     ///
     /// `payload`: Including component rendering, user input, and ipc events, all count as a payload. <br>
     /// The default threshold was `40`.
+    #[inline]
     pub fn cpu_payload_threshold(self, threshold: usize) -> Self {
         CpuBalance::set_payload_threshold(threshold);
         self

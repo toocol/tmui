@@ -9,10 +9,6 @@ use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
 pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>
 {
     title: String,
-    width: u32,
-    height: u32,
-
-    bitmap: Option<Arc<RwLock<Bitmap>>>,
 
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
@@ -25,7 +21,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
             title: title.to_string(),
             width,
             height,
-            bitmap: None,
             master: None,
         }
     }
@@ -48,19 +43,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn width(&self) -> u32 {
-        todo!()
-    }
-
-    fn height(&self) -> u32 {
-        todo!()
-    }
-
-    fn bitmap(&self) -> Arc<RwLock<Bitmap>> {
-        todo!()
-    }
-
-    fn create_window(&mut self) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         todo!()
     }
 }
