@@ -1,9 +1,20 @@
-use crate::{extend_element, extend_object, extend_widget};
+use crate::{extend_element, extend_object, extend_widget, general_attr::GeneralAttr};
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Ident};
 
-pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    id: Option<&String>,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+
+    let general_attr = GeneralAttr::parse(ast)?;
+
+    let async_task_clause = &general_attr.async_task_impl_clause;
+    let async_method_clause = &general_attr.async_task_method_clause;
+
+    let popupable_impl_clause = &general_attr.popupable_impl_clause;
+    let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
 
     let set_shared_id_clause = match id {
         Some(id) => quote!(
@@ -19,6 +30,21 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub shared_widget: SharedWidget
                     })?);
+
+                    if general_attr.is_async_task {
+                        for async_field in general_attr.async_task_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #async_field
+                            })?);
+                        }
+                    }
+
+                    if general_attr.is_popupable {
+                        let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
+                    }
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -62,6 +88,10 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
 
                 #shared_widget_trait_impl_clause
 
+                #async_task_clause
+
+                #popupable_impl_clause
+
                 impl WidgetAcquire for #name {}
 
                 impl SuperType for #name {
@@ -75,6 +105,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
+                        type_registry.register::<#name, ReflectSharedWidgetImpl>();
+                        #popupable_reflect_clause
                     }
 
                     #[inline]
@@ -91,6 +123,17 @@ pub(crate) fn expand(ast: &mut DeriveInput, id: Option<&String>) -> syn::Result<
                     fn point_effective(&self, point: &Point) -> bool {
                         self.shared_widget.widget.point_effective(point)
                     }
+                }
+
+                impl ChildRegionAcquirer for #name {
+                    #[inline]
+                    fn child_region(&self) -> tlib::skia_safe::Region {
+                        self.shared_widget.widget.child_region()
+                    }
+                }
+
+                impl #name {
+                    #async_method_clause
                 }
             })
         }
@@ -120,6 +163,26 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
             #[inline]
             fn set_shared_id(&mut self, id: &'static str) {
                 self.#(#shared_widget_path).*.set_shared_id(id)
+            }
+
+            #[inline]
+            fn image_info(&self) -> &tlib::skia_safe::ImageInfo {
+                self.#(#shared_widget_path).*.image_info()
+            }
+
+            #[inline]
+            fn is_shared_invalidate(&self) -> bool {
+                self.#(#shared_widget_path).*.is_shared_invalidate()
+            }
+
+            #[inline]
+            fn shared_validate(&self) {
+                self.#(#shared_widget_path).*.shared_validate()
+            }
+
+            #[inline]
+            fn pixels_render(&mut self, painter: &mut Painter) {
+                self.#(#shared_widget_path).*.pixels_render(painter)
             }
         }
 

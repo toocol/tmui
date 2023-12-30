@@ -1,4 +1,6 @@
-pub use macros::{cast, cast_boxed, cast_mut, extends, reflect_trait, tasync, Childrenable, Childable};
+pub use macros::{
+    animatable, cast, cast_boxed, cast_mut, extends, reflect_trait, async_do, async_task, popupable, Childable, Childrenable,
+};
 
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
 pub use crate::emit;
@@ -8,7 +10,7 @@ pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{
     InnerInitializer, Object, ObjectAcquire, ObjectChildrenConstruct, ObjectExt, ObjectImpl,
     ObjectImplExt, ObjectOperation, ReflectObjectChildrenConstruct, ReflectObjectImpl,
-    ReflectObjectImplExt, ReflectObjectOperation, SuperType,
+    ReflectObjectImplExt, ReflectObjectOperation, SuperType, ObjectId
 };
 pub use crate::r#async::{async_tasks, tokio_runtime, AsyncTask};
 pub use crate::reflect::{FromType, Reflect, ReflectTrait, TypeRegistry};

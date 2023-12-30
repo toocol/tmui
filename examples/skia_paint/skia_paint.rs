@@ -28,16 +28,18 @@ impl WidgetImpl for SkiaPaint {
         self.update()
     }
 
-    fn paint(&mut self, mut painter: tmui::graphics::painter::Painter) {
-        self.draw_text(&mut painter);
+    fn paint(&mut self, painter: &mut tmui::graphics::painter::Painter) {
+        self.draw_text(painter);
 
-        self.draw_region_1(&mut painter);
+        self.draw_region_1(painter);
 
-        self.draw_region_2(&mut painter);
+        self.draw_region_2(painter);
 
-        self.draw_region_3(&mut painter);
+        self.draw_region_3(painter);
 
-        self.draw_layer(&mut painter);
+        self.draw_layer(painter);
+
+        self.draw_round_rect(painter);
 
         println!("cnt: {}", painter.save_count());
     }
@@ -128,9 +130,10 @@ impl SkiaPaint {
         painter.set_font(Font::with_family(FAMILY).to_skia_font());
         painter.draw_text(TEXT, (0., 200.));
 
-        painter.draw_paragraph(REP, (0., 300.), 0., 1024.);
+        painter.draw_paragraph(REP, (0., 300.), 0., 100., None, true);
+        painter.draw_paragraph(REP, (0., 325.), 0., 100., Some(1), false);
         painter.set_color(Color::RED);
-        painter.draw_paragraph(REP, (0., 350.), 5., 1024.);
+        painter.draw_paragraph(REP, (0., 350.), 5., 1024., None, true);
     }
 
     fn draw_region_1(&mut self, painter: &mut Painter) {
@@ -205,5 +208,9 @@ impl SkiaPaint {
         painter.fill_rect(rect, Color::RED);
         painter.clear(Color::TRANSPARENT);
         painter.restore();
+    }
+
+    fn draw_round_rect(&mut self, painter: &mut Painter) {
+        painter.fill_round_rect(Rect::new(600, 0, 100, 40), 10., Color::CYAN);
     }
 }

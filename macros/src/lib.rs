@@ -1,25 +1,32 @@
 extern crate proc_macro;
 
+mod animation;
+mod async_do;
+mod async_task;
 mod cast;
+mod childable;
 mod extend_attr;
 mod extend_container;
 mod extend_element;
 mod extend_object;
+mod extend_popup;
 mod extend_shared_widget;
 mod extend_widget;
+mod general_attr;
 mod layout;
+mod popupable;
 mod reflect_trait;
+mod scroll_area;
 mod split_pane;
 mod stack;
-mod tasync;
 mod trait_info;
 
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
+use async_do::AsyncDoParser;
 use syn::{self, parse_macro_input, DeriveInput};
-use tasync::AsyncTaskParser;
 use trait_info::TraitInfo;
 
 /// Let struct to extend specific type.<br>
@@ -32,11 +39,13 @@ use trait_info::TraitInfo;
 ///     - Widget
 ///     - SharedWidget
 ///     - Container
+///     - Popup
 /// - ### Supported layouts:
 ///     - Stack
 ///     - VBox
 ///     - HBox
 ///     - SplitPane
+///     - ScrollArea
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
@@ -44,12 +53,12 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
 
     match extend_attr.check() {
         Err(e) => return e.to_compile_error().into(),
-        _ => {},
+        _ => {}
     }
 
     let extend_str = extend_attr.extend.to_string();
     match extend_str.as_str() {
-        "Object" => match extend_object::expand(&mut ast) {
+        "Object" => match extend_object::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -62,6 +71,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 &mut ast,
                 extend_attr.layout_meta.as_ref().unwrap(),
                 layout,
+                extend_attr.internal,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
@@ -75,10 +85,14 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false, false) {
+        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
+        "Popup" => match extend_popup::expand(&mut ast) {
+            Ok(tkn) => tkn.into(),
+            Err(e) => e.to_compile_error().into(),
+        }
         _ => syn::Error::new_spanned(
             ast,
             format!("`{}` was not supported to extends.", extend_str),
@@ -125,7 +139,7 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// The widget annotated `[run_after]` will execute the [`WidgetImpl::run_after()`] function
 /// after the application was started.
-/// 
+///
 /// ### Only taing effect when struct annotated `#[extends(Widget)]`
 #[proc_macro_attribute]
 pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -159,8 +173,18 @@ pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// });
 /// ```
 #[proc_macro]
-pub fn tasync(input: TokenStream) -> TokenStream {
-    parse_macro_input!(input as AsyncTaskParser).expand().into()
+pub fn async_do(input: TokenStream) -> TokenStream {
+    parse_macro_input!(input as AsyncDoParser).expand().into()
+}
+
+/// arguments:
+/// 
+/// `name`: Upper camel case needed, the name of async task struct, same as the async function.
+/// 
+/// `value``: General param of async block's return value
+#[proc_macro_attribute]
+pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
 }
 
 #[proc_macro]
@@ -206,4 +230,22 @@ pub fn stack_impl(input: TokenStream) -> TokenStream {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
+}
+
+/// arguments:
+/// 
+/// `ty`: the type([`tmui::animation::Animation`]) of animation.
+/// 
+/// `direction`: the direction([`tmui::animation::Direction`]) of animation.
+/// 
+/// `duration`: the time duration of animation(millis).
+#[proc_macro_attribute]
+pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+
+#[proc_macro_attribute]
+pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
 }

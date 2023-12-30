@@ -3,10 +3,14 @@ use super::{
     mem_rw_lock::MemRwLock,
     BuildType, MemContext, IPC_MEM_LOCK_NAME, IPC_MEM_SIGNAL_EVT, IPC_QUEUE_SIZE,
 };
-use crate::{mem::{
-    mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_BUFFER_NAME,
-    IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
-}, ipc_event::{InnerIpcEvent, IpcEvent}};
+use crate::{
+    ipc_event::{InnerIpcEvent, IpcEvent},
+    mem::{
+        mem_queue::MemQueueBuilder, IpcError, RequestSide, SharedInfo, IPC_MEM_BUFFER_NAME,
+        IPC_MEM_MASTER_QUEUE, IPC_MEM_SHARED_INFO_NAME, IPC_MEM_SLAVE_QUEUE,
+    },
+};
+use log::error;
 use parking_lot::Mutex;
 use raw_sync::{
     events::{Event, EventInit, EventState},
@@ -18,6 +22,7 @@ use std::{
     marker::PhantomData,
     mem::size_of,
     sync::{atomic::Ordering, Arc},
+    time::Duration,
 };
 use tlib::global::SemanticExt;
 
@@ -31,24 +36,11 @@ pub(crate) struct MasterContext<T: 'static + Copy, M: 'static + Copy> {
     slave_queue: MemQueue<IPC_QUEUE_SIZE, InnerIpcEvent<T>>,
     _request_type: PhantomData<M>,
     mutex: Mutex<()>,
+    pretreat_size: (u32, u32),
 }
 
 impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
-    pub(crate) fn create<P: ToString>(name: P, width: u32, height: u32) -> Self {
-        let buffer_name = format!(
-            "{}{}{}{}_{}",
-            name.to_string(),
-            IPC_MEM_BUFFER_NAME,
-            width,
-            height,
-            0
-        );
-        let buffer = ShmemConf::new()
-            .size((width * height * 4) as usize)
-            .os_id(buffer_name)
-            .create()
-            .unwrap();
-
+    pub(crate) fn create<P: ToString>(name: P) -> Self {
         let mut shared_info_name = name.to_string();
         shared_info_name.push_str(IPC_MEM_SHARED_INFO_NAME);
         let shared_info = ShmemConf::new()
@@ -56,13 +48,14 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
             .os_id(shared_info_name)
             .create()
             .unwrap();
-        let info_data = unsafe {
+
+        unsafe {
             (shared_info.as_ptr() as *mut SharedInfo<M>)
                 .as_mut()
                 .unwrap()
+                .prepared
+                .store(true, Ordering::Release)
         };
-        info_data.width.store(width, Ordering::Release);
-        info_data.height.store(height, Ordering::Release);
 
         let mut event_signal_name = name.to_string();
         event_signal_name.push_str(IPC_MEM_SIGNAL_EVT);
@@ -99,7 +92,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
 
         Self {
             name: name.to_string(),
-            buffer: Some(buffer),
+            buffer: None,
             shared_info,
             buffer_lock,
             wait_signal_mem: event_signal_mem,
@@ -107,6 +100,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MasterContext<T, M> {
             slave_queue,
             _request_type: Default::default(),
             mutex: Mutex::new(()),
+            pretreat_size: (0, 0),
         }
     }
 
@@ -221,14 +215,20 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
 
     #[inline]
     fn wait(&self) {
-        let (evt, _) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true).unwrap() };
-        evt.wait(Timeout::Infinite).unwrap();
+        if let Ok((evt, _)) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true) } {
+            if let Err(e) = evt.wait(Timeout::Val(Duration::from_secs(2))) {
+                error!("Ipc => master context wait failed. {:?}", e)
+            }
+        }
     }
 
     #[inline]
     fn signal(&self) {
-        let (evt, _) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()).unwrap() };
-        evt.set(EventState::Signaled).unwrap();
+        if let Ok((evt, _)) = unsafe { Event::from_existing(self.wait_signal_mem.as_ptr()) } {
+            if let Err(e) = evt.set(EventState::Signaled) {
+                error!("Ipc => master context signal failed. {:?}", e)
+            }
+        }
     }
 
     #[inline]
@@ -236,31 +236,68 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
         self.buffer_lock.clone()
     }
 
-    fn resize(&mut self, width: u32, height: u32) -> Shmem {
+    #[inline]
+    fn pretreat_resize(&mut self, width: u32, height: u32) {
+        let sinfo = self.shared_info();
+        if width == 0 || height == 0 {
+            sinfo.resized.store(false, Ordering::Release);
+            return;
+        }
+
+        sinfo.resized.store(true, Ordering::Release);
+        self.pretreat_size = (width, height);
+    }
+
+    fn create_buffer(&mut self, width: u32, height: u32) {
+        let buffer_name = format!(
+            "{}{}_{}",
+            self.name.to_string(),
+            IPC_MEM_BUFFER_NAME,
+            0
+        );
+
+        self.buffer = Some(
+            ShmemConf::new()
+                .size((width * height * 4) as usize)
+                .os_id(buffer_name)
+                .create()
+                .unwrap(),
+        );
+
+        let info_data = self.shared_info();
+        info_data.width.store(width, Ordering::Release);
+        info_data.height.store(height, Ordering::Release);
+    }
+
+    fn recreate_buffer(&mut self) -> Option<Shmem> {
         let info_data = unsafe {
             (self.shared_info.as_ptr() as *mut SharedInfo<M>)
                 .as_mut()
                 .unwrap()
         };
-        info_data.width.store(width, Ordering::Release);
-        info_data.height.store(height, Ordering::Release);
+        if !info_data.resized.load(Ordering::Acquire) {
+            return None;
+        }
+
+        info_data
+            .width
+            .store(self.pretreat_size.0, Ordering::Release);
+        info_data
+            .height
+            .store(self.pretreat_size.1, Ordering::Release);
+        info_data.prepared.store(false, Ordering::SeqCst);
+
         let name_helper = info_data.name_helper.fetch_add(1, Ordering::Release);
 
-        let buffer_name = format!(
-            "{}{}{}{}_{}",
-            self.name,
-            IPC_MEM_BUFFER_NAME,
-            width,
-            height,
-            name_helper + 1
-        );
+        let buffer_name = format!("{}{}_{}", self.name, IPC_MEM_BUFFER_NAME, name_helper + 1);
 
+        let (width, height) = (self.pretreat_size.0, self.pretreat_size.1);
         let buffer = ShmemConf::new()
             .size((width * height * 4) as usize)
             .os_id(buffer_name)
             .create()
             .unwrap();
 
-        self.buffer.replace(buffer).unwrap()
+        self.buffer.replace(buffer)
     }
 }

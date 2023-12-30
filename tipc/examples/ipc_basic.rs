@@ -34,8 +34,6 @@ fn main() {
 fn ipc_master() {
     let master = IpcBuilder::<UserEvent, Request>::with_customize()
         .name(NAME)
-        .width(100)
-        .height(100)
         .master();
 
     let mut cnt = 0u64;
@@ -59,7 +57,7 @@ fn ipc_master() {
                 break;
             }
         }
-        tlib::timer::sleep(Duration::from_micros(10));
+        std::thread::yield_now();
     }
 
     let rec = Instant::now();

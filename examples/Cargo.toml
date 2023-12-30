@@ -15,6 +15,14 @@ lazy_static = "1.4.0"
 once_cell = "1.17.0"
 
 [[bin]]
+name = "animation"
+path = "animation/main.rs"
+
+[[bin]]
+name = "async_task"
+path = "async_task/main.rs"
+
+[[bin]]
 name = "box_layout"
 path = "box_layout/main.rs"
 
@@ -25,6 +33,10 @@ path = "child_attr_widget/main.rs"
 [[bin]]
 name = "color_convert"
 path = "color_convert/main.rs"
+
+[[bin]]
+name = "custom_popup"
+path = "custom_popup/main.rs"
 
 [[bin]]
 name = "image_draw"
@@ -45,6 +57,10 @@ path = "layout_widget/main.rs"
 [[bin]]
 name = "run_after"
 path = "run_after/main.rs"
+
+[[bin]]
+name = "scroll_area_layout"
+path = "scroll_area_layout/main.rs"
 
 [[bin]]
 name = "scrolled"
@@ -69,6 +85,10 @@ path = "skia_paint/main.rs"
 [[bin]]
 name = "split_pane_layout"
 path = "split_pane_layout/main.rs"
+
+[[bin]]
+name = "tree_view"
+path = "tree_view/main.rs"
 
 [[bin]]
 name = "window"

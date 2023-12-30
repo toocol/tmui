@@ -7,7 +7,7 @@ use tmui::{
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shmem_ipc59";
+pub const IPC_NAME: &'static str = "shmem_ipc134";
 
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
@@ -67,5 +67,6 @@ fn build_ui(window: &mut ApplicationWindow) {
     test_widget.set_valign(Align::Center);
 
     test_widget.child(label);
+    window.set_background(Color::GREY);
     window.child(test_widget)
 }

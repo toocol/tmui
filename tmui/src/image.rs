@@ -23,7 +23,7 @@ impl ObjectSubclass for Image {
 impl ObjectImpl for Image {}
 
 impl WidgetImpl for Image {
-    fn paint(&mut self, mut painter: crate::graphics::painter::Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         let mut contents_rect = self.contents_rect(Some(Coordinate::Widget));
         let image_buf = self.image_buf.as_ref().unwrap();
 

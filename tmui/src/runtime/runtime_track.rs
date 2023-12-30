@@ -3,9 +3,6 @@ use std::time::Instant;
 use tlib::namespace::{MouseButton, KeyboardModifier};
 
 pub(crate) struct RuntimeTrack {
-    pub(crate) vsync_rec: Option<Instant>,
-    pub(crate) update_cnt: usize,
-
     pub(crate) modifier: KeyboardModifier,
 
     pub(crate) mouse_position: (i32, i32),
@@ -20,8 +17,6 @@ impl RuntimeTrack {
     #[inline]
     pub fn new() -> Self {
         Self {
-            vsync_rec: None,
-            update_cnt: 0,
             modifier: KeyboardModifier::NoModifier,
             mouse_position: (0, 0),
             mouse_button_state: MouseButton::NoButton,

@@ -1,16 +1,17 @@
 use crate::{
     generate_u128,
+    ipc_event::IpcEvent,
     mem::{master_context::MasterContext, mem_queue::MemQueueError, MemContext, MAX_REGION_SIZE},
-    IpcNode, ipc_event::IpcEvent,
+    IpcNode,
 };
 use core::{panic, slice};
-use std::{error::Error, ffi::c_void, sync::atomic::Ordering};
+use shared_memory::Shmem;
+use std::{collections::VecDeque, error::Error, ffi::c_void, sync::atomic::Ordering};
 use tlib::figure::Rect;
 
 pub struct IpcMaster<T: 'static + Copy, M: 'static + Copy> {
-    width: usize,
-    height: usize,
     master_context: MasterContext<T, M>,
+    retentions: VecDeque<Shmem>,
 }
 
 /// SAFETY: MemQueue and memory context use `Mutex` to ensure thread safety.
@@ -18,13 +19,14 @@ unsafe impl<T: 'static + Copy, M: 'static + Copy> Send for IpcMaster<T, M> {}
 unsafe impl<T: 'static + Copy, M: 'static + Copy> Sync for IpcMaster<T, M> {}
 
 impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
-    pub fn new(name: &str, width: u32, height: u32) -> Self {
-        let master_context = MasterContext::create(name, width, height);
+    pub fn new(name: &str) -> Self {
+        let master_context = MasterContext::create(name);
 
         Self {
-            width: width as usize,
-            height: height as usize,
+            // width: width as usize,
+            // height: height as usize,
             master_context: master_context,
+            retentions: VecDeque::new(),
         }
     }
 
@@ -63,7 +65,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     #[inline]
     fn buffer(&self) -> &'static mut [u8] {
         unsafe {
-            slice::from_raw_parts_mut(self.master_context.buffer(), self.height * self.width * 4)
+            slice::from_raw_parts_mut(
+                self.master_context.buffer(),
+                (self.master_context.width() * self.master_context.height() * 4) as usize,
+            )
         }
     }
 
@@ -160,7 +165,54 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     }
 
     #[inline]
-    fn resize(&mut self, width: u32, height: u32) -> shared_memory::Shmem {
-        self.master_context.resize(width, height)
+    fn pretreat_resize(&mut self, width: u32, height: u32) {
+        self.master_context.pretreat_resize(width, height)
+    }
+
+    #[inline]
+    fn create_buffer(&mut self, width: u32, height: u32) {
+        self.master_context.create_buffer(width, height)
+    }
+
+    #[inline]
+    fn recreate_buffer(&mut self) {
+        if let Some(old) = self.master_context.recreate_buffer() {
+            self.retentions.push_back(old);
+        }
+    }
+
+    fn release_retention(&mut self) {
+        let shmem_info = self.master_context.shared_info();
+
+        shmem_info
+            .release_idx
+            .fetch_update(Ordering::Release, Ordering::Acquire, |release_idx| {
+                self.retentions
+                    .drain(0..release_idx.min(self.retentions.len()));
+                Some(0)
+            })
+            .expect("Shared buffer release retention failed.");
+    }
+
+    #[inline]
+    fn is_invalidate(&self) -> bool {
+        self.master_context.shared_info().invalidate.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn set_invalidate(&self, invalidate: bool) {
+        self.master_context.shared_info().invalidate.store(invalidate, Ordering::Release)
+    }
+}
+
+impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
+    #[inline]
+    pub fn wait_prepared(&self) {
+        while !self
+            .master_context
+            .shared_info()
+            .prepared
+            .load(Ordering::Acquire)
+        {}
     }
 }

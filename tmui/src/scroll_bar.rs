@@ -5,7 +5,7 @@ use derivative::Derivative;
 use std::mem::size_of;
 use tlib::{
     emit,
-    events::DeltaType,
+    events::{DeltaType, MouseEvent},
     global::bound,
     implements_enum_value,
     namespace::{AsNumeric, KeyboardModifier, Orientation},
@@ -43,6 +43,7 @@ pub struct ScrollBar {
     position: i32,
     /// Confirm if the scroll bar slider is held down
     pressed: bool,
+    press_offset: i32,
     offset_accumulated: f32,
     scroll_bar_position: ScrollBarPosition,
 }
@@ -65,35 +66,17 @@ impl ObjectImpl for ScrollBar {
 }
 
 impl WidgetImpl for ScrollBar {
-    fn paint(&mut self, mut painter: Painter) {
-        let size = self.size();
+    fn paint(&mut self, painter: &mut Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
+
         painter.set_antialiasing(false);
         painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
 
-        let val = self.value();
-        let slider_len = (size.height() as f32 * 0.2) as i32;
-        let maximum = self.maximum();
-        let percentage = val as f32 / maximum as f32;
-
         // Draw the slider.
-        match self.orientation {
-            Orientation::Vertical => {
-                let start_y = ((size.height() - slider_len) as f32 * percentage) as i32;
-
-                let rect = Rect::new(content_rect.x(), start_y, size.width(), slider_len);
-                painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
-            }
-            Orientation::Horizontal => {
-                let start_x = ((size.width() - slider_len) as f32 * percentage) as i32;
-
-                let rect = Rect::new(start_x, content_rect.y(), slider_len, size.height());
-                painter.fill_rect(rect, DEFAULT_SLIDER_BACKGROUND);
-            }
-        }
+        painter.fill_rect(self.calculate_slider(), DEFAULT_SLIDER_BACKGROUND);
     }
 
-    fn on_mouse_wheel(&mut self, event: &tlib::events::MouseEvent) {
+    fn on_mouse_wheel(&mut self, event: &MouseEvent) {
         let horizontal = event.delta().x().abs() > event.delta().y().abs();
 
         if !horizontal && event.delta().x() != 0 && self.orientation() == Orientation::Horizontal {
@@ -113,11 +96,49 @@ impl WidgetImpl for ScrollBar {
             self.update()
         }
     }
+
+    fn on_mouse_pressed(&mut self, event: &MouseEvent) {
+        let (_, y) = event.position();
+        let slider = self.calculate_slider();
+
+        if slider.contains(&event.position().into()) {
+            self.press_offset = y - slider.y();
+            self.pressed = true
+        } else {
+            let size = self.size();
+            let slider_len = self.slider_len();
+            let start_y = y - slider_len / 2;
+
+            let value = (start_y * self.maximum) / (size.height() - slider_len);
+            self.set_value(value.min(self.maximum).max(0));
+        }
+
+        self.window().high_load_request(true);
+    }
+
+    fn on_mouse_released(&mut self, _: &MouseEvent) {
+        self.pressed = false;
+        self.window().high_load_request(false);
+    }
+
+    fn on_mouse_move(&mut self, event: &MouseEvent) {
+        if self.pressed {
+            let size = self.size();
+            let (_, y) = event.position();
+
+            let start_y = y - self.press_offset;
+
+            let slider_len = self.slider_len();
+            let maximum = self.maximum();
+            let value = (start_y * maximum) / (size.height() - slider_len);
+            self.set_value(value.min(maximum).max(0));
+        }
+    }
 }
 
 pub trait ScrollBarSignal: ActionExt {
     signals! {
-        ScrollBarSignal: 
+        ScrollBarSignal:
 
         /// Emitted when ScrollBar's value has changed.
         /// @param value(i32)
@@ -216,7 +237,11 @@ impl ScrollBar {
         if old_min != self.minimum || old_max != self.maximum {
             self.update();
             emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
-            self.set_value(self.value);
+            self.set_value(if self.value > self.maximum {
+                self.maximum
+            } else {
+                self.value
+            });
         }
     }
 
@@ -314,13 +339,23 @@ impl ScrollBar {
     }
 
     #[inline]
+    pub fn slider_pressed(&self) -> bool {
+        self.pressed
+    }
+
+    #[inline]
     fn set_steps(&mut self, single: i32, page: i32) {
         self.single_step = single.abs();
         self.page_step = page.abs();
         self.update();
     }
 
-    pub(crate) fn scroll_by_delta(&mut self, modifier: KeyboardModifier, delta: i32, delta_type: DeltaType) -> bool {
+    pub fn scroll_by_delta(
+        &mut self,
+        modifier: KeyboardModifier,
+        delta: i32,
+        delta_type: DeltaType,
+    ) -> bool {
         let steps_to_scroll;
         let dividend = match delta_type {
             DeltaType::Line => 1.,
@@ -378,6 +413,34 @@ impl ScrollBar {
             return false;
         }
         return true;
+    }
+
+    #[inline]
+    fn slider_len(&self) -> i32 {
+        (self.size().height() as f32 * 0.2) as i32
+    }
+
+    fn calculate_slider(&mut self) -> Rect {
+        let size = self.size();
+        let content_rect = self.contents_rect(Some(Coordinate::Widget));
+
+        let val = self.value();
+        let slider_len = self.slider_len();
+        let maximum = self.maximum();
+        let percentage = val as f32 / maximum as f32;
+
+        match self.orientation {
+            Orientation::Vertical => {
+                let start_y = ((size.height() - slider_len) as f32 * percentage) as i32;
+
+                Rect::new(content_rect.x(), start_y, size.width(), slider_len)
+            }
+            Orientation::Horizontal => {
+                let start_x = ((size.width() - slider_len) as f32 * percentage) as i32;
+
+                Rect::new(start_x, content_rect.y(), slider_len, size.height())
+            }
+        }
     }
 
     #[inline]

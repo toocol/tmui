@@ -18,9 +18,6 @@ impl Region {
 
     #[inline]
     pub fn add_rect(&mut self, rect: Rect) {
-        if !rect.is_valid() {
-            return;
-        }
         self.regions.push(rect)
     }
 
@@ -54,19 +51,6 @@ impl Region {
             }
         }
         false
-    }
-
-    #[inline]
-    pub fn intersects_rect(&self, other: &Rect) -> Region {
-        let mut region = Region::new();
-
-        for rect in self.regions.iter() {
-            if let Some(rect) = rect.intersects(other) {
-                region.add_rect(rect)
-            }
-        }
-
-        region
     }
 
     #[inline]
@@ -119,9 +103,6 @@ impl FRegion {
 
     #[inline]
     pub fn add_rect(&mut self, rect: FRect) {
-        if !rect.is_valid() {
-            return;
-        }
         self.regions.push(rect)
     }
 

@@ -10,7 +10,7 @@ fn main() {
     let rec = Rc::new(RefCell::new(0));
     let rec_clone = rec.clone();
 
-    tasync!(move {
+    async_do!(move {
         println!("[{:?}] Start executing async block 1", thread::current().id());
         sleep(Duration::from_secs(2)).await;
         println!("[{:?}] Async block 1 awake", thread::current().id());
@@ -22,7 +22,7 @@ fn main() {
     });
 
 
-    tasync!({
+    async_do!({
         println!("[{:?}] Start executing async block 2", thread::current().id());
         sleep(Duration::from_secs(1)).await;
         println!("[{:?}] Async block 2 awake", thread::current().id())

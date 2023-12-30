@@ -1,84 +1,67 @@
-use crate::{extend_element, extend_object, layout};
+use crate::{
+    childable::Childable, extend_element, extend_object, general_attr::GeneralAttr, layout,
+};
 use proc_macro2::Ident;
 use quote::quote;
-use syn::{
-    parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Pound, Attribute, DeriveInput,
-    Meta, Path, Token,
-};
+use syn::{parse::Parser, DeriveInput, Meta};
 
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
 
-    let mut run_after = false;
-    for attr in ast.attrs.iter() {
-        if let Some(attr_ident) = attr.path.get_ident() {
-            if attr_ident.to_string() == "run_after" {
-                run_after = true;
-                break;
-            }
-        }
-    }
-    let run_after_clause = if run_after {
-        quote!(
-            ApplicationWindow::run_afters_of(self.window_id()).push(
-                std::ptr::NonNull::new(self)
-            );
-        )
-    } else {
-        proc_macro2::TokenStream::new()
-    };
+    let general_attr = GeneralAttr::parse(ast)?;
+
+    let run_after_clause = &general_attr.run_after_clause;
+
+    let animation_clause = &general_attr.animation_clause;
+    let animation_reflect = &general_attr.animation_reflect;
+    let animation_state_holder_field = &general_attr.animation_state_holder_field;
+    let animation_state_holder_impl = &general_attr.animation_state_holder_impl;
+    let animation_state_holder_reflect = &general_attr.animation_state_holder_reflect;
+
+    let async_task_clause = &general_attr.async_task_impl_clause;
+    let async_method_clause = &general_attr.async_task_method_clause;
+
+    let popupable_impl_clause = &general_attr.popupable_impl_clause;
+    let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
-            let mut child_field = None;
+            let mut childable = Childable::new();
+
             match &mut struct_data.fields {
                 syn::Fields::Named(fields) => {
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub widget: Widget
                     })?);
 
-                    // If field with attribute `#[child]`,
-                    // add attribute `#[derivative(Default(value = "Object::new(&[])"))]` to it,
-                    for field in fields.named.iter_mut() {
-                        let mut childable = false;
-                        for attr in field.attrs.iter() {
-                            if let Some(attr_ident) = attr.path.get_ident() {
-                                if attr_ident.to_string() == "child" {
-                                    if child_field.is_some() {
-                                        return Err(syn::Error::new_spanned(
-                                            field,
-                                            "Widget can only has one child.",
-                                        ));
-                                    }
-                                    childable = true;
-                                    break;
-                                }
-                            }
-                        }
+                    if general_attr.is_animation {
+                        let default = general_attr.animation.as_ref().unwrap().parse_default()?;
+                        let field = &general_attr.animation_field;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #default
+                            #field
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #animation_state_holder_field
+                        })?);
+                    }
 
-                        if childable {
-                            child_field = Some(field.ident.clone().unwrap());
-
-                            let mut segments = Punctuated::<syn::PathSegment, Token![::]>::new();
-                            segments.push(syn::PathSegment {
-                                ident: syn::Ident::new("derivative", field.span()),
-                                arguments: syn::PathArguments::None,
-                            });
-                            let attr = Attribute {
-                                pound_token: Pound {
-                                    spans: [field.span()],
-                                },
-                                style: syn::AttrStyle::Outer,
-                                bracket_token: syn::token::Bracket { span: field.span() },
-                                path: Path {
-                                    leading_colon: None,
-                                    segments,
-                                },
-                                tokens: quote! {(Default(value = "Object::new(&[])"))},
-                            };
-                            field.attrs.push(attr);
+                    if general_attr.is_async_task {
+                        for async_field in general_attr.async_task_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #async_field
+                            })?);
                         }
                     }
+
+                    if general_attr.is_popupable {
+                        let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
+                    }
+
+                    childable.parse_childable(fields)?;
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -101,15 +84,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             let widget_trait_impl_clause =
                 gen_widget_trait_impl_clause(name, Some("widget"), vec!["widget"])?;
 
-            let child_ref_clause = match child_field {
-                Some(field) => {
-                    quote! {
-                        let child = self.#field.as_mut() as *mut dyn WidgetImpl;
-                        self._child_ref(child);
-                    }
-                }
-                None => proc_macro2::TokenStream::new(),
-            };
+            let child_ref_clause = childable.get_child_ref();
 
             Ok(quote! {
                 #[derive(Derivative)]
@@ -121,6 +96,13 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 #element_trait_impl_clause
 
                 #widget_trait_impl_clause
+
+                #animation_clause
+                #animation_state_holder_impl
+
+                #async_task_clause
+
+                #popupable_impl_clause
 
                 impl WidgetAcquire for #name {}
 
@@ -135,6 +117,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
+                        #popupable_reflect_clause
+                        #animation_reflect
+                        #animation_state_holder_reflect
                     }
 
                     #[inline]
@@ -154,6 +139,17 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         self.widget.point_effective(point)
                     }
                 }
+
+                impl ChildRegionAcquirer for #name {
+                    #[inline]
+                    fn child_region(&self) -> tlib::skia_safe::Region {
+                        self.widget.child_region()
+                    }
+                }
+
+                impl #name {
+                    #async_method_clause
+                }
             })
         }
         _ => Err(syn::Error::new_spanned(
@@ -167,8 +163,9 @@ pub(crate) fn expand_with_layout(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
+    internal: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout)
+    layout::expand(ast, layout_meta, layout, internal)
 }
 
 pub(crate) fn gen_widget_trait_impl_clause(
@@ -209,8 +206,8 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn as_element(&mut self) -> *mut dyn ElementImpl {
-                self as *mut Self as *mut dyn ElementImpl
+            fn as_element(&mut self) -> &mut dyn ElementImpl {
+                self
             }
 
             #[inline]
@@ -290,12 +287,20 @@ pub(crate) fn gen_widget_trait_impl_clause(
 
             #[inline]
             fn hide(&mut self) {
-                self.#(#widget_path).*.hide()
+                if let Some(snapshot) = cast_mut!(self as Snapshot) {
+                    snapshot.start(false);
+                }
+
+                self.#(#widget_path).*.hide();
             }
 
             #[inline]
             fn show(&mut self) {
-                self.#(#widget_path).*.show()
+                if let Some(snapshot) = cast_mut!(self as Snapshot) {
+                    snapshot.start(true);
+                }
+
+                self.#(#widget_path).*.show();
             }
 
             #[inline]
@@ -556,6 +561,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn border_ref(&self) -> &Border {
+                self.#(#widget_path).*.border_ref()
+            }
+
+            #[inline]
             fn set_borders(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
                 self.#(#widget_path).*.set_borders(top, right, bottom, left)
             }
@@ -571,7 +581,27 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn borders(&self) -> [f32; 4] {
+            fn set_border_top_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_top_color(color)
+            }
+
+            #[inline]
+            fn set_border_right_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_right_color(color)
+            }
+
+            #[inline]
+            fn set_border_bottom_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_bottom_color(color)
+            }
+
+            #[inline]
+            fn set_border_left_color(&mut self, color: Color) {
+                self.#(#widget_path).*.set_border_left_color(color)
+            }
+
+            #[inline]
+            fn borders(&self) -> (f32, f32, f32, f32) {
                 self.#(#widget_path).*.borders()
             }
 
@@ -581,7 +611,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn border_color(&self) -> Color {
+            fn border_color(&self) -> (Color, Color, Color, Color) {
                 self.#(#widget_path).*.border_color()
             }
 
@@ -718,6 +748,66 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn set_repaint_when_resize(&mut self, repaint: bool) {
                 self.#(#widget_path).*.set_repaint_when_resize(repaint)
+            }
+
+            #[inline]
+            fn is_pressed(&self) -> bool {
+                self.#(#widget_path).*.is_pressed()
+            }
+
+            #[inline]
+            fn propagate_update(&mut self) {
+                self.#(#widget_path).*.propagate_update()
+            }
+
+            #[inline]
+            fn propagate_update_rect(&mut self, rect: Rect) {
+                self.#(#widget_path).*.propagate_update_rect(rect)
+            }
+
+            #[inline]
+            fn propagate_update_rect_f(&mut self, rect: FRect) {
+                self.#(#widget_path).*.propagate_update_rect_f(rect)
+            }
+
+            #[inline]
+            fn propagate_update_global_rect(&mut self, rect: Rect) {
+                self.#(#widget_path).*.propagate_update_global_rect(rect)
+            }
+
+            #[inline]
+            fn propagate_update_global_rect_f(&mut self, rect: FRect) {
+                self.#(#widget_path).*.propagate_update_global_rect_f(rect)
+            }
+
+            #[inline]
+            fn descendant_of(&self, id: ObjectId) -> bool {
+                self.#(#widget_path).*.descendant_of(id)
+            }
+
+            #[inline]
+            fn propagate_animation_progressing(&mut self, is: bool) {
+                self.#(#widget_path).*.propagate_animation_progressing(is)
+            }
+
+            #[inline]
+            fn is_animation_progressing(&self) -> bool {
+                self.#(#widget_path).*.is_animation_progressing()
+            }
+
+            #[inline]
+            fn transparency(&self) -> Transparency {
+                self.#(#widget_path).*.transparency()
+            }
+
+            #[inline]
+            fn set_transparency(&mut self, transparency: Transparency) {
+                self.#(#widget_path).*.set_transparency(transparency)
+            }
+
+            #[inline]
+            fn propagate_set_transparency(&mut self, transparency: Transparency) {
+                self.#(#widget_path).*.propagate_set_transparency(transparency)
             }
         }
 

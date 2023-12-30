@@ -33,7 +33,7 @@ pub trait Layout {
 }
 
 pub trait ContainerLayout {
-    fn static_composition() -> Composition;
+    fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition;
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
@@ -60,6 +60,29 @@ pub trait ContentAlignment {
     fn set_content_valign(&mut self, valign: Align);
 }
 
+trait RemainSize {
+    fn remain_size(&self) -> Size;
+}
+impl RemainSize for dyn WidgetImpl {
+    fn remain_size(&self) -> Size {
+        if let Some(container) = cast!(self as ContainerImpl) {
+            let mut size = container.size();
+            for c in container.children() {
+                let cs = c.size();
+                if c.fixed_width() {
+                    size.set_width(size.width() - cs.width());
+                }
+                if c.fixed_height() {
+                    size.set_height(size.height() - cs.height());
+                }
+            }
+            size
+        } else {
+            self.size()
+        }
+    }
+}
+
 pub(crate) trait SizeCalculation {
     /// Widget has child:
     ///
@@ -76,7 +99,7 @@ pub(crate) trait SizeCalculation {
 }
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> Size {
-        if self.id() == self.window_id() {
+        if self.id() == self.window_id() || cast!(self as Overlaid).is_some() {
             return self.size();
         }
         let size = self.size();
@@ -98,7 +121,9 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
             }
         } else {
-            self.set_fixed_width(self.get_width_request())
+            if self.get_width_request() != 0 {
+                self.set_fixed_width(self.get_width_request())
+            }
         }
 
         if self.vexpand() && !self.fixed_height() {
@@ -117,7 +142,9 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
             }
         } else {
-            self.set_fixed_height(self.get_height_request())
+            if self.get_height_request() != 0 {
+                self.set_fixed_height(self.get_height_request())
+            }
         }
 
         if window_size.width() == 0 && self.size().width() != 0 {
@@ -139,7 +166,7 @@ impl SizeCalculation for dyn WidgetImpl {
             );
             emit!(SizeCalculation::pre_calc_size => self.size_changed(), self.size())
         }
-        self.size()
+        self.remain_size()
     }
 
     fn calc_node_size(&mut self, child_size: Size) {
@@ -201,11 +228,6 @@ impl SizeCalculation for dyn WidgetImpl {
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
                 }
-            } else {
-                self.set_fixed_width(parent_size.width());
-                if self.size().width() == 0 {
-                    self.set_fixed_width(window_size.width());
-                }
             }
         }
 
@@ -232,11 +254,6 @@ impl SizeCalculation for dyn WidgetImpl {
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
-                }
-            } else {
-                self.set_fixed_height(parent_size.height());
-                if self.size().height() == 0 {
-                    self.set_fixed_height(window_size.height());
                 }
             }
         }
@@ -274,12 +291,14 @@ impl LayoutManager {
         self.window_size = new_size;
     }
 
-    pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        // Deal with the size first
-        Self::child_size_probe(self.window_size, widget.size(), widget);
+    pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl, is_animation: bool) {
+        if !is_animation {
+            // Deal with the size first
+            Self::child_size_probe(self.window_size, widget.size(), widget);
+        }
 
         // Deal with the position
-        Self::child_position_probe(None, None, Some(widget));
+        Self::child_position_probe(None, widget.get_raw_parent_mut(), Some(widget));
     }
 
     pub(crate) fn child_size_probe(
@@ -433,7 +452,7 @@ impl LayoutManager {
         parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
-        if parent.is_none() {
+        if parent.is_none() || cast!(widget as Overlaid).is_some() {
             return;
         }
         let parent = parent.unwrap();

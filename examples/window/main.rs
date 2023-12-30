@@ -16,6 +16,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("window")
+        .transparent(true)
         .build();
 
     app.connect_activate(build_ui);
@@ -24,13 +25,13 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut label = Label::new(Some("Hello World"));
+    let mut label = Label::new(Some("Hello World! J"));
     label.set_background(Color::CYAN);
     label.set_halign(Align::Center);
     label.set_valign(Align::Center);
     label.width_request(200);
     label.height_request(40);
-    label.set_content_halign(Align::End);
+    label.set_content_halign(Align::Center);
     label.set_content_valign(Align::End);
     label.set_size(30);
     label.set_margin_left(50);
@@ -44,5 +45,9 @@ fn build_ui(window: &mut ApplicationWindow) {
     test_widget.set_valign(Align::Center);
 
     test_widget.child(label);
-    window.child(test_widget)
+    window.child(test_widget);
+
+    window.register_run_after(|win| {
+        win.propagate_set_transparency(100);
+    });
 }

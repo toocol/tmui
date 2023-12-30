@@ -59,7 +59,7 @@ impl ContainerImplExt for Overlay {
 
 impl Layout for Overlay {
     fn composition(&self) -> Composition {
-        Self::static_composition()
+        Self::static_composition(self)
     }
 
     fn position_layout(
@@ -73,7 +73,7 @@ impl Layout for Overlay {
 }
 
 impl ContainerLayout for Overlay {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::Overlay
     }
 
@@ -113,5 +113,8 @@ impl StaticContainerScaleCalculate for Overlay {
 }
 
 impl ChildContainerDiffRender for Overlay {
-    fn container_diff_render(&mut self, _painter: &mut Painter) {}
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
+
+#[reflect_trait]
+pub trait Overlaid {}

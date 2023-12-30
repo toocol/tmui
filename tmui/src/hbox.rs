@@ -53,7 +53,7 @@ impl ContainerImplExt for HBox {
 
 impl Layout for HBox {
     fn composition(&self) -> Composition {
-        HBox::static_composition()
+        HBox::static_composition(self)
     }
 
     fn position_layout(
@@ -67,7 +67,7 @@ impl Layout for HBox {
 }
 
 impl ContainerLayout for HBox {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::HorizontalArrange
     }
 
@@ -214,25 +214,25 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
         }
     }
 
-    debug_assert!(parent_rect.height() >= totoal_children_width);
+    debug_assert!(parent_rect.width() >= totoal_children_width);
 
     let mut offset = parent_rect.x();
     for child in start_childs {
         child.set_fixed_x(offset);
-        offset += child.image_rect().height();
+        offset += child.image_rect().width();
     }
 
     let middle_point = parent_rect.width() / 2 + parent_rect.x();
     offset = middle_point - (center_childs_width / 2);
     for child in center_childs {
         child.set_fixed_x(offset);
-        offset += child.image_rect().height();
+        offset += child.image_rect().width();
     }
 
     offset = parent_rect.x() + parent_rect.width() - end_childs_width;
     for child in end_childs {
         child.set_fixed_x(offset);
-        offset += child.image_rect().height();
+        offset += child.image_rect().width();
     }
 }
 
@@ -260,6 +260,6 @@ impl StaticContainerScaleCalculate for HBox {
 }
 
 impl ChildContainerDiffRender for HBox {
-    fn container_diff_render(&mut self, _painter: &mut Painter) {
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
     }
 }

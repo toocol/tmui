@@ -22,8 +22,6 @@ pub enum IpcType {
 
 pub struct IpcBuilder<T: 'static + Copy, M: 'static + Copy> {
     name: Option<String>,
-    width: Option<u32>,
-    height: Option<u32>,
     _user_event: PhantomData<T>,
     _request_response: PhantomData<M>,
 }
@@ -40,8 +38,6 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcBuilder<T, M> {
     pub fn with_customize() -> Self {
         Self {
             name: None,
-            width: None,
-            height: None,
             _user_event: Default::default(),
             _request_response: Default::default(),
         }
@@ -54,29 +50,11 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcBuilder<T, M> {
     }
 
     #[inline]
-    pub fn width(mut self, width: u32) -> Self {
-        self.width = Some(width);
-        self
-    }
-
-    #[inline]
-    pub fn height(mut self, height: u32) -> Self {
-        self.height = Some(height);
-        self
-    }
-
-    #[inline]
-    pub fn master(mut self) -> IpcMaster<T, M> {
+    pub fn master(self) -> IpcMaster<T, M> {
         IpcMaster::<T, M>::new(
             self.name
                 .as_ref()
                 .expect("Build IpcMaster require `name` not none."),
-            self.width
-                .take()
-                .expect("Build IpcMaster require `width` not none."),
-            self.height
-                .take()
-                .expect("Build IpcMaster require `height` not none."),
         )
     }
 
@@ -91,16 +69,12 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcBuilder<T, M> {
 }
 
 pub trait WithIpcMaster<T: 'static + Copy, M: 'static + Copy> {
-    fn create_ipc_master(name: &'static str, width: u32, height: u32) -> IpcMaster<T, M> {
-        IpcBuilder::<T, M>::with_customize()
-            .name(name)
-            .width(width)
-            .height(height)
-            .master()
+    fn create_ipc_master(name: &'static str) -> IpcMaster<T, M> {
+        IpcBuilder::<T, M>::with_customize().name(name).master()
     }
 
-    fn with_ipc_master(&mut self, name: &'static str, width: u32, height: u32) {
-        self.proc_ipc_master(Self::create_ipc_master(name, width, height))
+    fn with_ipc_master(&mut self, name: &'static str) {
+        self.proc_ipc_master(Self::create_ipc_master(name))
     }
 
     fn proc_ipc_master(&mut self, master: IpcMaster<T, M>);
@@ -155,7 +129,17 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
 
     fn ty(&self) -> IpcType;
 
-    fn resize(&mut self, width: u32, height: u32) -> Shmem;
+    fn pretreat_resize(&mut self, width: u32, height: u32);
+
+    fn create_buffer(&mut self, width: u32, height: u32);
+
+    fn recreate_buffer(&mut self);
+
+    fn release_retention(&mut self);
+
+    fn is_invalidate(&self) -> bool;
+
+    fn set_invalidate(&self, invalidate: bool);
 }
 
 lazy_static! {
@@ -190,7 +174,7 @@ lazy_static! {
 #[inline]
 pub fn generate_u128(input: &str) -> Option<u128> {
     let bytes = input.as_bytes();
-    let mut result = Vec::with_capacity(bytes.len() * 2); // Assuming max 3 digits per byte
+    let mut result = Vec::with_capacity(bytes.len() * 2); // Assuming max 2 digits per byte
 
     for b in bytes {
         result.extend_from_slice(CHARCTER_MAP.get(b)?.to_string().as_bytes());

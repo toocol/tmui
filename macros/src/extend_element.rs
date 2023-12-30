@@ -75,12 +75,12 @@ pub(crate) fn gen_element_trait_impl_clause(
     Ok(quote!(
         impl ElementExt for #name {
             #[inline]
-            fn set_window_id(&mut self, id: u16) {
+            fn set_window_id(&mut self, id: ObjectId) {
                 self.#(#element_path).*.set_window_id(id)
             }
 
             #[inline]
-            fn window_id(&self) -> u16 {
+            fn window_id(&self) -> ObjectId {
                 self.#(#element_path).*.window_id()
             }
 
@@ -111,6 +111,20 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
+            fn update_global_rect(&mut self, rect: Rect) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_global_rect(rect);
+            }
+
+            #[inline]
+            fn update_global_rect_f(&mut self, rect: FRect) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_global_rect_f(rect);
+            }
+
+            #[inline]
             fn update_region(&mut self, region: &Region) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
@@ -125,13 +139,22 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn clear_region(&mut self) {
-                self.#(#element_path).*.clear_region();
+            fn update_global_region(&mut self, region: &Region) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_global_region(region);
             }
 
             #[inline]
-            fn clear_region_f(&mut self) {
-                self.#(#element_path).*.clear_region_f();
+            fn update_global_region_f(&mut self, region: &FRegion) {
+                self.set_property("invalidate", true.to_value());
+                Board::notify_update();
+                self.#(#element_path).*.update_global_region_f(region);
+            }
+
+            #[inline]
+            fn clear_regions(&mut self) {
+                self.#(#element_path).*.clear_regions();
             }
 
             #[inline]
@@ -142,6 +165,16 @@ pub(crate) fn gen_element_trait_impl_clause(
             #[inline]
             fn redraw_region_f(&self) -> &FRegion {
                 self.#(#element_path).*.redraw_region_f()
+            }
+
+            #[inline]
+            fn global_redraw_region(&self) -> &Region {
+                self.#(#element_path).*.global_redraw_region()
+            }
+
+            #[inline]
+            fn global_redraw_region_f(&self) -> &FRegion {
+                self.#(#element_path).*.global_redraw_region_f()
             }
 
             #[inline]

@@ -1,9 +1,9 @@
 use lazy_static::lazy_static;
-use std::sync::atomic::Ordering;
-use tlib::connect;
+use tlib::{connect, skia_safe::ImageInfo};
 
 use crate::{
-    application::{self, PLATFORM_CONTEXT},
+    application,
+    backend::create_image_info,
     platform::PlatformType,
     prelude::*,
     tlib::{
@@ -36,6 +36,8 @@ lazy_static! {
 #[run_after]
 pub struct SharedWidget {
     shared_id: Option<&'static str>,
+    image_info: ImageInfo,
+    run_aftered: bool,
 }
 
 impl ObjectSubclass for SharedWidget {
@@ -61,8 +63,15 @@ impl WidgetImpl for SharedWidget {
         }
         self.parent_run_after();
 
-        let platform_context = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
-        platform_context.add_shared_region(self.shared_id(), self.rect());
+        let bridge = self.window().ipc_bridge().unwrap();
+
+        let size = self.size();
+        bridge.create_buffer(size.width() as u32, size.height() as u32);
+
+        bridge.add_shared_region(self.shared_id(), self.rect());
+
+        self.image_info = create_image_info((size.width(), size.height()));
+        self.run_aftered = true;
     }
 }
 
@@ -70,6 +79,14 @@ pub trait SharedWidgetExt {
     fn shared_id(&self) -> &'static str;
 
     fn set_shared_id(&mut self, id: &'static str);
+
+    fn image_info(&self) -> &ImageInfo;
+
+    fn is_shared_invalidate(&self) -> bool;
+
+    fn shared_validate(&self);
+
+    fn pixels_render(&mut self, painter: &mut Painter);
 }
 
 impl SharedWidgetExt for SharedWidget {
@@ -84,13 +101,61 @@ impl SharedWidgetExt for SharedWidget {
         self.check_shared_id(id);
         self.shared_id = Some(id)
     }
+
+    #[inline]
+    fn image_info(&self) -> &ImageInfo {
+        &self.image_info
+    }
+
+    #[inline]
+    fn is_shared_invalidate(&self) -> bool {
+        ApplicationWindow::window_of(self.window_id())
+            .ipc_bridge()
+            .unwrap()
+            .is_invalidate()
+    }
+
+    #[inline]
+    fn shared_validate(&self) {
+        ApplicationWindow::window_of(self.window_id())
+            .ipc_bridge()
+            .unwrap()
+            .set_invalidate(false)
+    }
+
+    fn pixels_render(&mut self, painter: &mut Painter) {
+        let bridge = ApplicationWindow::window_of(self.window_id())
+            .ipc_bridge()
+            .unwrap();
+
+        bridge.wait_prepared();
+
+        let (buffer, _guard) = bridge.buffer();
+
+        let size = self.size();
+        let row_bytes = size.width() as usize * 4;
+
+        painter.draw_pixels(self.image_info(), buffer, row_bytes, (0, 0));
+    }
 }
 
 impl SharedWidget {
     #[inline]
-    fn on_geometry_changed(&self, _: Rect) {
-        let platform_context = unsafe { PLATFORM_CONTEXT.load(Ordering::SeqCst).as_mut().unwrap() };
-        platform_context.add_shared_region(self.shared_id(), self.rect());
+    fn on_geometry_changed(&mut self, _: Rect) {
+        self.window()
+            .ipc_bridge()
+            .unwrap()
+            .add_shared_region(self.shared_id(), self.rect());
+
+        if self.run_aftered {
+            let size = self.size();
+
+            let bridge = self.window().ipc_bridge().unwrap();
+
+            bridge.pretreat_resize(size.width(), size.height());
+
+            self.image_info = create_image_info((size.width(), size.height()));
+        }
     }
 
     #[inline]
@@ -105,3 +170,7 @@ impl SharedWidget {
         }
     }
 }
+
+#[reflect_trait]
+pub trait SharedWidgetImpl: WidgetImpl + SharedWidgetExt {}
+impl SharedWidgetImpl for SharedWidget {}

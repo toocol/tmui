@@ -55,10 +55,10 @@ use std::{
 static INIT: Once = Once::new();
 type ActionsMap = Box<
     HashMap<
-        u16,
+        ObjectId,
         (
-            HashSet<u16>,
-            HashMap<String, HashMap<u16, Vec<Box<dyn Fn(&Option<Value>)>>>>,
+            HashSet<ObjectId>,
+            HashMap<String, HashMap<ObjectId, Vec<Box<dyn Fn(&Option<Value>)>>>>,
         ),
     >,
 >;
@@ -126,7 +126,7 @@ impl ActionHub {
     pub fn connect_action<F: Fn(&Option<Value>) + 'static>(
         &mut self,
         signal: Signal,
-        target: u16,
+        target: ObjectId,
         f: F,
     ) {
         IS_MAIN_THREAD.with(|is_main| {
@@ -150,9 +150,9 @@ impl ActionHub {
 
     pub fn disconnect_action(
         &mut self,
-        emiter: Option<u16>,
+        emiter: Option<ObjectId>,
         signal: Option<&str>,
-        target: Option<u16>,
+        target: Option<ObjectId>,
     ) {
         IS_MAIN_THREAD.with(|is_main| {
             if !*is_main.borrow() {
@@ -244,11 +244,11 @@ impl ActionHub {
     }
 }
 pub trait ActionExt: ObjectOperation {
-    fn connect(&self, signal: Signal, target: u16, f: Box<dyn Fn(&Option<Value>)>) {
+    fn connect(&self, signal: Signal, target: ObjectId, f: Box<dyn Fn(&Option<Value>)>) {
         ActionHub::instance().connect_action(signal, target, f)
     }
 
-    fn disconnect(&self, emiter: Option<u16>, signal: Option<&str>, target: Option<u16>) {
+    fn disconnect(&self, emiter: Option<ObjectId>, signal: Option<&str>, target: Option<ObjectId>) {
         ActionHub::instance().disconnect_action(emiter, signal, target)
     }
 
@@ -274,14 +274,14 @@ impl<T: ActionExt> AsMutPtr for T {}
 /// The `Siginal` emited in the different threads will be transfer to the `main` thread to process the action.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Signal {
-    emiter_id: u16,
+    emiter_id: ObjectId,
     signal: String,
     from_type: Option<String>,
     emit_type: Option<String>,
 }
 impl Signal {
     #[inline]
-    pub fn new(emiter_id: u16, signal: String) -> Self {
+    pub fn new(emiter_id: ObjectId, signal: String) -> Self {
         Self {
             emiter_id,
             signal,
@@ -291,7 +291,7 @@ impl Signal {
     }
 
     #[inline]
-    pub fn emiter_id(&self) -> u16 {
+    pub fn emiter_id(&self) -> ObjectId {
         self.emiter_id
     }
 

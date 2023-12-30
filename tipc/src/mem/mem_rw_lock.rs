@@ -5,7 +5,7 @@ use super::{
 use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::{
     mem::size_of,
-    sync::atomic::{Ordering, AtomicU8}, thread,
+    sync::atomic::{Ordering, AtomicU8},
 };
 
 #[repr(C)]
@@ -64,7 +64,6 @@ impl MemRwLock {
             if val == 0 {
                 break;
             }
-            thread::yield_now();
         }
         inner.read.fetch_add(1, Ordering::SeqCst);
 
@@ -82,7 +81,6 @@ impl MemRwLock {
             if read == 0 && write == 0 {
                 break;
             }
-            thread::yield_now();
         }
         inner.write.fetch_add(1, Ordering::SeqCst);
 

@@ -8,10 +8,13 @@ use macros::reflect_trait;
 use std::{
     any::Any,
     collections::HashMap,
-    sync::atomic::{AtomicU16, Ordering},
+    sync::atomic::{AtomicU32, Ordering},
 };
 
-static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
+pub type IdGenerator = AtomicU32;
+pub type ObjectId = u32;
+
+static ID_INCREMENT: IdGenerator = IdGenerator::new(1);
 
 /// Super type of object system, every subclass object should extends this struct by proc-marco `[extends_object]`,
 /// and impl `ObjectSubclass, ObjectImpl`
@@ -37,7 +40,7 @@ static ID_INCREMENT: AtomicU16 = AtomicU16::new(1);
 /// ```
 #[derive(Debug)]
 pub struct Object {
-    id: u16,
+    id: ObjectId,
     properties: HashMap<String, Box<Value>>,
     constructed: bool,
 }
@@ -57,7 +60,7 @@ pub trait ObjectOperation {
     /// Returns the type of the object.
     ///
     /// Go to[`Function defination`](ObjectOperation::id) (Defined in [`ObjectOperation`])
-    fn id(&self) -> u16;
+    fn id(&self) -> ObjectId;
 
     /// Go to[`Function defination`](ObjectOperation::set_property) (Defined in [`ObjectOperation`])
     fn set_property(&mut self, name: &str, value: Value);
@@ -75,9 +78,6 @@ impl Object {
     ) -> Box<T> {
         let mut obj = Box::new(T::default());
 
-        obj.pretreat_construct();
-        obj.construct();
-
         let default_name = format!("{}#{}", T::NAME, obj.id());
         obj.set_property("name", default_name.to_value());
 
@@ -85,6 +85,9 @@ impl Object {
         for (name, value) in properties {
             obj.set_property(*name, value.to_value())
         }
+
+        obj.pretreat_construct();
+        obj.construct();
 
         obj
     }
@@ -100,7 +103,7 @@ impl Object {
 
 impl ObjectOperation for Object {
     #[inline]
-    fn id(&self) -> u16 {
+    fn id(&self) -> ObjectId {
         self.id
     }
 

@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 use crate::{
-    application_window::ApplicationWindow,
     skia_safe::{self, Canvas, Font, Matrix, Paint, Path, Point},
-    widget::WidgetImpl,
+    widget::WidgetImpl, tlib,
 };
 use log::{error, warn};
+use ::tlib::skia_safe::BlendMode;
 use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
@@ -13,7 +13,7 @@ use tlib::{
         canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
             FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-        },
+        }, IPoint,
     },
 };
 
@@ -43,11 +43,13 @@ impl<'a> Painter<'a> {
     /// The constructer to build the Painter.
     #[inline]
     pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
-        let base_offset = ApplicationWindow::window_of(widget.window_id()).base_offset();
         let rect = widget.rect();
+        let mut paint = Paint::default();
+        paint.set_blend_mode(BlendMode::Src);
+
         Painter {
             canvas,
-            paint: Paint::default(),
+            paint,
             font: None,
             color: None,
             line_width: None,
@@ -56,8 +58,8 @@ impl<'a> Painter<'a> {
             saved_line_width: None,
             width: rect.width(),
             height: rect.height(),
-            x_offset: rect.x() + base_offset.x(),
-            y_offset: rect.y() + base_offset.y(),
+            x_offset: rect.x(),
+            y_offset: rect.y(),
             transform: Matrix::new_identity(),
             text_style: TextStyle::new(),
             paragraph_style: ParagraphStyle::new(),
@@ -165,8 +167,12 @@ impl<'a> Painter<'a> {
     /// Reset the painter to Initial state.
     #[inline]
     pub fn reset(&mut self) {
-        self.canvas.reset_matrix();
         self.paint.reset();
+    }
+
+    #[inline]
+    pub fn reset_matrix(&mut self) {
+        self.canvas.reset_matrix();
     }
 
     /// Set the antialiasing to true.
@@ -241,13 +247,32 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn fill_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
-        self.paint
-            .set_style(crate::skia_safe::PaintStyle::StrokeAndFill);
+        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
         let mut rect: crate::skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        if let Some(color) = self.color {
+            self.paint.set_color(color);
+        }
+    }
+
+    #[inline]
+    pub fn fill_round_rect<T: Into<crate::skia_safe::Rect>>(
+        &mut self,
+        rect: T,
+        border_radius: f32,
+        color: Color,
+    ) {
+        self.paint.set_color(color);
+        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
+
+        let mut rect: crate::skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
+        self.canvas.draw_rrect(rrect, &self.paint);
         if let Some(color) = self.color {
             self.paint.set_color(color);
         }
@@ -263,6 +288,24 @@ impl<'a> Painter<'a> {
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
+        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
+    }
+
+    /// Strike the specified rect with border radius and offset.
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_round_rect<T: Into<crate::skia_safe::Rect>>(
+        &mut self,
+        rect: T,
+        border_radius: f32,
+    ) {
+        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
+        let mut rect: crate::skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
+        self.canvas.draw_rrect(rrect, &self.paint);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 
@@ -299,6 +342,8 @@ impl<'a> Painter<'a> {
         origin: T,
         letter_spacing: f32,
         width_layout: f32,
+        max_lines: Option<usize>,
+        ellipsis: bool,
     ) {
         if let Some(font) = self.font.as_ref() {
             // create font manager
@@ -316,6 +361,12 @@ impl<'a> Painter<'a> {
             // set text style
             self.text_style.set_letter_spacing(letter_spacing);
             self.paragraph_style.set_text_style(&self.text_style);
+            self.paragraph_style.set_max_lines(max_lines);
+            if ellipsis {
+                self.paragraph_style.set_ellipsis("\u{2026}");
+            } else {
+                self.paragraph_style.set_ellipsis("");
+            }
 
             // layout the paragraph
             let mut paragraph_builder =
@@ -326,7 +377,8 @@ impl<'a> Painter<'a> {
 
             let mut origin: Point = origin.into();
             origin.offset((self.x_offset, self.y_offset));
-            paragraph.paint(&mut self.canvas, origin)
+
+            paragraph.paint(&mut self.canvas, origin);
         } else {
             error!("The `font` of `Painter` is None.")
         }
@@ -441,6 +493,19 @@ impl<'a> Painter<'a> {
         self.canvas.draw_point(point, &self.paint);
     }
 
+    #[inline]
+    pub fn clip_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
+        let mut rect: skia_safe::Rect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+        self.canvas.clip_rect(rect, op, false);
+    }
+
+    #[inline]
+    pub fn clip_rect_global<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
+        let rect: skia_safe::Rect = rect.into();
+        self.canvas.clip_rect(rect, op, false);
+    }
+
     /// Clip the region to draw.
     #[inline]
     pub fn clip_region(&mut self, region: skia_safe::Region, op: skia_safe::ClipOp) {
@@ -487,5 +552,20 @@ impl<'a> Painter<'a> {
         dst.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_image_rect(image, from, dst, &self.paint);
+    }
+
+    #[inline]
+    pub fn draw_pixels<T: Into<tlib::figure::Point>>(
+        &mut self,
+        info: &skia_safe::ImageInfo,
+        pixels: &[u8],
+        row_bytes: usize,
+        offset: T,
+    ) {
+        let mut offset: tlib::figure::Point = offset.into();
+        offset.offset(self.x_offset, self.y_offset);
+        let offset: IPoint = offset.into();
+
+        let _ = self.canvas.write_pixels(info, pixels, row_bytes, offset);
     }
 }

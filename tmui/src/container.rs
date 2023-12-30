@@ -3,7 +3,7 @@ use crate::{
     prelude::*,
     widget::{ScaleCalculate, WidgetImpl, WindowAcquire},
 };
-use tlib::object::{ObjectImpl, ObjectSubclass};
+use tlib::{object::{ObjectImpl, ObjectSubclass}, skia_safe::region::RegionOp};
 
 #[extends(Widget)]
 pub struct Container {
@@ -59,6 +59,50 @@ impl ObjectImpl for Container {
                     }
                 }
             }
+            "propagate_update" => {
+                let propagate_update = value.get::<bool>();
+                if propagate_update {
+                    for child in self.children.iter_mut() {
+                        child.propagate_update()
+                    }
+                }
+            }
+            "propagate_update_rect" => {
+                let rect = value.get::<Rect>();
+                for child in self.children.iter_mut() {
+                    child.propagate_update_rect(rect)
+                }
+            }
+            "propagate_update_rect_f" => {
+                let rect = value.get::<FRect>();
+                for child in self.children.iter_mut() {
+                    child.propagate_update_rect_f(rect)
+                }
+            }
+            "propagate_update_global_rect" => {
+                let rect = value.get::<Rect>();
+                for child in self.children.iter_mut() {
+                    child.propagate_update_global_rect(rect)
+                }
+            }
+            "propagate_update_global_rect_f" => {
+                let rect = value.get::<FRect>();
+                for child in self.children.iter_mut() {
+                    child.propagate_update_global_rect_f(rect)
+                }
+            }
+            "animation_progressing" => {
+                let is = value.get::<bool>();
+                for child in self.children.iter_mut() {
+                    child.propagate_animation_progressing(is)
+                }
+            }
+            "propagate_transparency" => {
+                let transparency = value.get::<Transparency>();
+                for child in self.children.iter_mut() {
+                    child.propagate_set_transparency(transparency)
+                }
+            }
             _ => {}
         }
     }
@@ -104,6 +148,24 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
         }
 
         true
+    }
+}
+
+pub trait ChildrenRegionAcquirer {
+    fn children_region(&self) -> tlib::skia_safe::Region;
+}
+impl<T: ContainerImpl> ChildrenRegionAcquirer for T {
+    fn children_region(&self) -> tlib::skia_safe::Region {
+        let mut region = tlib::skia_safe::Region::new();
+        for c in self.children() {
+            if !c.visible() || !c.is_animation_progressing() {
+                continue;
+            }
+
+            let rect: tlib::skia_safe::IRect = c.rect().into();
+            region.op_rect(rect, RegionOp::Union);
+        }
+        region
     }
 }
 

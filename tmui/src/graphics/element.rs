@@ -10,12 +10,14 @@ use tlib::{
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends(Object)]
 pub struct Element {
-    window_id: u16,
+    window_id: ObjectId,
     old_rect: Rect,
     rect: Rect,
     /// The region rect of element's coordinate was `Widget`.
     redraw_region: Region,
     redraw_region_f: FRegion,
+    global_redraw_region: Region,
+    global_redraw_region_f: FRegion,
 }
 
 impl ObjectSubclass for Element {
@@ -40,12 +42,12 @@ pub trait ElementExt: 'static {
     /// Set the application window id which the element belongs to.
     ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
-    fn set_window_id(&mut self, id: u16);
+    fn set_window_id(&mut self, id: ObjectId);
 
     /// Get the application window id which the element belongs to.
     ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
-    fn window_id(&self) -> u16;
+    fn window_id(&self) -> ObjectId;
 
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     ///
@@ -57,15 +59,25 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
     fn force_update(&mut self);
 
-    /// Specified the region to redraw.
+    /// Specified the rects to redraw. (Rect point's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget))
     ///
     /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
     fn update_rect(&mut self, rect: Rect);
 
-    /// Specified the region to redraw.
+    /// Specified the float rects to redraw. (Rect point's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget))
     ///
     /// Go to[`Function defination`](ElementExt::update_rect_f) (Defined in [`ElementExt`])
     fn update_rect_f(&mut self, rect: FRect);
+
+    /// Specified the region to redraw. (Rect point's coordinate was [`World`](tlib::namespace::Coordinate::World))
+    ///
+    /// Go to[`Function defination`](ElementExt::update_global_rect) (Defined in [`ElementExt`])
+    fn update_global_rect(&mut self, rect: Rect);
+
+    /// Specified the float region to redraw. (Rect point's coordinate was [`World`](tlib::namespace::Coordinate::World))
+    ///
+    /// Go to[`Function defination`](ElementExt::update_global_rect_f) (Defined in [`ElementExt`])
+    fn update_global_rect_f(&mut self, rect: FRect);
 
     /// Specified the region to redraw.
     ///
@@ -77,27 +89,44 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::update_region_f) (Defined in [`ElementExt`])
     fn update_region_f(&mut self, region: &FRegion);
 
-    /// Cleaer the redraw region.
+    /// Specified the region to redraw.
     ///
-    /// Go to[`Function defination`](ElementExt::clear_region) (Defined in [`ElementExt`])
-    fn clear_region(&mut self);
+    /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
+    fn update_global_region(&mut self, region: &Region);
+
+    /// Specified the region to redraw.
+    ///
+    /// Go to[`Function defination`](ElementExt::update_region_f) (Defined in [`ElementExt`])
+    fn update_global_region_f(&mut self, region: &FRegion);
 
     /// Cleaer the redraw region.
     ///
-    /// Go to[`Function defination`](ElementExt::clear_region_f) (Defined in [`ElementExt`])
-    fn clear_region_f(&mut self);
+    /// Go to[`Function defination`](ElementExt::clear_regions) (Defined in [`ElementExt`])
+    fn clear_regions(&mut self);
 
     /// Get the redraw region. <br>
-    /// The region rect of element's coordinate was `Widget`.
+    /// The region rect of element's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget).
     ///
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn redraw_region(&self) -> &Region;
 
     /// Get the redraw region. <br>
-    /// The region rect of element's coordinate was `Widget`.
+    /// The region rect of element's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget).
     ///
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn redraw_region_f(&self) -> &FRegion;
+
+    /// Get the redraw region. <br>
+    /// The region rect of element's coordinate was [`World`](tlib::namespace::Coordinate::World).
+    ///
+    /// Go to[`Function defination`](ElementExt::global_redraw_region) (Defined in [`ElementExt`])
+    fn global_redraw_region(&self) -> &Region;
+
+    /// Get the redraw region. <br>
+    /// The region rect of element's coordinate was [`World`](tlib::namespace::Coordinate::World).
+    ///
+    /// Go to[`Function defination`](ElementExt::global_redraw_region) (Defined in [`ElementExt`])
+    fn global_redraw_region_f(&self) -> &FRegion;
 
     /// Go to[`Function defination`](ElementExt::rect) (Defined in [`ElementExt`])
     fn rect(&self) -> Rect;
@@ -129,12 +158,12 @@ pub trait ElementExt: 'static {
 
 impl ElementExt for Element {
     #[inline]
-    fn set_window_id(&mut self, id: u16) {
+    fn set_window_id(&mut self, id: ObjectId) {
         self.window_id = id
     }
 
     #[inline]
-    fn window_id(&self) -> u16 {
+    fn window_id(&self) -> ObjectId {
         self.window_id
     }
 
@@ -152,18 +181,22 @@ impl ElementExt for Element {
 
     #[inline]
     fn update_rect(&mut self, rect: Rect) {
-        if !rect.is_valid() {
-            return;
-        }
         self.redraw_region.add_rect(rect)
     }
 
     #[inline]
     fn update_rect_f(&mut self, rect: FRect) {
-        if !rect.is_valid() {
-            return;
-        }
         self.redraw_region_f.add_rect(rect)
+    }
+
+    #[inline]
+    fn update_global_rect(&mut self, rect: Rect) {
+        self.global_redraw_region.add_rect(rect)
+    }
+
+    #[inline]
+    fn update_global_rect_f(&mut self, rect: FRect) {
+        self.global_redraw_region_f.add_rect(rect)
     }
 
     #[inline]
@@ -183,13 +216,27 @@ impl ElementExt for Element {
     }
 
     #[inline]
-    fn clear_region(&mut self) {
-        self.redraw_region.clear()
+    fn update_global_region(&mut self, region: &Region) {
+        if region.is_empty() {
+            return
+        }
+        self.redraw_region.add_region(region)
     }
 
     #[inline]
-    fn clear_region_f(&mut self) {
-        self.redraw_region_f.clear()
+    fn update_global_region_f(&mut self, region: &FRegion) {
+        if region.is_empty() {
+            return
+        }
+        self.redraw_region_f.add_region(region)
+    }
+
+    #[inline]
+    fn clear_regions(&mut self) {
+        self.redraw_region.clear();
+        self.redraw_region_f.clear();
+        self.global_redraw_region.clear();
+        self.global_redraw_region_f.clear();
     }
 
     #[inline]
@@ -200,6 +247,16 @@ impl ElementExt for Element {
     #[inline]
     fn redraw_region_f(&self) -> &FRegion {
         &self.redraw_region_f
+    }
+
+    #[inline]
+    fn global_redraw_region(&self) -> &Region {
+        &self.global_redraw_region
+    }
+
+    #[inline]
+    fn global_redraw_region_f(&self) -> &FRegion {
+        &self.global_redraw_region_f
     }
 
     #[inline]
@@ -262,6 +319,7 @@ pub trait ElementAcquire: ElementImpl + Default {}
 
 /// The hierarchy of widget on the z-axis, the higher the numerical value,
 /// the higher the widget position
+pub(crate) const TOP_Z_INDEX: u32 = 100000;
 pub(crate) trait HierachyZ {
     fn z_index(&self) -> u32;
 

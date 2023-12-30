@@ -1,6 +1,7 @@
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
+        border::Border,
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
@@ -9,10 +10,11 @@ use crate::{
     layout::LayoutManager,
     prelude::*,
     primitive::Message,
+    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
-use std::ptr::NonNull;
+use std::{ptr::NonNull, slice::Iter};
 use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
@@ -20,6 +22,7 @@ use tlib::{
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
+    skia_safe::{region::RegionOp, ClipOp},
 };
 
 /// Size hint for widget:
@@ -27,6 +30,8 @@ use tlib::{
 /// 1: normal size hint
 /// 2: maximum size hint
 pub type SizeHint = (Option<Size>, Option<Size>, Option<Size>);
+
+pub type Transparency = u8;
 
 #[extends(Element)]
 pub struct Widget {
@@ -52,10 +57,7 @@ pub struct Widget {
     font_family: String,
     margins: [i32; 4],
     paddings: [i32; 4],
-    borders: [f32; 4],
-    border_style: BorderStyle,
-    #[derivative(Default(value = "Color::BLACK"))]
-    border_color: Color,
+    border: Border,
 
     width_request: i32,
     height_request: i32,
@@ -168,6 +170,11 @@ pub trait WidgetSignals: ActionExt {
         ///
         /// @param [`ReceiveCharacterEvent`]
         receive_character();
+
+        /// Emit when widget's background changed.
+        ///
+        /// @param [`Color`]
+        background_changed();
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
@@ -241,6 +248,55 @@ impl Widget {
             child.set_minimized(true)
         }
     }
+
+    #[inline]
+    fn notify_propagate_update(&mut self) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update();
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_rect(&mut self, rect: Rect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_rect(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_rect_f(&mut self, rect: FRect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_rect_f(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_global_rect(&mut self, rect: Rect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_global_rect(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_update_global_rect_f(&mut self, rect: FRect) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_update_global_rect_f(rect);
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_animation_progressing(&mut self, is: bool) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_animation_progressing(is)
+        }
+    }
+
+    #[inline]
+    fn notify_propagate_transparency(&mut self, transparency: Transparency) {
+        if let Some(child) = self.get_child_mut() {
+            child.propagate_set_transparency(transparency)
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -299,6 +355,36 @@ impl ObjectImpl for Widget {
                     self.notify_minimized();
                 }
             }
+            "propagate_update" => {
+                let propagate_update = value.get::<bool>();
+                if propagate_update {
+                    self.notify_propagate_update();
+                }
+            }
+            "propagate_update_rect" => {
+                let rect = value.get::<Rect>();
+                self.notify_propagate_update_rect(rect);
+            }
+            "propagate_update_rect_f" => {
+                let rect = value.get::<FRect>();
+                self.notify_propagate_update_rect_f(rect);
+            }
+            "propagate_update_global_rect" => {
+                let rect = value.get::<Rect>();
+                self.notify_propagate_update_global_rect(rect);
+            }
+            "propagate_update_global_rect_f" => {
+                let rect = value.get::<FRect>();
+                self.notify_propagate_update_global_rect_f(rect);
+            }
+            "animation_progressing" => {
+                let is = value.get::<bool>();
+                self.notify_propagate_animation_progressing(is);
+            }
+            "propagate_transparency" => {
+                let transparency = value.get::<Transparency>();
+                self.notify_propagate_transparency(transparency);
+            }
             _ => {}
         }
     }
@@ -311,49 +397,46 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
-        if !self.visible() {
+        if !self.visible() && !self.is_animation_progressing() {
             return;
         }
 
         let mut painter = Painter::new(cr.canvas(), self);
 
-        let contents_rect = self.contents_rect(Some(Coordinate::Widget));
-        if contents_rect.width() <= 0 || contents_rect.height() <= 0 {
+        if let Some(shared_widget) = cast_mut!(self as SharedWidgetImpl) {
+            shared_widget.pixels_render(&mut painter);
             return;
         }
 
-        let is_shared_widget = self.super_type().is_a(SharedWidget::static_type());
+        let mut geometry = self.rect();
+        if geometry.width() == 0 || geometry.height() == 0 {
+            return;
+        }
+        geometry.set_point(&(0, 0).into());
+
+        painter_clip(self, &mut painter);
 
         if !self.first_rendered() || self.rerender_styles() {
-            if !is_shared_widget {
-                // Draw the background color of the Widget.
-                if self.rerender_difference() && self.first_rendered() && !self.window().minimized()
-                {
-                    self.render_difference(&mut painter);
-                } else {
-                    painter.fill_rect(contents_rect, self.background());
-                }
+            // Draw the background color of the Widget.
+            let mut background = self.background();
+            background.set_transparency(self.transparency());
+
+            if self.rerender_difference() && self.first_rendered() && !self.window().minimized() {
+                let mut border_rect: FRect = self.rect_record().into();
+                border_rect.set_point(&(0, 0).into());
+                self.border_ref()
+                    .clear_border(&mut painter, border_rect, background);
+
+                self.render_difference(&mut painter, background);
+            } else {
+                painter.fill_rect(geometry, background);
             }
 
             self.set_rect_record(self.rect());
             self.set_image_rect_record(self.image_rect());
 
             // Draw the border of the Widget.
-            let borders = self.borders();
-            let _style = self.border_style();
-            painter.set_color(self.border_color());
-            if borders[0] > 0. {
-                painter.set_line_width(borders[0]);
-            }
-            if borders[1] > 0. {
-                painter.set_line_width(borders[1]);
-            }
-            if borders[2] > 0. {
-                painter.set_line_width(borders[2]);
-            }
-            if borders[3] > 0. {
-                painter.set_line_width(borders[3]);
-            }
+            self.border_ref().render(&mut painter, geometry.into());
 
             self.set_first_rendered();
             self.set_rerender_styles(false);
@@ -361,7 +444,83 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter.reset();
         painter.set_font(self.font().to_skia_font());
-        self.paint(painter);
+
+        painter.clip_rect(
+            self.contents_rect(Some(Coordinate::Widget)),
+            ClipOp::Intersect,
+        );
+
+        self.paint(&mut painter);
+
+        painter.restore();
+    }
+}
+
+#[inline]
+pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter) {
+    painter.save();
+
+    painter.clip_region(widget.child_region(), ClipOp::Difference);
+
+    handle_clip_redraw_region(widget, widget.redraw_region().iter(), painter, false);
+
+    handle_clip_redraw_region_f(widget, widget.redraw_region_f().iter(), painter, false);
+
+    handle_clip_redraw_region(widget, widget.global_redraw_region().iter(), painter, true);
+
+    handle_clip_redraw_region_f(
+        widget,
+        widget.global_redraw_region_f().iter(),
+        painter,
+        true,
+    );
+}
+
+#[inline]
+pub(crate) fn handle_clip_redraw_region(
+    widget: &dyn WidgetImpl,
+    iter: Iter<Rect>,
+    painter: &mut Painter,
+    global: bool,
+) {
+    let mut region = skia_safe::Region::new();
+    let mut op = false;
+    for &r in iter {
+        let mut r = r;
+        if !global {
+            r.set_point(&widget.map_to_global(&r.point()))
+        }
+
+        let r: skia_safe::IRect = r.into();
+        region.op_rect(r, RegionOp::Union);
+        op = true;
+    }
+    if op {
+        painter.clip_region(region, ClipOp::Intersect);
+    }
+}
+
+#[inline]
+pub(crate) fn handle_clip_redraw_region_f(
+    widget: &dyn WidgetImpl,
+    iter: Iter<FRect>,
+    painter: &mut Painter,
+    global: bool,
+) {
+    let mut region = skia_safe::Region::new();
+    let mut op = false;
+    for &r in iter {
+        let mut r = r;
+        if !global {
+            r.set_point(&widget.map_to_global_f(&r.point()))
+        }
+
+        let r: skia_safe::IRect = r.into();
+        region.op_rect(r, RegionOp::Union);
+        op = true;
+    }
+    if op {
+        painter.clip_region(region, ClipOp::Intersect);
     }
 }
 
@@ -380,7 +539,7 @@ pub trait WidgetExt {
     fn set_initialized(&mut self, initialized: bool);
 
     /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
-    fn as_element(&mut self) -> *mut dyn ElementImpl;
+    fn as_element(&mut self) -> &mut dyn ElementImpl;
 
     /// Go to[`Function defination`](WidgetExt::first_rendered) (Defined in [`WidgetExt`])
     fn first_rendered(&self) -> bool;
@@ -496,7 +655,7 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::get_height_request) (Defined in [`WidgetExt`])
     fn get_height_request(&self) -> i32;
 
-    /// Update widget's geometry: size, layout...
+    /// Update widget's child image rect union.
     ///
     /// Go to[`Function defination`](WidgetExt::update_geometry) (Defined in [`WidgetExt`])
     fn update_geometry(&mut self);
@@ -721,6 +880,11 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_padding_left) (Defined in [`WidgetExt`])
     fn set_padding_left(&mut self, val: i32);
 
+    /// Get the refrence of [`Border`].
+    ///
+    /// Go to[`Function defination`](WidgetExt::border_ref) (Defined in [`WidgetExt`])
+    fn border_ref(&self) -> &Border;
+
     /// Set the borders of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_borders) (Defined in [`WidgetExt`])
@@ -731,15 +895,35 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_border_style) (Defined in [`WidgetExt`])
     fn set_border_style(&mut self, style: BorderStyle);
 
-    /// Set the border color of the widget.
+    /// Set the border color(all directions) of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_border_color) (Defined in [`WidgetExt`])
     fn set_border_color(&mut self, color: Color);
 
+    /// Set the top border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_top_color) (Defined in [`WidgetExt`])
+    fn set_border_top_color(&mut self, color: Color);
+
+    /// Set the right border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_right_color) (Defined in [`WidgetExt`])
+    fn set_border_right_color(&mut self, color: Color);
+
+    /// Set the bottom border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_bottom_color) (Defined in [`WidgetExt`])
+    fn set_border_bottom_color(&mut self, color: Color);
+
+    /// Set the left border color of the widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_border_left_color) (Defined in [`WidgetExt`])
+    fn set_border_left_color(&mut self, color: Color);
+
     /// Get the borders of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::borders) (Defined in [`WidgetExt`])
-    fn borders(&self) -> [f32; 4];
+    fn borders(&self) -> (f32, f32, f32, f32);
 
     /// Get the border style of the widget.
     ///
@@ -749,7 +933,7 @@ pub trait WidgetExt {
     /// Get the border color of the widget.
     ///
     /// Go to[`Function defination`](WidgetExt::border_color) (Defined in [`WidgetExt`])
-    fn border_color(&self) -> Color;
+    fn border_color(&self) -> (Color, Color, Color, Color);
 
     /// Set the system cursor shape.
     ///
@@ -889,6 +1073,66 @@ pub trait WidgetExt {
 
     /// Go to[`Function defination`](WidgetExt::set_repaint_when_resize) (Defined in [`WidgetExt`])
     fn set_repaint_when_resize(&mut self, repaint: bool);
+
+    /// Go to[`Function defination`](WidgetExt::is_pressed) (Defined in [`WidgetExt`])
+    fn is_pressed(&self) -> bool;
+
+    /// Invalidate this widget to update it, and also update the child widget..
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update) (Defined in [`WidgetExt`])
+    fn propagate_update(&mut self);
+
+    /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`Widget`](tlib::namespace::Coordinate::Widget)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
+    fn propagate_update_rect(&mut self, rect: Rect);
+
+    /// Invalidate this widget with float dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`Widget`](tlib::namespace::Coordinate::Widget)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_rect_f) (Defined in [`WidgetExt`])
+    fn propagate_update_rect_f(&mut self, rect: FRect);
+
+    /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`World`](tlib::namespace::Coordinate::World)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_global_rect) (Defined in [`WidgetExt`])
+    fn propagate_update_global_rect(&mut self, rect: Rect);
+
+    /// Invalidate this widget with float dirty rect to update it, and also update the child widget..<br>
+    /// Coordinate: [`World`](tlib::namespace::Coordinate::World)
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_update_global_rect_f) (Defined in [`WidgetExt`])
+    fn propagate_update_global_rect_f(&mut self, rect: FRect);
+
+    /// Check if the widget is a descendant of the widget represented by the specified id.
+    ///
+    /// Go to[`Function defination`](WidgetExt::descendant_of) (Defined in [`WidgetExt`])
+    fn descendant_of(&self, id: ObjectId) -> bool;
+
+    /// Propagate setting the property `animation_progressing`
+    ///
+    /// Go to[`Function defination`](WidgetExt::propagate_animation_progressing) (Defined in [`WidgetExt`])
+    fn propagate_animation_progressing(&mut self, is: bool);
+
+    /// Go to[`Function defination`](WidgetExt::is_animation_progressing) (Defined in [`WidgetExt`])
+    fn is_animation_progressing(&self) -> bool;
+
+    /// Getting the transparency of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
+    fn transparency(&self) -> Transparency;
+
+    /// Setting the transparency of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
+    fn set_transparency(&mut self, transparency: Transparency);
+
+    /// Propagate setting the transparency of widget.
+    ///
+    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
+    fn propagate_set_transparency(&mut self, transparency: Transparency);
 }
 
 impl WidgetExt for Widget {
@@ -908,8 +1152,8 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn as_element(&mut self) -> *mut dyn ElementImpl {
-        self as *mut Self as *mut dyn ElementImpl
+    fn as_element(&mut self) -> &mut dyn ElementImpl {
+        self
     }
 
     #[inline]
@@ -1061,12 +1305,17 @@ impl WidgetExt for Widget {
     #[inline]
     fn hide(&mut self) {
         self.set_property("visible", false.to_value());
-        self.update();
+
+        if !self.is_animation_progressing() {
+            self.window()
+                .invalid_effected_widgets(self.image_rect(), self.id());
+        }
     }
 
     #[inline]
     fn show(&mut self) {
         self.set_property("visible", true.to_value());
+        self.set_rerender_styles(true);
         self.update();
     }
 
@@ -1095,7 +1344,7 @@ impl WidgetExt for Widget {
             self.set_property("height", height.to_value());
         }
         if self.id() != self.window_id() {
-            if ApplicationWindow::is_initialize_phase() {
+            if !self.window().initialized() {
                 return;
             }
             self.window().layout_change(self);
@@ -1301,7 +1550,8 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_background(&mut self, color: Color) {
         self.set_rerender_styles(true);
-        self.background = color
+        self.background = color;
+        emit!(Widget::set_background => self.background_changed(), color);
     }
 
     #[inline]
@@ -1476,6 +1726,11 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
+    fn border_ref(&self) -> &Border {
+        &self.border
+    }
+
+    #[inline]
     fn set_borders(&mut self, mut top: f32, mut right: f32, mut bottom: f32, mut left: f32) {
         if top < 0. {
             top = 0.;
@@ -1489,35 +1744,55 @@ impl WidgetExt for Widget {
         if left < 0. {
             left = 0.;
         }
-        self.borders[0] = top;
-        self.borders[1] = right;
-        self.borders[2] = bottom;
-        self.borders[3] = left;
+        self.border.width.0 = top;
+        self.border.width.1 = right;
+        self.border.width.2 = bottom;
+        self.border.width.3 = left;
     }
 
     #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
-        self.border_style = style;
+        self.border.style = style;
     }
 
     #[inline]
     fn set_border_color(&mut self, color: Color) {
-        self.border_color = color;
+        self.border.border_color = (color, color, color, color);
     }
 
     #[inline]
-    fn borders(&self) -> [f32; 4] {
-        self.borders
+    fn set_border_top_color(&mut self, color: Color) {
+        self.border.border_color.0 = color;
+    }
+
+    #[inline]
+    fn set_border_right_color(&mut self, color: Color) {
+        self.border.border_color.1 = color;
+    }
+
+    #[inline]
+    fn set_border_bottom_color(&mut self, color: Color) {
+        self.border.border_color.2 = color;
+    }
+
+    #[inline]
+    fn set_border_left_color(&mut self, color: Color) {
+        self.border.border_color.3 = color;
+    }
+
+    #[inline]
+    fn borders(&self) -> (f32, f32, f32, f32) {
+        self.border.width
     }
 
     #[inline]
     fn border_style(&self) -> BorderStyle {
-        self.border_style
+        self.border.style
     }
 
     #[inline]
-    fn border_color(&self) -> Color {
-        self.border_color
+    fn border_color(&self) -> (Color, Color, Color, Color) {
+        self.border.border_color
     }
 
     #[inline]
@@ -1527,23 +1802,20 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn map_to_global(&self, point: &Point) -> Point {
-        let contents_rect = self.contents_rect(None);
+        let contents_rect = self.rect();
         Point::new(point.x() + contents_rect.x(), point.y() + contents_rect.y())
     }
 
     #[inline]
     fn map_to_widget(&self, point: &Point) -> Point {
-        let contents_rect = self.contents_rect(None);
-        Point::new(point.x() - contents_rect.x(), point.y() - contents_rect.y())
+        let rect = self.rect();
+        Point::new(point.x() - rect.x(), point.y() - rect.y())
     }
 
     #[inline]
     fn map_to_global_f(&self, point: &FPoint) -> FPoint {
-        let contents_rect = self.contents_rect(None);
-        FPoint::new(
-            point.x() + contents_rect.x() as f32,
-            point.y() + contents_rect.y() as f32,
-        )
+        let rect = self.rect();
+        FPoint::new(point.x() + rect.x() as f32, point.y() + rect.y() as f32)
     }
 
     #[inline]
@@ -1590,6 +1862,9 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn hscale(&self) -> f32 {
+        if self.fixed_width {
+            return 0.;
+        }
         self.hscale
     }
 
@@ -1600,6 +1875,9 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn vscale(&self) -> f32 {
+        if self.fixed_height {
+            return 0.;
+        }
         self.vscale
     }
 
@@ -1667,6 +1945,92 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_repaint_when_resize(&mut self, repaint: bool) {
         self.repaint_when_resize = repaint
+    }
+
+    #[inline]
+    fn is_pressed(&self) -> bool {
+        self.id() == self.window().pressed_widget()
+    }
+
+    #[inline]
+    fn propagate_update(&mut self) {
+        self.update();
+
+        self.set_property("propagate_update", true.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_rect(&mut self, rect: Rect) {
+        self.update_rect(rect);
+
+        self.set_property("propagate_update_rect", rect.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_rect_f(&mut self, rect: FRect) {
+        self.update_rect_f(rect);
+
+        self.set_property("propagate_update_rect_f", rect.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_global_rect(&mut self, rect: Rect) {
+        self.update_global_rect(rect);
+
+        self.set_property("propagate_update_global_rect", rect.to_value());
+    }
+
+    #[inline]
+    fn propagate_update_global_rect_f(&mut self, rect: FRect) {
+        self.update_global_rect_f(rect);
+
+        self.set_property("propagate_update_global_rect_f", rect.to_value());
+    }
+
+    #[inline]
+    fn descendant_of(&self, id: ObjectId) -> bool {
+        let mut parent = self.get_parent_ref();
+        while let Some(p) = parent {
+            if p.id() == id {
+                return true;
+            }
+
+            parent = p.get_parent_ref();
+        }
+        false
+    }
+
+    #[inline]
+    fn propagate_animation_progressing(&mut self, is: bool) {
+        self.set_property("animation_progressing", is.to_value())
+    }
+
+    #[inline]
+    fn is_animation_progressing(&self) -> bool {
+        match self.get_property("animation_progressing") {
+            Some(p) => p.get::<bool>(),
+            None => false,
+        }
+    }
+
+    #[inline]
+    fn transparency(&self) -> Transparency {
+        match self.get_property("transparency") {
+            Some(t) => t.get::<Transparency>(),
+            None => 255,
+        }
+    }
+
+    #[inline]
+    fn set_transparency(&mut self, transparency: Transparency) {
+        self.set_property("transparency", transparency.to_value())
+    }
+
+    #[inline]
+    fn propagate_set_transparency(&mut self, transparency: Transparency) {
+        self.set_transparency(transparency);
+
+        self.set_property("propagate_transparency", transparency.to_value())
     }
 }
 
@@ -1788,6 +2152,23 @@ impl PointEffective for Widget {
     }
 }
 
+////////////////////////////////////// ChildRegionAcquirer //////////////////////////////////////
+pub trait ChildRegionAcquirer {
+    fn child_region(&self) -> tlib::skia_safe::Region;
+}
+impl ChildRegionAcquirer for Widget {
+    fn child_region(&self) -> tlib::skia_safe::Region {
+        let mut region = tlib::skia_safe::Region::new();
+        if let Some(child) = self.get_child_ref() {
+            if child.visible() || child.is_animation_progressing() {
+                let rect: tlib::skia_safe::IRect = child.rect().into();
+                region.op_rect(rect, RegionOp::Replace);
+            }
+        }
+        region
+    }
+}
+
 ////////////////////////////////////// InnerEventProcess //////////////////////////////////////
 pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse pressed event.
@@ -1823,11 +2204,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
         if self.enable_focus() {
             self.set_focus(true)
         }
+        self.window().set_pressed_widget(self.id());
         emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
     }
 
     #[inline]
     fn inner_mouse_released(&mut self, event: &MouseEvent) {
+        self.window().set_pressed_widget(0);
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
     }
 
@@ -1884,6 +2267,7 @@ pub trait WidgetImpl:
     + Layout
     + InnerEventProcess
     + PointEffective
+    + ChildRegionAcquirer
     + ActionExt
 {
     /// Invoke this function when widget's size change.
@@ -1897,7 +2281,7 @@ pub trait WidgetImpl:
     }
 
     /// Invoke this function when renderering.
-    fn paint(&mut self, mut painter: Painter) {}
+    fn paint(&mut self, painter: &mut Painter) {}
 
     /// Invoke when widget's font was changed.
     fn font_changed(&mut self) {}
@@ -1918,6 +2302,8 @@ pub trait WidgetImpl:
     fn on_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
+    ///
+    /// The widget does not track mouse movement by default. If need, call function [`set_mouse_tracking`](WidgetExt::set_mouse_tracking)
     fn on_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.

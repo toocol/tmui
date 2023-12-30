@@ -63,7 +63,7 @@ impl ContainerImplExt for Stack {
 
 impl Layout for Stack {
     fn composition(&self) -> Composition {
-        Stack::static_composition()
+        Stack::static_composition(self)
     }
 
     fn position_layout(
@@ -77,7 +77,7 @@ impl Layout for Stack {
 }
 
 impl ContainerLayout for Stack {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::Stack
     }
 
@@ -147,6 +147,6 @@ impl Stack {
 }
 
 impl ChildContainerDiffRender for Stack {
-    fn container_diff_render(&mut self, _painter: &mut Painter) {
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
     }
 }

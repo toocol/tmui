@@ -1,16 +1,17 @@
 use crate::{
     generate_u128,
+    ipc_event::IpcEvent,
     mem::{mem_queue::MemQueueError, slave_context::SlaveContext, MemContext},
-    IpcNode, ipc_event::IpcEvent,
+    IpcNode,
 };
 use core::slice;
-use std::{error::Error, ffi::c_void, sync::atomic::Ordering};
+use shared_memory::Shmem;
+use std::{collections::VecDeque, error::Error, ffi::c_void, sync::atomic::Ordering};
 use tlib::figure::Rect;
 
 pub struct IpcSlave<T: 'static + Copy, M: 'static + Copy> {
-    width: usize,
-    height: usize,
     slave_context: SlaveContext<T, M>,
+    retentions: VecDeque<Shmem>,
 }
 
 /// SAFETY: MemQueue and memory context use `Mutex` to ensure thread safety.
@@ -21,13 +22,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
     /// The name should be same with the [`IpcMaster`]
     pub fn new(name: &str) -> Self {
         let slave_context = SlaveContext::open(name);
-        let width = slave_context.width();
-        let height = slave_context.height();
 
         Self {
-            width: width as usize,
-            height: height as usize,
             slave_context: slave_context,
+            retentions: VecDeque::new(),
         }
     }
 }
@@ -41,7 +39,10 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     #[inline]
     fn buffer(&self) -> &'static mut [u8] {
         unsafe {
-            slice::from_raw_parts_mut(self.slave_context.buffer(), self.height * self.width * 4)
+            slice::from_raw_parts_mut(
+                self.slave_context.buffer(),
+                (self.slave_context.height() * self.slave_context.width() * 4) as usize,
+            )
         }
     }
 
@@ -138,7 +139,53 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
     }
 
     #[inline]
-    fn resize(&mut self, width: u32, height: u32) -> shared_memory::Shmem {
-        self.slave_context.resize(width, height)
+    fn pretreat_resize(&mut self, width: u32, height: u32) {
+        self.slave_context.pretreat_resize(width, height)
+    }
+
+    #[inline]
+    fn create_buffer(&mut self, _: u32, _: u32) {
+        unreachable!()
+    }
+
+    #[inline]
+    fn recreate_buffer(&mut self) {
+        if let Some(old) = self.slave_context.recreate_buffer() {
+            self.retentions.push_back(old);
+        }
+    }
+
+    fn release_retention(&mut self) {
+        let shmem_info = self.slave_context.shared_info();
+
+        self.retentions.pop_front();
+
+        shmem_info.release_idx.fetch_add(1, Ordering::Release);
+    }
+
+    #[inline]
+    fn is_invalidate(&self) -> bool {
+        self.slave_context
+            .shared_info()
+            .invalidate
+            .load(Ordering::Acquire)
+    }
+
+    #[inline]
+    fn set_invalidate(&self, invalidate: bool) {
+        self.slave_context
+            .shared_info()
+            .invalidate
+            .store(invalidate, Ordering::Release)
+    }
+}
+
+impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
+    #[inline]
+    pub fn prepared(&self) {
+        self.slave_context
+            .shared_info()
+            .prepared
+            .store(true, Ordering::Release);
     }
 }

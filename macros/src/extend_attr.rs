@@ -9,12 +9,15 @@ pub(crate) struct ExtendAttr {
     pub(crate) layout_meta: Option<Meta>,
     pub(crate) layout: Option<String>,
 
+    pub(crate) internal: bool,
+    pub(crate) ignore_default: bool,
+
     pub(crate) id_meta: Option<Meta>,
     pub(crate) id: Option<String>,
 }
 
 impl ExtendAttr {
-    fn error<T: ToTokens>(span: T, msg: &'static str) -> syn::Result<Self> {
+    fn error<T: ToTokens>(span: T, msg: &str) -> syn::Result<Self> {
         Err(syn::Error::new_spanned(span, msg))
     }
 
@@ -49,6 +52,8 @@ impl Parse for ExtendAttr {
             extend,
             layout_meta: None,
             layout: None,
+            internal: false,
+            ignore_default: false,
             id_meta: None,
             id: None,
         };
@@ -109,10 +114,26 @@ impl Parse for ExtendAttr {
                                 _ => return Self::error(meta, "Value of `id` should be string.")
                             }
                         },
-                        _ => {
+                        "internal" => {
+                            match lit {
+                                syn::Lit::Bool(lit_bool) => {
+                                    extend_attr.internal = lit_bool.value();
+                                }
+                                _ => return Self::error(meta, "Value of `internal` should be bool.")
+                            }
+                        }
+                        "ignore_default" => {
+                            match lit {
+                                syn::Lit::Bool(lit_bool) => {
+                                    extend_attr.ignore_default = lit_bool.value();
+                                }
+                                _ => return Self::error(meta, "Value of `ignore_default` should be bool.")
+                            }
+                        }
+                        s => {
                             return Self::error(
                                 meta,
-                                "Only support attribute config `id = \"xxx\"` for `SharedWidget`.",
+                                &format!("Invalid attribute config: {}", s),
                            )
                         }
                     }

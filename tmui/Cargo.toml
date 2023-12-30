@@ -10,7 +10,7 @@ build = "build.rs"
 cfg_aliases = "0.1.1"
 
 [features]
-default = ["wayland", "x11"]
+default = ["x11"]
 wayland = []
 x11 = []
 

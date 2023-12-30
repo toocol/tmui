@@ -6,16 +6,24 @@ use tlib::{
     emit,
     object::{ObjectImpl, ObjectSubclass},
     signals,
+    skia_safe::textlayout::{
+        FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+    },
 };
-use widestring::U16String;
 
 #[extends(Widget)]
+#[popupable]
 pub struct Label {
-    label: Vec<u16>,
+    label: String,
     content_halign: Align,
     content_valign: Align,
     #[derivative(Default(value = "Color::BLACK"))]
     color: Color,
+    letter_spacing: f32,
+    auto_wrap: bool,
+
+    paragraph_width: f32,
+    paragraph_height: f32,
 }
 
 impl ObjectSubclass for Label {
@@ -47,131 +55,180 @@ pub trait LabelSignal: ActionExt {
 impl LabelSignal for Label {}
 
 impl WidgetImpl for Label {
-    fn paint(&mut self, mut painter: Painter) {
-        let content_rect = self.contents_rect(Some(Coordinate::Widget));
-
-        let font: skia_safe::Font = self.font().to_skia_font();
-        let mut widths = vec![0f32; self.label.len()];
-        font.get_widths(&self.label, &mut widths);
-        let mut text_width = 0;
-        let mut idx = 0;
-        for i in 0..widths.len() {
-            let width = widths[i] as i32;
-            text_width += width;
-            if text_width > content_rect.width() {
-                idx = i - 1;
-                text_width -= width;
-                break;
-            } else if text_width == content_rect.width() {
-                idx = i;
-                break;
-            } else {
-                idx = i;
-            }
-        }
-        let text = U16String::from_vec(&self.label[0..idx + 1])
-            .to_string()
-            .expect("`Label` encode u16 string to utf-8 string failed.");
+    fn paint(&mut self, painter: &mut Painter) {
+        let content_rect: FRect = self.contents_rect(Some(Coordinate::Widget)).into();
 
         painter.reset();
-        painter.set_antialiasing(true);
-        painter.set_color(self.color);
+        painter.set_antialiasing(false);
 
-        let measure = font.measure_str(&text, Some(painter.paint_ref())).1;
-        painter.set_font(font);
+        let mut color = self.color;
+        color.set_transparency(self.transparency());
+        painter.set_color(color);
 
-        let mut draw_point = content_rect.bottom_left();
+        let mut draw_point = content_rect.top_left();
         match self.content_halign {
             Align::Start => {}
             Align::Center => {
-                let offset = (content_rect.width() - text_width) / 2;
-                draw_point.set_x(draw_point.x() + offset);
+                let offset = (content_rect.width() - self.paragraph_width) / 2.;
+                if offset > 0. {
+                    draw_point.set_x(draw_point.x() + offset);
+                }
             }
             Align::End => {
-                let offset = content_rect.width() - text_width;
-                draw_point.set_x(draw_point.x() + offset);
+                let offset = content_rect.width() - self.paragraph_width;
+                if offset > 0. {
+                    draw_point.set_x(draw_point.x() + offset);
+                }
             }
         };
         match self.content_valign {
-            Align::Start => {
-                let offset = content_rect.height() - measure.height() as i32 - 2;
-                draw_point.set_y(draw_point.y() - offset);
-            }
+            Align::Start => {}
             Align::Center => {
-                let offset = (content_rect.height() - measure.height() as i32) / 2;
-                draw_point.set_y(draw_point.y() - offset);
+                let offset = (content_rect.height() - self.paragraph_height) / 2.;
+                if offset > 0. {
+                    draw_point.set_y(draw_point.y() + offset);
+                }
             }
-            Align::End => {}
+            Align::End => {
+                let offset = content_rect.height() - self.paragraph_height;
+                if offset > 0. {
+                    draw_point.set_y(draw_point.y() + offset);
+                }
+            }
         };
         debug!(
             "Paint label(Widget coordinate) contents rect = {:?}, draw point = {:?}, text = {}",
-            content_rect, draw_point, &text
+            content_rect, draw_point, &self.label
         );
-        painter.draw_text(&text, draw_point);
+
+        let (lines, ellipsis) = if self.auto_wrap {
+            (None, false)
+        } else {
+            (Some(1), true)
+        };
+
+        painter.draw_paragraph(
+            &self.label,
+            draw_point,
+            self.letter_spacing,
+            content_rect.width(),
+            lines,
+            ellipsis,
+        );
     }
 
     fn font_changed(&mut self) {
         let font: skia_safe::Font = self.font().to_skia_font();
+        let typeface = font.typeface();
+        if typeface.is_none() {
+            return;
+        }
+        let typeface = typeface.unwrap();
 
-        let mut widths = vec![0f32; self.label.len()];
-        font.get_widths(&self.label, &mut widths);
-        let width: f32 = widths.into_iter().sum();
-        let height = if self.label.len() == 0 {
-            font.metrics().1.cap_height
+        let mut typeface_provider = TypefaceFontProvider::new();
+        let family = typeface.family_name();
+        typeface_provider.register_typeface(typeface, Some(family.clone()));
+
+        let mut font_collection = FontCollection::new();
+        font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
+
+        // define text style
+        let mut style = ParagraphStyle::new();
+        let mut text_style = TextStyle::new();
+        text_style.set_font_size(font.size());
+        text_style.set_font_families(&vec![family]);
+        text_style.set_letter_spacing(self.letter_spacing);
+        style.set_text_style(&text_style);
+        if self.auto_wrap {
+            style.set_max_lines(None);
+            style.set_ellipsis("");
         } else {
-            let text = U16String::from_vec(&self.label[..])
-                .to_string()
-                .expect("`Label` encode u16 string to utf-8 string failed.");
-            font.measure_str(&text, None).1.height()
+            style.set_max_lines(Some(1));
+            style.set_ellipsis("\u{2026}");
         };
+
+        // layout the paragraph
+        let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
+        paragraph_builder.add_text(self.text());
+        let mut paragraph = paragraph_builder.build();
+        paragraph.layout(f32::MAX);
+
+        self.paragraph_width = paragraph.max_intrinsic_width().round();
+        self.paragraph_height = paragraph.height().round();
 
         let size = self.size();
 
-        if width > size.width() as f32 || height > size.height() as f32 {
-            self.set_fixed_width(width as i32 + 10);
-            self.set_fixed_height(height as i32 + 4);
+        if size.width() == 0 || size.height() == 0 {
+            self.set_fixed_width(self.paragraph_width as i32);
+            self.set_fixed_height(self.paragraph_height as i32);
+        }
+        if self.window_id() != 0 && self.window().initialized() {
+            self.window().layout_change(self);
         }
     }
 }
 
 impl Label {
+    #[inline]
     pub fn new(text: Option<&str>) -> Box<Self> {
         let mut label: Box<Self> = Object::new(&[]);
         if let Some(text) = text {
-            label.label = U16String::from_str(text).as_slice().to_vec();
+            label.label = text.to_string();
 
             label.font_changed();
         }
         label
     }
 
-    pub fn text(&self) -> String {
-        U16String::from_vec(self.label.clone()).to_string().unwrap()
+    #[inline]
+    pub fn text(&self) -> &str {
+        &self.label
     }
 
+    #[inline]
     pub fn set_text(&mut self, text: &str) {
-        let old = U16String::from_vec(&self.label[..])
-            .to_string()
-            .expect("`Label` encode u16 string to utf-8 string failed.");
-        self.label = U16String::from_str(text).as_slice().to_vec();
+        let old = self.label.clone();
+        self.label = text.to_string();
         emit!(Label::set_text => self.text_changed(), old, text);
         self.font_changed();
         self.set_rerender_styles(true);
         self.update()
     }
 
+    #[inline]
     pub fn set_color(&mut self, color: Color) {
         self.color = color;
         self.set_rerender_styles(true);
         self.update();
     }
 
+    #[inline]
     pub fn set_size(&mut self, size: i32) {
         let font = self.font_mut();
         font.set_size(size as f32);
         self.font_changed();
         self.set_rerender_styles(true);
         self.update();
+    }
+
+    #[inline]
+    pub fn set_letter_spacing(&mut self, letter_spacing: f32) {
+        self.letter_spacing = letter_spacing;
+    }
+
+    #[inline]
+    pub fn letter_spacing(&self) -> f32 {
+        self.letter_spacing
+    }
+
+    #[inline]
+    pub fn set_auto_wrap(&mut self, auto_wrap: bool) {
+        self.auto_wrap = auto_wrap;
+    }
+
+    #[inline]
+    pub fn auto_wrap(&self) -> bool {
+        self.auto_wrap
     }
 }
 

@@ -4,13 +4,14 @@ use crate::{
         ContainerScaleCalculate, ReflectSizeUnifiedAdjust, StaticContainerScaleCalculate,
         SCALE_DISMISS,
     },
+    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
     tlib::{
         object::{ObjectImpl, ObjectSubclass},
         values::{FromBytes, FromValue, ToBytes, ToValue},
     },
-    widget::WidgetImpl, graphics::painter::Painter,
+    widget::WidgetImpl,
 };
 use log::debug;
 use std::{collections::HashMap, mem::size_of, ptr::NonNull};
@@ -19,7 +20,7 @@ use tlib::{implements_enum_value, namespace::AsNumeric, nonnull_mut, split_pane_
 #[extends(Container)]
 pub struct SplitPane {
     /// The HashMap to hold all the ownership of SplitInfo.
-    split_infos: HashMap<u16, Box<SplitInfo>>,
+    split_infos: HashMap<ObjectId, Box<SplitInfo>>,
     /// The vector to hold all the raw pointer of SplitInfo, ensure execution order.
     split_infos_vec: Vec<Option<NonNull<SplitInfo>>>,
 }
@@ -77,7 +78,7 @@ impl ContainerImplExt for SplitPane {
 
 impl Layout for SplitPane {
     fn composition(&self) -> Composition {
-        SplitPane::static_composition()
+        SplitPane::static_composition(self)
     }
 
     fn position_layout(
@@ -104,7 +105,7 @@ macro_rules! split_from {
 }
 
 impl ContainerLayout for SplitPane {
-    fn static_composition() -> Composition {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::FixedContainer
     }
 
@@ -132,7 +133,7 @@ impl ContainerLayout for SplitPane {
 #[reflect_trait]
 pub trait SplitInfosGetter {
     /// Get the split infos map.
-    fn split_infos(&mut self) -> &mut HashMap<u16, Box<SplitInfo>>;
+    fn split_infos(&mut self) -> &mut HashMap<ObjectId, Box<SplitInfo>>;
 
     /// Get the plit infos deque.
     fn split_infos_vec(&mut self) -> &mut Vec<Option<NonNull<SplitInfo>>>;
@@ -145,7 +146,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_left<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
+    fn split_left<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
 
     /// Split new widget up.
     ///
@@ -153,7 +154,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_up<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
+    fn split_up<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
 
     /// Split new widget right.
     ///
@@ -161,7 +162,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_right<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
+    fn split_right<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
 
     /// Split new widget down.
     ///
@@ -169,22 +170,22 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_down<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>);
+    fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
 
     /// Close the split pane, the widgets were splited from this pane will be closed automatically.
     ///
     /// @param: id the id of target widget where user click on. <br>
-    fn close_pane(&mut self, id: u16);
+    fn close_pane(&mut self, id: ObjectId);
 
     /// Common function of split().
-    fn split<T: WidgetImpl>(&mut self, id: u16, widget: Box<T>, ty: SplitType);
+    fn split<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>, ty: SplitType);
 }
 
 split_pane_impl!(SplitPane);
 
 pub struct SplitInfo {
     /// The id of self widget.
-    pub id: u16,
+    pub id: ObjectId,
     /// The self widget ptr which the `SplitInfo` binded.
     pub widget: Option<NonNull<dyn WidgetImpl>>,
     /// The ptr of `SplitInfo` which this widget splited from.
@@ -198,7 +199,7 @@ pub struct SplitInfo {
 impl SplitInfo {
     #[inline]
     pub fn new(
-        id: u16,
+        id: ObjectId,
         widget: Option<NonNull<dyn WidgetImpl>>,
         split_from: Option<NonNull<SplitInfo>>,
         ty: SplitType,
@@ -379,6 +380,5 @@ impl StaticContainerScaleCalculate for SplitPane {
 }
 
 impl ChildContainerDiffRender for SplitPane {
-    fn container_diff_render(&mut self, _painter: &mut Painter) {
-    }
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }

@@ -8,6 +8,8 @@ use skia_safe::{
 use FontWeight::*;
 use FontWidth::*;
 
+const DEFAULT_FONT_FAMILY: &'static str = "Arial";
+
 /////////////////////////////////////////////////////////////////////////////////////////
 /// [`Font`]
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -30,13 +32,19 @@ pub struct Font {
 impl Default for Font {
     #[inline]
     fn default() -> Self {
-        skia_safe::Font::default().into()
+        let mut font: Font = skia_safe::Font::default().into();
+
+        let typeface = FontTypeface::builder().family(DEFAULT_FONT_FAMILY).build();
+        font.set_typeface(typeface);
+
+        font
     }
 }
 
 impl Font {
     #[inline]
     fn new() -> Self {
+        let typeface = FontTypeface::builder().family(DEFAULT_FONT_FAMILY).build();
         Self {
             force_auto_hinting: Default::default(),
             embedded_bitmaps: Default::default(),
@@ -46,7 +54,7 @@ impl Font {
             baseline_snap: Default::default(),
             edging: Default::default(),
             hinting: Default::default(),
-            typeface: Default::default(),
+            typeface: Some(typeface),
             size: Default::default(),
             scale_x: Default::default(),
             skew_x: Default::default(),

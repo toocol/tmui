@@ -2,7 +2,6 @@ use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::{
     mem::size_of,
     sync::atomic::{AtomicBool, Ordering},
-    thread,
 };
 
 #[repr(C)]
@@ -24,9 +23,7 @@ impl MemMutex {
                 .size(size_of::<_MemMutex>())
                 .os_id(&key)
                 .create()?,
-            MemMutexOp::Open => ShmemConf::new()
-                .os_id(&key)
-                .open()?,
+            MemMutexOp::Open => ShmemConf::new().os_id(&key).open()?,
         };
         Ok(Self { inner })
     }
@@ -46,9 +43,7 @@ impl MemMutex {
             .locked
             .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
             .is_err()
-        {
-            thread::yield_now();
-        }
+        {}
 
         MemMutexGuard::new(self)
     }

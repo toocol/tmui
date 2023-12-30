@@ -15,7 +15,7 @@ use std::{
         atomic::{AtomicPtr, Ordering},
         Once,
     },
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, SystemTime},
 };
 
 static INIT: Once = Once::new();
@@ -26,8 +26,8 @@ lazy_static! {
 
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
-    timers: RefCell<Box<HashMap<u16, Option<NonNull<Timer>>>>>,
-    once_timers: RefCell<Box<HashMap<u16, Box<Timer>>>>,
+    timers: RefCell<Box<HashMap<ObjectId, Option<NonNull<Timer>>>>>,
+    once_timers: RefCell<Box<HashMap<ObjectId, Box<Timer>>>>,
 }
 
 impl TimerHub {
@@ -47,7 +47,7 @@ impl TimerHub {
         }
     }
 
-    fn contains_timer(id: u16) -> bool {
+    fn contains_timer(id: ObjectId) -> bool {
         Self::instance().timers.borrow().contains_key(&id)
     }
 
@@ -103,7 +103,7 @@ impl TimerHub {
         })
     }
 
-    fn delete_timer(&self, id: u16) {
+    fn delete_timer(&self, id: ObjectId) {
         self.timers.borrow_mut().remove(&id);
     }
 }
@@ -193,26 +193,6 @@ impl ObjectSubclass for Timer {
 }
 
 impl ObjectImpl for Timer {}
-
-/// More accurate sleep, resulting in more CPU usage.
-#[inline]
-pub fn sleep(wait: Duration) {
-    let wait_until = Instant::now() + wait;
-
-    loop {
-        let now = Instant::now();
-        if now >= wait_until {
-            break;
-        }
-        let remaining_time = wait_until - now;
-
-        if remaining_time >= Duration::from_millis(10) {
-            std::thread::park_timeout(Duration::from_millis(1));
-        } else {
-            std::thread::yield_now();
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
