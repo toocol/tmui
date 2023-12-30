@@ -1,25 +1,20 @@
 #![cfg(free_unix)]
-use crate::{
-    platform::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext},
-    primitive::bitmap::Bitmap,
+use crate::platform::{
+    logic_window::LogicWindow, physical_window::PhysicalWindow, win_config::WindowConfig,
+    PlatformContext,
 };
-use std::sync::{mpsc::Sender, Arc};
-use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
+use std::sync::Arc;
+use tipc::{ipc_master::IpcMaster, WithIpcMaster};
 
 pub(crate) struct PlatformX11<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    title: String,
-
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformX11<T, M> {
     #[inline]
-    pub fn new(title: &str, width: u32, height: u32) -> Self {
-        Self {
-            title: title.to_string(),
-            master: None,
-        }
+    pub fn new() -> Self {
+        Self { master: None }
     }
 
     // Wrap trait `PlatfomContext` with [`Box`].
@@ -36,11 +31,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         todo!()
     }
 
-    fn title(&self) -> &str {
-        todo!()
-    }
-
-    fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(
+        &mut self,
+        win_config: WindowConfig,
+    ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         todo!()
     }
 }

@@ -1,26 +1,18 @@
 #![cfg(free_unix)]
-use crate::{
-    platform::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext},
-    primitive::bitmap::Bitmap,
-};
-use std::sync::{mpsc::Sender, Arc};
-use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
+use crate::platform::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, win_config::WindowConfig};
+use std::sync::Arc;
+use tipc::{ipc_master::IpcMaster, WithIpcMaster};
 
 pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>
 {
-    title: String,
-
     /// Shared memory ipc
     master: Option<Arc<IpcMaster<T, M>>>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformWayland<T, M> {
     #[inline]
-    pub fn new(title: &str, width: u32, height: u32) -> Self {
+    pub fn new() -> Self {
         Self {
-            title: title.to_string(),
-            width,
-            height,
             master: None,
         }
     }
@@ -36,10 +28,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     for PlatformWayland<T, M>
 {
     fn initialize(&mut self) {
-        todo!()
-    }
-
-    fn title(&self) -> &str {
         todo!()
     }
 
