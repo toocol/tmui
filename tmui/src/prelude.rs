@@ -33,7 +33,9 @@ pub use crate::overlay::{Overlaid, ReflectOverlaid};
 pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
-pub use crate::shared_widget::{SharedWidget, SharedWidgetExt, SharedWidgetImpl, ReflectSharedWidgetImpl};
+pub use crate::shared_widget::{
+    ReflectSharedWidgetImpl, SharedWidget, SharedWidgetExt, SharedWidgetImpl,
+};
 pub use crate::split_pane::{
     ReflectSplitInfosGetter, SplitInfo, SplitInfosGetter, SplitPane, SplitPaneExt, SplitType,
 };
@@ -43,5 +45,8 @@ pub use crate::widget::{
     ChildRegionAcquirer, PointEffective, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire,
     WidgetExt, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
 };
-pub use tlib::figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size};
 pub use tlib::tokio;
+pub use tlib::{
+    figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size},
+    {self},
+};
