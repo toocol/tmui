@@ -17,30 +17,25 @@ use cocoa::{
 };
 use objc::runtime::Object;
 use std::sync::{mpsc::channel, Arc};
-use tipc::{ipc_master::IpcMaster, IpcNode, RwLock, WithIpcMaster};
+use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
 use tlib::winit::{
-    dpi::{PhysicalSize, Size},
     event_loop::EventLoopBuilder,
     raw_window_handle::{HasWindowHandle, RawWindowHandle},
-    window::WindowBuilder,
 };
 
 use self::macos_window::MacosWindow;
 
-use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext};
+use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, win_config::{WindowConfig, self}, ipc_inner_agent::InnerAgent};
 
 pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    title: String,
-
     // Ipc shared memory context.
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformMacos<T, M> {
     #[inline]
-    pub fn new(title: &str, width: u32, height: u32) -> Self {
+    pub fn new() -> Self {
         Self {
-            title: title.to_string(),
             master: None,
         }
     }
@@ -55,31 +50,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformMacos<T, M>
 {
-    fn initialize(&mut self) {
-        match self.master {
-            Some(ref master) => {
-                let master = master.read();
-                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::from_raw_pointer(
-                    master.buffer_raw_pointer(),
-                    self.width,
-                    self.height,
-                    master.buffer_lock(),
-                    master.name(),
-                    master.ty(),
-                ))));
-            }
-            None => {
-                self.bitmap = Some(Arc::new(RwLock::new(Bitmap::new(self.width, self.height))));
-            }
-        }
-    }
-
-    #[inline]
-    fn title(&self) -> &str {
-        &self.title
-    }
+    fn initialize(&mut self) {}
 
     fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+        let inner_agent = if self.master.is_some() {
+            let master = self.master.as_ref().unwrap().clone();
+            Some(InnerAgent::master(master))
+        } else {
+            None
+        };
+        let (width, height) = win_config.size();
+        let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
+
         let event_loop = EventLoopBuilder::<Message>::with_user_event()
             .build()
             .unwrap();
@@ -89,11 +71,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
         }
 
-        let window = WindowBuilder::new()
-            .with_title(&self.title)
-            .with_inner_size(Size::Physical(PhysicalSize::new(self.width, self.height)))
-            .build(&event_loop)
-            .unwrap();
+        let window = win_config::build_window(win_config, &event_loop).unwrap();
 
         let window_handle = window.window_handle().unwrap().as_raw();
         let ns_view: id = match window_handle {
@@ -119,7 +97,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         (
             LogicWindow::master(
-                self.bitmap(),
+                bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
                 LogicWindowContext {
@@ -129,7 +107,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             ),
             PhysicalWindow::Macos(MacosWindow::new(
                 ns_view,
-                self.bitmap(),
+                bitmap,
                 self.master.clone(),
                 PhysicalWindowContext::Default(
                     window,

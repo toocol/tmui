@@ -44,17 +44,11 @@ impl<T: 'static + Copy, M: 'static + Copy> SlaveContext<T, M> {
                 .as_ref()
                 .unwrap()
         };
-        let (width, height, name_helper) = (
-            sinfo.width.load(Ordering::Acquire),
-            sinfo.height.load(Ordering::Acquire),
-            sinfo.name_helper.load(Ordering::Acquire),
-        );
+        let name_helper = sinfo.name_helper.load(Ordering::Acquire);
         let buffer_name = format!(
-            "{}{}{}{}_{}",
+            "{}{}_{}",
             name.to_string(),
             IPC_MEM_BUFFER_NAME,
-            width,
-            height,
             name_helper
         );
         let buffer = ShmemConf::new().os_id(buffer_name).open().unwrap();
@@ -233,8 +227,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
         self.buffer_lock.clone()
     }
 
-    fn pretreat_resize(&mut self, _width: u32, _height: u32){
-    }
+    fn pretreat_resize(&mut self, _width: u32, _height: u32) {}
 
     fn create_buffer(&mut self, _: u32, _: u32) {
         unreachable!()
