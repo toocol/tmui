@@ -165,7 +165,7 @@ pub trait Snapshot: WidgetImpl + Animatable {
                     )
                 }
 
-                self.propagate_update_global_rect(self.rect());
+                self.propagate_update_styles_rect(CoordRect::new(self.rect(), Coordinate::World));
                 self.set_rerender_styles(true);
             }
 

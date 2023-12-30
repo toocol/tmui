@@ -1,9 +1,10 @@
 use crate::{
+    namespace::Coordinate,
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Type, Value,
 };
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Point
@@ -429,14 +430,88 @@ impl FromValue for FPoint {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// CoordPoint
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub struct CoordPoint(FPoint, Coordinate);
+impl CoordPoint {
+    #[inline]
+    pub fn new<T: Into<FPoint>>(point: T, coord: Coordinate) -> Self {
+        Self(point.into(), coord)
+    }
+
+    #[inline]
+    pub fn point(&self) -> FPoint {
+        self.0
+    }
+
+    #[inline]
+    pub fn coord(&self) -> Coordinate {
+        self.1
+    }
+}
+
+impl StaticType for CoordPoint {
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("CoordPoint")
+    }
+
+    fn bytes_len() -> usize {
+        FPoint::bytes_len() + Coordinate::bytes_len()
+    }
+}
+
+impl ToBytes for CoordPoint {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.0.to_bytes());
+        bytes.append(&mut self.1.to_bytes());
+        bytes
+    }
+}
+
+impl FromBytes for CoordPoint {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let point = FPoint::from_bytes(&data[0..8], 8);
+        let coord = Coordinate::from_bytes(&data[8..9], 1);
+        Self(point, coord)
+    }
+}
+
+impl ToValue for CoordPoint {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+
+impl FromValue for CoordPoint {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::Point;
+    use crate::{namespace::Coordinate, prelude::ToValue};
+
+    use super::{Point, CoordPoint};
 
     #[test]
     fn test_mut_ref() {
         let mut pos: Point = (0, 0).into();
         *pos.x_mut() += 1;
         assert_eq!(pos.x(), 1);
+    }
+
+    #[test]
+    fn test_coord_point_value() {
+        let p = CoordPoint::new((10, 10), Coordinate::Widget);
+        let val = p.to_value();
+        assert_eq!(p, val.get::<CoordPoint>())
     }
 }

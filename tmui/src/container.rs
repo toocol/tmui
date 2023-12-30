@@ -68,27 +68,15 @@ impl ObjectImpl for Container {
                 }
             }
             "propagate_update_rect" => {
-                let rect = value.get::<Rect>();
+                let rect = value.get::<CoordRect>();
                 for child in self.children.iter_mut() {
                     child.propagate_update_rect(rect)
                 }
             }
-            "propagate_update_rect_f" => {
-                let rect = value.get::<FRect>();
+            "propagate_update_styles_rect" => {
+                let rect = value.get::<CoordRect>();
                 for child in self.children.iter_mut() {
-                    child.propagate_update_rect_f(rect)
-                }
-            }
-            "propagate_update_global_rect" => {
-                let rect = value.get::<Rect>();
-                for child in self.children.iter_mut() {
-                    child.propagate_update_global_rect(rect)
-                }
-            }
-            "propagate_update_global_rect_f" => {
-                let rect = value.get::<FRect>();
-                for child in self.children.iter_mut() {
-                    child.propagate_update_global_rect_f(rect)
+                    child.propagate_update_styles_rect(rect)
                 }
             }
             "animation_progressing" => {

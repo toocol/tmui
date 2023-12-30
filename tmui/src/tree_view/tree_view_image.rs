@@ -81,7 +81,7 @@ impl WidgetImpl for TreeViewImage {
 
     fn paint(&mut self, mut painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
-            painter.fill_rect(*redraw_rect, self.background());
+            painter.fill_rect(redraw_rect.rect(), self.background());
         }
 
         let rect = self.contents_rect(Some(Coordinate::Widget));
@@ -226,7 +226,7 @@ impl TreeViewImage {
         let rect: Rect = (x, y, width, height).into();
 
         if rect.is_valid() {
-            self.update_rect(rect)
+            self.update_rect(CoordRect::new(rect, Coordinate::Widget))
         }
     }
 

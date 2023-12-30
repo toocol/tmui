@@ -761,23 +761,13 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn propagate_update_rect(&mut self, rect: Rect) {
+            fn propagate_update_rect(&mut self, rect: CoordRect) {
                 self.#(#widget_path).*.propagate_update_rect(rect)
             }
 
             #[inline]
-            fn propagate_update_rect_f(&mut self, rect: FRect) {
-                self.#(#widget_path).*.propagate_update_rect_f(rect)
-            }
-
-            #[inline]
-            fn propagate_update_global_rect(&mut self, rect: Rect) {
-                self.#(#widget_path).*.propagate_update_global_rect(rect)
-            }
-
-            #[inline]
-            fn propagate_update_global_rect_f(&mut self, rect: FRect) {
-                self.#(#widget_path).*.propagate_update_global_rect_f(rect)
+            fn propagate_update_styles_rect(&mut self, rect: CoordRect) {
+                self.#(#widget_path).*.propagate_update_styles_rect(rect)
             }
 
             #[inline]

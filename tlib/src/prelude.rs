@@ -5,6 +5,8 @@ pub use macros::{
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
 pub use crate::emit;
 pub use crate::figure::font::Font;
+pub use crate::figure::region::CoordRegion;
+pub use crate::figure::rectangle::CoordRect;
 pub use crate::global::AsAny;
 pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
 pub use crate::object::{

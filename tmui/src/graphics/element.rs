@@ -1,8 +1,7 @@
 use crate::{application_window::current_window_id, widget::WidgetImpl};
-
 use super::{board::Board, drawing_context::DrawingContext};
 use tlib::{
-    figure::{Rect, Region, FRect, FRegion},
+    figure::{Rect, CoordRegion, CoordRect},
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
 };
@@ -13,11 +12,8 @@ pub struct Element {
     window_id: ObjectId,
     old_rect: Rect,
     rect: Rect,
-    /// The region rect of element's coordinate was `Widget`.
-    redraw_region: Region,
-    redraw_region_f: FRegion,
-    global_redraw_region: Region,
-    global_redraw_region_f: FRegion,
+    redraw_region: CoordRegion,
+    styles_redraw_region: CoordRegion,
 }
 
 impl ObjectSubclass for Element {
@@ -59,45 +55,22 @@ pub trait ElementExt: 'static {
     /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
     fn force_update(&mut self);
 
-    /// Specified the rects to redraw. (Rect point's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget))
+    /// Specified the rects to redraw.
+    /// This will result in clipping the drawing area of the widget.(after styles render)
     ///
     /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
-    fn update_rect(&mut self, rect: Rect);
+    fn update_rect(&mut self, rect: CoordRect);
 
-    /// Specified the float rects to redraw. (Rect point's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget))
+    /// Specified the styles rects to redraw.
+    /// This will result in clipping the drawing area of the widget.(before styles render)
     ///
-    /// Go to[`Function defination`](ElementExt::update_rect_f) (Defined in [`ElementExt`])
-    fn update_rect_f(&mut self, rect: FRect);
-
-    /// Specified the region to redraw. (Rect point's coordinate was [`World`](tlib::namespace::Coordinate::World))
-    ///
-    /// Go to[`Function defination`](ElementExt::update_global_rect) (Defined in [`ElementExt`])
-    fn update_global_rect(&mut self, rect: Rect);
-
-    /// Specified the float region to redraw. (Rect point's coordinate was [`World`](tlib::namespace::Coordinate::World))
-    ///
-    /// Go to[`Function defination`](ElementExt::update_global_rect_f) (Defined in [`ElementExt`])
-    fn update_global_rect_f(&mut self, rect: FRect);
+    /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
+    fn update_styles_rect(&mut self, rect: CoordRect);
 
     /// Specified the region to redraw.
     ///
     /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
-    fn update_region(&mut self, region: &Region);
-
-    /// Specified the region to redraw.
-    ///
-    /// Go to[`Function defination`](ElementExt::update_region_f) (Defined in [`ElementExt`])
-    fn update_region_f(&mut self, region: &FRegion);
-
-    /// Specified the region to redraw.
-    ///
-    /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
-    fn update_global_region(&mut self, region: &Region);
-
-    /// Specified the region to redraw.
-    ///
-    /// Go to[`Function defination`](ElementExt::update_region_f) (Defined in [`ElementExt`])
-    fn update_global_region_f(&mut self, region: &FRegion);
+    fn update_region(&mut self, region: &CoordRegion);
 
     /// Cleaer the redraw region.
     ///
@@ -105,28 +78,14 @@ pub trait ElementExt: 'static {
     fn clear_regions(&mut self);
 
     /// Get the redraw region. <br>
-    /// The region rect of element's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget).
     ///
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
-    fn redraw_region(&self) -> &Region;
+    fn redraw_region(&self) -> &CoordRegion;
 
-    /// Get the redraw region. <br>
-    /// The region rect of element's coordinate was [`Widget`](tlib::namespace::Coordinate::Widget).
+    /// Get the styles redraw region. <br>
     ///
     /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
-    fn redraw_region_f(&self) -> &FRegion;
-
-    /// Get the redraw region. <br>
-    /// The region rect of element's coordinate was [`World`](tlib::namespace::Coordinate::World).
-    ///
-    /// Go to[`Function defination`](ElementExt::global_redraw_region) (Defined in [`ElementExt`])
-    fn global_redraw_region(&self) -> &Region;
-
-    /// Get the redraw region. <br>
-    /// The region rect of element's coordinate was [`World`](tlib::namespace::Coordinate::World).
-    ///
-    /// Go to[`Function defination`](ElementExt::global_redraw_region) (Defined in [`ElementExt`])
-    fn global_redraw_region_f(&self) -> &FRegion;
+    fn styles_redraw_region(&self) -> &CoordRegion;
 
     /// Go to[`Function defination`](ElementExt::rect) (Defined in [`ElementExt`])
     fn rect(&self) -> Rect;
@@ -180,83 +139,37 @@ impl ElementExt for Element {
     }
 
     #[inline]
-    fn update_rect(&mut self, rect: Rect) {
+    fn update_rect(&mut self, rect: CoordRect) {
         self.redraw_region.add_rect(rect)
     }
 
     #[inline]
-    fn update_rect_f(&mut self, rect: FRect) {
-        self.redraw_region_f.add_rect(rect)
+    fn update_styles_rect(&mut self, rect: CoordRect) {
+        self.styles_redraw_region.add_rect(rect)
     }
 
     #[inline]
-    fn update_global_rect(&mut self, rect: Rect) {
-        self.global_redraw_region.add_rect(rect)
-    }
-
-    #[inline]
-    fn update_global_rect_f(&mut self, rect: FRect) {
-        self.global_redraw_region_f.add_rect(rect)
-    }
-
-    #[inline]
-    fn update_region(&mut self, region: &Region) {
+    fn update_region(&mut self, region: &CoordRegion) {
         if region.is_empty() {
             return
         }
         self.redraw_region.add_region(region)
-    }
-
-    #[inline]
-    fn update_region_f(&mut self, region: &FRegion) {
-        if region.is_empty() {
-            return
-        }
-        self.redraw_region_f.add_region(region)
-    }
-
-    #[inline]
-    fn update_global_region(&mut self, region: &Region) {
-        if region.is_empty() {
-            return
-        }
-        self.redraw_region.add_region(region)
-    }
-
-    #[inline]
-    fn update_global_region_f(&mut self, region: &FRegion) {
-        if region.is_empty() {
-            return
-        }
-        self.redraw_region_f.add_region(region)
     }
 
     #[inline]
     fn clear_regions(&mut self) {
         self.redraw_region.clear();
-        self.redraw_region_f.clear();
-        self.global_redraw_region.clear();
-        self.global_redraw_region_f.clear();
+        self.styles_redraw_region.clear();
     }
 
     #[inline]
-    fn redraw_region(&self) -> &Region {
+    fn redraw_region(&self) -> &CoordRegion {
         &self.redraw_region
     }
 
     #[inline]
-    fn redraw_region_f(&self) -> &FRegion {
-        &self.redraw_region_f
-    }
-
-    #[inline]
-    fn global_redraw_region(&self) -> &Region {
-        &self.global_redraw_region
-    }
-
-    #[inline]
-    fn global_redraw_region_f(&self) -> &FRegion {
-        &self.global_redraw_region_f
+    fn styles_redraw_region(&self) -> &CoordRegion {
+        &self.styles_redraw_region
     }
 
     #[inline]
