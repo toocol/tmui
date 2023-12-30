@@ -316,7 +316,7 @@ impl ApplicationWindow {
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
             if region.intersects_rect(dirty_irect) {
                 widget.set_rerender_styles(true);
-                widget.update_global_rect(dirty_rect);
+                widget.update_styles_rect(CoordRect::new(dirty_rect, Coordinate::World));
             }
         }
     }

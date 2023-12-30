@@ -257,30 +257,16 @@ impl Widget {
     }
 
     #[inline]
-    fn notify_propagate_update_rect(&mut self, rect: Rect) {
+    fn notify_propagate_update_rect(&mut self, rect: CoordRect) {
         if let Some(child) = self.get_child_mut() {
             child.propagate_update_rect(rect);
         }
     }
 
     #[inline]
-    fn notify_propagate_update_rect_f(&mut self, rect: FRect) {
+    fn notify_propagate_update_styles_rect(&mut self, rect: CoordRect) {
         if let Some(child) = self.get_child_mut() {
-            child.propagate_update_rect_f(rect);
-        }
-    }
-
-    #[inline]
-    fn notify_propagate_update_global_rect(&mut self, rect: Rect) {
-        if let Some(child) = self.get_child_mut() {
-            child.propagate_update_global_rect(rect);
-        }
-    }
-
-    #[inline]
-    fn notify_propagate_update_global_rect_f(&mut self, rect: FRect) {
-        if let Some(child) = self.get_child_mut() {
-            child.propagate_update_global_rect_f(rect);
+            child.propagate_update_styles_rect(rect);
         }
     }
 
@@ -362,20 +348,12 @@ impl ObjectImpl for Widget {
                 }
             }
             "propagate_update_rect" => {
-                let rect = value.get::<Rect>();
+                let rect = value.get::<CoordRect>();
                 self.notify_propagate_update_rect(rect);
             }
-            "propagate_update_rect_f" => {
-                let rect = value.get::<FRect>();
-                self.notify_propagate_update_rect_f(rect);
-            }
-            "propagate_update_global_rect" => {
-                let rect = value.get::<Rect>();
-                self.notify_propagate_update_global_rect(rect);
-            }
-            "propagate_update_global_rect_f" => {
-                let rect = value.get::<FRect>();
-                self.notify_propagate_update_global_rect_f(rect);
+            "propagate_update_styles_rect" => {
+                let rect = value.get::<CoordRect>();
+                self.notify_propagate_update_styles_rect(rect);
             }
             "animation_progressing" => {
                 let is = value.get::<bool>();
@@ -421,7 +399,9 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         }
         geometry.set_point(&(0, 0).into());
 
-        painter_clip(self, &mut painter);
+        painter.save();
+        painter.clip_region(self.child_region(), ClipOp::Difference);
+        painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
         if !self.first_rendered() || self.rerender_styles() {
             // Draw the background color of the Widget.
@@ -457,6 +437,8 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
             ClipOp::Intersect,
         );
 
+        painter_clip(self, &mut painter, self.redraw_region().iter());
+
         self.paint(&mut painter);
 
         painter.restore();
@@ -464,61 +446,13 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 }
 
 #[inline]
-pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter) {
-    painter.save();
-
-    painter.clip_region(widget.child_region(), ClipOp::Difference);
-
-    handle_clip_redraw_region(widget, widget.redraw_region().iter(), painter, false);
-
-    handle_clip_redraw_region_f(widget, widget.redraw_region_f().iter(), painter, false);
-
-    handle_clip_redraw_region(widget, widget.global_redraw_region().iter(), painter, true);
-
-    handle_clip_redraw_region_f(
-        widget,
-        widget.global_redraw_region_f().iter(),
-        painter,
-        true,
-    );
-}
-
-#[inline]
-pub(crate) fn handle_clip_redraw_region(
-    widget: &dyn WidgetImpl,
-    iter: Iter<Rect>,
-    painter: &mut Painter,
-    global: bool,
-) {
+pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter, iter: Iter<CoordRect>) {
     let mut region = skia_safe::Region::new();
     let mut op = false;
-    for &r in iter {
-        let mut r = r;
-        if !global {
-            r.set_point(&widget.map_to_global(&r.point()))
-        }
-
-        let r: skia_safe::IRect = r.into();
-        region.op_rect(r, RegionOp::Union);
-        op = true;
-    }
-    if op {
-        painter.clip_region(region, ClipOp::Intersect);
-    }
-}
-
-#[inline]
-pub(crate) fn handle_clip_redraw_region_f(
-    widget: &dyn WidgetImpl,
-    iter: Iter<FRect>,
-    painter: &mut Painter,
-    global: bool,
-) {
-    let mut region = skia_safe::Region::new();
-    let mut op = false;
-    for &r in iter {
-        let mut r = r;
-        if !global {
+    for r in iter {
+        let coord =r.coord();
+        let mut r = r.rect();
+        if coord != Coordinate::World {
             r.set_point(&widget.map_to_global_f(&r.point()))
         }
 
@@ -1090,28 +1024,16 @@ pub trait WidgetExt {
     fn propagate_update(&mut self);
 
     /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
-    /// Coordinate: [`Widget`](tlib::namespace::Coordinate::Widget)
+    /// This will result in clipping the drawing area of the widget.(after styles render)
     ///
     /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
-    fn propagate_update_rect(&mut self, rect: Rect);
+    fn propagate_update_rect(&mut self, rect: CoordRect);
 
-    /// Invalidate this widget with float dirty rect to update it, and also update the child widget..<br>
-    /// Coordinate: [`Widget`](tlib::namespace::Coordinate::Widget)
+    /// Invalidate this widget with dirty styles rect to update it, and also update the child widget..<br>
+    /// This will result in clipping the drawing area of the widget.(before styles render)
     ///
-    /// Go to[`Function defination`](WidgetExt::propagate_update_rect_f) (Defined in [`WidgetExt`])
-    fn propagate_update_rect_f(&mut self, rect: FRect);
-
-    /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
-    /// Coordinate: [`World`](tlib::namespace::Coordinate::World)
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_update_global_rect) (Defined in [`WidgetExt`])
-    fn propagate_update_global_rect(&mut self, rect: Rect);
-
-    /// Invalidate this widget with float dirty rect to update it, and also update the child widget..<br>
-    /// Coordinate: [`World`](tlib::namespace::Coordinate::World)
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_update_global_rect_f) (Defined in [`WidgetExt`])
-    fn propagate_update_global_rect_f(&mut self, rect: FRect);
+    /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
+    fn propagate_update_styles_rect(&mut self, rect: CoordRect);
 
     /// Check if the widget is a descendant of the widget represented by the specified id.
     ///
@@ -1967,31 +1889,17 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn propagate_update_rect(&mut self, rect: Rect) {
+    fn propagate_update_rect(&mut self, rect: CoordRect) {
         self.update_rect(rect);
 
         self.set_property("propagate_update_rect", rect.to_value());
     }
 
     #[inline]
-    fn propagate_update_rect_f(&mut self, rect: FRect) {
-        self.update_rect_f(rect);
+    fn propagate_update_styles_rect(&mut self, rect: CoordRect) {
+        self.update_styles_rect(rect);
 
-        self.set_property("propagate_update_rect_f", rect.to_value());
-    }
-
-    #[inline]
-    fn propagate_update_global_rect(&mut self, rect: Rect) {
-        self.update_global_rect(rect);
-
-        self.set_property("propagate_update_global_rect", rect.to_value());
-    }
-
-    #[inline]
-    fn propagate_update_global_rect_f(&mut self, rect: FRect) {
-        self.update_global_rect_f(rect);
-
-        self.set_property("propagate_update_global_rect_f", rect.to_value());
+        self.set_property("propagate_update_styles_rect", rect.to_value());
     }
 
     #[inline]

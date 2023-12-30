@@ -1,6 +1,6 @@
 use std::{vec::IntoIter, slice::{Iter, IterMut}};
 
-use super::{Rect, Point, FRect, FPoint};
+use super::{Rect, Point, FRect, FPoint, CoordRect};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Region
@@ -176,6 +176,72 @@ impl FRegion {
 
 impl IntoIterator for FRegion {
     type Item = FRect;
+
+    type IntoIter = IntoIter<Self::Item>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.regions.into_iter()
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// CoordRegion
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct CoordRegion {
+    regions: Vec<CoordRect>,
+}
+impl CoordRegion {
+    #[inline]
+    pub fn new() -> Self {
+        Self { regions: vec![] }
+    }
+
+    #[inline]
+    pub fn add_rect(&mut self, rect: CoordRect) {
+        self.regions.push(rect)
+    }
+
+    #[inline]
+    pub fn add_region(&mut self, region: &CoordRegion) {
+        for rect in region.iter() {
+            self.add_rect(*rect);
+        }
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.regions.clear()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.regions.is_empty()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.regions.len()
+    }
+
+    #[inline]
+    pub fn regions(&self) -> &Vec<CoordRect> {
+        &self.regions
+    }
+
+    #[inline]
+    pub fn iter(&self) -> Iter<CoordRect> {
+        self.regions.iter()
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<CoordRect> {
+        self.regions.iter_mut()
+    }
+}
+impl IntoIterator for CoordRegion {
+    type Item = CoordRect;
 
     type IntoIter = IntoIter<Self::Item>;
 

@@ -97,59 +97,24 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn update_rect(&mut self, rect: Rect) {
+            fn update_rect(&mut self, rect: CoordRect) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
                 self.#(#element_path).*.update_rect(rect);
             }
 
             #[inline]
-            fn update_rect_f(&mut self, rect: FRect) {
+            fn update_styles_rect(&mut self, rect: CoordRect) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
-                self.#(#element_path).*.update_rect_f(rect);
+                self.#(#element_path).*.update_styles_rect(rect);
             }
 
             #[inline]
-            fn update_global_rect(&mut self, rect: Rect) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_global_rect(rect);
-            }
-
-            #[inline]
-            fn update_global_rect_f(&mut self, rect: FRect) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_global_rect_f(rect);
-            }
-
-            #[inline]
-            fn update_region(&mut self, region: &Region) {
+            fn update_region(&mut self, region: &CoordRegion) {
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
                 self.#(#element_path).*.update_region(region);
-            }
-
-            #[inline]
-            fn update_region_f(&mut self, region: &FRegion) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_region_f(region);
-            }
-
-            #[inline]
-            fn update_global_region(&mut self, region: &Region) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_global_region(region);
-            }
-
-            #[inline]
-            fn update_global_region_f(&mut self, region: &FRegion) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_global_region_f(region);
             }
 
             #[inline]
@@ -158,23 +123,13 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
 
             #[inline]
-            fn redraw_region(&self) -> &Region {
+            fn redraw_region(&self) -> &CoordRegion {
                 self.#(#element_path).*.redraw_region()
             }
 
             #[inline]
-            fn redraw_region_f(&self) -> &FRegion {
-                self.#(#element_path).*.redraw_region_f()
-            }
-
-            #[inline]
-            fn global_redraw_region(&self) -> &Region {
-                self.#(#element_path).*.global_redraw_region()
-            }
-
-            #[inline]
-            fn global_redraw_region_f(&self) -> &FRegion {
-                self.#(#element_path).*.global_redraw_region_f()
+            fn styles_redraw_region(&self) -> &CoordRegion {
+                self.#(#element_path).*.styles_redraw_region()
             }
 
             #[inline]

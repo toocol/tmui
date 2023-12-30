@@ -1,8 +1,8 @@
-use super::{point::Point, FPoint, FSize, Size};
+use super::{point::Point, FPoint, FSize, Size, CoordPoint};
 use crate::{
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
-    Value,
+    Value, namespace::Coordinate, Type,
 };
 use std::{
     ops::{Add, Div, Mul, Sub},
@@ -993,6 +993,17 @@ impl FRect {
     }
 }
 
+impl From<(i32, i32, i32, i32)> for FRect {
+    fn from((x, y, width, height): (i32, i32, i32, i32)) -> Self {
+        Self {
+            x: x as f32,
+            y: y as f32,
+            width: width as f32,
+            height: height as f32,
+        }
+    }
+}
+
 impl From<(f32, f32, f32, f32)> for FRect {
     fn from((x, y, width, height): (f32, f32, f32, f32)) -> Self {
         Self {
@@ -1650,6 +1661,96 @@ impl Into<Rect> for AtomicRect {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// CoordRect
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub struct CoordRect(FRect, Coordinate);
+impl CoordRect {
+    #[inline]
+    pub fn new<T: Into<FRect>>(rect: T, coord: Coordinate) -> Self {
+        Self(rect.into(), coord)
+    }
+
+    #[inline]
+    pub fn rect(&self) -> FRect {
+        self.0
+    }
+
+    #[inline]
+    pub fn coord(&self) -> Coordinate {
+        self.1
+    }
+
+    #[inline]
+    pub fn point(&self) -> CoordPoint {
+        CoordPoint::new(self.0.point(), self.1)
+    }
+
+    #[inline]
+    pub fn top_left(&self) -> CoordPoint {
+        CoordPoint::new(self.0.top_left(), self.1)
+    }
+
+    #[inline]
+    pub fn top_right(&self) -> CoordPoint {
+        CoordPoint::new(self.0.top_left(), self.1)
+    }
+
+    #[inline]
+    pub fn bottom_left(&self) -> CoordPoint {
+        CoordPoint::new(self.0.top_left(), self.1)
+    }
+
+    #[inline]
+    pub fn bottom_right(&self) -> CoordPoint {
+        CoordPoint::new(self.0.top_left(), self.1)
+    }
+}
+
+impl StaticType for CoordRect {
+    fn static_type() -> crate::Type {
+        crate::Type::from_name("CoordRect")
+    }
+
+    fn bytes_len() -> usize {
+        FRect::bytes_len() + Coordinate::bytes_len()
+    }
+}
+
+impl ToBytes for CoordRect {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.0.to_bytes());
+        bytes.append(&mut self.1.to_bytes());
+        bytes
+    }
+}
+
+impl FromBytes for CoordRect {
+    fn from_bytes(data: &[u8], _len: usize) -> Self {
+        let point = FRect::from_bytes(&data[0..16], 16);
+        let coord = Coordinate::from_bytes(&data[16..17], 1);
+        Self(point, coord)
+    }
+}
+
+impl ToValue for CoordRect {
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+
+impl FromValue for CoordRect {
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1731,5 +1832,12 @@ mod tests {
         assert_eq!(rect.y(), 30);
         assert_eq!(rect.width(), 20);
         assert_eq!(rect.height(), 20);
+    }
+
+    #[test]
+    fn test_coord_rect_value() {
+        let r = CoordRect::new((10, 10, 30, 30), Coordinate::Widget);
+        let val = r.to_value();
+        assert_eq!(r, val.get::<CoordRect>())
     }
 }
