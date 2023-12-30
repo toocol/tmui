@@ -140,10 +140,10 @@ impl ObjectSubclass for ScrollArea {
 impl ObjectImpl for ScrollArea {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_rerender_difference(true);
 
         self.scroll_bar.set_vexpand(true);
         self.scroll_bar.width_request(10);
-        // self.scroll_bar.set_hscale(10.);
 
         let parent = self as *mut dyn WidgetImpl;
         self.scroll_bar.set_parent(parent);
