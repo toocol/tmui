@@ -1,7 +1,7 @@
 use crate::{
     prelude::{StaticType, ToValue},
     values::{FromBytes, FromValue, ToBytes},
-    Type, Value,
+    Type, Value, typedef::SkiaBlendMode,
 };
 use std::mem::size_of;
 use strum::IntoEnumIterator;
@@ -1159,6 +1159,96 @@ impl From<u8> for ImageOption {
     }
 }
 implements_enum_value!(ImageOption, u8);
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`BlendMode`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, EnumIter)]
+pub enum BlendMode {
+    Clear = 0,
+    Src,
+    Dst,
+    #[default]
+    SrcOver,
+    DstOver,
+    ScrIn,
+    DstIn,
+    SrcOut,
+    DstOut,
+    SrcATop,
+    DstATop,
+    Xor,
+    Plus,
+    Modulate,
+    Screen,
+    Overlay,
+    Darken,
+    Lighten,
+    ColorDodge,
+    ColorBurn,
+    HardLight,
+    SoftLight,
+    Difference,
+    Exclusion,
+    Multiply,
+    Hue,
+    Saturation,
+    Color,
+    Luminosity,
+}
+impl AsNumeric<u8> for BlendMode {
+    #[inline]
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+impl From<u8> for BlendMode {
+    fn from(value: u8) -> Self {
+        for mode in Self::iter() {
+            if mode.as_numeric() == value {
+                return mode;
+            }
+        }
+        unreachable!()
+    }
+}
+implements_enum_value!(BlendMode, u8);
+impl Into<SkiaBlendMode> for BlendMode {
+    fn into(self) -> SkiaBlendMode {
+        match self {
+            Self::Clear => SkiaBlendMode::Clear,
+            Self::Src => SkiaBlendMode::Src,
+            Self::Dst => SkiaBlendMode::Dst,
+            Self::SrcOver => SkiaBlendMode::SrcOver,
+            Self::DstOver => SkiaBlendMode::DstOver,
+            Self::ScrIn => SkiaBlendMode::SrcIn,
+            Self::DstIn => SkiaBlendMode::DstIn,
+            Self::SrcOut => SkiaBlendMode::SrcOut,
+            Self::DstOut => SkiaBlendMode::DstOut,
+            Self::SrcATop => SkiaBlendMode::SrcATop,
+            Self::DstATop => SkiaBlendMode::DstATop,
+            Self::Xor => SkiaBlendMode::Xor,
+            Self::Plus => SkiaBlendMode::Plus,
+            Self::Modulate => SkiaBlendMode::Modulate,
+            Self::Screen => SkiaBlendMode::Screen,
+            Self::Overlay => SkiaBlendMode::Overlay,
+            Self::Darken => SkiaBlendMode::Darken,
+            Self::Lighten => SkiaBlendMode::Lighten,
+            Self::ColorDodge => SkiaBlendMode::ColorDodge,
+            Self::ColorBurn => SkiaBlendMode::ColorBurn,
+            Self::HardLight => SkiaBlendMode::HardLight,
+            Self::SoftLight => SkiaBlendMode::SoftLight,
+            Self::Difference => SkiaBlendMode::Difference,
+            Self::Exclusion => SkiaBlendMode::Exclusion,
+            Self::Multiply => SkiaBlendMode::Multiply,
+            Self::Hue => SkiaBlendMode::Hue,
+            Self::Saturation => SkiaBlendMode::Saturation,
+            Self::Color => SkiaBlendMode::Color,
+            Self::Luminosity => SkiaBlendMode::Luminosity,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

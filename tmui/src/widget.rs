@@ -19,7 +19,7 @@ use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
     figure::{Color, FPoint, FontTypeface, Size},
-    namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
+    namespace::{Align, BorderStyle, Coordinate, SystemCursorShape, BlendMode},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
@@ -403,9 +403,16 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         let mut painter = Painter::new(cr.canvas(), self);
 
+        // Shared widget porcessing:
         if let Some(shared_widget) = cast_mut!(self as SharedWidgetImpl) {
             shared_widget.pixels_render(&mut painter);
             return;
+        }
+
+        // The default paint blend mode is set to `Src`, 
+        // it should be set to `SrcOver` when the widget is undergoing animation progress.
+        if self.is_animation_progressing() {
+            painter.set_blend_mode(BlendMode::SrcOver);
         }
 
         let mut geometry = self.rect();

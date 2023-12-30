@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 use crate::{
-    skia_safe::{self, Canvas, Font, Matrix, Paint, Path, Point},
+    skia_safe::{self, Canvas, Matrix, Paint, Path, Point},
     widget::WidgetImpl, tlib,
 };
 use log::{error, warn};
-use ::tlib::skia_safe::BlendMode;
+use ::tlib::{typedef::{SkiaBlendMode, SkiaFont, SkiaRect}, namespace::BlendMode};
 use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
@@ -20,11 +20,11 @@ use tlib::{
 pub struct Painter<'a> {
     canvas: RefMut<'a, Canvas>,
     paint: Paint,
-    font: Option<Font>,
+    font: Option<SkiaFont>,
     color: Option<Color>,
     line_width: Option<f32>,
 
-    saved_font: Option<Font>,
+    saved_font: Option<SkiaFont>,
     saved_color: Option<Color>,
     saved_line_width: Option<f32>,
 
@@ -45,7 +45,7 @@ impl<'a> Painter<'a> {
     pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
         let rect = widget.rect();
         let mut paint = Paint::default();
-        paint.set_blend_mode(BlendMode::Src);
+        paint.set_blend_mode(SkiaBlendMode::Src);
 
         Painter {
             canvas,
@@ -113,6 +113,11 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn save_count(&self) -> usize {
         self.canvas.save_count()
+    }
+
+    #[inline]
+    pub fn set_blend_mode(&mut self, blend_mode: BlendMode) {
+        self.paint.set_blend_mode(blend_mode.into());
     }
 
     /// Save the pen status: Color, Font, line width etc...
@@ -194,7 +199,7 @@ impl<'a> Painter<'a> {
 
     /// Set the font of painter.
     #[inline]
-    pub fn set_font(&mut self, font: Font) {
+    pub fn set_font(&mut self, font: SkiaFont) {
         self.text_style.set_font_size(font.size());
         if let Some(typeface) = font.typeface() {
             self.text_style
@@ -245,11 +250,11 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn fill_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T, color: Color) {
+    pub fn fill_rect<T: Into<SkiaRect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
-        let mut rect: crate::skia_safe::Rect = rect.into();
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
@@ -259,7 +264,7 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn fill_round_rect<T: Into<crate::skia_safe::Rect>>(
+    pub fn fill_round_rect<T: Into<SkiaRect>>(
         &mut self,
         rect: T,
         border_radius: f32,
@@ -268,7 +273,7 @@ impl<'a> Painter<'a> {
         self.paint.set_color(color);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
-        let mut rect: crate::skia_safe::Rect = rect.into();
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
@@ -282,9 +287,9 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_rect<T: Into<crate::skia_safe::Rect>>(&mut self, rect: T) {
+    pub fn draw_rect<T: Into<SkiaRect>>(&mut self, rect: T) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
-        let mut rect: crate::skia_safe::Rect = rect.into();
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_rect(rect, &self.paint);
@@ -295,13 +300,13 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_round_rect<T: Into<crate::skia_safe::Rect>>(
+    pub fn draw_round_rect<T: Into<SkiaRect>>(
         &mut self,
         rect: T,
         border_radius: f32,
     ) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
-        let mut rect: crate::skia_safe::Rect = rect.into();
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
@@ -468,7 +473,7 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, a: f32, alen: f32) {
         let rect: FRect = (x, y, w, h).into();
-        let mut rect: crate::skia_safe::Rect = rect.into();
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_arc(rect, a, alen, true, &self.paint);
