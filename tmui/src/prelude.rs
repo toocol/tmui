@@ -10,9 +10,10 @@ pub use crate::animation::{
 };
 pub use crate::application_window::{current_window_id, ApplicationWindow};
 pub use crate::container::{
-    ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerImpl, ContainerImplExt,
-    ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
+    ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerExt, ContainerImpl,
+    ContainerImplExt, ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
     ReflectSizeUnifiedAdjust, SizeUnifiedAdjust, StaticContainerScaleCalculate,
+    StaticSizeUnifiedAdjust,
 };
 pub use crate::graphics::board::Board;
 pub use crate::graphics::border::Border;
@@ -42,8 +43,8 @@ pub use crate::split_pane::{
 pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
-    ChildRegionAcquirer, PointEffective, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire,
-    WidgetExt, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
+    widget_ext::WidgetExt, ChildRegionAcquirer, PointEffective, ReflectWidgetImpl, SizeHint,
+    Transparency, Widget, WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
 };
 pub use tlib::tokio;
 pub use tlib::{

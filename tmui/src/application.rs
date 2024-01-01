@@ -438,6 +438,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set the title of application main window.
+    /// 
+    /// The default value was "Tmui Window".
     #[inline]
     pub fn title(mut self, title: &'static str) -> Self {
         self.win_cfg_bld = self.win_cfg_bld.title(title.to_string());

@@ -51,6 +51,9 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
 
 fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
+    let has_size_unified_adjust = has_content_alignment;
+    let is_vbox = layout == "VBox";
+    let is_hbox = layout == "HBox";
     let is_split_pane = layout == "SplitPane";
     let is_stack = layout == "Stack";
     let is_scroll_area = layout == "ScrollArea";
@@ -59,6 +62,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
         ast,
         false,
         has_content_alignment,
+        has_size_unified_adjust,
         is_split_pane,
         is_stack,
         is_scroll_area,
@@ -109,6 +113,28 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
                 #[inline]
                 fn set_content_valign(&mut self, valign: Align) {
                     self.content_valign = valign
+                }
+            }
+        )
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    let impl_size_unified_adjust = if is_vbox {
+        quote!(
+            impl SizeUnifiedAdjust for #name {
+                #[inline]
+                fn size_unified_adjust(&mut self) {
+                    VBox::static_size_unified_adjust(self)
+                }
+            }
+        )
+    } else if is_hbox {
+        quote!(
+            impl SizeUnifiedAdjust for #name {
+                #[inline]
+                fn size_unified_adjust(&mut self) {
+                    HBox::static_size_unified_adjust(self)
                 }
             }
         )
@@ -228,6 +254,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
         }
 
         #impl_content_alignment
+
+        #impl_size_unified_adjust
 
         #impl_split_pane
 

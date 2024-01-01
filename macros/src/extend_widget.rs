@@ -799,6 +799,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn propagate_set_transparency(&mut self, transparency: Transparency) {
                 self.#(#widget_path).*.propagate_set_transparency(transparency)
             }
+
+            #[inline]
+            fn size_hint(&self) -> SizeHint {
+                self.#(#widget_path).*.size_hint()
+            }
+
+            #[inline]
+            fn set_size_hint(&mut self, size_hint: SizeHint) {
+                self.#(#widget_path).*.set_size_hint(size_hint)
+            }
         }
 
         impl WidgetImplExt for #name {

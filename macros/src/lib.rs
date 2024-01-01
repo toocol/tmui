@@ -85,7 +85,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false) {
+        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },

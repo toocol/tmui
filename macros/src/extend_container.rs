@@ -2,6 +2,7 @@ use crate::{
     extend_element, extend_object, extend_widget,
     scroll_area::generate_scroll_area_inner_init, general_attr::GeneralAttr,
 };
+use proc_macro2::Ident;
 use quote::quote;
 use syn::{
     parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Pound, Attribute, DeriveInput,
@@ -12,6 +13,7 @@ pub(crate) fn expand(
     ast: &mut DeriveInput,
     impl_children_construct: bool,
     has_content_alignment: bool,
+    has_size_unified_adjust: bool,
     is_split_pane: bool,
     is_stack: bool,
     is_scroll_area: bool,
@@ -163,6 +165,8 @@ pub(crate) fn expand(
                 vec!["container", "widget"],
             )?;
 
+            let container_trait_impl_clause = gen_container_trait_impl_clause(name, vec!["container"])?;
+
             let mut children_construct_clause = proc_macro2::TokenStream::new();
             if impl_children_construct {
                 children_construct_clause.extend(quote!(
@@ -172,6 +176,12 @@ pub(crate) fn expand(
 
             let reflect_content_alignment = if has_content_alignment {
                 quote!(type_registry.register::<#name, ReflectContentAlignment>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let reflect_size_unified_adjust = if has_size_unified_adjust {
+                quote!(type_registry.register::<#name, ReflectSizeUnifiedAdjust>();)
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -214,6 +224,8 @@ pub(crate) fn expand(
 
                 #widget_trait_impl_clause
 
+                #container_trait_impl_clause
+
                 #children_construct_clause
 
                 #animation_clause
@@ -240,6 +252,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectObjectChildrenConstruct>();
                         type_registry.register::<#name, ReflectChildContainerDiffRender>();
                         #reflect_content_alignment
+                        #reflect_size_unified_adjust
                         #reflect_split_infos_getter
                         #reflect_stack_trait
                         #reflect_scroll_area
@@ -279,4 +292,28 @@ pub(crate) fn expand(
             "`extends(Container)` has to be used with structs ",
         )),
     }
+}
+
+pub(crate) fn gen_container_trait_impl_clause(
+    name: &Ident,
+    container_path: Vec<&'static str>,
+) -> syn::Result<proc_macro2::TokenStream> {
+    let container_path: Vec<_> = container_path 
+        .iter()
+        .map(|s| Ident::new(s, name.span()))
+        .collect();
+
+    Ok(quote!(
+        impl ContainerExt for #name {
+            #[inline]
+            fn is_strict_children_layout(&self) -> bool {
+                self.#(#container_path).*.is_strict_children_layout()
+            }
+
+            #[inline]
+            fn set_strict_children_layout(&mut self, strict_children_layout: bool) {
+                self.#(#container_path).*.set_strict_children_layout(strict_children_layout)
+            }
+        }
+    ))
 }

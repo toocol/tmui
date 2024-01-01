@@ -96,6 +96,9 @@ pub(crate) trait SizeCalculation {
 
     /// Widget has no child:
     fn calc_leaf_size(&mut self, window_size: Size, parent_size: Size);
+
+    /// Checking `size_hint` of widget to adjust size.
+    fn check_size_hint(&mut self);
 }
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> Size {
@@ -147,6 +150,8 @@ impl SizeCalculation for dyn WidgetImpl {
             }
         }
 
+        self.check_size_hint();
+
         if window_size.width() == 0 && self.size().width() != 0 {
             self.set_fixed_width(0);
         }
@@ -181,6 +186,14 @@ impl SizeCalculation for dyn WidgetImpl {
         }
         if size.height() == 0 && child_size.height() != 0 {
             self.set_fixed_height(child_size.height());
+        }
+
+        self.check_size_hint();
+
+        if child_size.width() > self.size().width() || child_size.height() > self.size().height() {
+            if let Some(unified) = cast_mut!(self as SizeUnifiedAdjust) {
+                unified.size_unified_adjust();
+            }
         }
 
         if self.size() != size {
@@ -258,6 +271,8 @@ impl SizeCalculation for dyn WidgetImpl {
             }
         }
 
+        self.check_size_hint();
+
         if window_size.width() == 0 && size.width() != 0 {
             self.set_fixed_width(0);
         }
@@ -276,6 +291,28 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.size()
             );
             emit!(SizeCalculation::calc_leaf_size => self.size_changed(), self.size())
+        }
+    }
+
+    fn check_size_hint(&mut self) {
+        let size_hint = self.size_hint();
+        if let Some(minimum_hint) = size_hint.0 {
+            let size = self.size();
+            if size.width() < minimum_hint.width() {
+                self.set_fixed_width(minimum_hint.width())
+            }
+            if size.height() < minimum_hint.height() {
+                self.set_fixed_height(minimum_hint.height())
+            }
+        }
+        if let Some(maximum_hint) = size_hint.1 {
+            let size = self.size();
+            if size.width() > maximum_hint.width() {
+                self.set_fixed_width(maximum_hint.width())
+            }
+            if size.height() > maximum_hint.height() {
+                self.set_fixed_height(maximum_hint.height())
+            }
         }
     }
 }
