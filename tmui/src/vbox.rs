@@ -301,7 +301,6 @@ impl StaticSizeUnifiedAdjust for VBox {
         let gap = exceed_height - height_to_reduce * children_cnt as i32;
 
         let strict_children_layout = container.is_strict_children_layout();
-        let rect = container.contents_rect(None);
 
         container.children_mut().iter_mut().enumerate().for_each(|(i, c)| {
             let mut ch = (c.size().height() - height_to_reduce).max(0);
@@ -316,8 +315,6 @@ impl StaticSizeUnifiedAdjust for VBox {
                 if let Some(minimum_hint) = minimum_hint {
                     if ch < minimum_hint.height() {
                         ch = minimum_hint.height();
-
-                        c.propagate_update_rect(CoordRect::new(rect, Coordinate::World));
                     }
                 }
             }
