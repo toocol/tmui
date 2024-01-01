@@ -8,7 +8,7 @@ use crate::{
     graphics::board::Board,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
-    widget::WidgetExt, application,
+    widget::widget_ext::WidgetExt, application,
 };
 
 pub const FRAME_INTERVAL: u128 = 16000;

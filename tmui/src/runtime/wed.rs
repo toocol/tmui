@@ -1,4 +1,4 @@
-use crate::{application_window::ApplicationWindow, prelude::SharedWidget, widget::WidgetExt};
+use crate::{application_window::ApplicationWindow, prelude::SharedWidget, widget::widget_ext::WidgetExt};
 use std::ptr::NonNull;
 use tlib::{
     events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},

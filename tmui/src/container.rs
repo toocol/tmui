@@ -8,6 +8,18 @@ use tlib::{object::{ObjectImpl, ObjectSubclass}, skia_safe::region::RegionOp};
 #[extends(Widget)]
 pub struct Container {
     pub children: Vec<Box<dyn WidgetImpl>>,
+
+    /// The container will restrictly respect childrens' `size_hint` or not.
+    /// 
+    /// `false`: <br>
+    /// - Container layout will attempt to respect the `size_hint` of each subcomponent. 
+    ///   But when space is insufficient, it will compress these components, 
+    ///   which may result in them being smaller than the size specified by their `size_hint`.
+    /// 
+    /// `true`: <br>
+    /// - Container layout will strictly respect the `size_hint` of each subcomponent, 
+    ///   the parts beyond the size range will be hidden.
+    strict_children_layout: bool,
 }
 
 impl ObjectSubclass for Container {
@@ -100,8 +112,25 @@ impl WidgetImpl for Container {}
 
 pub trait ContainerAcquire: ContainerImpl + ContainerImplExt + Default {}
 
+pub trait ContainerExt {
+    fn is_strict_children_layout(&self) -> bool;
+
+    fn set_strict_children_layout(&mut self, strict_children_layout: bool);
+}
+impl ContainerExt for Container {
+    #[inline]
+    fn is_strict_children_layout(&self) -> bool {
+        self.strict_children_layout
+    }
+
+    #[inline]
+    fn set_strict_children_layout(&mut self, strict_children_layout: bool) {
+        self.strict_children_layout = strict_children_layout
+    }
+}
+
 #[reflect_trait]
-pub trait ContainerImpl: WidgetImpl + ContainerPointEffective + ContainerScaleCalculate {
+pub trait ContainerImpl: WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`
     fn children(&self) -> Vec<&dyn WidgetImpl>;
@@ -209,4 +238,7 @@ impl WindowAcquire for dyn ContainerImpl {
 #[reflect_trait]
 pub trait SizeUnifiedAdjust {
     fn size_unified_adjust(&mut self);
+}
+pub trait StaticSizeUnifiedAdjust {
+    fn static_size_unified_adjust(container: &mut dyn ContainerImpl);
 }

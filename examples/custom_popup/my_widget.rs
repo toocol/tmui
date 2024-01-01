@@ -24,6 +24,8 @@ impl ObjectSubclass for MyWidget {
 impl ObjectImpl for MyWidget {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_strict_children_layout(true);
+        // self.set_homogeneous(true);
 
         self.label_1.set_text("Rect based animated popup. (click me)");
         self.label_2.set_text("Transparency based animated popup. (click me)");
@@ -39,6 +41,9 @@ impl ObjectImpl for MyWidget {
 
         self.label_1.set_halign(Align::Start);
         self.label_2.set_halign(Align::End);
+
+        // self.label_1.set_size_hint((Some((150, 0).into()), None));
+        // self.label_2.set_size_hint((Some((150, 0).into()), None));
 
         connect!(self.label_1, mouse_pressed(), self, handle_label_1_popup(MouseEvent));
         connect!(self.label_2, mouse_pressed(), self, handle_label_2_popup(MouseEvent));

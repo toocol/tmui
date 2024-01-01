@@ -1,6 +1,6 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION, StaticSizeUnifiedAdjust},
     layout::LayoutManager,
     prelude::*, graphics::painter::Painter,
 };
@@ -23,6 +23,7 @@ impl ObjectSubclass for VBox {
 impl ObjectImpl for VBox {
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<VBox, ReflectContentAlignment>();
+        type_registry.register::<VBox, ReflectSizeUnifiedAdjust>();
     }
 }
 
@@ -141,6 +142,7 @@ fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     content_valign: Align,
 ) {
     let parent_rect = widget.contents_rect(None);
+    let is_strict_children_layout = widget.is_strict_children_layout();
     let children_total_height: i32 =
         if content_valign == Align::Center || content_valign == Align::End {
             widget
@@ -151,7 +153,10 @@ fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         } else {
             0
         };
-    debug_assert!(parent_rect.height() >= children_total_height);
+
+    if !is_strict_children_layout {
+        debug_assert!(parent_rect.height() >= children_total_height);
+    }
 
     let mut offset = match content_valign {
         Align::Start => parent_rect.y(),
@@ -180,6 +185,7 @@ fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
 
 fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let parent_rect = widget.contents_rect(None);
+    let is_strict_children_layout = widget.is_strict_children_layout();
     let mut start_childs = vec![];
     let mut center_childs = vec![];
     let mut end_childs = vec![];
@@ -216,7 +222,9 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
         }
     }
 
-    debug_assert!(parent_rect.height() >= totoal_children_height);
+    if !is_strict_children_layout {
+        debug_assert!(parent_rect.height() >= totoal_children_height);
+    }
 
     let mut offset = parent_rect.y();
     for child in start_childs {
@@ -263,5 +271,55 @@ impl StaticContainerScaleCalculate for VBox {
 
 impl ChildContainerDiffRender for VBox {
     fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
+    }
+}
+
+impl SizeUnifiedAdjust for VBox {
+    #[inline]
+    fn size_unified_adjust(&mut self) {
+        Self::static_size_unified_adjust(self)
+    }
+}
+impl StaticSizeUnifiedAdjust for VBox {
+    #[inline]
+    fn static_size_unified_adjust(container: &mut dyn ContainerImpl) {
+        let mut children_height = 0;
+        let children_cnt = container.children().len();
+        if children_cnt == 0 {
+            return
+        }
+
+        container.children().iter().for_each(|c| {
+            children_height += c.size().height();
+        });
+
+        let height = container.size().height();
+        debug_assert!(height < children_height);
+
+        let exceed_height = children_height - height;
+        let height_to_reduce = (exceed_height as f32 / children_cnt as f32).round() as i32;
+        let gap = exceed_height - height_to_reduce * children_cnt as i32;
+
+        let strict_children_layout = container.is_strict_children_layout();
+
+        container.children_mut().iter_mut().enumerate().for_each(|(i, c)| {
+            let mut ch = (c.size().height() - height_to_reduce).max(0);
+
+            // Handle to ensure that there are no gaps between all subcomponents:
+            if i == children_cnt - 1 {
+                ch -= gap;
+            }
+            
+            if strict_children_layout {
+                let (minimum_hint, _) = c.size_hint();
+                if let Some(minimum_hint) = minimum_hint {
+                    if ch < minimum_hint.height() {
+                        ch = minimum_hint.height();
+                    }
+                }
+            }
+
+            c.set_fixed_height(ch);
+        });
     }
 }

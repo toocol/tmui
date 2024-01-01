@@ -1,6 +1,6 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION},
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION, StaticSizeUnifiedAdjust},
     layout::LayoutManager,
     prelude::*, graphics::painter::Painter,
 };
@@ -20,6 +20,7 @@ impl ObjectSubclass for HBox {
 impl ObjectImpl for HBox {
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<HBox, ReflectContentAlignment>();
+        type_registry.register::<HBox, ReflectSizeUnifiedAdjust>();
     }
 }
 
@@ -137,6 +138,7 @@ fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     content_halign: Align,
     content_valign: Align,
 ) {
+    let is_strict_children_layout = widget.is_strict_children_layout();
     let parent_rect = widget.contents_rect(None);
     let children_total_width: i32 =
         if content_halign == Align::Center || content_halign == Align::End {
@@ -148,7 +150,10 @@ fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         } else {
             0
         };
-    debug_assert!(parent_rect.width() >= children_total_width);
+
+    if !is_strict_children_layout {
+        debug_assert!(parent_rect.width() >= children_total_width);
+    }
 
     let mut offset = match content_halign {
         Align::Start => parent_rect.x(),
@@ -181,6 +186,7 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let mut center_childs = vec![];
     let mut end_childs = vec![];
     let mut totoal_children_width = 0;
+    let is_strict_children_layout = widget.is_strict_children_layout();
     let mut children = widget.children_mut();
 
     let mut center_childs_width = 0;
@@ -214,7 +220,9 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
         }
     }
 
-    debug_assert!(parent_rect.width() >= totoal_children_width);
+    if !is_strict_children_layout {
+        debug_assert!(parent_rect.width() >= totoal_children_width);
+    }
 
     let mut offset = parent_rect.x();
     for child in start_childs {
@@ -261,5 +269,55 @@ impl StaticContainerScaleCalculate for HBox {
 
 impl ChildContainerDiffRender for HBox {
     fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
+    }
+}
+
+impl SizeUnifiedAdjust for HBox {
+    #[inline]
+    fn size_unified_adjust(&mut self) {
+        Self::static_size_unified_adjust(self)
+    }
+}
+impl StaticSizeUnifiedAdjust for HBox {
+    #[inline]
+    fn static_size_unified_adjust(container: &mut dyn ContainerImpl) {
+        let mut children_width = 0;
+        let children_cnt = container.children().len();
+        if children_cnt == 0 {
+            return
+        }
+
+        container.children().iter().for_each(|c| {
+            children_width += c.size().width();
+        });
+
+        let width = container.size().width();
+        debug_assert!(width < children_width);
+
+        let exceed_width = children_width - width;
+        let width_to_reduce = (exceed_width as f32 / children_cnt as f32).round() as i32;
+        let gap = exceed_width - width_to_reduce * children_cnt as i32;
+
+        let strict_children_layout = container.is_strict_children_layout();
+
+        container.children_mut().iter_mut().enumerate().for_each(|(i, c)| {
+            let mut cw = (c.size().width() - width_to_reduce).max(0);
+
+            // Handle to ensure that there are no gaps between all subcomponents:
+            if i == children_cnt - 1 {
+                cw -= gap;
+            }
+            
+            if strict_children_layout {
+                let (minimum_hint, _) = c.size_hint();
+                if let Some(minimum_hint) = minimum_hint {
+                    if cw < minimum_hint.width() {
+                        cw = minimum_hint.width();
+                    }
+                }
+            }
+
+            c.set_fixed_width(cw);
+        });
     }
 }
