@@ -5,7 +5,7 @@ pub mod tree_store;
 pub mod tree_view_image;
 pub mod tree_view_object;
 
-use self::{tree_store::TreeStore, tree_view_image::TreeViewImage};
+use self::{tree_node::TreeNode, tree_store::TreeStore, tree_view_image::TreeViewImage};
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -13,7 +13,51 @@ use crate::{
 };
 use tlib::{connect, signals};
 
+/// Tree components display data in a hierarchical manner.
+///
+/// Certain functions (such as node hover display, handle mouse enter/leave) need to invoke [`set_mouse_tracking(true)`](crate::widget::widget_ext::WidgetExt::set_mouse_tracking).
+///
+/// Basic usage:
+/// ```
+/// use tmui::tree_view::{
+///     tree_view_object::TreeViewObject, cell::{Cell, cell_render::TextCellRender},
+///     node_render::NodeRender, TreeView,
+/// };
+/// use tmui::tlib::figure::color::Color;
+///
+/// pub struct Content {
+///     val: String,
+/// }
+/// impl TreeViewObject for Content {
+///    #[inline]
+///    fn cells(&self) -> Vec<Cell> {
+///        vec![Cell::string()
+///            .value(self.val.clone())
+///            .cell_render(TextCellRender::builder().color(Color::BLACK).build())
+///            .build()]
+///    }
+///
+///    #[inline]
+///    fn extensible(&self) -> bool {
+///        false
+///    }
+///
+///    #[inline]
+///    fn node_render(&self) -> NodeRender {
+///        NodeRender::default()
+///   }
+/// }
+/// 
+/// fn test_build_ui() {
+///     let mut tree_view = TreeView::new();
+///     let _node_added = tree_view
+///                         .get_store_mut()
+///                         .root_mut()
+///                         .add_node(&Content { val: "test".to_string() });
+/// }
+/// ```
 #[extends(Widget, Layout(ScrollArea), internal = true)]
+#[popupable]
 pub struct TreeView {}
 
 impl ObjectSubclass for TreeView {
@@ -29,6 +73,18 @@ impl ObjectImpl for TreeView {
         connect!(self, background_changed(), image, set_background(Color));
 
         self.set_area(image);
+    }
+
+    fn on_property_set(&mut self, name: &str, value: &Value) {
+        self.parent_on_property_set(name, value);
+
+        match name {
+            "mouse_tracking" => {
+                let is_tracking = value.get::<bool>();
+                self.get_image_mut().set_mouse_tracking(is_tracking);
+            }
+            _ => {}
+        };
     }
 }
 
@@ -58,6 +114,34 @@ impl TreeView {
     #[inline]
     pub fn set_line_spacing(&mut self, line_spacing: i32) {
         self.get_image_mut().set_line_spacing(line_spacing)
+    }
+
+    /// Function clousure will be executed when mouse pressed the node.
+    #[inline]
+    pub fn register_node_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(&mut self, f: T) {
+        self.get_image_mut().register_node_pressed(f)
+    }
+
+    /// Function clousure will be executed when mouse released on the node.
+    #[inline]
+    pub fn register_node_released<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(&mut self, f: T) {
+        self.get_image_mut().register_node_released(f)
+    }
+
+    /// Function clousure will be executed when mouse enter the node.
+    ///
+    /// [`set_mouse_tracking(true)`](crate::widget::widget_ext::WidgetExt::set_mouse_tracking) to enable this.
+    #[inline]
+    pub fn register_node_enter<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(&mut self, f: T) {
+        self.get_image_mut().register_node_enter(f)
+    }
+
+    /// Function clousure will be executed when mouse leave the node.
+    ///
+    /// [`set_mouse_tracking(true)`](crate::widget::widget_ext::WidgetExt::set_mouse_tracking) to enable this.
+    #[inline]
+    pub fn register_node_leave<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(&mut self, f: T) {
+        self.get_image_mut().register_node_leave(f)
     }
 }
 

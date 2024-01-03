@@ -457,6 +457,8 @@ pub trait WidgetExt {
     fn mouse_tracking(&self) -> bool;
 
     /// Set the `mouse_tracking` status of widget.
+    /// 
+    /// when `ture`, widget will track the movement of mouse.
     ///
     /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_mouse_tracking(&mut self, is_tracking: bool);
@@ -1322,12 +1324,16 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn mouse_tracking(&self) -> bool {
-        self.mouse_tracking
+        if let Some(val) = self.get_property("mouse_tracking") {
+            val.get::<bool>()
+        } else {
+            false
+        }
     }
 
     #[inline]
     fn set_mouse_tracking(&mut self, is_tracking: bool) {
-        self.mouse_tracking = is_tracking
+        self.set_property("mouse_tracking", is_tracking.to_value());
     }
 
     #[inline]

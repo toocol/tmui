@@ -647,7 +647,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
 
             #[inline]
             fn set_mouse_tracking(&mut self, is_tracking: bool) {
-                self.#(#widget_path).*.set_mouse_tracking(is_tracking)
+                self.set_property("mouse_tracking", is_tracking.to_value());
             }
 
             #[inline]

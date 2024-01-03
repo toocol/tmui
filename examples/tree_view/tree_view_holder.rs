@@ -1,7 +1,12 @@
 use std::{ptr::NonNull, time::Duration};
 
 use tlib::{
-    actions::ActionExt, connect, global::SemanticExt, nonnull_mut, timer::Timer,
+    actions::ActionExt,
+    connect,
+    global::SemanticExt,
+    namespace::MouseButton,
+    nonnull_mut,
+    timer::Timer,
     tokio::task::JoinHandle,
 };
 use tmui::{
@@ -17,7 +22,7 @@ use tmui::{
     widget::{WidgetImpl, WidgetImplExt},
 };
 
-const DATA_SIZE: i32 = 100;
+const DATA_SIZE: i32 = 5;
 
 #[extends(Widget)]
 #[derive(Childable)]
@@ -37,7 +42,35 @@ impl ObjectImpl for TreeViewHolder {
 
         self.tree_view.set_hexpand(true);
         self.tree_view.set_vexpand(true);
+        self.tree_view.set_mouse_tracking(true);
         self.tree_view.set_line_spacing(10);
+        self.tree_view.register_node_pressed(|node, evt| {
+            println!(
+                "Node has pressed, id = {}, mouse position = {:?}, value = {:?}",
+                node.id(),
+                evt.position(),
+                node.get_value::<String>(0)
+            );
+
+            if evt.mouse_button() == MouseButton::RightButton {
+                if node.is_extensible() {
+                    node.add_node(&Content {
+                        val: "new_content".to_string(),
+                    });
+                } else {
+                    node.remove();
+                }
+            }
+        });
+        self.tree_view.register_node_released(|node, _| {
+            println!("Node released, id = {}", node.id());
+        });
+        self.tree_view.register_node_enter(|node, _| {
+            println!("Node enter, id = {}", node.id());
+        });
+        self.tree_view.register_node_leave(|node, _| {
+            println!("Node leave, id = {}", node.id());
+        });
 
         self.set_hexpand(true);
         self.set_vexpand(true);

@@ -27,6 +27,7 @@ pub struct TreeNode {
     is_root: bool,
     extensible: bool,
     expanded: bool,
+    removed: bool,
     children: Vec<Box<TreeNode>>,
     children_id_holder: Vec<ObjectId>,
     idx: usize,
@@ -51,6 +52,12 @@ impl TreeNode {
     }
 
     pub fn add_node(&mut self, obj: &dyn TreeViewObject) -> Option<&mut TreeNode> {
+        if self.removed {
+            return None;
+        }
+        if !self.extensible {
+            return None;
+        }
         let mut node = Self::create_from_obj(obj);
 
         node.store = self.store;
@@ -59,13 +66,12 @@ impl TreeNode {
     }
 
     pub fn add_node_directly(&mut self, mut node: Box<TreeNode>) -> Option<&mut TreeNode> {
+        if self.removed {
+            return None;
+        }
         node.store = self.store;
 
         self.add_node_directly_inner(node)
-    }
-
-    pub fn remove(&mut self) {
-        self.remove_node_inner()
     }
 
     pub fn get_value<T: 'static + StaticType + FromValue>(&self, cell_idx: usize) -> Option<T> {
@@ -153,13 +159,6 @@ impl TreeNode {
     }
 
     #[inline]
-    pub fn node_clicked(&mut self) {
-        self.expanded = !self.expanded;
-
-        self.notify_grand_child_expand(self.expanded, self.id(), self.children_id_holder.to_owned())
-    }
-
-    #[inline]
     pub fn is_expanded(&self) -> bool {
         self.expanded
     }
@@ -173,6 +172,24 @@ impl TreeNode {
     pub fn is_selected(&self) -> bool {
         self.status == Status::Selected
     }
+
+    #[inline]
+    pub fn remove(&mut self) {
+        self.removed = true;
+        let _hold = self.remove_node_inner();
+
+        let child_id = self.id();
+        let child_expanded = self.is_expanded();
+        let mut parent = self.get_parent();
+        let mut deleted = vec![child_id];
+        deleted.extend_from_slice(&self.get_children_ids());
+        TreeStore::store_mut(self.store).unwrap().node_deleted(
+            nonnull_mut!(parent),
+            child_id,
+            child_expanded,
+            deleted,
+        );
+    }
 }
 
 impl TreeNode {
@@ -185,6 +202,7 @@ impl TreeNode {
             is_root: true,
             extensible: true,
             expanded: true,
+            removed: false,
             children: vec![],
             children_id_holder: vec![],
             idx: 0,
@@ -204,6 +222,7 @@ impl TreeNode {
             is_root: false,
             extensible: obj.extensible(),
             expanded: true,
+            removed: false,
             children: vec![],
             children_id_holder: vec![],
             idx: 0,
@@ -244,6 +263,11 @@ impl TreeNode {
     }
 
     #[inline]
+    pub(crate) fn get_parent(&self) -> Option<NonNull<TreeNode>> {
+        self.parent
+    }
+
+    #[inline]
     pub(crate) fn get_children_ids(&self) -> &Vec<ObjectId> {
         &self.children_id_holder
     }
@@ -265,13 +289,31 @@ impl TreeNode {
         let id = node.id;
         let ids = vec![id];
 
-        self.children_id_holder.extend_from_slice(&ids);
-        self.notify_grand_child_add(&ids);
-
         self.children.push(node);
 
+        if !self.is_expanded() {
+            self.node_shuffle_expand()
+        }
+
+        let anchor = if let Some(last) = self.children_id_holder.last() {
+            *last
+        } else {
+            self.id
+        };
+        self.children_id_holder.push(id);
+        self.notify_grand_child_add(anchor, &ids);
+
         if is_ui_thread() {
-            store.node_added(self, id, &ids);
+            let idx = store.node_added(self, id, &ids);
+
+            if idx != usize::MAX {
+                let image_len = store.image_len() as i32;
+                let buffer_len = store.buffer_len() as i32;
+                let scroll_to = (idx as i32 - image_len / 2)
+                    .max(0)
+                    .min((buffer_len - store.get_window_lines()).max(0));
+                store.scroll_to(scroll_to, true);
+            }
         }
 
         store.get_node_mut(id)
@@ -297,25 +339,51 @@ impl TreeNode {
         let mut ids = vec![id];
         ids.extend_from_slice(&node.children_id_holder);
 
-        self.children_id_holder.extend_from_slice(&ids);
-        self.notify_grand_child_add(&ids);
-
         self.children.push(node);
 
+        if !self.is_expanded() {
+            self.node_shuffle_expand()
+        }
+
+        let anchor = if let Some(last) = self.children_id_holder.last() {
+            *last
+        } else {
+            self.id
+        };
+        self.children_id_holder.extend_from_slice(&ids);
+        self.notify_grand_child_add(anchor, &ids);
+
         if is_ui_thread() {
-            store.node_added(self, id, &ids);
+            let idx = store.node_added(self, id, &ids);
+
+            if idx != usize::MAX {
+                let image_len = store.image_len() as i32;
+                let buffer_len = store.buffer_len() as i32;
+                let scroll_to = (idx as i32 - image_len / 2)
+                    .max(0)
+                    .min((buffer_len - store.get_window_lines()).max(0));
+                store.scroll_to(scroll_to, true);
+            }
         }
 
         store.get_node_mut(id)
     }
 
-    pub(crate) fn notify_grand_child_add(&mut self, id: &Vec<ObjectId>) {
+    pub(crate) fn notify_grand_child_add(&mut self, anchor: ObjectId, id: &Vec<ObjectId>) {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
 
-            parent.children_id_holder.extend_from_slice(id);
+            let mut idx = 0;
+            for &i in parent.children_id_holder.iter() {
+                idx += 1;
+                if i == anchor {
+                    break;
+                }
+            }
 
-            parent.notify_grand_child_add(id);
+            parent.children_id_holder.splice(idx..idx, id.clone());
+
+            parent.notify_grand_child_add(anchor, id);
         }
     }
 
@@ -369,27 +437,52 @@ impl TreeNode {
         parent.notify_grand_child_expand(expand, id, ids);
     }
 
-    pub(crate) fn remove_node_inner(&mut self) {
+    pub(crate) fn remove_node_inner(&mut self) -> Option<Box<TreeNode>> {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
 
             debug_assert!(parent.children.len() > self.idx);
-            parent.children.remove(self.idx);
-
-            TreeStore::store_mut(self.store)
-                .unwrap()
-                .remove_node_cache(self.id());
+            let hold = parent.children.remove(self.idx);
 
             for (i, c) in parent.children.iter_mut().enumerate() {
                 c.idx = i;
             }
 
-            let mut ids_to_remove = self.get_children_ids().to_owned();
-            ids_to_remove.push(self.id());
-            self.notify_grand_child_remove(ids_to_remove);
+            let mut ids_to_remove = vec![self.id()];
+            ids_to_remove.extend_from_slice(&self.children_id_holder);
+
+            let store = TreeStore::store_mut(self.store).unwrap();
+            for &id in ids_to_remove.iter() {
+                store.remove_node_cache(id)
+            }
+
+            if self.expanded {
+                self.notify_grand_child_remove(ids_to_remove);
+            } else {
+                self.notify_grand_child_remove(vec![self.id()]);
+            }
+
+            return Some(hold);
         }
+        None
     }
 
+    #[inline]
+    pub(crate) fn node_shuffle_expand(&mut self) {
+        self.expanded = !self.expanded;
+
+        self.notify_grand_child_expand(
+            self.expanded,
+            self.id(),
+            self.children_id_holder.to_owned(),
+        );
+
+        TreeStore::store_mut(self.store)
+            .unwrap()
+            .node_expanded(self);
+    }
+
+    #[inline]
     pub(crate) fn set_status(&mut self, status: Status) {
         self.status = status
     }

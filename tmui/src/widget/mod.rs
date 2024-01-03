@@ -125,9 +125,6 @@ pub struct Widget {
     /// - Container layout will strictly respect the `size_hint` of each subcomponent,
     ///   the parts beyond the size range will be hidden.
     size_hint: SizeHint,
-
-    /// Let the widget track the `MouseMoveEvent`, the default value was false.
-    mouse_tracking: bool,
 }
 
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
