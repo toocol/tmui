@@ -14,6 +14,7 @@ mod extend_shared_widget;
 mod extend_widget;
 mod general_attr;
 mod layout;
+mod loadable;
 mod popupable;
 mod reflect_trait;
 mod scroll_area;
@@ -247,5 +248,10 @@ pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn loadable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

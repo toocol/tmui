@@ -46,6 +46,7 @@ pub use crate::widget::{
     widget_ext::WidgetExt, ChildRegionAcquirer, PointEffective, ReflectWidgetImpl, SizeHint,
     Transparency, Widget, WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
 };
+pub use crate::loading::{LoadingModel, Loadable, ReflectLoadable};
 pub use tlib::tokio;
 pub use tlib::{
     figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size},

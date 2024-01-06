@@ -8,7 +8,7 @@ use crate::{
     graphics::board::Board,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
-    widget::widget_ext::WidgetExt, application,
+    widget::widget_ext::WidgetExt, application, loading::LoadingManager,
 };
 
 pub const FRAME_INTERVAL: u128 = 16000;
@@ -75,6 +75,7 @@ impl FrameManager {
 
             self.frame = self.frame.next();
             AnimationManager::with(|m| m.borrow_mut().process(self.frame));
+            LoadingManager::with(|m| m.borrow_mut().process(self.frame));
 
             let update = board.invalidate_visual();
             if window.minimized() {

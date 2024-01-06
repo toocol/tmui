@@ -291,7 +291,7 @@ impl TreeNode {
 
         self.children.push(node);
 
-        if !self.is_expanded() {
+        if !self.is_expanded() && is_ui_thread() {
             self.node_shuffle_expand()
         }
 
@@ -300,6 +300,9 @@ impl TreeNode {
         } else {
             self.id
         };
+        if !is_ui_thread() && anchor + 1 != id {
+            panic!("Cross thread construction of `TreeView` must strictly follow the order.")
+        }
         self.children_id_holder.push(id);
         self.notify_grand_child_add(anchor, &ids);
 
@@ -341,7 +344,7 @@ impl TreeNode {
 
         self.children.push(node);
 
-        if !self.is_expanded() {
+        if !self.is_expanded() && is_ui_thread() {
             self.node_shuffle_expand()
         }
 
@@ -350,6 +353,9 @@ impl TreeNode {
         } else {
             self.id
         };
+        if !is_ui_thread() && anchor + 1 != id {
+            panic!("Cross thread construction of `TreeView` must strictly follow the order.")
+        }
         self.children_id_holder.extend_from_slice(&ids);
         self.notify_grand_child_add(anchor, &ids);
 
@@ -373,15 +379,19 @@ impl TreeNode {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
 
-            let mut idx = 0;
-            for &i in parent.children_id_holder.iter() {
-                idx += 1;
-                if i == anchor {
-                    break;
+            if is_ui_thread() {
+                let mut idx = 0;
+                for &i in parent.children_id_holder.iter() {
+                    idx += 1;
+                    if i == anchor {
+                        break;
+                    }
                 }
-            }
 
-            parent.children_id_holder.splice(idx..idx, id.clone());
+                parent.children_id_holder.splice(idx..idx, id.clone());
+            } else {
+                parent.children_id_holder.extend_from_slice(id);
+            }
 
             parent.notify_grand_child_add(anchor, id);
         }

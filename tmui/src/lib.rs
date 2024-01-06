@@ -12,6 +12,7 @@ pub mod prelude;
 pub mod widget;
 pub mod label;
 pub mod layout;
+pub mod loading;
 pub mod container;
 pub mod cursor;
 pub mod event_hints;

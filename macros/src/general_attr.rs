@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, popupable::Popupable};
+use crate::{animation::Animation, async_task::AsyncTask, popupable::Popupable, loadable::Loadable};
 
 pub(crate) struct GeneralAttr {
     // fields about `run_after`
@@ -18,17 +18,23 @@ pub(crate) struct GeneralAttr {
     pub(crate) animation_state_holder_impl: TokenStream,
     pub(crate) animation_state_holder_reflect: TokenStream,
 
-    // field about `async_task`
+    // fields about `async_task`
     pub(crate) is_async_task: bool,
     pub(crate) async_task_fields: Vec<TokenStream>,
     pub(crate) async_task_impl_clause: TokenStream,
     pub(crate) async_task_method_clause: TokenStream,
 
-    // field about `popupable`
+    // fields about `popupable`
     pub(crate) is_popupable: bool,
     pub(crate) popupable_field_clause: TokenStream,
     pub(crate) popupable_impl_clause: TokenStream,
     pub(crate) popupable_reflect_clause: TokenStream,
+
+    // fields about `loadable`
+    pub(crate) is_loadable: bool,
+    pub(crate) loadable_field_clause: TokenStream,
+    pub(crate) loadable_impl_clause: TokenStream,
+    pub(crate) loadable_reflect_clause: TokenStream,
 }
 
 impl GeneralAttr {
@@ -44,6 +50,8 @@ impl GeneralAttr {
         let mut async_tasks = vec![];
 
         let mut popupable = None;
+
+        let mut loadable = None;
 
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
@@ -62,6 +70,7 @@ impl GeneralAttr {
                         async_tasks.push(AsyncTask::parse_attr(attr));
                     }
                     "popupable" => popupable = Some(Popupable::parse(ast)?),
+                    "loadable" => loadable = Some(Loadable::parse(ast)?),
                     _ => {}
                 }
             }
@@ -165,6 +174,25 @@ impl GeneralAttr {
             proc_macro2::TokenStream::new()
         };
 
+        // Loadable 
+        let loadable_field_clause = if let Some(loadable) = loadable.as_ref() {
+            loadable.loadable_field()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let loadable_impl_clause = if let Some(loadable) = loadable.as_ref() {
+            loadable.loadable_impl()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let loadable_reflect_clause = if let Some(loadable) = loadable.as_ref() {
+            loadable.loadable_reflect()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -183,6 +211,10 @@ impl GeneralAttr {
             popupable_field_clause,
             popupable_impl_clause,
             popupable_reflect_clause,
+            is_loadable: loadable.is_some(),
+            loadable_field_clause,
+            loadable_impl_clause,
+            loadable_reflect_clause,
         })
     }
 }

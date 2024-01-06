@@ -24,6 +24,7 @@ const REPCHAR: &'static str = concat!(
 
 #[extends(Widget)]
 #[run_after]
+#[loadable]
 pub(crate) struct TreeViewImage {
     store: Box<TreeStore>,
     scroll_bar: Option<NonNull<ScrollBar>>,

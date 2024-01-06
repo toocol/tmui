@@ -1315,10 +1315,10 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
-        let contents_rect = self.contents_rect(None);
+        let rect = self.rect();
         FPoint::new(
-            point.x() - contents_rect.x() as f32,
-            point.y() - contents_rect.y() as f32,
+            point.x() - rect.x() as f32,
+            point.y() - rect.y() as f32,
         )
     }
 

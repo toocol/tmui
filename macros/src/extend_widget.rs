@@ -24,6 +24,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
     let popupable_impl_clause = &general_attr.popupable_impl_clause;
     let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
 
+    let loadable_impl_clause = &general_attr.loadable_impl_clause;
+    let loadable_reflect_clause = &general_attr.loadable_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -56,6 +59,13 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                     if general_attr.is_popupable {
                         let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
+                    }
+
+                    if general_attr.is_loadable {
+                        let field = &general_attr.loadable_field_clause;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
@@ -104,6 +114,8 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 #popupable_impl_clause
 
+                #loadable_impl_clause
+
                 impl WidgetAcquire for #name {}
 
                 impl SuperType for #name {
@@ -120,6 +132,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         #popupable_reflect_clause
                         #animation_reflect
                         #animation_state_holder_reflect
+                        #loadable_reflect_clause
                     }
 
                     #[inline]

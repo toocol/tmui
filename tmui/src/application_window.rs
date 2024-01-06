@@ -9,7 +9,7 @@ use crate::{
     prelude::*,
     primitive::Message,
     runtime::{wed, window_context::OutputSender},
-    widget::{WidgetImpl, WidgetSignals, ZIndexStep},
+    widget::{WidgetImpl, WidgetSignals, ZIndexStep}, loading::LoadingManager,
 };
 use log::debug;
 use once_cell::sync::Lazy;
@@ -386,6 +386,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
 
         if let Some(snapshot) = cast_mut!(child_ref as Snapshot) {
             AnimationManager::with(|m| m.borrow_mut().add_snapshot(snapshot))
+        }
+        if let Some(loading) = cast_mut!(child_ref as Loadable) {
+            LoadingManager::with(|m| m.borrow_mut().add_loading(loading))
         }
 
         // Determine whether the widget is a container.

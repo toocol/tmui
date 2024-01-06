@@ -97,6 +97,16 @@ impl TreeView {
     }
 
     #[inline]
+    pub fn start_loading(&mut self) {
+        self.get_image_mut().start_loading();
+    }
+
+    #[inline]
+    pub fn stop_loading(&mut self) {
+        self.get_image_mut().stop_loading();
+    }
+
+    #[inline]
     pub fn get_store(&self) -> &TreeStore {
         self.get_image().get_store()
     }

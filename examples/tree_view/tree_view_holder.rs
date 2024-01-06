@@ -1,12 +1,7 @@
-use std::{ptr::NonNull, time::Duration};
-
+#![allow(dead_code)]
+use std::time::Duration;
 use tlib::{
-    actions::ActionExt,
-    connect,
-    global::SemanticExt,
-    namespace::MouseButton,
-    nonnull_mut,
-    timer::Timer,
+    actions::ActionExt, connect, global::SemanticExt, namespace::MouseButton, timer::Timer,
     tokio::task::JoinHandle,
 };
 use tmui::{
@@ -22,14 +17,15 @@ use tmui::{
     widget::{WidgetImpl, WidgetImplExt},
 };
 
-const DATA_SIZE: i32 = 5;
+const DATA_SIZE: i32 = 500000;
 
 #[extends(Widget)]
 #[derive(Childable)]
+#[async_task(name = "BuildTreeTask", value = "Box<TreeNode>")]
 pub struct TreeViewHolder {
     #[child]
     tree_view: Box<TreeView>,
-    task: Option<Box<AsyncTask>>,
+    // task: Option<Box<AsyncTLOADING_COLOR,
 }
 
 impl ObjectSubclass for TreeViewHolder {
@@ -40,6 +36,7 @@ impl ObjectImpl for TreeViewHolder {
     fn construct(&mut self) {
         self.parent_construct();
 
+        self.tree_view.start_loading();
         self.tree_view.set_hexpand(true);
         self.tree_view.set_vexpand(true);
         self.tree_view.set_mouse_tracking(true);
@@ -82,70 +79,109 @@ impl ObjectImpl for TreeViewHolder {
         let id = store.id();
         let level = store.root_mut().level();
 
-        let mut root_mut = NonNull::new(store.root_mut());
+        self.build_tree_task(
+            async move {
+                let mut group1 = TreeNode::create(id, level + 1, &Group { name: "group-1" });
 
-        let join = tokio::spawn(async move {
-            let mut group1 = TreeNode::create(id, level + 1, &Group { name: "group-1" });
-
-            for i in 0..10 {
-                let content = format!("content_{}", i);
-                group1.add_node(&Content { val: content });
-            }
-
-            if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
-                for i in 0..DATA_SIZE {
-                    let content = format!("sub_content_{}", i);
-                    group2.add_node(&Content { val: content });
+                for i in 0..10 {
+                    let content = format!("content_{}", i);
+                    group1.add_node(&Content { val: content });
                 }
-            }
 
-            for i in 10..15 {
-                let content = format!("content_{}", i);
-                group1.add_node(&Content { val: content });
-            }
-
-            if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
-                for i in 0..DATA_SIZE {
-                    let content = format!("sub_content_{}", i);
-                    group3.add_node(&Content { val: content });
+                if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
+                    for i in 0..DATA_SIZE {
+                        let content = format!("sub_content_{}", i);
+                        group2.add_node(&Content { val: content });
+                    }
                 }
-            }
 
-            group1
-        });
-        self.task = Some(AsyncTask::new(join).then(move |node| {
-            let root_mut = nonnull_mut!(root_mut);
+                for i in 10..15 {
+                    let content = format!("content_{}", i);
+                    group1.add_node(&Content { val: content });
+                }
 
-            root_mut.add_node_directly(node);
-            root_mut.notify_update();
+                if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
+                    for i in 0..DATA_SIZE {
+                        let content = format!("sub_content_{}", i);
+                        group3.add_node(&Content { val: content });
+                    }
+                }
 
-            // let group1 = root_mut.add_node(&Group { name: "group-1" }).unwrap();
+                group1
+            },
+            Some(|w: &mut TreeViewHolder, node| {
+                let root_mut = w.tree_view.get_store_mut().root_mut();
 
-            // for i in 0..10 {
-            //     let content = format!("content_{}", i);
-            //     group1.add_node(&Content { val: content });
-            // }
+                root_mut.add_node_directly(node);
+                root_mut.notify_update();
 
-            // if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
-            //     for i in 0..300 {
-            //         let content = format!("sub_content_{}", i);
-            //         group2.add_node(&Content { val: content });
-            //     }
-            // }
+                w.tree_view.stop_loading();
+            }),
+        );
 
-            // for i in 10..15 {
-            //     let content = format!("content_{}", i);
-            //     group1.add_node(&Content { val: content });
-            // }
+        // let mut root_mut = NonNull::new(store.root_mut());
+        // let join = tokio::spawn(async move {
+        //     let mut group1 = TreeNode::create(id, level + 1, &Group { name: "group-1" });
 
-            // if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
-            //     for i in 0..300 {
-            //         let content = format!("sub_content_{}", i);
-            //         group3.add_node(&Content { val: content });
-            //     }
-            // }
-            // root_mut.notify_update();
-        }));
+        //     for i in 0..10 {
+        //         let content = format!("content_{}", i);
+        //         group1.add_node(&Content { val: content });
+        //     }
+
+        //     if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
+        //         for i in 0..DATA_SIZE {
+        //             let content = format!("sub_content_{}", i);
+        //             group2.add_node(&Content { val: content });
+        //         }
+        //     }
+
+        //     for i in 10..15 {
+        //         let content = format!("content_{}", i);
+        //         group1.add_node(&Content { val: content });
+        //     }
+
+        //     if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
+        //         for i in 0..DATA_SIZE {
+        //             let content = format!("sub_content_{}", i);
+        //             group3.add_node(&Content { val: content });
+        //         }
+        //     }
+
+        //     group1
+        // });
+        // self.task = Some(AsyncTask::new(join).then(move |node| {
+        //     let root_mut = nonnull_mut!(root_mut);
+
+        //     root_mut.add_node_directly(node);
+        //     root_mut.notify_update();
+
+        //     // let group1 = root_mut.add_node(&Group { name: "group-1" }).unwrap();
+
+        //     // for i in 0..10 {
+        //     //     let content = format!("content_{}", i);
+        //     //     group1.add_node(&Content { val: content });
+        //     // }
+
+        //     // if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
+        //     //     for i in 0..300 {
+        //     //         let content = format!("sub_content_{}", i);
+        //     //         group2.add_node(&Content { val: content });
+        //     //     }
+        //     // }
+
+        //     // for i in 10..15 {
+        //     //     let content = format!("content_{}", i);
+        //     //     group1.add_node(&Content { val: content });
+        //     // }
+
+        //     // if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
+        //     //     for i in 0..300 {
+        //     //         let content = format!("sub_content_{}", i);
+        //     //         group3.add_node(&Content { val: content });
+        //     //     }
+        //     // }
+        //     // root_mut.notify_update();
+        // }));
     }
 }
 

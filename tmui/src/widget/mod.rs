@@ -465,7 +465,15 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter_clip(self, &mut painter, self.redraw_region().iter());
 
-        self.paint(&mut painter);
+        if let Some(loading) = cast_mut!(self as Loadable) {
+            if loading.is_loading() {
+                loading.render_loading(&mut painter);
+            } else {
+                self.paint(&mut painter);
+            }
+        } else {
+            self.paint(&mut painter);
+        }
 
         painter.restore();
     }

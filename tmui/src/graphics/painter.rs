@@ -456,14 +456,15 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_arc(&mut self, x: i32, y: i32, w: i32, h: i32, a: i32, alen: i32) {
+    pub fn draw_arc(&mut self, x: i32, y: i32, w: i32, h: i32, angle: i32, sweep_angle: i32, use_center: bool) {
         self.draw_arc_f(
             x as f32,
             y as f32,
             w as f32,
             h as f32,
-            a as f32,
-            alen as f32,
+            angle as f32,
+            sweep_angle as f32,
+            use_center,
         )
     }
 
@@ -471,12 +472,12 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, a: f32, alen: f32) {
+    pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, angle: f32, sweep_angle: f32, use_center: bool) {
         let rect: FRect = (x, y, w, h).into();
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
-        self.canvas.draw_arc(rect, a, alen, true, &self.paint);
+        self.canvas.draw_arc(rect, angle, sweep_angle, use_center, &self.paint);
     }
 
     /// Draw a point at (x, y) with offset.
