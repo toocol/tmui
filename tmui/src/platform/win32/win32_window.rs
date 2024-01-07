@@ -6,10 +6,12 @@ use std::{
     sync::{mpsc::Sender, Arc},
 };
 use tipc::{RwLock, ipc_master::IpcMaster};
-use tlib::winit::window::Window;
+use tlib::winit::window::{Window, WindowId};
 use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
 pub(crate) struct Win32Window<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {
+    window_id: WindowId,
+
     hwnd: HWND,
     bitmap: Arc<RwLock<Bitmap>>,
 
@@ -21,6 +23,7 @@ pub(crate) struct Win32Window<T: 'static + Copy + Send + Sync, M: 'static + Copy
 impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Window<T, M> {
     #[inline]
     pub fn new(
+        window_id: WindowId,
         hwnd: HWND,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
@@ -28,12 +31,18 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) -> Self {
         Self {
+            window_id,
             hwnd,
             bitmap,
             master,
             context: Some(context),
             user_ipc_event_sender,
         }
+    }
+
+    #[inline]
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
     }
 
     /// Request to redraw the window.

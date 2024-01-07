@@ -4,11 +4,9 @@ use crate::{
     platform::{
         ipc_window::IpcWindow,
         physical_window::{PhysWindow, PhysicalWindow},
+        PlatformContext,
     },
-    primitive::{
-        cpu_balance::CpuBalance,
-        Message,
-    },
+    primitive::{cpu_balance::CpuBalance, Message},
     runtime::{
         runtime_track::RuntimeTrack,
         window_context::{OutputReceiver, PhysicalWindowContext},
@@ -24,7 +22,7 @@ use std::{
     ops::Add,
     sync::atomic::Ordering,
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant}, collections::HashMap,
 };
 use tipc::{ipc_event::IpcEvent, IpcNode};
 use tlib::{
@@ -37,21 +35,34 @@ use tlib::{
     winit::{
         event::{ElementState, MouseScrollDelta},
         event_loop::ControlFlow,
-        keyboard::{Key, ModifiersState, PhysicalKey},
+        keyboard::{Key, ModifiersState, PhysicalKey}, window::WindowId,
     },
 };
 
-pub(crate) struct WindowsProcess<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {
+pub(crate) struct WindowsProcess<
+    'a,
+    T: 'static + Copy + Send + Sync,
+    M: 'static + Copy + Send + Sync,
+> {
     _holdt: PhantomData<T>,
     _holdm: PhantomData<M>,
+    ui_stack_size: usize,
+    platform_context: &'a Box<dyn PlatformContext<T, M>>,
+
+    windows: HashMap<WindowId, PhysWindow<T, M>>,
 }
 
-impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsProcess<T, M> {
+impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
+    WindowsProcess<'a, T, M>
+{
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(ui_stack_size: usize, platform_context: &'a Box<dyn PlatformContext<T, M>>) -> Self {
         Self {
             _holdt: PhantomData::default(),
             _holdm: PhantomData::default(),
+            ui_stack_size,
+            platform_context,
+            windows: HashMap::new(),
         }
     }
 
@@ -146,6 +157,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                 match event {
                     // Window resized event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::Resized(size),
                         ..
                     } => {
@@ -161,6 +173,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Window close event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::CloseRequested,
                         ..
                     } => {
@@ -178,30 +191,35 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Window destroy event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::Destroyed,
                         ..
                     } => {}
 
                     // Modifier change event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::ModifiersChanged(modifier),
                         ..
                     } => convert_modifier(&mut runtime_track.modifier, modifier.state()),
 
                     // Mouse enter window event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::CursorEntered { .. },
                         ..
                     } => {}
 
                     // Mouse leave window event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::CursorLeft { .. },
                         ..
                     } => {}
 
                     // Mouse moved event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::CursorMoved { position, .. },
                         ..
                     } => {
@@ -226,6 +244,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Mouse wheel event.
                     Event::WindowEvent {
+                        window_id,
                         event: WindowEvent::MouseWheel { delta, .. },
                         ..
                     } => {
@@ -256,6 +275,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Mouse pressed event.
                     Event::WindowEvent {
+                        window_id,
                         event:
                             WindowEvent::MouseInput {
                                 state: ElementState::Pressed,
@@ -286,6 +306,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Mouse release event.
                     Event::WindowEvent {
+                        window_id,
                         event:
                             WindowEvent::MouseInput {
                                 state: ElementState::Released,
@@ -316,6 +337,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Key pressed event.
                     Event::WindowEvent {
+                        window_id,
                         event:
                             WindowEvent::KeyboardInput {
                                 event:
@@ -351,6 +373,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
 
                     // Key released event.
                     Event::WindowEvent {
+                        window_id,
                         event:
                             WindowEvent::KeyboardInput {
                                 event:
@@ -384,6 +407,15 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         target.set_control_flow(ControlFlow::Poll)
                     }
 
+                    // Redraw event.
+                    Event::WindowEvent {
+                        window_id,
+                        event: WindowEvent::RedrawRequested { .. },
+                        ..
+                    } => {
+                        window.redraw();
+                    }
+
                     // VSync event.
                     Event::UserEvent(Message::VSync(ins)) => {
                         debug!(
@@ -403,12 +435,12 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         }
                     },
 
-                    // Redraw event.
-                    Event::WindowEvent {
-                        event: WindowEvent::RedrawRequested { .. },
-                        ..
-                    } => {
-                        window.redraw();
+                    // VSync event.
+                    Event::UserEvent(Message::CreateWindow(mut win)) => {
+                        let (logic_window, physical_window) =
+                            self.platform_context.create_window(win.take_config());
+
+                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     _ => (),

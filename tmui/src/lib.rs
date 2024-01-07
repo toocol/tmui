@@ -10,6 +10,7 @@ pub mod platform;
 pub mod graphics;
 pub mod prelude;
 pub mod widget;
+pub mod window;
 pub mod label;
 pub mod layout;
 pub mod loading;

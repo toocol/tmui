@@ -12,7 +12,7 @@ use crate::{
     event_hints::event_hints,
     platform::{win_config::{WindowConfig, WindowConfigBuilder}, PlatformContext, PlatformIpc, PlatformType},
     primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
-    runtime::{ui_runtime, windows_process::WindowsProcess}, graphics::icon::Icon,
+    runtime::{windows_process::WindowsProcess, start_ui_runtime}, graphics::icon::Icon,
 };
 use std::{
     any::Any,
@@ -22,7 +22,6 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Once,
     },
-    thread,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
 use tlib::{events::Event, figure::Size, winit::window::WindowButtons};
@@ -108,13 +107,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         logic_window.on_request_receive = on_request_receive;
 
         // Create the `UI` main thread.
-        let join = thread::Builder::new()
-            .name("tmui-main".to_string())
-            .stack_size(self.ui_stack_size)
-            .spawn(move || ui_runtime::<T, M>(logic_window))
-            .unwrap();
+        let join = start_ui_runtime(0, self.ui_stack_size, logic_window);
 
-        WindowsProcess::<T, M>::new().process(physical_window);
+        WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context).process(physical_window);
 
         join.join().unwrap();
     }

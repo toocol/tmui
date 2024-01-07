@@ -29,9 +29,6 @@ use tlib::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::Win32::Foundation::HWND;
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    /// The fileds associated with win32
-    hwnd: Option<HWND>,
-
     /// Shared memory ipc
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
 }
@@ -40,7 +37,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
     #[inline]
     pub fn new() -> Self {
         Self {
-            hwnd: None,
             master: None,
         }
     }
@@ -58,7 +54,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn initialize(&mut self) {}
 
     fn create_window(
-        &mut self,
+        &self,
         win_config: WindowConfig,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let inner_agent = if self.master.is_some() {
@@ -77,10 +73,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         let window = win_config::build_window(win_config, &event_loop).unwrap();
 
+        let window_id = window.id();
         let window_handle = window.window_handle().unwrap().as_raw();
-        match window_handle {
-            RawWindowHandle::Win32(hwnd) => self.hwnd = Some(HWND(hwnd.hwnd.into())),
-            _ => {}
+        let hwnd = match window_handle {
+            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd.into()),
+            _ => unreachable!(),
         };
         let event_loop_proxy = event_loop.create_proxy();
 
@@ -100,6 +97,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         (
             LogicWindow::master(
+                window_handle,
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -109,7 +107,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 },
             ),
             PhysicalWindow::Win32(Win32Window::new(
-                self.hwnd.unwrap(),
+                window_id,
+                hwnd,
                 bitmap,
                 self.master.clone(),
                 PhysicalWindowContext::Default(

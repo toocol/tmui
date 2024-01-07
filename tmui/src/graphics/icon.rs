@@ -1,5 +1,5 @@
 use std::path::Path;
-use tlib::figure::ImageBuf;
+use tlib::{figure::ImageBuf, typedef::WinitIcon};
 
 #[derive(Debug, Clone)]
 pub struct Icon(ImageBuf);
@@ -14,7 +14,7 @@ impl Icon {
     }
 }
 
-impl Into<tlib::winit::window::Icon> for Icon {
+impl Into<WinitIcon> for Icon {
     #[inline]
     fn into(self) -> tlib::winit::window::Icon {
         tlib::winit::window::Icon::from_rgba(

@@ -67,7 +67,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     }
 
     #[inline]
-    fn create_window(&mut self, _: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(&self, _: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let slave_clone = self.slave.as_ref().unwrap().clone();
         let inner_agent = InnerAgent::slave(slave_clone);
 

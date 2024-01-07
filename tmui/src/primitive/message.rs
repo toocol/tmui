@@ -7,6 +7,8 @@ use tlib::{
     prelude::SystemCursorShape,
 };
 
+use crate::window::Window;
+
 #[derive(Debug)]
 pub enum Message {
     /// VSync signal to redraw the window
@@ -17,6 +19,9 @@ pub enum Message {
 
     /// Events like MouseEvent, KeyEvent...
     Event(Event),
+
+    // Create new window.
+    CreateWindow(Window),
 }
 
 impl PayloadWeight for Message {
@@ -26,6 +31,7 @@ impl PayloadWeight for Message {
             Self::VSync(..) => 1.,
             Self::SetCursorShape(..) => 0.,
             Self::Event(..) => 1.,
+            Self::CreateWindow(_) => 1.,
         }
     }
 }
@@ -37,6 +43,7 @@ impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
             Self::VSync(a) => IpcEvent::VSync(a),
             Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
             Self::Event(evt) => convert_event(&evt),
+            Self::CreateWindow(_) => unreachable!(),
         }
     }
 }

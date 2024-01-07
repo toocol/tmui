@@ -25,7 +25,7 @@ use tlib::{
     events::Event,
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
-    object::{ObjectImpl, ObjectSubclass},
+    object::{ObjectImpl, ObjectSubclass}, winit::raw_window_handle::RawWindowHandle,
 };
 
 thread_local! {
@@ -37,6 +37,7 @@ static INIT: Once = Once::new();
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    raw_window_handle: Option<RawWindowHandle>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
 
@@ -183,6 +184,11 @@ impl ApplicationWindow {
             }
         }
         finds
+    }
+
+    #[inline]
+    pub(crate) fn set_raw_window_handle(&mut self, raw_window_handle: RawWindowHandle) {
+        self.raw_window_handle = Some(raw_window_handle)
     }
 
     #[inline]

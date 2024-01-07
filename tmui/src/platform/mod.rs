@@ -50,5 +50,5 @@ pub(crate) trait PlatformContext<T: 'static + Copy + Sync + Send, M: 'static + C
     fn initialize(&mut self);
 
     /// Create the window and event loop of the specific platform.
-    fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);
+    fn create_window(&self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);
 }

@@ -5,7 +5,7 @@ pub(crate) mod window_context;
 pub(crate) mod windows_process;
 
 use crate::{
-    application::{Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL, self},
+    application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
@@ -13,16 +13,35 @@ use crate::{
     prelude::*,
     primitive::{cpu_balance::CpuBalance, Message},
 };
-use std::sync::atomic::Ordering;
+use std::{
+    sync::atomic::Ordering,
+    thread::{self, JoinHandle},
+};
 use tipc::IpcType;
 use tlib::{
     events::{downcast_event, EventType, ResizeEvent},
     global::SemanticExt,
+    payload::PayloadWeight,
     r#async::tokio_runtime,
-    timer::TimerHub, payload::PayloadWeight,
+    timer::TimerHub,
 };
-
 use self::frame_manager::FrameManager;
+
+pub(crate) fn start_ui_runtime<T, M>(
+    index: usize,
+    ui_stack_size: usize,
+    logic_window: LogicWindow<T, M>,
+) -> JoinHandle<()>
+where
+    T: 'static + Copy + Sync + Send,
+    M: 'static + Copy + Sync + Send,
+{
+    thread::Builder::new()
+        .name(format!("tmui-main-{}", index))
+        .stack_size(ui_stack_size)
+        .spawn(move || ui_runtime::<T, M>(logic_window))
+        .unwrap()
+}
 
 pub(crate) fn ui_runtime<T, M>(mut logic_window: LogicWindow<T, M>)
 where
@@ -76,6 +95,9 @@ where
     window.set_board(board.as_mut());
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());
+    if let Some(raw_window_handle) = logic_window.raw_window_handle() {
+        window.set_raw_window_handle(raw_window_handle)
+    }
 
     if let Some(on_activate) = on_activate {
         on_activate(&mut window);
