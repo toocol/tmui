@@ -4,7 +4,7 @@ pub(crate) mod ipc_window;
 
 use self::ipc_window::IpcWindow;
 
-use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, win_config::WindowConfig};
+use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext};
 use crate::{
     platform::ipc_inner_agent::InnerAgent,
     primitive::{
@@ -16,10 +16,11 @@ use crate::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
         PhysicalWindowContext,
     },
+    window::win_config::WindowConfig,
 };
 use std::sync::{mpsc::channel, Arc};
 use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
-use tlib::figure::Rect;
+use tlib::{figure::Rect, winit::{raw_window_handle::RawWindowHandle, event_loop::{EventLoopWindowTarget, EventLoopProxy}}};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     region: Rect,
@@ -63,11 +64,16 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         self.region = slave
             .region(self.shared_widget_id.unwrap())
             .expect("The `SharedWidget` with id `{}` was not exist.");
-
     }
 
     #[inline]
-    fn create_window(&self, _: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(
+        &self,
+        _: WindowConfig,
+        _: Option<RawWindowHandle>,
+        _: Option<&EventLoopWindowTarget<Message>>,
+        _: Option<EventLoopProxy<Message>>,
+    ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let slave_clone = self.slave.as_ref().unwrap().clone();
         let inner_agent = InnerAgent::slave(slave_clone);
 
@@ -103,7 +109,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             ),
             PhysicalWindow::Ipc(IpcWindow::new(
                 self.slave.as_ref().unwrap().clone(),
-                PhysicalWindowContext::Ipc(
+                PhysicalWindowContext(
                     OutputReceiver::Receiver(output_receiver),
                     InputSender(input_sender),
                 ),

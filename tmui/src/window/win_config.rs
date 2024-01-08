@@ -2,19 +2,22 @@ use crate::{graphics::icon::Icon, primitive::Message};
 use derivative::Derivative;
 use tlib::{
     figure::Size,
+    typedef::WinitIcon,
     winit::{
         dpi::PhysicalSize,
         error::OsError,
-        event_loop::EventLoop,
+        event_loop::EventLoopWindowTarget,
+        raw_window_handle::RawWindowHandle,
         window::{Window, WindowBuilder, WindowButtons},
-    }, typedef::WinitIcon,
+    },
 };
 
 type WinitSize = tlib::winit::dpi::Size;
 
 pub(crate) fn build_window(
     win_config: WindowConfig,
-    target: &EventLoop<Message>,
+    target: &EventLoopWindowTarget<Message>,
+    parent: Option<RawWindowHandle>,
 ) -> Result<Window, OsError> {
     let (width, height) = win_config.size();
 
@@ -29,6 +32,8 @@ pub(crate) fn build_window(
         .with_maximized(win_config.maximized)
         .with_active(win_config.active)
         .with_enabled_buttons(win_config.enable_buttons);
+
+    unsafe { window_bld = window_bld.with_parent_window(parent) };
 
     if let Some(max_size) = win_config.max_size {
         window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(
@@ -206,7 +211,7 @@ impl WindowConfigBuilder {
     }
 
     /// Set the title of window.
-    /// 
+    ///
     /// The default value was "Tmui Window".
     #[inline]
     pub fn title(mut self, title: String) -> Self {

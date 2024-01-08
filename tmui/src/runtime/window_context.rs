@@ -1,16 +1,10 @@
 use crate::{
     primitive::Message,
-    winit::{
-        event_loop::{EventLoop, EventLoopProxy},
-        window::Window,
-    },
+    winit::event_loop::{EventLoop, EventLoopProxy},
 };
 use std::sync::mpsc::{Receiver, Sender};
 
-pub(crate) enum PhysicalWindowContext {
-    Default(Window, OutputReceiver, InputSender),
-    Ipc(OutputReceiver, InputSender),
-}
+pub(crate) struct PhysicalWindowContext(pub(crate) OutputReceiver, pub(crate) InputSender);
 
 pub(crate) struct LogicWindowContext {
     pub output_sender: OutputSender,
@@ -21,8 +15,8 @@ pub(crate) enum OutputSender {
     EventLoopProxy(EventLoopProxy<Message>),
     Sender(Sender<Message>),
 }
-pub(crate) enum OutputReceiver { 
-    EventLoop(EventLoop<Message>),
+pub(crate) enum OutputReceiver {
+    EventLoop(Option<EventLoop<Message>>),
     Receiver(Receiver<Message>),
 }
 

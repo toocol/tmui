@@ -3,7 +3,7 @@ use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave,
     mem::mem_rw_lock::MemRwLock, IpcNode, IpcType, RwLock,
 };
-use tlib::winit::raw_window_handle::RawWindowHandle;
+use tlib::winit::{raw_window_handle::RawWindowHandle, window::WindowId};
 use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
@@ -16,7 +16,9 @@ use super::{
 };
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
+    window_id: Option<WindowId>,
     raw_window_handle: Option<RawWindowHandle>,
+
     bitmap: Arc<RwLock<Bitmap>>,
     lock: Option<Arc<MemRwLock>>,
 
@@ -44,6 +46,7 @@ unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Se
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWindow<T, M> {
     pub fn master(
+        window_id: WindowId,
         raw_window_handle: RawWindowHandle,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
@@ -52,6 +55,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     ) -> Self {
         let lock = master.as_ref().and_then(|m| Some(m.read().buffer_lock()));
         Self {
+            window_id: Some(window_id),
             raw_window_handle: Some(raw_window_handle),
             bitmap,
             lock,
@@ -78,6 +82,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     ) -> Self {
         let lock = Some(slave.read().buffer_lock());
         Self {
+            window_id: None,
             raw_window_handle: None,
             bitmap,
             lock,
@@ -93,6 +98,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             on_user_event_receive: None,
             on_request_receive: None,
         }
+    }
+
+    #[inline]
+    pub fn window_id(&self) -> Option<WindowId> {
+        self.window_id
     }
 
     #[inline]

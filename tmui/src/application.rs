@@ -10,9 +10,9 @@ use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
     event_hints::event_hints,
-    platform::{win_config::{WindowConfig, WindowConfigBuilder}, PlatformContext, PlatformIpc, PlatformType},
+    platform::{PlatformContext, PlatformIpc, PlatformType},
     primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
-    runtime::{windows_process::WindowsProcess, start_ui_runtime}, graphics::icon::Icon,
+    runtime::{windows_process::WindowsProcess, start_ui_runtime}, graphics::icon::Icon, window::win_config::{WindowConfig, WindowConfigBuilder},
 };
 use std::{
     any::Any,
@@ -91,7 +91,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let platform_context = platform_mut.as_mut().unwrap();
 
         // Create the window
-        let (mut logic_window, physical_window) = platform_context.create_window(self.win_config.borrow_mut().take().unwrap());
+        let (mut logic_window, physical_window) = platform_context.create_window(self.win_config.borrow_mut().take().unwrap(), None, None, None);
 
         // Get the customize event handle functions.
         let on_activate = self.on_activate.borrow_mut().take();

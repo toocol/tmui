@@ -5,11 +5,13 @@ use crate::{
         element::{HierachyZ, TOP_Z_INDEX},
     },
     layout::LayoutManager,
+    loading::LoadingManager,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
     primitive::Message,
     runtime::{wed, window_context::OutputSender},
-    widget::{WidgetImpl, WidgetSignals, ZIndexStep}, loading::LoadingManager,
+    widget::{WidgetImpl, WidgetSignals, ZIndexStep},
+    window::win_builder::WindowBuilder,
 };
 use log::debug;
 use once_cell::sync::Lazy;
@@ -25,7 +27,8 @@ use tlib::{
     events::Event,
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
-    object::{ObjectImpl, ObjectSubclass}, winit::raw_window_handle::RawWindowHandle,
+    object::{ObjectImpl, ObjectSubclass},
+    winit::{raw_window_handle::RawWindowHandle, window::WindowId},
 };
 
 thread_local! {
@@ -37,6 +40,7 @@ static INIT: Once = Once::new();
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    winit_id: Option<WindowId>,
     raw_window_handle: Option<RawWindowHandle>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
@@ -100,7 +104,11 @@ type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);
 
 impl ApplicationWindow {
     #[inline]
-    pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
+    pub(crate) fn new(
+        platform_type: PlatformType,
+        width: i32,
+        height: i32,
+    ) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =
             Object::new(&[("width", &width), ("height", &height)]);
@@ -192,6 +200,16 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn winit_id(&self) -> Option<WindowId> {
+        self.winit_id
+    }
+
+    #[inline]
+    pub(crate) fn set_winit_id(&mut self, id: WindowId) {
+        self.winit_id = Some(id)
+    }
+
+    #[inline]
     pub(crate) fn set_ipc_bridge(&mut self, ipc_bridge: Option<Box<dyn IpcBridge>>) {
         self.ipc_bridge = ipc_bridge
     }
@@ -249,6 +267,17 @@ impl ApplicationWindow {
     #[inline]
     pub fn platform_type(&self) -> PlatformType {
         self.platform_type
+    }
+
+    #[inline]
+    pub fn create_child_window(&self, window_bld: WindowBuilder) {
+        let mut window = window_bld.build();
+        window.set_parent(
+            self.raw_window_handle
+                .expect("Can not create child window on slave side of shared memory application."),
+        );
+
+        self.send_message(Message::CreateWindow(window));
     }
 
     #[inline]

@@ -1,5 +1,5 @@
-use super::Window;
-use crate::{application_window::ApplicationWindow, platform::win_config::WindowConfig};
+use super::{Window, win_config::WindowConfig};
+use crate::application_window::ApplicationWindow;
 
 #[derive(Default)]
 pub struct WindowBuilder {

@@ -1,18 +1,24 @@
-use self::win_builder::WindowBuilder;
-use crate::{application_window::ApplicationWindow, platform::win_config::WindowConfig};
+pub mod win_config;
+pub mod win_builder;
+
+use tlib::winit::raw_window_handle::RawWindowHandle;
+use self::{win_builder::WindowBuilder, win_config::WindowConfig};
+use crate::application_window::ApplicationWindow;
 use std::{
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
-pub mod win_builder;
 
 static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 pub struct Window {
+    index: usize,
+    parent: Option<RawWindowHandle>,
     win_cfg: Option<WindowConfig>,
     on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-    index: usize,
 }
+
+unsafe impl Send for Window {}
 
 impl Debug for Window {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,9 +33,10 @@ impl Window {
     #[inline]
     pub(crate) fn new() -> Self {
         Self {
+            index: WINDOW_COUNTER.fetch_add(1, Ordering::Acquire),
+            parent: None,
             win_cfg: None,
             on_activate: None,
-            index: WINDOW_COUNTER.fetch_add(1, Ordering::Acquire),
         }
     }
 }
@@ -41,19 +48,29 @@ impl Window {
     }
 
     #[inline]
-    pub fn take_config(&mut self) -> WindowConfig {
+    pub(crate) fn take_config(&mut self) -> WindowConfig {
         self.win_cfg.take().unwrap()
     }
 
     #[inline]
-    pub fn take_on_activate(
+    pub(crate) fn take_on_activate(
         &mut self,
     ) -> Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>> {
         self.on_activate.take()
     }
 
     #[inline]
+    pub(crate) fn set_parent(&mut self, handle: RawWindowHandle) {
+        self.parent = Some(handle)
+    }
+
+    #[inline]
     pub fn index(&self) -> usize {
         self.index
+    }
+
+    #[inline]
+    pub fn parent(&self) -> Option<RawWindowHandle> {
+        self.parent
     }
 }

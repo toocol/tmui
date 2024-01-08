@@ -4,7 +4,7 @@ use tlib::{
     events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
     namespace::AsNumeric,
     payload::PayloadWeight,
-    prelude::SystemCursorShape,
+    prelude::SystemCursorShape, winit::window::WindowId,
 };
 
 use crate::window::Window;
@@ -12,7 +12,7 @@ use crate::window::Window;
 #[derive(Debug)]
 pub enum Message {
     /// VSync signal to redraw the window
-    VSync(Instant),
+    VSync(WindowId, Instant),
 
     /// Set the cursor shape by user.
     SetCursorShape(SystemCursorShape),
@@ -40,7 +40,7 @@ impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
     #[inline]
     fn into(self) -> IpcEvent<T> {
         match self {
-            Self::VSync(a) => IpcEvent::VSync(a),
+            Self::VSync(_, a) => IpcEvent::VSync(a),
             Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
             Self::Event(evt) => convert_event(&evt),
             Self::CreateWindow(_) => unreachable!(),

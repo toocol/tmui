@@ -4,11 +4,13 @@ use tlib::payload::PayloadWeight;
 
 use crate::{
     animation::manager::AnimationManager,
+    application,
     application_window::ApplicationWindow,
     graphics::board::Board,
+    loading::LoadingManager,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
-    widget::widget_ext::WidgetExt, application, loading::LoadingManager,
+    widget::widget_ext::WidgetExt,
 };
 
 pub const FRAME_INTERVAL: u128 = 16000;
@@ -82,9 +84,11 @@ impl FrameManager {
                 window.set_minimized(false);
             }
             if update {
-                let msg = Message::VSync(Instant::now());
-                cpu_balance.add_payload(msg.payload_wieght());
-                window.send_message(msg);
+                if let Some(window_id) = window.winit_id() {
+                    let msg = Message::VSync(window_id, Instant::now());
+                    cpu_balance.add_payload(msg.payload_wieght());
+                    window.send_message(msg);
+                }
             }
             update
         } else {
