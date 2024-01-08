@@ -13,13 +13,12 @@ use crate::{
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
     window::win_builder::WindowBuilder,
 };
-use log::debug;
+use log::{debug, error};
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     ptr::NonNull,
-    sync::Once,
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -35,8 +34,6 @@ thread_local! {
     pub(crate) static WINDOW_ID: RefCell<ObjectId> = RefCell::new(0);
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
 }
-
-static INIT: Once = Once::new();
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
@@ -104,11 +101,7 @@ type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);
 
 impl ApplicationWindow {
     #[inline]
-    pub(crate) fn new(
-        platform_type: PlatformType,
-        width: i32,
-        height: i32,
-    ) -> Box<ApplicationWindow> {
+    pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =
             Object::new(&[("width", &width), ("height", &height)]);
@@ -270,12 +263,20 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn create_child_window(&self, window_bld: WindowBuilder) {
+    pub fn create_window(&self, window_bld: WindowBuilder) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not create window on slave side of shared memory application.");
+            return;
+        }
+
         let mut window = window_bld.build();
-        window.set_parent(
-            self.raw_window_handle
-                .expect("Can not create child window on slave side of shared memory application."),
-        );
+        if window.is_child_window() {
+            window.set_parent(
+                self.raw_window_handle.expect(
+                    "Can not create child window on slave side of shared memory application.",
+                ),
+            );
+        }
 
         self.send_message(Message::CreateWindow(window));
     }
@@ -317,9 +318,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn set_board(&mut self, board: &mut Board) {
-        INIT.call_once(move || {
-            self.board = NonNull::new(board);
-        });
+        self.board = NonNull::new(board);
     }
 
     #[inline]

@@ -66,13 +66,8 @@ where
     // Setup the tokio async runtime
     let _guard = tokio_runtime().enter();
 
-    // Create and initialize the `ActionHub`.
-    let mut action_hub = ActionHub::new();
-    action_hub.initialize();
-
-    // Create and initialize the `TimerHub`.
-    let mut timer_hub = TimerHub::new();
-    timer_hub.initialize();
+    // Initialize the `ActionHub`.
+    ActionHub::initialize();
 
     let bitmap = logic_window.bitmap();
     let read_guard = bitmap.read();
@@ -136,8 +131,7 @@ where
             &size_record,
         );
 
-        timer_hub.check_timers();
-        action_hub.process_multi_thread_actions();
+        TimerHub::with(|timer_hub| timer_hub.check_timers());
         tlib::r#async::async_callbacks();
 
         if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {

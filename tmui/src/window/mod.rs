@@ -16,6 +16,7 @@ pub struct Window {
     parent: Option<RawWindowHandle>,
     win_cfg: Option<WindowConfig>,
     on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+    child_window: bool,
 }
 
 unsafe impl Send for Window {}
@@ -37,6 +38,7 @@ impl Window {
             parent: None,
             win_cfg: None,
             on_activate: None,
+            child_window: false,
         }
     }
 }
@@ -72,5 +74,10 @@ impl Window {
     #[inline]
     pub fn parent(&self) -> Option<RawWindowHandle> {
         self.parent
+    }
+
+    #[inline]
+    pub fn is_child_window(&self) -> bool {
+        self.child_window
     }
 }

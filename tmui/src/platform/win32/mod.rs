@@ -21,7 +21,7 @@ use crate::{
     },
     runtime::window_context::OutputSender,
 };
-use std::sync::{mpsc::channel, Arc};
+use std::{sync::{mpsc::channel, Arc}, cell::Cell};
 use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
 use tlib::winit::{
     event_loop::{EventLoopProxy, EventLoopWindowTarget},
@@ -32,7 +32,7 @@ use windows::Win32::Foundation::HWND;
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     /// Shared memory ipc
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
-    main_win_create: bool,
+    main_win_create: Cell<bool>,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformWin32<T, M> {
@@ -40,7 +40,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
     pub fn new() -> Self {
         Self {
             master: None,
-            main_win_create: true,
+            main_win_create: Cell::new(true),
         }
     }
 
@@ -102,7 +102,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         // Create the shared channel.
         let (shared_channel, user_ipc_event_sender) =
-            if self.master.is_some() && self.main_win_create {
+            if self.master.is_some() && self.main_win_create.get() {
                 let (user_ipc_event_sender, user_ipc_event_receiver) = channel();
                 let shared_channel = shared_channel::master_channel(
                     self.master.as_ref().unwrap().clone(),
@@ -112,6 +112,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             } else {
                 (None, None)
             };
+
+        self.main_win_create.set(false);
 
         (
             LogicWindow::master(

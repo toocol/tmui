@@ -45,11 +45,11 @@ pub(crate) struct WindowsProcess<
 > {
     _holdt: PhantomData<T>,
     _holdm: PhantomData<M>,
+
     ui_stack_size: usize,
     platform_context: &'a Box<dyn PlatformContext<T, M>>,
 
     windows: HashMap<WindowId, PhysWindow<T, M>>,
-
     main_window_id: Option<WindowId>,
     proxy: Option<EventLoopProxy<Message>>,
 }
@@ -127,7 +127,6 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                                 match evt {
                                     IpcEvent::SetCursorShape(cursor) => {
-                                        // TODO:
                                         proxy.send_event(Message::SetCursorShape(cursor)).unwrap();
                                     }
                                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
@@ -170,6 +169,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                 match event {
                     Event::WindowEvent { window_id, event } => {
+                        let main_window_id = self.main_window_id();
                         let window = self
                             .windows
                             .get_mut(&window_id)
@@ -198,7 +198,10 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             // Window close event.
                             WindowEvent::CloseRequested => {
-                                println!("The close button was pressed; stopping");
+                                if window_id != main_window_id {
+                                    return
+                                }
+
                                 if let Some(master) = window.master.clone() {
                                     let master_guard = master.read();
                                     master_guard.try_send(IpcEvent::Exit).unwrap();

@@ -23,7 +23,7 @@ impl ObjectImpl for MyWidget {
 
 impl WidgetImpl for MyWidget {
     fn on_mouse_pressed(&mut self, _: &tlib::events::MouseEvent) {
-        self.window().create_child_window(
+        self.window().create_window(
             WindowBuilder::new()
                 .config(WindowConfig::builder().width(300).height(100).build())
                 .on_activate(|_window| {
