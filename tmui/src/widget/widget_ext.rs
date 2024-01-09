@@ -1,4 +1,4 @@
-use super::{Transparency, Widget, WidgetImpl, WindowAcquire, SizeHint};
+use super::{SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -457,7 +457,7 @@ pub trait WidgetExt {
     fn mouse_tracking(&self) -> bool;
 
     /// Set the `mouse_tracking` status of widget.
-    /// 
+    ///
     /// when `ture`, widget will track the movement of mouse.
     ///
     /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
@@ -616,14 +616,14 @@ pub trait WidgetExt {
     fn propagate_set_transparency(&mut self, transparency: Transparency);
 
     /// Get the size hint of widget.
-    /// 
+    ///
     /// For specific information about size_hint, please refer to [`size_hint`](crate::widget::Widget::size_hint)
     ///
     /// Go to[`Function defination`](WidgetExt::size_hint) (Defined in [`WidgetExt`])
     fn size_hint(&self) -> SizeHint;
 
     /// Set the size hint of widget.
-    /// 
+    ///
     /// For specific information about size_hint, please refer to [`size_hint`](crate::widget::Widget::size_hint)
     ///
     /// Go to[`Function defination`](WidgetExt::set_size_hint) (Defined in [`WidgetExt`])
@@ -935,7 +935,6 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_font(&mut self, font: Font) {
         self.font = font;
-        self.font_changed();
     }
 
     #[inline]
@@ -1316,10 +1315,7 @@ impl WidgetExt for Widget {
     #[inline]
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
         let rect = self.rect();
-        FPoint::new(
-            point.x() - rect.x() as f32,
-            point.y() - rect.y() as f32,
-        )
+        FPoint::new(point.x() - rect.x() as f32, point.y() - rect.y() as f32)
     }
 
     #[inline]
@@ -1531,7 +1527,7 @@ impl WidgetExt for Widget {
                     panic!("`Minimum size hint can not be larger than maximum size hint.")
                 }
             }
-            _ => {},
+            _ => {}
         }
         self.size_hint = size_hint
     }

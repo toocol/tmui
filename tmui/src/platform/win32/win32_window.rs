@@ -8,6 +8,7 @@ use std::{
     mem::size_of,
     sync::{mpsc::Sender, Arc},
 };
+use log::error;
 use tipc::{ipc_master::IpcMaster, RwLock};
 use tlib::{
     typedef::WinitWindow,
@@ -17,7 +18,7 @@ use windows::Win32::{Foundation::*, Graphics::Gdi::*};
 
 pub(crate) struct Win32Window<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {
     window_id: WindowId,
-    winit_window: WinitWindow,
+    winit_window: Option<WinitWindow>,
 
     hwnd: HWND,
     bitmap: Arc<RwLock<Bitmap>>,
@@ -40,7 +41,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
     ) -> Self {
         Self {
             window_id,
-            winit_window,
+            winit_window: Some(winit_window),
             hwnd,
             bitmap,
             master,
@@ -65,13 +66,25 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
     }
 
     #[inline]
+    pub fn send_input(&self, msg: Message) {
+        self.input_sender().send(msg).unwrap_or_else(|_| {
+            error!("Error sending Message: The UI thread may have been closed.");
+        });
+    }
+
+    #[inline]
     pub fn input_sender(&self) -> &Sender<Message> {
         &self.context.1 .0
     }
 
     #[inline]
     pub fn winit_window(&self) -> &WinitWindow {
-        &self.winit_window
+        self.winit_window.as_ref().unwrap()
+    }
+
+    #[inline]
+    pub fn take_winit_window(&mut self) -> Option<WinitWindow> {
+        self.winit_window.take()
     }
 
     /// Request to redraw the window.

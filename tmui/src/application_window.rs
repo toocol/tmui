@@ -253,6 +253,15 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn send_message(&self, message: Message) {
+        match self.output_sender {
+            Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
+            Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
+            None => panic!("`ApplicationWindow` did not register the output_sender."),
+        }
+    }
+
+    #[inline]
     pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
         self.run_after = Some(Box::new(run_after));
     }
@@ -279,15 +288,6 @@ impl ApplicationWindow {
         }
 
         self.send_message(Message::CreateWindow(window));
-    }
-
-    #[inline]
-    pub fn send_message(&self, message: Message) {
-        match self.output_sender {
-            Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
-            Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
-            None => panic!("`ApplicationWindow` did not register the output_sender."),
-        }
     }
 
     #[inline]

@@ -4,7 +4,7 @@ pub(crate) mod win32_window;
 use self::win32_window::Win32Window;
 use super::{
     ipc_inner_agent::InnerAgent, logic_window::LogicWindow, physical_window::PhysicalWindow,
-    PlatformContext,
+    PlatformContext, PlatformType,
 };
 use crate::{
     primitive::Message,
@@ -12,7 +12,7 @@ use crate::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, PhysicalWindowContext,
     },
     window::win_config::{self, WindowConfig},
-    winit::event_loop::EventLoopBuilder,
+    winit::event_loop::EventLoopBuilder, backend::BackendType,
 };
 use crate::{
     primitive::{
@@ -33,14 +33,18 @@ pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Co
     /// Shared memory ipc
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     main_win_create: Cell<bool>,
+    platform_type: PlatformType,
+    backend_type: BackendType,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformWin32<T, M> {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(platform_type: PlatformType, backend_type: BackendType) -> Self {
         Self {
             master: None,
             main_win_create: Cell::new(true),
+            platform_type,
+            backend_type,
         }
     }
 
@@ -54,8 +58,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformWin32<T, M>
 {
-    fn initialize(&mut self) {}
-
     fn create_window(
         &self,
         win_config: WindowConfig,
@@ -115,7 +117,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         self.main_win_create.set(false);
 
-        (
+        let (mut logic_window, physical_window) = (
             LogicWindow::master(
                 window_id,
                 window_handle,
@@ -139,7 +141,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 ),
                 user_ipc_event_sender,
             )),
-        )
+        );
+
+        logic_window.platform_type = self.platform_type;
+        logic_window.backend_type = self.backend_type;
+
+        (logic_window, physical_window)
     }
 }
 

@@ -4,6 +4,7 @@ pub(crate) mod wed;
 pub(crate) mod window_context;
 pub(crate) mod windows_process;
 
+use self::frame_manager::FrameManager;
 use crate::{
     application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
     application_window::ApplicationWindow,
@@ -25,7 +26,6 @@ use tlib::{
     r#async::tokio_runtime,
     timer::TimerHub,
 };
-use self::frame_manager::FrameManager;
 
 pub(crate) fn start_ui_runtime<T, M>(
     index: usize,
@@ -134,28 +134,36 @@ where
         TimerHub::with(|timer_hub| timer_hub.check_timers());
         tlib::r#async::async_callbacks();
 
-        if let Ok(Message::Event(mut evt)) = input_receiver.try_recv() {
-            if evt.event_type() == EventType::Resize {
-                let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
+        if let Ok(event) = input_receiver.try_recv() {
+            match event {
+                Message::Event(mut evt) => {
+                    if evt.event_type() == EventType::Resize {
+                        let resize_evt = downcast_event::<ResizeEvent>(evt).unwrap();
 
-                if resize_evt.width() > 0 && resize_evt.height() > 0 {
-                    size_record = (resize_evt.width() as u32, resize_evt.height() as u32);
-                    resized = true;
-                } else {
-                    window.set_minimized(true);
+                        if resize_evt.width() > 0 && resize_evt.height() > 0 {
+                            size_record = (resize_evt.width() as u32, resize_evt.height() as u32);
+                            resized = true;
+                        } else {
+                            window.set_minimized(true);
+                        }
+
+                        evt = resize_evt;
+
+                        application::request_high_load(true);
+                    }
+
+                    cpu_balance.add_payload(evt.payload_wieght());
+                    let evt = window.dispatch_event(evt);
+                    if let Some(ref evt) = evt {
+                        if logic_window.ipc_type == IpcType::Master {
+                            Application::<T, M>::send_event_ipc(&evt);
+                        }
+                    }
                 }
-
-                evt = resize_evt;
-
-                application::request_high_load(true);
-            }
-
-            cpu_balance.add_payload(evt.payload_wieght());
-            let evt = window.dispatch_event(evt);
-            if let Some(ref evt) = evt {
-                if logic_window.ipc_type == IpcType::Master {
-                    Application::<T, M>::send_event_ipc(&evt);
+                Message::WindowClosed => {
+                    break;
                 }
+                _ => {}
             }
         }
 

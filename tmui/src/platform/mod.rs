@@ -49,9 +49,6 @@ pub enum PlatformType {
 pub(crate) trait PlatformContext<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>:
     'static
 {
-    /// Initialize the PlatformContext.
-    fn initialize(&mut self);
-
     /// Create the window and event loop of the specific platform.
     fn create_window(
         &self,

@@ -33,8 +33,6 @@ impl ObjectSubclass for Label {
 impl ObjectImpl for Label {
     fn construct(&mut self) {
         self.parent_construct();
-
-        self.font_changed();
     }
 
     fn type_register(&self, type_registry: &mut TypeRegistry) {
@@ -159,8 +157,13 @@ impl WidgetImpl for Label {
         let size = self.size();
 
         if size.width() == 0 || size.height() == 0 {
-            self.set_fixed_width(self.paragraph_width as i32);
-            self.set_fixed_height(self.paragraph_height as i32);
+            if self.paragraph_width != 0. {
+                self.set_fixed_width(self.paragraph_width as i32 + 1);
+            }
+
+            if self.paragraph_height != 0. {
+                self.set_fixed_height(self.paragraph_height as i32);
+            }
         }
         if self.window_id() != 0 && self.window().initialized() {
             self.window().layout_change(self);

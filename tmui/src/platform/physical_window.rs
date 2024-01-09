@@ -45,6 +45,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PhysicalW
             Self::Win32(win) => win,
             #[cfg(macos_platform)]
             Self::Macos(win) => win,
+            #[cfg(wayland_platform)]
+            Self::Wayland(win) => win,
+            #[cfg(x11_platform)]
+            Self::X11(win) => win,
         }
     }
 }

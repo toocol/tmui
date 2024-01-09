@@ -22,6 +22,9 @@ pub enum Message {
 
     // Create new window.
     CreateWindow(Window),
+
+    // Window has closed.
+    WindowClosed,
 }
 
 impl PayloadWeight for Message {
@@ -32,6 +35,7 @@ impl PayloadWeight for Message {
             Self::SetCursorShape(..) => 0.,
             Self::Event(..) => 1.,
             Self::CreateWindow(_) => 1.,
+            Self::WindowClosed => 0.,
         }
     }
 }
@@ -44,6 +48,7 @@ impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
             Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
             Self::Event(evt) => convert_event(&evt),
             Self::CreateWindow(_) => unreachable!(),
+            Self::WindowClosed => unreachable!(),
         }
     }
 }

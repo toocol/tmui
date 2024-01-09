@@ -13,7 +13,7 @@ use crate::{
         event::{Event, WindowEvent},
     },
 };
-use log::debug;
+use log::{debug, error};
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -175,6 +175,8 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             .get_mut(&window_id)
                             .expect(&format!("Can not find window with id {:?}", window_id));
 
+                        target.set_control_flow(ControlFlow::Poll);
+
                         match event {
                             // Window redraw event.
                             WindowEvent::RedrawRequested => {
@@ -187,19 +189,17 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     return;
                                 }
                                 let evt = ResizeEvent::new(size.width as i32, size.height as i32);
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
+                                window.send_input(Message::Event(Box::new(evt)));
 
-                                target.set_control_flow(ControlFlow::Poll);
                                 application::request_high_load(true);
                             }
 
-                            // Window close event.
+                            // Window close requested event.
                             WindowEvent::CloseRequested => {
                                 if window_id != main_window_id {
-                                    return
+                                    window.send_input(Message::WindowClosed);
+                                    let _ = window.take_winit_window();
+                                    return;
                                 }
 
                                 if let Some(master) = window.master.clone() {
@@ -214,7 +214,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             // Window destroy event.
-                            WindowEvent::Destroyed => {}
+                            WindowEvent::Destroyed => {
+                                self.windows.remove(&window_id);
+                            }
 
                             // Modifier change event.
                             WindowEvent::ModifiersChanged(modifier) => {
@@ -243,12 +245,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 runtime_track.mouse_position = (pos.0, pos.1);
                                 Cursor::set_position(pos);
 
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
-
-                                target.set_control_flow(ControlFlow::Poll)
+                                window.send_input(Message::Event(Box::new(evt)));
                             }
 
                             // Mouse wheel event.
@@ -274,11 +271,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     delta_type,
                                 );
 
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
-                                target.set_control_flow(ControlFlow::Poll)
+                                window.send_input(Message::Event(Box::new(evt)));
                             }
 
                             // Mouse pressed event.
@@ -303,11 +296,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     DeltaType::default(),
                                 );
 
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
-                                target.set_control_flow(ControlFlow::Poll)
+                                window.send_input(Message::Event(Box::new(evt)));
                             }
 
                             // Mouse release event.
@@ -332,11 +321,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     DeltaType::default(),
                                 );
 
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
-                                target.set_control_flow(ControlFlow::Poll)
+                                window.send_input(Message::Event(Box::new(evt)));
                             }
 
                             // Key pressed event.
@@ -368,11 +353,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     text,
                                 );
 
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
-                                target.set_control_flow(ControlFlow::Poll)
+                                window.send_input(Message::Event(Box::new(evt)));
                             }
 
                             // Key released event.
@@ -404,11 +385,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     text,
                                 );
 
-                                window
-                                    .input_sender()
-                                    .send(Message::Event(Box::new(evt)))
-                                    .unwrap();
-                                target.set_control_flow(ControlFlow::Poll)
+                                window.send_input(Message::Event(Box::new(evt)));
                             }
 
                             _ => {}
@@ -451,9 +428,13 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                     // VSync event.
                     Event::UserEvent(Message::CreateWindow(mut win)) => {
-                        let (mut logic_window, physical_window) = self
-                            .platform_context
-                            .create_window(win.take_config(), win.parent(), Some(target), Some(self.proxy()));
+                        let (mut logic_window, physical_window) =
+                            self.platform_context.create_window(
+                                win.take_config(),
+                                win.parent(),
+                                Some(target),
+                                Some(self.proxy()),
+                            );
 
                         logic_window.on_activate = win.take_on_activate();
 
@@ -466,8 +447,6 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             self.ui_stack_size,
                             logic_window,
                         ));
-
-                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     _ => (),
@@ -525,7 +504,11 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                         break 'main;
                     }
                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                    evt => input_sender.send(Message::Event(evt.into())).unwrap(),
+                    evt => input_sender
+                        .send(Message::Event(evt.into()))
+                        .unwrap_or_else(|_| {
+                            error!("Error sending Message: The UI thread may have been closed.")
+                        }),
                 }
             }
 

@@ -1,15 +1,15 @@
-pub mod win_config;
 pub mod win_builder;
+pub mod win_config;
 
-use tlib::winit::raw_window_handle::RawWindowHandle;
 use self::{win_builder::WindowBuilder, win_config::WindowConfig};
 use crate::application_window::ApplicationWindow;
 use std::{
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
+use tlib::winit::raw_window_handle::RawWindowHandle;
 
-static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 pub struct Window {
     index: usize,
@@ -24,8 +24,10 @@ unsafe impl Send for Window {}
 impl Debug for Window {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Window")
+            .field("index", &self.index)
             .field("win_cfg", &self.win_cfg)
             .field("on_activate", &self.on_activate.is_some())
+            .field("child_window", &self.child_window)
             .finish()
     }
 }
