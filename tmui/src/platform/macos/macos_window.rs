@@ -1,7 +1,10 @@
 #![cfg(target_os = "macos")]
-use std::sync::{mpsc::Sender, Arc};
+use crate::{
+    primitive::{bitmap::Bitmap, Message},
+    runtime::window_context::{OutputReceiver, PhysicalWindowContext},
+};
 use cocoa::{
-    appkit::{NSImage, NSImageView, NSView, NSWindow, NSEvent},
+    appkit::{NSEvent, NSImage, NSImageView, NSView, NSWindow},
     base::{id, nil},
     foundation::{NSAutoreleasePool, NSSize},
 };
@@ -11,11 +14,19 @@ use core_graphics::{
     data_provider::CGDataProvider,
     image::CGImage,
 };
+use log::error;
 use objc::*;
+use std::sync::{mpsc::Sender, Arc};
 use tipc::{ipc_master::IpcMaster, RwLock};
-use crate::{primitive::bitmap::Bitmap, runtime::window_context::PhysicalWindowContext};
+use tlib::{
+    typedef::WinitWindow,
+    winit::{event_loop::EventLoop, window::WindowId},
+};
 
 pub(crate) struct MacosWindow<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {
+    window_id: WindowId,
+    winit_window: Option<WinitWindow>,
+
     ns_view: id,
     ns_image_view: Option<id>,
     color_space: CGColorSpace,
@@ -23,13 +34,15 @@ pub(crate) struct MacosWindow<T: 'static + Copy + Send + Sync, M: 'static + Copy
     bitmap: Arc<RwLock<Bitmap>>,
 
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
-    pub context: Option<PhysicalWindowContext>,
+    pub context: PhysicalWindowContext,
     pub user_ipc_event_sender: Option<Sender<Vec<T>>>,
 }
 
 impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWindow<T, M> {
     #[inline]
     pub fn new(
+        window_id: WindowId,
+        winit_window: WinitWindow,
         ns_view: id,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
@@ -37,19 +50,60 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWind
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
     ) -> Self {
         Self {
+            window_id,
+            winit_window: Some(winit_window),
             ns_view,
             ns_image_view: None,
             color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
             bitmap,
             master,
-            context: Some(context),
+            context: context,
             user_ipc_event_sender,
         }
     }
 
     #[inline]
-    pub fn request_redraw(&mut self, window: &tlib::winit::window::Window) {
-        window.request_redraw();
+    pub fn window_id(&self) -> WindowId {
+        self.window_id
+    }
+
+    #[inline]
+    pub fn take_event_loop(&mut self) -> EventLoop<Message> {
+        match self.context.0 {
+            OutputReceiver::EventLoop(ref mut event_loop) => {
+                event_loop.take().expect("event_loop is None.")
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline]
+    pub fn send_input(&self, msg: Message) {
+        self.input_sender().send(msg).unwrap_or_else(|_| {
+            error!("Error sending Message: The UI thread may have been closed.");
+        });
+    }
+
+    #[inline]
+    pub fn input_sender(&self) -> &Sender<Message> {
+        &self.context.1 .0
+    }
+
+    #[inline]
+    pub fn winit_window(&self) -> &WinitWindow {
+        self.winit_window.as_ref().unwrap()
+    }
+
+    #[inline]
+    pub fn take_winit_window(&mut self) -> Option<WinitWindow> {
+        self.winit_window.take()
+    }
+
+    #[inline]
+    pub fn request_redraw(&self) {
+        if let Some(ref window) = self.winit_window {
+            window.request_redraw();
+        }
     }
 
     pub fn redraw(&mut self) {
