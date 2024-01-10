@@ -32,6 +32,7 @@ use windows::Win32::Foundation::HWND;
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     /// Shared memory ipc
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
+
     main_win_create: Cell<bool>,
     platform_type: PlatformType,
     backend_type: BackendType,

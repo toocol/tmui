@@ -57,7 +57,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWind
             color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
             bitmap,
             master,
-            context: context,
+            context,
             user_ipc_event_sender,
         }
     }
