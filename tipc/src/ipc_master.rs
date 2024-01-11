@@ -5,6 +5,7 @@ use crate::{
     IpcNode,
 };
 use core::{panic, slice};
+use raw_sync::Timeout;
 use shared_memory::Shmem;
 use std::{collections::VecDeque, error::Error, ffi::c_void, sync::atomic::Ordering};
 use tlib::figure::Rect;
@@ -120,8 +121,8 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
     fn terminate(&self) {}
 
     #[inline]
-    fn wait(&self) {
-        self.master_context.wait()
+    fn wait(&self, timeout: Timeout) {
+        self.master_context.wait(timeout)
     }
 
     #[inline]

@@ -22,7 +22,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, IpcNode};
+use tipc::{ipc_event::IpcEvent, IpcNode, raw_sync::Timeout};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
@@ -202,10 +202,10 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     return;
                                 }
 
-                                if let Some(master) = window.master.clone() {
+                                if let Some(ref master) = window.master {
                                     let master_guard = master.read();
                                     master_guard.try_send(IpcEvent::Exit).unwrap();
-                                    master_guard.wait();
+                                    master_guard.wait(Timeout::Val(Duration::from_secs(1)));
                                 }
 
                                 target.exit();

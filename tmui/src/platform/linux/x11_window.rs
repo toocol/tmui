@@ -2,7 +2,7 @@
 use crate::{primitive::{bitmap::Bitmap, Message}, runtime::window_context::{PhysicalWindowContext, OutputReceiver}};
 use std::sync::{mpsc::Sender, Arc};
 use log::error;
-use tipc::{ipc_master::IpcMaster, RwLock};
+use tipc::{ipc_master::IpcMaster, parking_lot::RwLock};
 use tlib::{winit::{window::WindowId, event_loop::EventLoop}, typedef::WinitWindow};
 
 pub(crate) struct X11Window<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {

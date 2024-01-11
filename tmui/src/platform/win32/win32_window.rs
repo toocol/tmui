@@ -9,7 +9,7 @@ use std::{
     sync::{mpsc::Sender, Arc},
 };
 use log::error;
-use tipc::{ipc_master::IpcMaster, RwLock};
+use tipc::{ipc_master::IpcMaster, parking_lot::RwLock};
 use tlib::{
     typedef::WinitWindow,
     winit::{event_loop::EventLoop, window::WindowId},

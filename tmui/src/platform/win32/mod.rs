@@ -22,7 +22,7 @@ use crate::{
     runtime::window_context::OutputSender,
 };
 use std::{sync::{mpsc::channel, Arc}, cell::Cell};
-use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
+use tipc::{ipc_master::IpcMaster, WithIpcMaster, parking_lot::RwLock};
 use tlib::winit::{
     event_loop::{EventLoopProxy, EventLoopWindowTarget},
     raw_window_handle::{HasWindowHandle, RawWindowHandle},

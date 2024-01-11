@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave,
-    mem::mem_rw_lock::MemRwLock, IpcNode, IpcType, RwLock,
+    mem::mem_rw_lock::MemRwLock, IpcNode, IpcType, parking_lot::RwLock,
 };
 use tlib::winit::{raw_window_handle::RawWindowHandle, window::WindowId};
 use crate::{

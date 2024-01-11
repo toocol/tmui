@@ -19,7 +19,7 @@ use crate::{
     window::win_config::WindowConfig, backend::BackendType,
 };
 use std::sync::{mpsc::channel, Arc};
-use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
+use tipc::{ipc_slave::IpcSlave, IpcNode, parking_lot::RwLock, WithIpcSlave};
 use tlib::winit::{raw_window_handle::RawWindowHandle, event_loop::{EventLoopWindowTarget, EventLoopProxy}};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {

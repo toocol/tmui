@@ -8,7 +8,10 @@ use std::{
     ptr::NonNull,
     sync::Arc,
 };
-use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
+use tipc::{
+    parking_lot::RwLock,
+    parking_lot::{lock_api::RwLockWriteGuard, RawRwLock},
+};
 use tlib::{nonnull_mut, prelude::*, ptr_ref};
 
 thread_local! {

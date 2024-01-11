@@ -22,7 +22,7 @@ use std::{
     cell::Cell,
     sync::{mpsc::channel, Arc},
 };
-use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
+use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
 use tlib::winit::{
     event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
     raw_window_handle::{HasWindowHandle, RawWindowHandle},

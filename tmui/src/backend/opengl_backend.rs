@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tipc::RwLock;
+use tipc::parking_lot::RwLock;
 use tlib::global::SemanticExt;
 
 use super::Backend;

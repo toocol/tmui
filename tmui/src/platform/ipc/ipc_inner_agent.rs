@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock};
+use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, parking_lot::RwLock};
 use tlib::global::SemanticExt;
 
 pub(crate) trait IpcInnerAgent {
