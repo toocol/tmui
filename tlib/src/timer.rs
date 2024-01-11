@@ -5,23 +5,16 @@ use crate::{
     prelude::*,
     signal, signals,
 };
-use lazy_static::lazy_static;
 use log::warn;
 use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
-    ptr::{null_mut, NonNull},
-    sync::{
-        atomic::{AtomicPtr, Ordering},
-        Once,
-    },
+    ptr::NonNull,
     time::{Duration, SystemTime},
 };
 
-static INIT: Once = Once::new();
-thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
-lazy_static! {
-    static ref TIMER_HUB: AtomicPtr<TimerHub> = AtomicPtr::new(null_mut());
+thread_local! {
+    static INSTANCE: Box<TimerHub> = TimerHub::new();
 }
 
 /// `TimerHub` hold all raw pointer of [`Timer`]
@@ -31,32 +24,23 @@ pub struct TimerHub {
 }
 
 impl TimerHub {
-    pub fn new() -> Box<Self> {
+    pub(crate) fn new() -> Box<Self> {
         Box::new(Self {
             timers: RefCell::new(Box::new(HashMap::new())),
             once_timers: RefCell::new(Box::new(HashMap::new())),
         })
     }
 
-    pub fn instance<'a>() -> &'a Self {
-        let timer_hub = TIMER_HUB.load(Ordering::SeqCst);
-        unsafe {
-            timer_hub
-                .as_ref()
-                .expect("`TimerHub` was not initialized, or already dead.")
-        }
+    #[inline]
+    pub fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&Box<Self>) -> R,
+    {
+        INSTANCE.with(f)
     }
 
     fn contains_timer(id: ObjectId) -> bool {
-        Self::instance().timers.borrow().contains_key(&id)
-    }
-
-    /// Intialize the `TimerHub`, this function should only call once.
-    pub fn initialize(self: &mut Box<Self>) {
-        INIT.call_once(|| {
-            IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
-            TIMER_HUB.store(self.as_mut(), std::sync::atomic::Ordering::SeqCst);
-        });
+        Self::with(|hub| hub.timers.borrow().contains_key(&id))
     }
 
     /// Check the timers, if any timer was arrival the interval, emit the [`timeout()`] signal.
@@ -123,7 +107,7 @@ pub struct Timer {
 impl Drop for Timer {
     fn drop(&mut self) {
         self.disconnect_all();
-        TimerHub::instance().delete_timer(self.id())
+        TimerHub::with(|hub| hub.delete_timer(self.id()))
     }
 }
 
@@ -135,15 +119,18 @@ impl Timer {
 
     /// Create an once timer.
     /// Once timer can only be executed once and will be removed later
-    pub fn once<'a>() -> RefMut<'a, Self> {
+    pub fn once<F: FnOnce(RefMut<Self>)>(f: F) {
         let mut timer = Self::new();
         timer.once_timer = true;
-        TimerHub::instance().add_once_timer(timer)
+        TimerHub::with(|hub| {
+            let once = hub.add_once_timer(timer);
+            f(once);
+        })
     }
 
     pub fn start(&mut self, duration: Duration) {
         if !TimerHub::contains_timer(self.id()) && !self.once_timer {
-            TimerHub::instance().add_timer(self);
+            TimerHub::with(|hub| hub.add_timer(self))
         }
         self.started = true;
         self.duration = duration;
@@ -180,7 +167,7 @@ impl Timer {
 
 pub trait TimerSignal: ActionExt {
     signals! {
-        TimerSignal: 
+        TimerSignal:
 
         /// Triggered when timer reaches the time interval.
         timeout();
@@ -196,11 +183,12 @@ impl ObjectImpl for Timer {}
 
 #[cfg(test)]
 mod tests {
-    use super::{Timer, TimerHub};
+    use super::Timer;
     use crate::{
         connect,
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
+        timer::TimerHub,
     };
     use std::time::{Duration, Instant};
 
@@ -222,32 +210,29 @@ mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     fn test_timer() {
-        let mut action_hub = ActionHub::new();
-        action_hub.initialize();
-
-        let mut timer_hub = TimerHub::new();
-        timer_hub.initialize();
+        ActionHub::initialize();
 
         let mut widget: Box<Widget> = Object::new(&[]);
         let mut timer = Timer::new();
 
         connect!(timer, timeout(), widget, deal_num());
-        timer.start(Duration::from_secs(1));
+        timer.start(Duration::from_millis(200));
 
-        let mut timer = Timer::once();
+        Timer::once(|mut timer| {
+            connect!(timer, timeout(), widget, deal_num());
+            timer.start(Duration::from_millis(1));
+        });
 
-        connect!(timer, timeout(), widget, deal_num());
-        timer.start(Duration::from_secs(1));
-        drop(timer);
 
         loop {
             if widget.num >= 5 {
                 break;
             }
-            timer_hub.check_timers();
+            TimerHub::with(|hub| hub.check_timers())
         }
+        drop(timer);
     }
 
     #[test]

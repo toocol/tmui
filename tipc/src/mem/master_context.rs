@@ -22,7 +22,6 @@ use std::{
     marker::PhantomData,
     mem::size_of,
     sync::{atomic::Ordering, Arc},
-    time::Duration,
 };
 use tlib::global::SemanticExt;
 
@@ -214,9 +213,9 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     }
 
     #[inline]
-    fn wait(&self) {
+    fn wait(&self, timeout: Timeout) {
         if let Ok((evt, _)) = unsafe { Event::new(self.wait_signal_mem.as_ptr(), true) } {
-            if let Err(e) = evt.wait(Timeout::Val(Duration::from_secs(2))) {
+            if let Err(e) = evt.wait(timeout) {
                 error!("Ipc => master context wait failed. {:?}", e)
             }
         }

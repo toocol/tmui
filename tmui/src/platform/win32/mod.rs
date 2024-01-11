@@ -3,18 +3,16 @@ pub(crate) mod win32_window;
 
 use self::win32_window::Win32Window;
 use super::{
-    ipc_inner_agent::InnerAgent,
-    logic_window::LogicWindow,
-    physical_window::PhysicalWindow,
-    win_config::{self, WindowConfig},
-    PlatformContext,
+    ipc_inner_agent::InnerAgent, logic_window::LogicWindow, physical_window::PhysicalWindow,
+    PlatformContext, PlatformType,
 };
 use crate::{
     primitive::Message,
     runtime::window_context::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, PhysicalWindowContext,
     },
-    winit::event_loop::EventLoopBuilder,
+    window::win_config::{self, WindowConfig},
+    winit::event_loop::EventLoopBuilder, backend::BackendType,
 };
 use crate::{
     primitive::{
@@ -23,25 +21,31 @@ use crate::{
     },
     runtime::window_context::OutputSender,
 };
-use std::sync::{mpsc::channel, Arc};
-use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
-use tlib::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use std::{sync::{mpsc::channel, Arc}, cell::Cell};
+use tipc::{ipc_master::IpcMaster, WithIpcMaster, parking_lot::RwLock};
+use tlib::winit::{
+    event_loop::{EventLoopProxy, EventLoopWindowTarget},
+    raw_window_handle::{HasWindowHandle, RawWindowHandle},
+};
 use windows::Win32::Foundation::HWND;
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    /// The fileds associated with win32
-    hwnd: Option<HWND>,
-
     /// Shared memory ipc
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
+
+    main_win_create: Cell<bool>,
+    platform_type: PlatformType,
+    backend_type: BackendType,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformWin32<T, M> {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(platform_type: PlatformType, backend_type: BackendType) -> Self {
         Self {
-            hwnd: None,
             master: None,
+            main_win_create: Cell::new(true),
+            platform_type,
+            backend_type,
         }
     }
 
@@ -55,11 +59,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformW
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformWin32<T, M>
 {
-    fn initialize(&mut self) {}
-
     fn create_window(
-        &mut self,
+        &self,
         win_config: WindowConfig,
+        parent: Option<RawWindowHandle>,
+        target: Option<&EventLoopWindowTarget<Message>>,
+        proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let inner_agent = if self.master.is_some() {
             let master = self.master.as_ref().unwrap().clone();
@@ -71,35 +76,52 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let (width, height) = win_config.size();
         let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
 
-        let event_loop = EventLoopBuilder::<Message>::with_user_event()
-            .build()
-            .unwrap();
+        let (window, event_loop) = if let Some(target) = target {
+            let window = win_config::build_window(win_config, target, parent).unwrap();
 
-        let window = win_config::build_window(win_config, &event_loop).unwrap();
+            (window, None)
+        } else {
+            let event_loop = EventLoopBuilder::<Message>::with_user_event()
+                .build()
+                .unwrap();
+            let window = win_config::build_window(win_config, &event_loop, parent).unwrap();
 
-        let window_handle = window.window_handle().unwrap().as_raw();
-        match window_handle {
-            RawWindowHandle::Win32(hwnd) => self.hwnd = Some(HWND(hwnd.hwnd.into())),
-            _ => {}
+            (window, Some(event_loop))
         };
-        let event_loop_proxy = event_loop.create_proxy();
+
+        let window_id = window.id();
+        let window_handle = window.window_handle().unwrap().as_raw();
+        let hwnd = match window_handle {
+            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd.into()),
+            _ => unreachable!(),
+        };
+        let event_loop_proxy = if let Some(proxy) = proxy {
+            proxy
+        } else {
+            event_loop.as_ref().unwrap().create_proxy()
+        };
 
         let (input_sender, input_receiver) = channel::<Message>();
 
         // Create the shared channel.
-        let (shared_channel, user_ipc_event_sender) = if self.master.is_some() {
-            let (user_ipc_event_sender, user_ipc_event_receiver) = channel();
-            let shared_channel = shared_channel::master_channel(
-                self.master.as_ref().unwrap().clone(),
-                user_ipc_event_receiver,
-            );
-            (Some(shared_channel), Some(user_ipc_event_sender))
-        } else {
-            (None, None)
-        };
+        let (shared_channel, user_ipc_event_sender) =
+            if self.master.is_some() && self.main_win_create.get() {
+                let (user_ipc_event_sender, user_ipc_event_receiver) = channel();
+                let shared_channel = shared_channel::master_channel(
+                    self.master.as_ref().unwrap().clone(),
+                    user_ipc_event_receiver,
+                );
+                (Some(shared_channel), Some(user_ipc_event_sender))
+            } else {
+                (None, None)
+            };
 
-        (
+        self.main_win_create.set(false);
+
+        let (mut logic_window, physical_window) = (
             LogicWindow::master(
+                window_id,
+                window_handle,
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -109,17 +131,23 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 },
             ),
             PhysicalWindow::Win32(Win32Window::new(
-                self.hwnd.unwrap(),
+                window_id,
+                window,
+                hwnd,
                 bitmap,
                 self.master.clone(),
-                PhysicalWindowContext::Default(
-                    window,
+                PhysicalWindowContext(
                     OutputReceiver::EventLoop(event_loop),
                     InputSender(input_sender),
                 ),
                 user_ipc_event_sender,
             )),
-        )
+        );
+
+        logic_window.platform_type = self.platform_type;
+        logic_window.backend_type = self.backend_type;
+
+        (logic_window, physical_window)
     }
 }
 

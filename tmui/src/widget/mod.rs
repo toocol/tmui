@@ -125,9 +125,6 @@ pub struct Widget {
     /// - Container layout will strictly respect the `size_hint` of each subcomponent,
     ///   the parts beyond the size range will be hidden.
     size_hint: SizeHint,
-
-    /// Let the widget track the `MouseMoveEvent`, the default value was false.
-    mouse_tracking: bool,
 }
 
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
@@ -468,7 +465,15 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
 
         painter_clip(self, &mut painter, self.redraw_region().iter());
 
-        self.paint(&mut painter);
+        if let Some(loading) = cast_mut!(self as Loadable) {
+            if loading.is_loading() {
+                loading.render_loading(&mut painter);
+            } else {
+                self.paint(&mut painter);
+            }
+        } else {
+            self.paint(&mut painter);
+        }
 
         painter.restore();
     }

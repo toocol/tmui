@@ -132,6 +132,30 @@ impl Color {
         self.a = a as i16
     }
 
+    #[inline]
+    pub const fn with_r(mut self, r: u8) -> Self {
+        self.r = r as i16;
+        self
+    }
+
+    #[inline]
+    pub const fn with_g(mut self, g: u8) -> Self {
+        self.g = g as i16;
+        self
+    }
+
+    #[inline]
+    pub const fn with_b(mut self, b: u8) -> Self {
+        self.b = b as i16;
+        self
+    }
+
+    #[inline]
+    pub const fn with_a(mut self, a: u8) -> Self {
+        self.a = a as i16;
+        self
+    }
+
     pub const RED: Color = Color {
         r: 255,
         g: 0,

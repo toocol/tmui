@@ -1,5 +1,6 @@
 use self::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
 use crate::ipc_event::IpcEvent;
+use raw_sync::Timeout;
 use shared_memory::Shmem;
 use std::{
     error::Error,
@@ -51,7 +52,7 @@ pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
 
     fn response_request(&self, response: Option<M>);
 
-    fn wait(&self);
+    fn wait(&self, timeout: Timeout);
 
     fn signal(&self);
 

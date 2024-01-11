@@ -4,7 +4,7 @@ pub(crate) mod ipc_window;
 
 use self::ipc_window::IpcWindow;
 
-use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, win_config::WindowConfig};
+use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, PlatformType};
 use crate::{
     platform::ipc_inner_agent::InnerAgent,
     primitive::{
@@ -16,28 +16,29 @@ use crate::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
         PhysicalWindowContext,
     },
+    window::win_config::WindowConfig, backend::BackendType,
 };
 use std::sync::{mpsc::channel, Arc};
-use tipc::{ipc_slave::IpcSlave, IpcNode, RwLock, WithIpcSlave};
-use tlib::figure::Rect;
+use tipc::{ipc_slave::IpcSlave, IpcNode, parking_lot::RwLock, WithIpcSlave};
+use tlib::winit::{raw_window_handle::RawWindowHandle, event_loop::{EventLoopWindowTarget, EventLoopProxy}};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
-    region: Rect,
-
     /// Shared memory ipc slave
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
-
     shared_widget_id: Option<&'static str>,
+
+    platform_type: PlatformType,
+    backend_type: BackendType,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformIpc<T, M> {
     #[inline]
-    pub fn new() -> Self {
-        let region = Rect::new(0, 0, 0, 0);
+    pub fn new(platform_type: PlatformType, backend_type: BackendType) -> Self {
         Self {
-            region,
             slave: None,
             shared_widget_id: None,
+            platform_type,
+            backend_type,
         }
     }
 
@@ -56,18 +57,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformI
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformIpc<T, M>
 {
-    fn initialize(&mut self) {
-        debug_assert!(self.slave.is_some());
-
-        let slave = self.slave.as_ref().unwrap().read();
-        self.region = slave
-            .region(self.shared_widget_id.unwrap())
-            .expect("The `SharedWidget` with id `{}` was not exist.");
-
-    }
-
     #[inline]
-    fn create_window(&mut self, _: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(
+        &self,
+        _: WindowConfig,
+        _: Option<RawWindowHandle>,
+        _: Option<&EventLoopWindowTarget<Message>>,
+        _: Option<EventLoopProxy<Message>>,
+    ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let slave_clone = self.slave.as_ref().unwrap().clone();
         let inner_agent = InnerAgent::slave(slave_clone);
 
@@ -90,7 +87,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             user_ipc_event_receiver,
         );
 
-        (
+        let (mut logic_window, physical_window) = (
             LogicWindow::slave(
                 bitmap,
                 self.shared_widget_id.unwrap(),
@@ -103,13 +100,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             ),
             PhysicalWindow::Ipc(IpcWindow::new(
                 self.slave.as_ref().unwrap().clone(),
-                PhysicalWindowContext::Ipc(
+                PhysicalWindowContext(
                     OutputReceiver::Receiver(output_receiver),
                     InputSender(input_sender),
                 ),
                 user_ipc_event_sender,
             )),
-        )
+        );
+
+        logic_window.platform_type = self.platform_type;
+        logic_window.backend_type = self.backend_type;
+
+        (logic_window, physical_window)
     }
 }
 

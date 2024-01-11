@@ -35,3 +35,20 @@ pub(crate) enum PhysicalWindow<T: 'static + Copy + Sync + Send, M: 'static + Cop
     #[cfg(x11_platform)]
     X11(PhysWindow<T, M>),
 }
+
+impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PhysicalWindow<T, M> {
+    #[inline]
+    pub(crate) fn into_phys_window(self) -> PhysWindow<T, M> {
+        match self {
+            Self::Ipc(_) => unreachable!(),
+            #[cfg(windows_platform)]
+            Self::Win32(win) => win,
+            #[cfg(macos_platform)]
+            Self::Macos(win) => win,
+            #[cfg(wayland_platform)]
+            Self::Wayland(win) => win,
+            #[cfg(x11_platform)]
+            Self::X11(win) => win,
+        }
+    }
+}

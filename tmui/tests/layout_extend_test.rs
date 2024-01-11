@@ -23,6 +23,8 @@ impl WidgetImpl for TestWidget {}
 
 #[test]
 fn main() {
+    ActionHub::initialize();
+
     let widget: Box<TestWidget> = Object::new(&[]);
     let children = widget.children();
     assert_eq!(1, children.len());

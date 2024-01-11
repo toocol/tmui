@@ -3,14 +3,14 @@ use tipc::{
     ipc_master::IpcMaster,
     ipc_slave::IpcSlave,
     mem::mem_rw_lock::{MemRwLock, MemRwLockGuard},
-    IpcNode, RwLock,
+    IpcNode, parking_lot::RwLock, raw_sync::Timeout, 
 };
 use tlib::{figure::Rect, global::SemanticExt};
 
 pub(crate) trait IpcBridge {
     fn region(&self) -> Rect;
 
-    fn wait(&self);
+    fn wait(&self, timeout: Timeout);
 
     fn signal(&self);
 
@@ -83,14 +83,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
         unreachable!()
     }
 
-    fn wait(&self) {
+    fn wait(&self, timeout: Timeout) {
         if let Some(ref master) = self.master {
-            master.read().wait();
+            master.read().wait(timeout);
             return;
         }
 
         if let Some(ref slave) = self.slave {
-            slave.read().wait();
+            slave.read().wait(timeout);
             return;
         }
     }

@@ -1,5 +1,5 @@
 pub use macros::{
-    animatable, cast, cast_boxed, cast_mut, extends, reflect_trait, async_do, async_task, popupable, Childable, Childrenable,
+    animatable, cast, cast_boxed, cast_mut, extends, reflect_trait, async_do, async_task, popupable, loadable, Childable, Childrenable,
 };
 
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};

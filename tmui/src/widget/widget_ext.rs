@@ -1,4 +1,4 @@
-use super::{Transparency, Widget, WidgetImpl, WindowAcquire, SizeHint};
+use super::{SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -458,6 +458,8 @@ pub trait WidgetExt {
 
     /// Set the `mouse_tracking` status of widget.
     ///
+    /// when `ture`, widget will track the movement of mouse.
+    ///
     /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_mouse_tracking(&mut self, is_tracking: bool);
 
@@ -614,14 +616,14 @@ pub trait WidgetExt {
     fn propagate_set_transparency(&mut self, transparency: Transparency);
 
     /// Get the size hint of widget.
-    /// 
+    ///
     /// For specific information about size_hint, please refer to [`size_hint`](crate::widget::Widget::size_hint)
     ///
     /// Go to[`Function defination`](WidgetExt::size_hint) (Defined in [`WidgetExt`])
     fn size_hint(&self) -> SizeHint;
 
     /// Set the size hint of widget.
-    /// 
+    ///
     /// For specific information about size_hint, please refer to [`size_hint`](crate::widget::Widget::size_hint)
     ///
     /// Go to[`Function defination`](WidgetExt::set_size_hint) (Defined in [`WidgetExt`])
@@ -933,7 +935,6 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_font(&mut self, font: Font) {
         self.font = font;
-        self.font_changed();
     }
 
     #[inline]
@@ -1313,21 +1314,22 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
-        let contents_rect = self.contents_rect(None);
-        FPoint::new(
-            point.x() - contents_rect.x() as f32,
-            point.y() - contents_rect.y() as f32,
-        )
+        let rect = self.rect();
+        FPoint::new(point.x() - rect.x() as f32, point.y() - rect.y() as f32)
     }
 
     #[inline]
     fn mouse_tracking(&self) -> bool {
-        self.mouse_tracking
+        if let Some(val) = self.get_property("mouse_tracking") {
+            val.get::<bool>()
+        } else {
+            false
+        }
     }
 
     #[inline]
     fn set_mouse_tracking(&mut self, is_tracking: bool) {
-        self.mouse_tracking = is_tracking
+        self.set_property("mouse_tracking", is_tracking.to_value());
     }
 
     #[inline]
@@ -1525,7 +1527,7 @@ impl WidgetExt for Widget {
                     panic!("`Minimum size hint can not be larger than maximum size hint.")
                 }
             }
-            _ => {},
+            _ => {}
         }
         self.size_hint = size_hint
     }

@@ -1,5 +1,8 @@
 use std::sync::Arc;
-use tipc::{lock_api::RwLockWriteGuard, RawRwLock, RwLock};
+use tipc::{
+    parking_lot::RwLock,
+    parking_lot::{lock_api::RwLockWriteGuard, RawRwLock},
+};
 use tlib::ptr_ref;
 
 use super::{create_image_info, Backend};

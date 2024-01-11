@@ -5,19 +5,20 @@ use crate::{
         element::{HierachyZ, TOP_Z_INDEX},
     },
     layout::LayoutManager,
+    loading::LoadingManager,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
     primitive::Message,
     runtime::{wed, window_context::OutputSender},
     widget::{WidgetImpl, WidgetSignals, ZIndexStep},
+    window::win_builder::WindowBuilder,
 };
-use log::debug;
+use log::{debug, error};
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     ptr::NonNull,
-    sync::Once,
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -26,6 +27,7 @@ use tlib::{
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
+    winit::{raw_window_handle::RawWindowHandle, window::WindowId},
 };
 
 thread_local! {
@@ -33,10 +35,10 @@ thread_local! {
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
 }
 
-static INIT: Once = Once::new();
-
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    winit_id: Option<WindowId>,
+    raw_window_handle: Option<RawWindowHandle>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
 
@@ -186,6 +188,21 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_raw_window_handle(&mut self, raw_window_handle: RawWindowHandle) {
+        self.raw_window_handle = Some(raw_window_handle)
+    }
+
+    #[inline]
+    pub(crate) fn winit_id(&self) -> Option<WindowId> {
+        self.winit_id
+    }
+
+    #[inline]
+    pub(crate) fn set_winit_id(&mut self, id: WindowId) {
+        self.winit_id = Some(id)
+    }
+
+    #[inline]
     pub(crate) fn set_ipc_bridge(&mut self, ipc_bridge: Option<Box<dyn IpcBridge>>) {
         self.ipc_bridge = ipc_bridge
     }
@@ -236,6 +253,15 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn send_message(&self, message: Message) {
+        match self.output_sender {
+            Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
+            Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
+            None => panic!("`ApplicationWindow` did not register the output_sender."),
+        }
+    }
+
+    #[inline]
     pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
         self.run_after = Some(Box::new(run_after));
     }
@@ -246,12 +272,22 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn send_message(&self, message: Message) {
-        match self.output_sender {
-            Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
-            Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
-            None => panic!("`ApplicationWindow` did not register the output_sender."),
+    pub fn create_window(&self, window_bld: WindowBuilder) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not create window on slave side of shared memory application.");
+            return;
         }
+
+        let mut window = window_bld.build();
+        if window.is_child_window() {
+            window.set_parent(
+                self.raw_window_handle.expect(
+                    "Can not create child window on slave side of shared memory application.",
+                ),
+            );
+        }
+
+        self.send_message(Message::CreateWindow(window));
     }
 
     #[inline]
@@ -282,9 +318,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn set_board(&mut self, board: &mut Board) {
-        INIT.call_once(move || {
-            self.board = NonNull::new(board);
-        });
+        self.board = NonNull::new(board);
     }
 
     #[inline]
@@ -386,6 +420,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
 
         if let Some(snapshot) = cast_mut!(child_ref as Snapshot) {
             AnimationManager::with(|m| m.borrow_mut().add_snapshot(snapshot))
+        }
+        if let Some(loading) = cast_mut!(child_ref as Loadable) {
+            LoadingManager::with(|m| m.borrow_mut().add_loading(loading))
         }
 
         // Determine whether the widget is a container.

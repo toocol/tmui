@@ -3,6 +3,7 @@ use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
 use lazy_static::lazy_static;
 use mem::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
+use raw_sync::Timeout;
 use std::{collections::HashMap, error::Error, ffi::c_void, marker::PhantomData, sync::Arc};
 use tlib::figure::Rect;
 
@@ -11,8 +12,17 @@ pub mod ipc_master;
 pub mod ipc_slave;
 pub mod mem;
 
-pub use parking_lot::*;
-pub use shared_memory::*;
+pub mod parking_lot {
+    pub use parking_lot::*;
+}
+
+pub mod shared_memory {
+    pub use shared_memory::*;
+}
+
+pub mod raw_sync {
+    pub use raw_sync::*;
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IpcType {
@@ -115,7 +125,7 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
 
     fn terminate(&self);
 
-    fn wait(&self);
+    fn wait(&self, timeout: Timeout);
 
     fn signal(&self);
 

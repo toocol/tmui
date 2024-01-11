@@ -3,7 +3,7 @@ pub mod raster_backend;
 
 use std::sync::Arc;
 
-use tipc::RwLock;
+use tipc::parking_lot::RwLock;
 use tlib::skia_safe::{ImageInfo, ColorType, AlphaType, ColorSpace};
 
 use crate::{skia_safe::Surface, primitive::bitmap::Bitmap};

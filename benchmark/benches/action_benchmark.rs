@@ -65,8 +65,7 @@ fn test_disconnect(widget: &[Box<Widget>], idx: usize) {
 }
 
 fn criterion_values(c: &mut Criterion) {
-    let mut action_hub = ActionHub::new();
-    action_hub.initialize();
+    ActionHub::initialize();
 
     let widget: Box<Widget> = Object::new(&[]);
     widget.connect(

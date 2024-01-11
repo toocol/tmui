@@ -4,29 +4,25 @@ use crate::{
     platform::{
         ipc_window::IpcWindow,
         physical_window::{PhysWindow, PhysicalWindow},
+        PlatformContext,
     },
-    primitive::{
-        cpu_balance::CpuBalance,
-        Message,
-    },
-    runtime::{
-        runtime_track::RuntimeTrack,
-        window_context::{OutputReceiver, PhysicalWindowContext},
-    },
+    primitive::{cpu_balance::CpuBalance, Message},
+    runtime::{runtime_track::RuntimeTrack, window_context::OutputReceiver},
     winit::{
         self,
         event::{Event, WindowEvent},
     },
 };
-use log::debug;
+use log::{debug, error};
 use std::{
+    collections::HashMap,
     marker::PhantomData,
     ops::Add,
     sync::atomic::Ordering,
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, IpcNode};
+use tipc::{ipc_event::IpcEvent, IpcNode, raw_sync::Timeout};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
@@ -36,26 +32,55 @@ use tlib::{
     prelude::SystemCursorShape,
     winit::{
         event::{ElementState, MouseScrollDelta},
-        event_loop::ControlFlow,
+        event_loop::{ControlFlow, EventLoopProxy},
         keyboard::{Key, ModifiersState, PhysicalKey},
+        window::WindowId,
     },
 };
 
-pub(crate) struct WindowsProcess<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> {
+pub(crate) struct WindowsProcess<
+    'a,
+    T: 'static + Copy + Send + Sync,
+    M: 'static + Copy + Send + Sync,
+> {
     _holdt: PhantomData<T>,
     _holdm: PhantomData<M>,
+
+    ui_stack_size: usize,
+    platform_context: &'a Box<dyn PlatformContext<T, M>>,
+
+    windows: HashMap<WindowId, PhysWindow<T, M>>,
+    main_window_id: Option<WindowId>,
+    proxy: Option<EventLoopProxy<Message>>,
 }
 
-impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsProcess<T, M> {
+impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
+    WindowsProcess<'a, T, M>
+{
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(ui_stack_size: usize, platform_context: &'a Box<dyn PlatformContext<T, M>>) -> Self {
         Self {
             _holdt: PhantomData::default(),
             _holdm: PhantomData::default(),
+            ui_stack_size,
+            platform_context,
+            windows: HashMap::new(),
+            main_window_id: None,
+            proxy: None,
         }
     }
 
-    pub fn process(&self, physical_window: PhysicalWindow<T, M>) {
+    #[inline]
+    fn main_window_id(&self) -> WindowId {
+        self.main_window_id.unwrap()
+    }
+
+    #[inline]
+    fn proxy(&self) -> EventLoopProxy<Message> {
+        self.proxy.as_ref().unwrap().clone()
+    }
+
+    pub fn process(&mut self, physical_window: PhysicalWindow<T, M>) {
         match physical_window {
             PhysicalWindow::Ipc(window) => {
                 self.event_handle_ipc(window);
@@ -75,16 +100,11 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
         };
     }
 
-    pub fn event_handle(&self, mut window: PhysWindow<T, M>) {
+    pub fn event_handle(&mut self, mut window: PhysWindow<T, M>) {
         let mut runtime_track = RuntimeTrack::new();
+        let mut ui_joins = vec![];
 
-        let (winit_window, event_loop, input_sender) = match window.context.take().unwrap() {
-            PhysicalWindowContext::Default(a, b, c) => match b {
-                OutputReceiver::EventLoop(d) => (a, d, c.0),
-                _ => unreachable!(),
-            },
-            _ => unreachable!(),
-        };
+        let event_loop = window.take_event_loop();
         let user_ipc_event_sender = window.user_ipc_event_sender.take();
 
         let proxy = event_loop.create_proxy();
@@ -132,8 +152,12 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
             None
         };
 
+        self.main_window_id = Some(window.window_id());
+        self.proxy = Some(event_loop.create_proxy());
+        self.windows.insert(window.window_id(), window);
+
         event_loop
-            .run(move |event, target| {
+            .run(|event, target| {
                 // Adjusting CPU usage.
                 if application::is_high_load() {
                     target.set_control_flow(ControlFlow::Poll)
@@ -144,179 +168,163 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                 }
 
                 match event {
-                    // Window resized event.
-                    Event::WindowEvent {
-                        event: WindowEvent::Resized(size),
-                        ..
-                    } => {
-                        if !Application::<T, M>::is_app_started() {
-                            return;
-                        }
-                        let evt = ResizeEvent::new(size.width as i32, size.height as i32);
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
+                    Event::WindowEvent { window_id, event } => {
+                        let main_window_id = self.main_window_id();
+                        let window = self
+                            .windows
+                            .get_mut(&window_id)
+                            .expect(&format!("Can not find window with id {:?}", window_id));
 
                         target.set_control_flow(ControlFlow::Poll);
-                        application::request_high_load(true);
-                    }
 
-                    // Window close event.
-                    Event::WindowEvent {
-                        event: WindowEvent::CloseRequested,
-                        ..
-                    } => {
-                        println!("The close button was pressed; stopping");
-                        if let Some(master) = window.master.clone() {
-                            let master_guard = master.read();
-                            master_guard.try_send(IpcEvent::Exit).unwrap();
-                            master_guard.wait();
-                        }
-
-                        target.exit();
-
-                        APP_STOPPED.store(true, Ordering::SeqCst);
-                    }
-
-                    // Window destroy event.
-                    Event::WindowEvent {
-                        event: WindowEvent::Destroyed,
-                        ..
-                    } => {}
-
-                    // Modifier change event.
-                    Event::WindowEvent {
-                        event: WindowEvent::ModifiersChanged(modifier),
-                        ..
-                    } => convert_modifier(&mut runtime_track.modifier, modifier.state()),
-
-                    // Mouse enter window event.
-                    Event::WindowEvent {
-                        event: WindowEvent::CursorEntered { .. },
-                        ..
-                    } => {}
-
-                    // Mouse leave window event.
-                    Event::WindowEvent {
-                        event: WindowEvent::CursorLeft { .. },
-                        ..
-                    } => {}
-
-                    // Mouse moved event.
-                    Event::WindowEvent {
-                        event: WindowEvent::CursorMoved { position, .. },
-                        ..
-                    } => {
-                        let evt = MouseEvent::new(
-                            EventType::MouseMove,
-                            (position.x as i32, position.y as i32),
-                            runtime_track.mouse_button_state(),
-                            runtime_track.modifier,
-                            0,
-                            Point::default(),
-                            DeltaType::default(),
-                        );
-
-                        let pos = evt.position();
-                        runtime_track.mouse_position = (pos.0, pos.1);
-                        Cursor::set_position(pos);
-
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-
-                        target.set_control_flow(ControlFlow::Poll)
-                    }
-
-                    // Mouse wheel event.
-                    Event::WindowEvent {
-                        event: WindowEvent::MouseWheel { delta, .. },
-                        ..
-                    } => {
-                        let (point, delta_type) = match delta {
-                            MouseScrollDelta::PixelDelta(pos) => {
-                                (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel)
+                        match event {
+                            // Window redraw event.
+                            WindowEvent::RedrawRequested => {
+                                window.redraw();
                             }
-                            MouseScrollDelta::LineDelta(x, y) => {
-                                (Point::new(x as i32, y as i32), DeltaType::Line)
+
+                            // Window resized event.
+                            WindowEvent::Resized(size) => {
+                                if !Application::<T, M>::is_app_started() {
+                                    return;
+                                }
+                                let evt = ResizeEvent::new(size.width as i32, size.height as i32);
+                                window.send_input(Message::Event(Box::new(evt)));
+
+                                application::request_high_load(true);
                             }
-                        };
-                        let evt = MouseEvent::new(
-                            EventType::MouseWhell,
-                            (
-                                runtime_track.mouse_position.0,
-                                runtime_track.mouse_position.1,
-                            ),
-                            runtime_track.mouse_button_state(),
-                            runtime_track.modifier,
-                            0,
-                            point,
-                            delta_type,
-                        );
 
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        target.set_control_flow(ControlFlow::Poll)
-                    }
+                            // Window close requested event.
+                            WindowEvent::CloseRequested => {
+                                if window_id != main_window_id {
+                                    window.send_input(Message::WindowClosed);
+                                    let _ = window.take_winit_window();
+                                    return;
+                                }
 
-                    // Mouse pressed event.
-                    Event::WindowEvent {
-                        event:
+                                if let Some(ref master) = window.master {
+                                    let master_guard = master.read();
+                                    master_guard.try_send(IpcEvent::Exit).unwrap();
+                                    master_guard.wait(Timeout::Val(Duration::from_secs(1)));
+                                }
+
+                                target.exit();
+
+                                APP_STOPPED.store(true, Ordering::SeqCst);
+                            }
+
+                            // Window destroy event.
+                            WindowEvent::Destroyed => {
+                                self.windows.remove(&window_id);
+                            }
+
+                            // Modifier change event.
+                            WindowEvent::ModifiersChanged(modifier) => {
+                                convert_modifier(&mut runtime_track.modifier, modifier.state())
+                            }
+
+                            // Mouse enter window event.
+                            WindowEvent::CursorEntered { .. } => {}
+
+                            // Mouse leave window event.
+                            WindowEvent::CursorLeft { .. } => {}
+
+                            // Mouse moved event.
+                            WindowEvent::CursorMoved { position, .. } => {
+                                let evt = MouseEvent::new(
+                                    EventType::MouseMove,
+                                    (position.x as i32, position.y as i32),
+                                    runtime_track.mouse_button_state(),
+                                    runtime_track.modifier,
+                                    0,
+                                    Point::default(),
+                                    DeltaType::default(),
+                                );
+
+                                let pos = evt.position();
+                                runtime_track.mouse_position = (pos.0, pos.1);
+                                Cursor::set_position(pos);
+
+                                window.send_input(Message::Event(Box::new(evt)));
+                            }
+
+                            // Mouse wheel event.
+                            WindowEvent::MouseWheel { delta, .. } => {
+                                let (point, delta_type) = match delta {
+                                    MouseScrollDelta::PixelDelta(pos) => {
+                                        (Point::new(pos.x as i32, pos.y as i32), DeltaType::Pixel)
+                                    }
+                                    MouseScrollDelta::LineDelta(x, y) => {
+                                        (Point::new(x as i32, y as i32), DeltaType::Line)
+                                    }
+                                };
+                                let evt = MouseEvent::new(
+                                    EventType::MouseWhell,
+                                    (
+                                        runtime_track.mouse_position.0,
+                                        runtime_track.mouse_position.1,
+                                    ),
+                                    runtime_track.mouse_button_state(),
+                                    runtime_track.modifier,
+                                    0,
+                                    point,
+                                    delta_type,
+                                );
+
+                                window.send_input(Message::Event(Box::new(evt)));
+                            }
+
+                            // Mouse pressed event.
                             WindowEvent::MouseInput {
                                 state: ElementState::Pressed,
                                 button,
                                 ..
-                            },
-                        ..
-                    } => {
-                        let mouse_button: MouseButton = button.into();
-                        runtime_track.receive_mouse_click(mouse_button);
+                            } => {
+                                let mouse_button: MouseButton = button.into();
+                                runtime_track.receive_mouse_click(mouse_button);
 
-                        let evt = MouseEvent::new(
-                            EventType::MouseButtonPress,
-                            (
-                                runtime_track.mouse_position.0,
-                                runtime_track.mouse_position.1,
-                            ),
-                            mouse_button,
-                            runtime_track.modifier,
-                            runtime_track.click_count(),
-                            Point::default(),
-                            DeltaType::default(),
-                        );
+                                let evt = MouseEvent::new(
+                                    EventType::MouseButtonPress,
+                                    (
+                                        runtime_track.mouse_position.0,
+                                        runtime_track.mouse_position.1,
+                                    ),
+                                    mouse_button,
+                                    runtime_track.modifier,
+                                    runtime_track.click_count(),
+                                    Point::default(),
+                                    DeltaType::default(),
+                                );
 
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        target.set_control_flow(ControlFlow::Poll)
-                    }
+                                window.send_input(Message::Event(Box::new(evt)));
+                            }
 
-                    // Mouse release event.
-                    Event::WindowEvent {
-                        event:
+                            // Mouse release event.
                             WindowEvent::MouseInput {
                                 state: ElementState::Released,
                                 button,
                                 ..
-                            },
-                        ..
-                    } => {
-                        let button: MouseButton = button.into();
-                        runtime_track.receive_mouse_release(button);
+                            } => {
+                                let button: MouseButton = button.into();
+                                runtime_track.receive_mouse_release(button);
 
-                        let evt = MouseEvent::new(
-                            EventType::MouseButtonRelease,
-                            (
-                                runtime_track.mouse_position.0,
-                                runtime_track.mouse_position.1,
-                            ),
-                            button,
-                            runtime_track.modifier,
-                            1,
-                            Point::default(),
-                            DeltaType::default(),
-                        );
+                                let evt = MouseEvent::new(
+                                    EventType::MouseButtonRelease,
+                                    (
+                                        runtime_track.mouse_position.0,
+                                        runtime_track.mouse_position.1,
+                                    ),
+                                    button,
+                                    runtime_track.modifier,
+                                    1,
+                                    Point::default(),
+                                    DeltaType::default(),
+                                );
 
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        target.set_control_flow(ControlFlow::Poll)
-                    }
+                                window.send_input(Message::Event(Box::new(evt)));
+                            }
 
-                    // Key pressed event.
-                    Event::WindowEvent {
-                        event:
+                            // Key pressed event.
                             WindowEvent::KeyboardInput {
                                 event:
                                     winit::event::KeyEvent {
@@ -326,32 +334,29 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                                         ..
                                     },
                                 ..
-                            },
-                        ..
-                    } => {
-                        let mut key_code = KeyCode::default();
-                        match physical_key {
-                            PhysicalKey::Code(physical_key) => key_code = physical_key.into(),
-                            _ => {}
-                        }
-                        let text = match logical_key {
-                            Key::Character(str) => to_static(str.to_string()),
-                            _ => "",
-                        };
-                        let evt = KeyEvent::new(
-                            EventType::KeyPress,
-                            key_code,
-                            runtime_track.modifier,
-                            text,
-                        );
+                            } => {
+                                let mut key_code = KeyCode::default();
+                                match physical_key {
+                                    PhysicalKey::Code(physical_key) => {
+                                        key_code = physical_key.into()
+                                    }
+                                    _ => {}
+                                }
+                                let text = match logical_key {
+                                    Key::Character(str) => to_static(str.to_string()),
+                                    _ => "",
+                                };
+                                let evt = KeyEvent::new(
+                                    EventType::KeyPress,
+                                    key_code,
+                                    runtime_track.modifier,
+                                    text,
+                                );
 
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        target.set_control_flow(ControlFlow::Poll)
-                    }
+                                window.send_input(Message::Event(Box::new(evt)));
+                            }
 
-                    // Key released event.
-                    Event::WindowEvent {
-                        event:
+                            // Key released event.
                             WindowEvent::KeyboardInput {
                                 event:
                                     winit::event::KeyEvent {
@@ -361,54 +366,87 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                                         ..
                                     },
                                 ..
-                            },
-                        ..
-                    } => {
-                        let mut key_code = KeyCode::default();
-                        match physical_key {
-                            PhysicalKey::Code(physical_key) => key_code = physical_key.into(),
+                            } => {
+                                let mut key_code = KeyCode::default();
+                                match physical_key {
+                                    PhysicalKey::Code(physical_key) => {
+                                        key_code = physical_key.into()
+                                    }
+                                    _ => {}
+                                }
+                                let text = match logical_key {
+                                    Key::Character(str) => to_static(str.to_string()),
+                                    _ => "",
+                                };
+                                let evt = KeyEvent::new(
+                                    EventType::KeyRelease,
+                                    key_code,
+                                    runtime_track.modifier,
+                                    text,
+                                );
+
+                                window.send_input(Message::Event(Box::new(evt)));
+                            }
+
                             _ => {}
                         }
-                        let text = match logical_key {
-                            Key::Character(str) => to_static(str.to_string()),
-                            _ => "",
-                        };
-                        let evt = KeyEvent::new(
-                            EventType::KeyRelease,
-                            key_code,
-                            runtime_track.modifier,
-                            text,
-                        );
-
-                        input_sender.send(Message::Event(Box::new(evt))).unwrap();
-                        target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // VSync event.
-                    Event::UserEvent(Message::VSync(ins)) => {
+                    Event::UserEvent(Message::VSync(window_id, ins)) => {
+                        let window = self
+                            .windows
+                            .get_mut(&window_id)
+                            .expect(&format!("Can not find window with id {:?}", window_id));
+
                         debug!(
                             "vscyn track: {}ms",
                             ins.elapsed().as_micros() as f64 / 1000.
                         );
-                        window.request_redraw(&winit_window);
+                        window.request_redraw();
                         target.set_control_flow(ControlFlow::Poll)
                     }
 
                     // SetCursorShape event.
-                    Event::UserEvent(Message::SetCursorShape(cursor)) => match cursor {
-                        SystemCursorShape::BlankCursor => winit_window.set_cursor_visible(false),
-                        _ => {
-                            winit_window.set_cursor_visible(true);
-                            winit_window.set_cursor_icon(cursor.into())
-                        }
-                    },
+                    Event::UserEvent(Message::SetCursorShape(cursor)) => {
+                        let window_id = self.main_window_id();
+                        let window = self
+                            .windows
+                            .get_mut(&window_id)
+                            .expect(&format!("Can not find window with id {:?}", window_id));
 
-                    // Redraw event.
-                    Event::WindowEvent {
-                        event: WindowEvent::RedrawRequested { .. },
-                        ..
-                    } => {
-                        window.redraw();
+                        match cursor {
+                            SystemCursorShape::BlankCursor => {
+                                window.winit_window().set_cursor_visible(false)
+                            }
+                            _ => {
+                                window.winit_window().set_cursor_visible(true);
+                                window.winit_window().set_cursor_icon(cursor.into())
+                            }
+                        }
+                    }
+
+                    // VSync event.
+                    Event::UserEvent(Message::CreateWindow(mut win)) => {
+                        let (mut logic_window, physical_window) =
+                            self.platform_context.create_window(
+                                win.take_config(),
+                                win.parent(),
+                                Some(target),
+                                Some(self.proxy()),
+                            );
+
+                        logic_window.on_activate = win.take_on_activate();
+
+                        let phys_window = physical_window.into_phys_window();
+
+                        self.windows.insert(phys_window.window_id(), phys_window);
+
+                        ui_joins.push(super::start_ui_runtime(
+                            win.index(),
+                            self.ui_stack_size,
+                            logic_window,
+                        ));
                     }
 
                     _ => (),
@@ -419,16 +457,19 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
         if let Some(join) = join {
             join.join().unwrap()
         }
+        for join in ui_joins.into_iter() {
+            join.join().unwrap()
+        }
     }
 
     pub fn event_handle_ipc(&self, window: IpcWindow<T, M>) {
-        let (output_receiver, input_sender) = match window.context {
-            PhysicalWindowContext::Ipc(a, b) => match a {
-                OutputReceiver::Receiver(c) => (c, b.0),
+        let (output_receiver, input_sender) = (
+            match window.context.0 {
+                OutputReceiver::Receiver(c) => c,
                 _ => unreachable!(),
             },
-            _ => unreachable!(),
-        };
+            window.context.1 .0,
+        );
 
         let ipc_slave_clone = window.slave.clone();
         thread::Builder::new()
@@ -463,7 +504,11 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WindowsPr
                         break 'main;
                     }
                     IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                    evt => input_sender.send(Message::Event(evt.into())).unwrap(),
+                    evt => input_sender
+                        .send(Message::Event(evt.into()))
+                        .unwrap_or_else(|_| {
+                            error!("Error sending Message: The UI thread may have been closed.")
+                        }),
                 }
             }
 

@@ -1,6 +1,6 @@
 use std::sync::{mpsc::Sender, Arc};
 
-use tipc::{ipc_slave::IpcSlave, RwLock};
+use tipc::{ipc_slave::IpcSlave, parking_lot::RwLock};
 
 use crate::runtime::window_context::PhysicalWindowContext;
 

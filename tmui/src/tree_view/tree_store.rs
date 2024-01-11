@@ -14,7 +14,7 @@ use tlib::{
     global::SemanticExt,
     nonnull_mut, nonnull_ref,
     object::{ObjectId, ObjectOperation, ObjectSubclass},
-    signals,
+    signals, namespace::MouseButton,
 };
 
 #[extends(Object, ignore_default = true)]
@@ -27,6 +27,7 @@ pub struct TreeStore {
     window_lines: i32,
     current_line: i32,
 
+    enterd_node: Option<NonNull<TreeNode>>,
     hovered_node: Option<NonNull<TreeNode>>,
     selected_node: Option<NonNull<TreeNode>>,
 }
@@ -40,6 +41,8 @@ pub trait TreeStoreSignals: ActionExt {
         notify_update_rect();
 
         buffer_len_changed();
+
+        internal_scroll_value_changed();
     );
 }
 impl TreeStoreSignals for TreeStore {}
@@ -100,7 +103,7 @@ impl TreeStore {
 
     pub fn remove_node(&mut self, id: ObjectId) {
         if self.nodes_cache.contains_key(&id) {
-            nonnull_mut!(self.nodes_cache.get_mut(&id).unwrap()).remove_node_inner()
+            nonnull_mut!(self.nodes_cache.get_mut(&id).unwrap()).remove()
         } else {
             warn!(
                 "`TreeView` remove node failed, can not find the node, id = {}",
@@ -149,6 +152,7 @@ impl TreeStore {
             nodes_cache: nodes_map,
             window_lines: 0,
             current_line: 0,
+            enterd_node: None,
             hovered_node: None,
             selected_node: None,
         };
@@ -171,6 +175,24 @@ impl TreeStore {
     #[inline]
     pub(crate) fn remove_node_cache(&mut self, id: ObjectId) {
         self.nodes_cache.remove(&id);
+
+        if self.enterd_node.is_some() {
+            if nonnull_ref!(self.enterd_node).id() == id {
+                self.enterd_node = None;
+            }
+        }
+
+        if self.selected_node.is_some() {
+            if nonnull_ref!(self.selected_node).id() == id {
+                self.selected_node = None;
+            }
+        }
+
+        if self.hovered_node.is_some() {
+            if nonnull_ref!(self.hovered_node).id() == id {
+                self.hovered_node = None;
+            }
+        }
     }
 
     #[inline]
@@ -182,20 +204,65 @@ impl TreeStore {
     }
 
     #[inline]
+    pub(crate) fn get_image_mut(&mut self) -> &mut [Option<NonNull<TreeNode>>] {
+        let start = self.current_line as usize;
+        let end = (start + self.window_lines as usize).min(self.nodes_buffer.len());
+
+        &mut self.nodes_buffer[start..end]
+    }
+
+    #[inline]
+    pub(crate) fn get_image_node(&mut self, idx: usize) -> Option<&mut TreeNode> {
+        let image = self.get_image_mut();
+        if idx >= image.len() {
+            return None;
+        }
+
+        Some(nonnull_mut!(image[idx]))
+    }
+
+    #[inline]
+    pub(crate) fn get_image_node_ptr(&mut self, idx: usize) -> Option<NonNull<TreeNode>> {
+        let image = self.get_image_mut();
+        if idx >= image.len() {
+            return None;
+        }
+
+        image[idx]
+    }
+
+    #[inline]
     pub(crate) fn image_len(&self) -> usize {
         let start = self.current_line as usize;
         let end = (start + self.window_lines as usize).min(self.nodes_buffer.len());
         end - start
     }
 
+    #[inline]
+    pub(crate) fn buffer_len(&self) -> usize {
+        self.nodes_buffer.len()
+    }
+
+    /// Add node and it's children to the nodes buffer.
+    /// 
+    /// @param node: the parent node of the added node. <br>
+    /// @param child_id: the id of the added node. <br>
+    /// @param added: all the ids of added node and it's children's id. 
+    /// 
+    /// @return
+    /// - `normal`: the index of added node in nodes buffer.
+    /// - `usize::MAX`: add failed.         
     pub(crate) fn node_added(
         &mut self,
         node: &TreeNode,
         child_id: ObjectId,
         added: &Vec<ObjectId>,
-    ) {
+    ) -> usize {
         if !self.root().get_children_ids().contains(&child_id) {
-            return;
+            return usize::MAX;
+        }
+        if !node.is_expanded() {
+            return usize::MAX;
         }
 
         let children = node.get_children_ids();
@@ -224,6 +291,54 @@ impl TreeStore {
             .collect();
 
         self.nodes_buffer.splice(idx..idx, insert);
+
+        emit!(self.buffer_len_changed(), self.nodes_buffer.len());
+        emit!(self.notify_update_rect(), idx);
+
+        // Calculate the index of added node in nodes buffer:
+        let mut added_idx = usize::MAX;
+        for i in idx..self.nodes_buffer.len() {
+            if nonnull_ref!(self.nodes_buffer[i]).id() == child_id {
+                added_idx = i;
+                break;
+            }
+        }
+        return added_idx;
+    }
+
+    /// Remove node and it's children from the nodes buffer.
+    /// 
+    /// @param node: the parent node of the deleted node. <br>
+    /// @param child_id: the id of the deleted node. <br>
+    /// @param deleted: all the ids of nodes that should be deleted, container it's children nodes.
+    /// 
+    /// @return
+    /// - `normal`: the index of added node in nodes buffer.
+    /// - `usize::MAX`: add failed.         
+    pub(crate) fn node_deleted(
+        &mut self,
+        node: &TreeNode,
+        child: ObjectId,
+        child_expanded: bool,
+        deleted: Vec<ObjectId>
+    ) {
+        if !node.is_expanded() {
+            return
+        }
+
+        let mut idx = 0;
+        for c in self.nodes_buffer.iter() {
+            if nonnull_ref!(c).id() == child {
+                break;
+            }
+            idx += 1;
+        }
+
+        if child_expanded {
+            self.nodes_buffer.drain(idx..idx + deleted.len());
+        } else {
+            self.nodes_buffer.drain(idx..idx + 1);
+        }
 
         emit!(self.buffer_len_changed(), self.nodes_buffer.len());
         emit!(self.notify_update_rect(), idx);
@@ -322,7 +437,7 @@ impl TreeStore {
         emit!(self.notify_update());
     }
 
-    pub(crate) fn click_node(&mut self, idx: usize) {
+    pub(crate) fn click_node(&mut self, idx: usize, mouse_button: MouseButton) {
         if idx >= self.image_len() {
             let mut old_select = self.selected_node.take();
             if old_select.is_some() {
@@ -345,22 +460,40 @@ impl TreeStore {
         node.set_status(Status::Selected);
         self.selected_node = node_ptr;
 
-        node.node_clicked();
-        self.node_expanded(node);
+        if mouse_button == MouseButton::LeftButton {
+            node.node_shuffle_expand();
+        }
 
         emit!(self.notify_update());
     }
 
+    /// @param `internal`
+    /// - true: The view scrolling triggered internally in TreeView 
+    ///         requires notifying the scroll bar to change the value.
     #[inline]
-    pub(crate) fn scroll_to(&mut self, value: i32) -> bool {
-        if self.current_line == value {
-            return false
+    pub(crate) fn scroll_to(&mut self, value: i32, internal: bool) -> bool {
+        if self.current_line == value || value > self.nodes_buffer.len() as i32 {
+            return false;
         }
         // if value was 0, scroll to the begining, first node index was 0
         // scroll to 1, first node index was 1
         self.current_line = value;
 
+        if internal {
+            emit!(self.internal_scroll_value_changed(), value);
+        }
+
         true
+    }
+
+    #[inline]
+    pub(crate) fn get_entered_node(&self) -> Option<NonNull<TreeNode>> {
+        self.enterd_node
+    }
+
+    #[inline]
+    pub(crate) fn set_entered_node(&mut self, node: &mut TreeNode) {
+        self.enterd_node = NonNull::new(node)
     }
 }
 

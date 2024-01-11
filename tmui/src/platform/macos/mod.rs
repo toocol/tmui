@@ -2,12 +2,14 @@
 pub(crate) mod macos_window;
 
 use crate::{
+    backend::BackendType,
     primitive::Message,
     primitive::{bitmap::Bitmap, shared_channel},
     runtime::window_context::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
         PhysicalWindowContext,
     },
+    window::win_config::{self, WindowConfig},
 };
 use cocoa::{
     appkit::{
@@ -16,27 +18,40 @@ use cocoa::{
     base::id,
 };
 use objc::runtime::Object;
-use std::sync::{mpsc::channel, Arc};
-use tipc::{ipc_master::IpcMaster, RwLock, WithIpcMaster};
+use std::{
+    cell::Cell,
+    sync::{mpsc::channel, Arc},
+};
+use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
 use tlib::winit::{
-    event_loop::EventLoopBuilder,
+    event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
     raw_window_handle::{HasWindowHandle, RawWindowHandle},
 };
 
 use self::macos_window::MacosWindow;
 
-use super::{logic_window::LogicWindow, physical_window::PhysicalWindow, PlatformContext, win_config::{WindowConfig, self}, ipc_inner_agent::InnerAgent};
+use super::{
+    ipc_inner_agent::InnerAgent, logic_window::LogicWindow, physical_window::PhysicalWindow,
+    PlatformContext, PlatformType,
+};
 
 pub(crate) struct PlatformMacos<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     // Ipc shared memory context.
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
+
+    main_win_create: Cell<bool>,
+    platform_type: PlatformType,
+    backend_type: BackendType,
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformMacos<T, M> {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(platform_type: PlatformType, backend_type: BackendType) -> Self {
         Self {
             master: None,
+            main_win_create: Cell::new(true),
+            platform_type,
+            backend_type,
         }
     }
 
@@ -50,9 +65,13 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformM
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformContext<T, M>
     for PlatformMacos<T, M>
 {
-    fn initialize(&mut self) {}
-
-    fn create_window(&mut self, win_config: WindowConfig) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+    fn create_window(
+        &self,
+        win_config: WindowConfig,
+        parent: Option<RawWindowHandle>,
+        target: Option<&EventLoopWindowTarget<Message>>,
+        proxy: Option<EventLoopProxy<Message>>,
+    ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
         let inner_agent = if self.master.is_some() {
             let master = self.master.as_ref().unwrap().clone();
             Some(InnerAgent::master(master))
@@ -62,41 +81,58 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let (width, height) = win_config.size();
         let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
 
-        let event_loop = EventLoopBuilder::<Message>::with_user_event()
-            .build()
-            .unwrap();
+        let (window, event_loop) = if let Some(target) = target {
+            let window = win_config::build_window(win_config, target, parent).unwrap();
+
+            (window, None)
+        } else {
+            let event_loop = EventLoopBuilder::<Message>::with_user_event()
+                .build()
+                .unwrap();
+            let window = win_config::build_window(win_config, &event_loop, parent).unwrap();
+
+            (window, Some(event_loop))
+        };
 
         unsafe {
             let ns_app = NSApp();
             ns_app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
         }
 
-        let window = win_config::build_window(win_config, &event_loop).unwrap();
-
+        let window_id = window.id();
         let window_handle = window.window_handle().unwrap().as_raw();
         let ns_view: id = match window_handle {
             RawWindowHandle::AppKit(id) => id.ns_view.as_ptr() as *mut Object,
             _ => unreachable!(),
         };
 
-        let event_loop_proxy = event_loop.create_proxy();
+        let event_loop_proxy = if let Some(proxy) = proxy {
+            proxy
+        } else {
+            event_loop.as_ref().unwrap().create_proxy()
+        };
 
         let (input_sender, input_receiver) = channel::<Message>();
 
         // Create the shared channel.
-        let (shared_channel, user_ipc_event_sender) = if self.master.is_some() {
-            let (user_ipc_event_sender, user_ipc_event_receiver) = channel();
-            let shared_channel = shared_channel::master_channel(
-                self.master.as_ref().unwrap().clone(),
-                user_ipc_event_receiver,
-            );
-            (Some(shared_channel), Some(user_ipc_event_sender))
-        } else {
-            (None, None)
-        };
+        let (shared_channel, user_ipc_event_sender) =
+            if self.master.is_some() && self.main_win_create.get() {
+                let (user_ipc_event_sender, user_ipc_event_receiver) = channel();
+                let shared_channel = shared_channel::master_channel(
+                    self.master.as_ref().unwrap().clone(),
+                    user_ipc_event_receiver,
+                );
+                (Some(shared_channel), Some(user_ipc_event_sender))
+            } else {
+                (None, None)
+            };
 
-        (
+        self.main_win_create.set(false);
+
+        let (mut logic_window, physical_window) = (
             LogicWindow::master(
+                window_id,
+                window_handle,
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -106,17 +142,23 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 },
             ),
             PhysicalWindow::Macos(MacosWindow::new(
+                window_id,
+                window,
                 ns_view,
                 bitmap,
                 self.master.clone(),
-                PhysicalWindowContext::Default(
-                    window,
+                PhysicalWindowContext(
                     OutputReceiver::EventLoop(event_loop),
                     InputSender(input_sender),
                 ),
                 user_ipc_event_sender,
             )),
-        )
+        );
+
+        logic_window.platform_type = self.platform_type;
+        logic_window.backend_type = self.backend_type;
+
+        (logic_window, physical_window)
     }
 }
 

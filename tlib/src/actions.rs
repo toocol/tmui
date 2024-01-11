@@ -21,7 +21,7 @@
 //! impl Widget {
 //!     signals! {
 //!         Widget:
-//! 
+//!
 //!         action_test();
 //!     }
 //!
@@ -31,8 +31,7 @@
 //!
 //! fn main() {
 //!     // Not necessary in actual use. //
-//!     let mut action_hub = ActionHub::new();
-//!     action_hub.initialize();
+//!     ActionHub::initialize();
 //!
 //!     let mut widget: Box<Widget> = Object::new(&[]);
 //!     connect!(widget, action_test(), widget, slot());
@@ -41,18 +40,13 @@
 //! ```
 use crate::prelude::*;
 use log::debug;
-use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fmt::Display,
-    sync::{
-        mpsc::{channel, Receiver, Sender},
-        Once,
-    },
+    sync::atomic::{AtomicPtr, Ordering}, ptr::null_mut,
 };
 
-static INIT: Once = Once::new();
 type ActionsMap = Box<
     HashMap<
         ObjectId,
@@ -63,64 +57,40 @@ type ActionsMap = Box<
     >,
 >;
 
-thread_local! {static IS_MAIN_THREAD: RefCell<bool>  = RefCell::new(false)}
+thread_local! {
+    static INSTANCE: RefCell<Box<ActionHub>> = RefCell::new(ActionHub::new());
+    static INSTANCE_PTR: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
+}
 
 /// ActionHub hold all of the registered actions
 pub struct ActionHub {
     map: ActionsMap,
-    sender: Sender<(Signal, Option<Value>)>,
-    receiver: Receiver<(Signal, Option<Value>)>,
 }
 impl ActionHub {
+    #[inline]
     pub fn new() -> Box<Self> {
-        let (sender, receiver) = channel();
         Box::new(Self {
             map: Box::new(HashMap::new()),
-            sender,
-            receiver,
         })
     }
 
-    /// Get the singleton instance of `ActionHub`
-    pub fn instance() -> &'static mut Self {
-        static mut ACTION_HUB: Lazy<Box<ActionHub>> = Lazy::new(|| ActionHub::new());
-        unsafe { &mut ACTION_HUB }
-    }
-
-    /// Initialize the `ActionHub`, the instance should be managed by the caller.
-    ///
-    /// The thread initialize the `ActionHub` should be the `main` thread.
-    ///
-    /// This function should only call once.
-    pub fn initialize(self: &mut Box<Self>) {
-        INIT.call_once(|| {
-            IS_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+    pub fn initialize() {
+        INSTANCE.with(|ins| {
+            INSTANCE_PTR.with(|ptr| {
+                ptr.store(ins.borrow_mut().as_mut(), Ordering::Release)
+            })
         });
     }
 
     #[inline]
-    pub fn process_multi_thread_actions(&self) {
-        IS_MAIN_THREAD.with(|is_main| {
-            if !*is_main.borrow() {
-                panic!("`process_multi_thread_actions()` should only call in the `main` thread.")
-            }
-        });
-
-        while let Ok(action) = self.receiver.try_recv() {
-            let signal = action.0;
-            let param = action.1;
-            if let Some((_, emiter_map)) = self.map.get(&signal.emiter_id) {
-                if let Some(actions) = emiter_map.get(signal.signal()) {
-                    actions
-                        .iter()
-                        .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
-                } else {
-                    debug!("Unconnected action: {}", signal.signal());
-                }
-            } else {
-                debug!("Unconnected action: {}", signal.signal());
-            }
-        }
+    pub fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&mut Self) -> R,
+    {
+        INSTANCE_PTR.with(|ptr| {
+            let hub = unsafe { ptr.load(Ordering::Acquire).as_mut().unwrap() };
+            f(hub)
+        })
     }
 
     pub fn connect_action<F: Fn(&Option<Value>) + 'static>(
@@ -129,12 +99,6 @@ impl ActionHub {
         target: ObjectId,
         f: F,
     ) {
-        IS_MAIN_THREAD.with(|is_main| {
-            if !*is_main.borrow() {
-                panic!("`connect_action()` should only call in the `main` thread.")
-            }
-        });
-
         let map_ref = self.map.as_mut();
         let (target_set, signal_map) = map_ref
             .entry(signal.emiter_id)
@@ -154,12 +118,6 @@ impl ActionHub {
         signal: Option<&str>,
         target: Option<ObjectId>,
     ) {
-        IS_MAIN_THREAD.with(|is_main| {
-            if !*is_main.borrow() {
-                panic!("`disconnect_action()` should only call in the `main` thread.")
-            }
-        });
-
         let map_ref = self.map.as_mut();
 
         // When disconnect with specified signal(`signal.is_some()`),
@@ -213,47 +171,46 @@ impl ActionHub {
     }
 
     pub fn activate_action(&self, signal: Signal, param: Option<Value>) {
-        IS_MAIN_THREAD.with(|is_main| {
-            let name = signal.signal();
-            let from_type = signal.from_type();
-            let emit_type = signal.emit_type();
-            if *is_main.borrow() {
-                if let Some((_, emiter_map)) = self.map.get(&signal.emiter_id) {
-                    if let Some(actions) = emiter_map.get(name) {
-                        actions
-                            .iter()
-                            .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
-                    } else {
-                        debug!(
-                            "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
-                            name, from_type, emit_type
-                        );
-                    }
-                } else {
-                    debug!(
-                        "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
-                        name, from_type, emit_type
-                    );
-                }
+        let name = signal.signal();
+        let from_type = signal.from_type();
+        let emit_type = signal.emit_type();
+
+        if let Some((_, emiter_map)) = self.map.get(&signal.emiter_id) {
+            if let Some(actions) = emiter_map.get(name) {
+                actions
+                    .iter()
+                    .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
             } else {
-                self.sender
-                    .send((signal, param))
-                    .expect("`ActionHub` send actions from multi thread failed.");
+                debug!(
+                    "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
+                    name, from_type, emit_type
+                );
             }
-        })
+        } else {
+            debug!(
+                "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
+                name, from_type, emit_type
+            );
+        }
     }
 }
 pub trait ActionExt: ObjectOperation {
     fn connect(&self, signal: Signal, target: ObjectId, f: Box<dyn Fn(&Option<Value>)>) {
-        ActionHub::instance().connect_action(signal, target, f)
+        ActionHub::with(|hub| {
+            hub.connect_action(signal, target, f)
+        });
     }
 
     fn disconnect(&self, emiter: Option<ObjectId>, signal: Option<&str>, target: Option<ObjectId>) {
-        ActionHub::instance().disconnect_action(emiter, signal, target)
+        ActionHub::with(|hub| {
+            hub.disconnect_action(emiter, signal, target)
+        });
     }
 
     fn disconnect_all(&self) {
-        ActionHub::instance().disconnect_action(Some(self.id()), None, None)
+        ActionHub::with(|hub| {
+            hub.disconnect_action(Some(self.id()), None, None)
+        });
     }
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
@@ -340,22 +297,30 @@ macro_rules! emit {
     ( $emit_type:expr => $signal:expr ) => {{
         let mut signal = $signal;
         signal.set_emit_type(stringify!($emit_type).to_string());
-        ActionHub::instance().activate_action(signal, None);
+        ActionHub::with(|hub| {
+            hub.activate_action(signal, None);
+        });
     }};
     ( $emit_type:expr => $signal:expr, $($x:expr),+ ) => {{
         let tuple = ($($x),+);
         let value = tuple.to_value();
         let mut signal = $signal;
         signal.set_emit_type(stringify!($emit_type).to_string());
-        ActionHub::instance().activate_action(signal, Some(value));
+        ActionHub::with(|hub| {
+            hub.activate_action(signal, Some(value));
+        });
     }};
     ( $signal:expr ) => {{
-        ActionHub::instance().activate_action($signal, None);
+        ActionHub::with(|hub| {
+            hub.activate_action($signal, None);
+        });
     }};
     ( $signal:expr, $($x:expr),+ ) => {{
         let tuple = ($($x),+);
         let value = tuple.to_value();
-        ActionHub::instance().activate_action($signal, Some(value));
+        ActionHub::with(|hub| {
+            hub.activate_action($signal, Some(value));
+        });
     }};
 }
 
@@ -484,7 +449,7 @@ mod tests {
         object::{ObjectImpl, ObjectSubclass},
         prelude::*,
     };
-    use std::{rc::Rc, thread, time::Duration};
+    use std::rc::Rc;
 
     #[extends(Object)]
     pub struct Widget {}
@@ -545,25 +510,12 @@ mod tests {
 
     #[test]
     fn test_actions() {
-        let mut action_hub = ActionHub::new();
-        action_hub.initialize();
+        ActionHub::initialize();
 
         let mut widget = Widget::new();
         widget.reg_action();
         let rc = Rc::new(widget);
         rc.emit();
-
-        let mut join_vec = vec![];
-        for _ in 0..5 {
-            let signal = rc.action_test();
-            join_vec.push(thread::spawn(move || emit!(signal, 1, "desc")));
-        }
-
-        thread::sleep(Duration::from_millis(500));
-        action_hub.process_multi_thread_actions();
-        for join in join_vec {
-            join.join().unwrap();
-        }
 
         let action = Action::with_param(rc.action_test(), (1, "desc"));
         action.emit();

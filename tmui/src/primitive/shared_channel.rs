@@ -1,6 +1,6 @@
 use std::{sync::{mpsc::Receiver, Arc}, time::Instant};
 
-use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, RwLock, ipc_event::IpcEvent};
+use tipc::{ipc_master::IpcMaster, ipc_slave::IpcSlave, IpcNode, parking_lot::RwLock, ipc_event::IpcEvent};
 use tlib::events::Event;
 use super::convert_event;
 

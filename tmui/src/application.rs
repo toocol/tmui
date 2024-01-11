@@ -10,9 +10,11 @@ use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
     event_hints::event_hints,
-    platform::{win_config::{WindowConfig, WindowConfigBuilder}, PlatformContext, PlatformIpc, PlatformType},
+    graphics::icon::Icon,
+    platform::{PlatformContext, PlatformIpc, PlatformType},
     primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
-    runtime::{ui_runtime, windows_process::WindowsProcess}, graphics::icon::Icon,
+    runtime::{start_ui_runtime, windows_process::WindowsProcess},
+    window::win_config::{WindowConfig, WindowConfigBuilder},
 };
 use std::{
     any::Any,
@@ -22,10 +24,13 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Once,
     },
-    thread,
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
-use tlib::{events::Event, figure::Size, winit::window::WindowButtons};
+use tlib::{
+    events::Event,
+    figure::Size,
+    winit::window::WindowButtons,
+};
 
 thread_local! {
     pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
@@ -92,7 +97,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let platform_context = platform_mut.as_mut().unwrap();
 
         // Create the window
-        let (mut logic_window, physical_window) = platform_context.create_window(self.win_config.borrow_mut().take().unwrap());
+        let (mut logic_window, physical_window) = platform_context.create_window(
+            self.win_config.borrow_mut().take().unwrap(),
+            None,
+            None,
+            None,
+        );
 
         // Get the customize event handle functions.
         let on_activate = self.on_activate.borrow_mut().take();
@@ -100,21 +110,14 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let on_request_receive = self.on_request_receive.borrow_mut().take();
 
         // Set the fields of logic windows.
-        logic_window.platform_type = self.platform_type;
-        logic_window.backend_type = self.backend_type;
-
         logic_window.on_activate = on_activate;
         logic_window.on_user_event_receive = on_user_event_receive;
         logic_window.on_request_receive = on_request_receive;
 
         // Create the `UI` main thread.
-        let join = thread::Builder::new()
-            .name("tmui-main".to_string())
-            .stack_size(self.ui_stack_size)
-            .spawn(move || ui_runtime::<T, M>(logic_window))
-            .unwrap();
+        let join = start_ui_runtime(0, self.ui_stack_size, logic_window);
 
-        WindowsProcess::<T, M>::new().process(physical_window);
+        WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context).process(physical_window);
 
         join.join().unwrap();
     }
@@ -148,7 +151,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         // Create the [`PlatformContext`] based on the platform type specified by the user.
         let platform_context = match self.platform_type {
             PlatformType::Ipc => {
-                let mut platform_context = PlatformIpc::<T, M>::new();
+                let mut platform_context =
+                    PlatformIpc::<T, M>::new(self.platform_type, self.backend_type);
                 let shared_mem_name = self.shared_mem_name.expect(
                     "`PlatformType::Ipc` need build by function `Application::shared_builder()`",
                 );
@@ -157,44 +161,43 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                     .expect("`PlatformType::Ipc` require non-None.`");
                 platform_context.set_shared_widget_id(shared_widget_id);
                 platform_context.with_ipc_slave(shared_mem_name);
-                platform_context.initialize();
 
                 platform_context.wrap()
             }
             #[cfg(windows_platform)]
             PlatformType::Win32 => {
-                let mut platform_context = PlatformWin32::<T, M>::new();
+                let mut platform_context =
+                    PlatformWin32::<T, M>::new(self.platform_type, self.backend_type);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
-                platform_context.initialize();
                 platform_context.wrap()
             }
             #[cfg(x11_platform)]
             PlatformType::LinuxX11 => {
-                let mut platform_context = PlatformX11::<T, M>::new();
+                let mut platform_context =
+                    PlatformX11::<T, M>::new(self.platform_type, self.backend_type);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
-                platform_context.initialize();
                 platform_context.wrap()
             }
             #[cfg(wayland_platform)]
             PlatformType::LinuxWayland => {
-                let mut platform_context = PlatformWayland::<T, M>::new();
+                let mut platform_context =
+                    PlatformWayland::<T, M>::new(self.platform_type, self.backend_type);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
-                platform_context.initialize();
                 platform_context.wrap()
             }
             #[cfg(macos_platform)]
             PlatformType::Macos => {
-                let mut platform_context = PlatformMacos::<T, M>::new();
+                let mut platform_context =
+                    PlatformMacos::<T, M>::new(self.platform_type, self.backend_type);
                 if let Some(shared_mem_name) = self.shared_mem_name {
                     platform_context.with_ipc_master(shared_mem_name);
                 }
-                platform_context.initialize();
                 platform_context.wrap()
             }
         };
@@ -422,7 +425,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set the platform type of application.
-    /// 
+    ///
     /// The default platform was os specified, the alternative platform was [`Ipc`](PlatformType::Ipc).
     #[inline]
     pub fn platform(mut self, platform: PlatformType) -> Self {
@@ -438,7 +441,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set the title of application main window.
-    /// 
+    ///
     /// The default value was "Tmui Window".
     #[inline]
     pub fn title(mut self, title: &'static str) -> Self {
@@ -482,7 +485,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set whether the application main window should have a border, a title bar, etc.
-    /// 
+    ///
     /// The default value was `true`.
     #[inline]
     pub fn decoration(mut self, decoration: bool) -> Self {
@@ -491,7 +494,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set whether the application main window will support transparency.
-    /// 
+    ///
     /// The default value was `false`.
     #[inline]
     pub fn transparent(mut self, transparent: bool) -> Self {
@@ -500,7 +503,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Whether the background of the application main window should be blurred by the system.
-    /// 
+    ///
     /// The default value was `false`.
     #[inline]
     pub fn blur(mut self, blur: bool) -> Self {
@@ -509,7 +512,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set whether the application main window will be initially visible or hidden.
-    /// 
+    ///
     /// The default value was `true`.
     #[inline]
     pub fn visible(mut self, visible: bool) -> Self {
@@ -518,7 +521,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set whether the application main window is resizable or not.
-    /// 
+    ///
     /// The default value was `true`.
     #[inline]
     pub fn resizable(mut self, resizable: bool) -> Self {
@@ -527,7 +530,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Request that the application main window is maximized upon creation.
-    /// 
+    ///
     /// The default value was `false`.
     #[inline]
     pub fn maximized(mut self, maximized: bool) -> Self {
@@ -536,7 +539,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set whether the application main window will be initially focused or not.
-    /// 
+    ///
     /// The default value was `true`.
     #[inline]
     pub fn active(mut self, active: bool) -> Self {
@@ -554,7 +557,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 
     /// Set the thread stack size of each ui thread.
-    /// 
+    ///
     /// The default value was `8Mb`.
     #[inline]
     pub fn ui_stack_size(mut self, size: usize) -> Self {

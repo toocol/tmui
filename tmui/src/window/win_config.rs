@@ -2,10 +2,12 @@ use crate::{graphics::icon::Icon, primitive::Message};
 use derivative::Derivative;
 use tlib::{
     figure::Size,
+    typedef::WinitIcon,
     winit::{
         dpi::PhysicalSize,
         error::OsError,
-        event_loop::EventLoop,
+        event_loop::EventLoopWindowTarget,
+        raw_window_handle::RawWindowHandle,
         window::{Window, WindowBuilder, WindowButtons},
     },
 };
@@ -14,7 +16,8 @@ type WinitSize = tlib::winit::dpi::Size;
 
 pub(crate) fn build_window(
     win_config: WindowConfig,
-    target: &EventLoop<Message>,
+    target: &EventLoopWindowTarget<Message>,
+    parent: Option<RawWindowHandle>,
 ) -> Result<Window, OsError> {
     let (width, height) = win_config.size();
 
@@ -29,6 +32,8 @@ pub(crate) fn build_window(
         .with_maximized(win_config.maximized)
         .with_active(win_config.active)
         .with_enabled_buttons(win_config.enable_buttons);
+
+    unsafe { window_bld = window_bld.with_parent_window(parent) };
 
     if let Some(max_size) = win_config.max_size {
         window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(
@@ -63,7 +68,7 @@ pub struct WindowConfig {
     /// The minimum size of window.
     min_size: Option<Size>,
     /// The icon of window.
-    win_icon: Option<Icon>,
+    win_icon: Option<WinitIcon>,
     /// Whether the window should have a border, a title bar, etc.
     decoration: bool,
     /// Whether the window will support transparency.
@@ -134,7 +139,7 @@ impl WindowConfig {
     }
 
     #[inline]
-    pub fn win_icon(&self) -> Option<Icon> {
+    pub fn win_icon(&self) -> Option<WinitIcon> {
         self.win_icon.clone()
     }
 
@@ -206,7 +211,7 @@ impl WindowConfigBuilder {
     }
 
     /// Set the title of window.
-    /// 
+    ///
     /// The default value was "Tmui Window".
     #[inline]
     pub fn title(mut self, title: String) -> Self {
@@ -330,7 +335,9 @@ impl WindowConfigBuilder {
         cfg.height = self.height.expect("`WindowConfig` must specify the height");
         cfg.max_size = self.max_size;
         cfg.min_size = self.min_size;
-        cfg.win_icon = self.win_icon;
+        if let Some(icon) = self.win_icon {
+            cfg.win_icon = Some(icon.into());
+        }
         cfg.decoration = self.decoration;
         cfg.transparent = self.transparent;
         cfg.blur = self.blur;

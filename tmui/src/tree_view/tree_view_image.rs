@@ -1,4 +1,4 @@
-use super::tree_store::TreeStore;
+use super::{tree_node::TreeNode, tree_store::TreeStore};
 use crate::{
     prelude::*,
     scroll_bar::ScrollBar,
@@ -8,7 +8,7 @@ use crate::{
 };
 use std::ptr::NonNull;
 use tlib::{
-    connect,
+    connect, disconnect,
     events::MouseEvent,
     nonnull_mut, nonnull_ref, run_after,
     skia_safe::textlayout::{
@@ -24,6 +24,7 @@ const REPCHAR: &'static str = concat!(
 
 #[extends(Widget)]
 #[run_after]
+#[loadable]
 pub(crate) struct TreeViewImage {
     store: Box<TreeStore>,
     scroll_bar: Option<NonNull<ScrollBar>>,
@@ -33,6 +34,11 @@ pub(crate) struct TreeViewImage {
     #[derivative(Default(value = "1"))]
     line_height: i32,
     line_spacing: i32,
+
+    on_node_pressed: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
+    on_node_released: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
+    on_node_enter: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
+    on_node_leave: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
 }
 
 impl ObjectSubclass for TreeViewImage {
@@ -51,8 +57,6 @@ impl WidgetImpl for TreeViewImage {
     fn run_after(&mut self) {
         self.parent_run_after();
 
-        self.set_mouse_tracking(true);
-
         self.font_changed();
 
         self.calculate_window_lines();
@@ -69,6 +73,12 @@ impl WidgetImpl for TreeViewImage {
             buffer_len_changed(),
             self,
             when_nodes_buffer_changed(usize)
+        );
+        connect!(
+            self.store,
+            internal_scroll_value_changed(),
+            self,
+            internal_scroll_value_changed(i32)
         );
         connect!(
             nonnull_mut!(self.scroll_bar),
@@ -145,13 +155,58 @@ impl WidgetImpl for TreeViewImage {
         let idx = self.index_node(y);
 
         self.store.hover_node(idx);
+
+        // Handle the mouse enter/leave event:
+        let mut entered_node = self.store.get_entered_node();
+        let mut node_ptr = self.store.get_image_node_ptr(self.index_node(y));
+        if node_ptr.is_some() && (self.on_node_enter.is_some() || self.on_node_leave.is_some()) {
+            let node = nonnull_mut!(node_ptr);
+
+            if entered_node.is_none() {
+                self.store.set_entered_node(node);
+
+                if let Some(ref on_node_enter) = self.on_node_enter {
+                    on_node_enter(node, event);
+                }
+            } else {
+                let previous_node = nonnull_mut!(entered_node);
+
+                if previous_node.id() != node.id() {
+                    self.store.set_entered_node(node);
+
+                    if let Some(ref on_node_leave) = self.on_node_leave {
+                        on_node_leave(previous_node, event)
+                    }
+                    if let Some(ref on_node_enter) = self.on_node_enter {
+                        on_node_enter(node, event);
+                    }
+                }
+            }
+        }
     }
 
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
         let (_, y) = event.position();
         let idx = self.index_node(y);
 
-        self.store.click_node(idx);
+        self.store.click_node(idx, event.mouse_button());
+
+        if let Some(node) = self.store.get_image_node(idx) {
+            if let Some(ref on_node_pressed) = self.on_node_pressed {
+                on_node_pressed(node, event);
+            }
+        }
+    }
+
+    fn on_mouse_released(&mut self, event: &MouseEvent) {
+        let (_, y) = event.position();
+        let idx = self.index_node(y);
+
+        if let Some(node) = self.store.get_image_node(idx) {
+            if let Some(ref on_node_released) = self.on_node_released {
+                on_node_released(node, event);
+            }
+        }
     }
 
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
@@ -230,15 +285,64 @@ impl TreeViewImage {
         }
     }
 
+    #[inline]
     pub(crate) fn when_nodes_buffer_changed(&mut self, buffer_len: usize) {
         let scroll_bar = nonnull_mut!(self.scroll_bar);
 
         scroll_bar.set_range(0, buffer_len as i32 - self.store.get_window_lines());
     }
 
+    #[inline]
     pub(crate) fn scroll_bar_value_changed(&mut self, value: i32) {
-        if self.store.scroll_to(value) {
+        if self.store.scroll_to(value, false) {
             self.update()
         }
+    }
+
+    #[inline]
+    pub(crate) fn internal_scroll_value_changed(&mut self, value: i32) {
+        let scroll_bar = nonnull_mut!(self.scroll_bar);
+        disconnect!(scroll_bar, value_changed(), null, null);
+        scroll_bar.set_value(value);
+        connect!(
+            scroll_bar,
+            value_changed(),
+            self,
+            scroll_bar_value_changed(i32)
+        );
+
+        self.update_rect(CoordRect::new(self.rect(), Coordinate::World));
+    }
+
+    #[inline]
+    pub(crate) fn register_node_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.on_node_pressed = Some(Box::new(f))
+    }
+
+    #[inline]
+    pub(crate) fn register_node_released<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.on_node_released = Some(Box::new(f))
+    }
+
+    #[inline]
+    pub(crate) fn register_node_enter<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.on_node_enter = Some(Box::new(f))
+    }
+
+    #[inline]
+    pub(crate) fn register_node_leave<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.on_node_leave = Some(Box::new(f))
     }
 }

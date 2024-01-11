@@ -7,7 +7,7 @@ use tmui::{
 
 mod test_widget;
 
-pub const IPC_NAME: &'static str = "shmem_ipc134";
+pub const IPC_NAME: &'static str = "shmem_ipc136";
 
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
