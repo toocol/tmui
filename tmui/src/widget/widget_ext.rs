@@ -1,4 +1,4 @@
-use super::{SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
+use super::{EventBubble, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -628,6 +628,21 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::set_size_hint) (Defined in [`WidgetExt`])
     fn set_size_hint(&mut self, size_hint: SizeHint);
+
+    /// Whether the event will be bubbled or not.
+    ///
+    /// Go to[`Function defination`](WidgetExt::event_bubbled) (Defined in [`WidgetExt`])
+    fn is_event_bubbled(&self, event_bubble: EventBubble) -> bool;
+
+    /// Enable the event bubble.
+    ///
+    /// Go to[`Function defination`](WidgetExt::enable_bubble) (Defined in [`WidgetExt`])
+    fn enable_bubble(&mut self, event_bubble: EventBubble);
+
+    /// Disable the event bubble.
+    ///
+    /// Go to[`Function defination`](WidgetExt::disable_bubble) (Defined in [`WidgetExt`])
+    fn disable_bubble(&mut self, event_bubble: EventBubble);
 }
 
 impl WidgetExt for Widget {
@@ -1530,5 +1545,20 @@ impl WidgetExt for Widget {
             _ => {}
         }
         self.size_hint = size_hint
+    }
+
+    #[inline]
+    fn is_event_bubbled(&self, event_bubble: EventBubble) -> bool {
+        self.event_bubble.contains(event_bubble)
+    }
+
+    #[inline]
+    fn enable_bubble(&mut self, event_bubble: EventBubble) {
+        self.event_bubble.insert(event_bubble)
+    }
+
+    #[inline]
+    fn disable_bubble(&mut self, event_bubble: EventBubble) {
+        self.event_bubble.remove(event_bubble)
     }
 }

@@ -47,6 +47,7 @@ use trait_info::TraitInfo;
 ///     - HBox
 ///     - SplitPane
 ///     - ScrollArea
+///     - Pane
 #[proc_macro_attribute]
 pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);

@@ -266,6 +266,11 @@ pub(crate) fn expand(
                         #run_after_clause
                         #scroll_area_inner_init
                     }
+
+                    #[inline]
+                    fn pretreat_construct(&mut self) {
+
+                    }
                 }
 
                 impl PointEffective for #name {

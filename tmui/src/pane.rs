@@ -1,19 +1,68 @@
 use crate::{
+    container::SCALE_ADAPTION,
+    hbox::hbox_layout_homogeneous,
+    layout::LayoutManager,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl, container::SCALE_ADAPTION,
+    vbox::vbox_layout_homogeneous,
+    widget::WidgetImpl,
 };
+use log::error;
 
 #[extends(Container)]
 pub struct Pane {
     direction: Direction,
 }
 
+impl Pane {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
+    }
+}
+
+#[reflect_trait]
+pub trait PaneExt {
+    fn direction(&self) -> Direction;
+
+    fn set_direction(&mut self, direction: Direction);
+}
+
+impl PaneExt for Pane {
+    #[inline]
+    fn direction(&self) -> Direction {
+        self.direction
+    }
+
+    #[inline]
+    fn set_direction(&mut self, direction: Direction) {
+        self.direction = direction;
+
+        if self.window().initialized() {
+            self.window().layout_change(self)
+        }
+    }
+}
+
 impl ObjectSubclass for Pane {
     const NAME: &'static str = "Pane";
 }
 
-impl ObjectImpl for Pane {}
+impl ObjectImpl for Pane {
+    fn construct(&mut self) {
+        self.parent_construct();
+
+        self.set_mouse_tracking(true);
+
+        self.enable_bubble(EventBubble::MOUSE_MOVE);
+        self.enable_bubble(EventBubble::MOUSE_PRESSED);
+        self.enable_bubble(EventBubble::MOUSE_RELEASED);
+    }
+
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectPaneExt>();
+    }
+}
 
 impl WidgetImpl for Pane {}
 
@@ -32,11 +81,19 @@ impl ContainerImpl for Pane {
 }
 
 impl ContainerImplExt for Pane {
-    fn add_child<T>(&mut self, child: Box<T>)
+    fn add_child<T>(&mut self, mut child: Box<T>)
     where
         T: WidgetImpl,
     {
-        todo!()
+        if self.container.children.len() >= 2 {
+            error!("`Pane` can only have two child component.");
+            return;
+        }
+
+        child.set_parent(self);
+        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        self.container.children.push(child);
+        self.update();
     }
 }
 
@@ -60,14 +117,12 @@ impl StaticContainerScaleCalculate for Pane {
 }
 
 impl ChildContainerDiffRender for Pane {
-    fn container_diff_render(&mut self, painter: &mut Painter, background: Color) {
-        todo!()
-    }
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
 
 impl Layout for Pane {
     fn composition(&self) -> Composition {
-        todo!()
+        Self::static_composition(self)
     }
 
     fn position_layout(
@@ -76,11 +131,38 @@ impl Layout for Pane {
         parent: Option<&dyn WidgetImpl>,
         manage_by_container: bool,
     ) {
-        todo!()
+        Self::container_position_layout(self, previous, parent, manage_by_container);
     }
 }
 
-#[derive(Default)]
+impl ContainerLayout for Pane {
+    fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition {
+        let pane = cast!(widget as PaneExt).unwrap();
+
+        match pane.direction() {
+            Direction::Horizontal => Composition::HorizontalArrange,
+            Direction::Vertical => Composition::VerticalArrange,
+        }
+    }
+
+    fn container_position_layout<T: WidgetImpl + ContainerImpl>(
+        widget: &mut T,
+        previous: Option<&dyn WidgetImpl>,
+        parent: Option<&dyn WidgetImpl>,
+        manage_by_container: bool,
+    ) {
+        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+
+        let pane = cast!(widget as PaneExt).unwrap();
+
+        match pane.direction() {
+            Direction::Horizontal => hbox_layout_homogeneous(widget, Align::Start, Align::Start),
+            Direction::Vertical => vbox_layout_homogeneous(widget, Align::Start, Align::Start),
+        }
+    }
+}
+
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum Direction {
     #[default]
     Horizontal,

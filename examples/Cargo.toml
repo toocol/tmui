@@ -39,6 +39,10 @@ name = "custom_popup"
 path = "custom_popup/main.rs"
 
 [[bin]]
+name = "event_bubble"
+path = "event_bubble/main.rs"
+
+[[bin]]
 name = "image_draw"
 path = "image_draw/main.rs"
 

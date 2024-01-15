@@ -54,6 +54,11 @@ impl ObjectImpl for TreeViewImage {
 }
 
 impl WidgetImpl for TreeViewImage {
+    #[inline]
+    fn enable_focus(&self) -> bool {
+        true
+    }
+
     fn run_after(&mut self) {
         self.parent_run_after();
 

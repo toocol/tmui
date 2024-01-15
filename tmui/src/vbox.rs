@@ -136,7 +136,7 @@ impl VBox {
     }
 }
 
-fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
+pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     widget: &mut T,
     content_halign: Align,
     content_valign: Align,

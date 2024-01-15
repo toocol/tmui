@@ -133,7 +133,7 @@ impl HBox {
     }
 }
 
-fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
+pub(crate) fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     widget: &mut T,
     content_halign: Align,
     content_valign: Align,
