@@ -26,7 +26,7 @@ impl ObjectImpl for MyWidget {
 
         self.set_hexpand(true);
         self.set_vexpand(true);
-        self.set_background(Color::GREY);
+        self.set_background(Color::CYAN);
 
         self.enable_bubble(EventBubble::MOUSE_PRESSED);
         self.enable_bubble(EventBubble::MOUSE_RELEASED);

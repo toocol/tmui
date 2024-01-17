@@ -1,8 +1,12 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION, StaticSizeUnifiedAdjust},
+    container::{
+        ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
+        SCALE_ADAPTION,
+    },
+    graphics::painter::Painter,
     layout::LayoutManager,
-    prelude::*, graphics::painter::Painter,
+    prelude::*,
 };
 use tlib::object::ObjectSubclass;
 
@@ -258,7 +262,11 @@ impl ContainerScaleCalculate for HBox {
 impl StaticContainerScaleCalculate for HBox {
     #[inline]
     fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
-        c.children().iter().map(|c| c.hscale()).sum()
+        c.children()
+            .iter()
+            .filter(|c| !c.fixed_width())
+            .map(|c| c.hscale())
+            .sum()
     }
 
     #[inline]
@@ -268,8 +276,7 @@ impl StaticContainerScaleCalculate for HBox {
 }
 
 impl ChildContainerDiffRender for HBox {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
-    }
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
 
 impl SizeUnifiedAdjust for HBox {
@@ -284,7 +291,7 @@ impl StaticSizeUnifiedAdjust for HBox {
         let mut children_width = 0;
         let children_cnt = container.children().len();
         if children_cnt == 0 {
-            return
+            return;
         }
 
         container.children().iter().for_each(|c| {
@@ -292,7 +299,9 @@ impl StaticSizeUnifiedAdjust for HBox {
         });
 
         let width = container.size().width();
-        debug_assert!(width < children_width);
+        if width >= children_width {
+            return
+        }
 
         let exceed_width = children_width - width;
         let width_to_reduce = (exceed_width as f32 / children_cnt as f32).round() as i32;
@@ -300,24 +309,28 @@ impl StaticSizeUnifiedAdjust for HBox {
 
         let strict_children_layout = container.is_strict_children_layout();
 
-        container.children_mut().iter_mut().enumerate().for_each(|(i, c)| {
-            let mut cw = (c.size().width() - width_to_reduce).max(0);
+        container
+            .children_mut()
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, c)| {
+                let mut cw = (c.size().width() - width_to_reduce).max(0);
 
-            // Handle to ensure that there are no gaps between all subcomponents:
-            if i == children_cnt - 1 {
-                cw -= gap;
-            }
-            
-            if strict_children_layout {
-                let (minimum_hint, _) = c.size_hint();
-                if let Some(minimum_hint) = minimum_hint {
-                    if cw < minimum_hint.width() {
-                        cw = minimum_hint.width();
+                // Handle to ensure that there are no gaps between all subcomponents:
+                if i == children_cnt - 1 {
+                    cw -= gap;
+                }
+
+                if strict_children_layout {
+                    let size_hint = c.size_hint();
+                    if let Some(min_width) = size_hint.min_width() {
+                        if cw < min_width {
+                            cw = min_width;
+                        }
                     }
                 }
-            }
 
-            c.set_fixed_width(cw);
-        });
+                c.set_fixed_width(cw);
+            });
     }
 }

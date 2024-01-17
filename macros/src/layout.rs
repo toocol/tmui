@@ -1,7 +1,11 @@
 use crate::{
     extend_container,
+    scroll_area::{
+        generate_scroll_area_add_child, generate_scroll_area_get_children,
+        generate_scroll_area_impl,
+    },
     split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
-    stack::{generate_stack_add_child, generate_stack_impl}, scroll_area::{generate_scroll_area_add_child, generate_scroll_area_get_children, generate_scroll_area_impl},
+    stack::{generate_stack_add_child, generate_stack_impl},
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -49,11 +53,15 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
     children_idents
 }
 
-fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn::Result<proc_macro2::TokenStream> {
+fn gen_layout_clause(
+    ast: &mut DeriveInput,
+    layout: &str,
+    internal: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
     let has_size_unified_adjust = has_content_alignment;
-    let is_vbox = layout == "VBox";
     let is_hbox = layout == "HBox";
+    let is_vbox = layout == "VBox";
     let is_split_pane = layout == "SplitPane";
     let is_stack = layout == "Stack";
     let is_scroll_area = layout == "ScrollArea";

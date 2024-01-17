@@ -172,7 +172,7 @@ impl FromValue for Size {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Size
+/// FSize
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub struct FSize {
@@ -334,6 +334,93 @@ impl FromValue for FSize {
     #[inline]
     fn from_value(value: &Value) -> Self {
         Self::from_bytes(value.data(), Self::bytes_len())
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// SizeHint 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub struct SizeHint {
+    max_width: Option<i32>,
+    max_height: Option<i32>,
+    min_width: Option<i32>,
+    min_height: Option<i32>,
+}
+
+impl SizeHint {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
+    pub fn with_max_width(mut self, max_width: i32) -> Self {
+        self.max_width = Some(max_width);
+        self
+    }
+
+    #[inline]
+    pub fn with_max_height(mut self, max_height: i32) -> Self {
+        self.max_height = Some(max_height);
+        self
+    }
+
+    #[inline]
+    pub fn with_min_width(mut self, min_width: i32) -> Self {
+        self.min_width = Some(min_width);
+        self
+    }
+
+    #[inline]
+    pub fn with_min_height(mut self, min_height: i32) -> Self {
+        self.min_height = Some(min_height);
+        self
+    }
+
+    #[inline]
+    pub fn max_width(&self) -> Option<i32> {
+        self.max_width
+    }
+
+    #[inline]
+    pub fn max_height(&self) -> Option<i32> {
+        self.max_height
+    }
+
+    #[inline]
+    pub fn min_width(&self) -> Option<i32> {
+        self.min_width
+    }
+
+    #[inline]
+    pub fn min_height(&self) -> Option<i32> {
+        self.min_height
+    }
+
+    #[inline]
+    pub fn minimum(&self) -> (Option<i32>, Option<i32>) {
+        (self.min_width, self.min_height)
+    }
+
+    #[inline]
+    pub fn maximum(&self) -> (Option<i32>, Option<i32>) {
+        (self.max_width, self.max_height)
+    }
+
+    #[inline]
+    pub fn all(&self) -> (Option<i32>, Option<i32>, Option<i32>, Option<i32>) {
+        (self.min_width, self.min_height, self.max_width, self.max_height)
+    }
+
+    #[inline]
+    pub fn all_width(&self) -> (Option<i32>, Option<i32>) {
+        (self.min_width, self.max_width)
+    }
+
+    #[inline]
+    pub fn all_height(&self) -> (Option<i32>, Option<i32>) {
+        (self.min_height, self.max_height)
     }
 }
 

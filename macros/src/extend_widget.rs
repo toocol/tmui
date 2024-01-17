@@ -204,6 +204,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
     Ok(quote!(
         impl WidgetExt for #name {
             #[inline]
+            fn widget_model(&self) -> &Widget {
+                self.#(#widget_path).*.widget_model()
+            }
+
+            #[inline]
+            fn widget_model_mut(&mut self) -> &mut Widget {
+                self.#(#widget_path).*.widget_model_mut()
+            }
+
+            #[inline]
             fn name(&self) -> String {
                 self.#(#widget_path).*.name()
             }

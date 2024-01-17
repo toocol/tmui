@@ -20,6 +20,16 @@ use tlib::{
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
+    /// Get the ref of widget model.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
+    fn widget_model(&self) -> &Widget;
+
+    /// Get the mutable ref of widget model.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
+    fn widget_model_mut(&mut self) -> &mut Widget;
+
     /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
     fn name(&self) -> String;
 
@@ -647,6 +657,16 @@ pub trait WidgetExt {
 
 impl WidgetExt for Widget {
     #[inline]
+    fn widget_model(&self) -> &Widget {
+        self
+    }
+
+    #[inline]
+    fn widget_model_mut(&mut self) -> &mut Widget {
+        self
+    }
+
+    #[inline]
     fn name(&self) -> String {
         self.get_property("name").unwrap().get::<String>()
     }
@@ -864,6 +884,17 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn width_request(&mut self, width: i32) {
+        let size_hint = self.size_hint();
+        if let Some(min_width) = size_hint.min_width() {
+            if width < min_width {
+                return
+            }
+        }
+        if let Some(max_width)= size_hint.max_width() {
+            if width > max_width {
+                return
+            }
+        }
         self.set_property("width", width.to_value());
         self.fixed_width = true;
         self.width_request = width;
@@ -874,6 +905,17 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn height_request(&mut self, height: i32) {
+        let size_hint = self.size_hint();
+        if let Some(min_height) = size_hint.min_height() {
+            if height < min_height {
+                return
+            }
+        }
+        if let Some(max_height)= size_hint.max_height() {
+            if height > max_height {
+                return
+            }
+        }
         self.set_property("height", height.to_value());
         self.fixed_height = true;
         self.height_request = height;
@@ -1536,9 +1578,17 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_size_hint(&mut self, size_hint: SizeHint) {
-        match size_hint {
-            (Some(minimum), Some(maximum)) => {
-                if minimum.width() > maximum.width() || minimum.height() > maximum.height() {
+        match size_hint.all_width() {
+            (Some(min), Some(max)) => {
+                if min > max {
+                    panic!("`Minimum size hint can not be larger than maximum size hint.")
+                }
+            }
+            _ => {}
+        }
+        match size_hint.all_height() {
+            (Some(min), Some(max)) => {
+                if min > max {
                     panic!("`Minimum size hint can not be larger than maximum size hint.")
                 }
             }

@@ -45,11 +45,12 @@ pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
     widget_ext::WidgetExt, ChildRegionAcquirer, EventBubble, PointEffective, ReflectWidgetImpl,
-    SizeHint, Transparency, Widget, WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals,
-    WindowAcquire,
+    Transparency, Widget, WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals,
+    WindowAcquire, InnerCustomizeEventProcess, ReflectInnerCustomizeEventProcess
 };
+pub use crate::pane::{PaneExt, ReflectPaneExt};
 pub use tlib::tokio;
 pub use tlib::{
-    figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size},
+    figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size, SizeHint},
     {self},
 };
