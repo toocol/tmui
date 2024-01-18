@@ -1,9 +1,21 @@
-use super::WidgetImpl;
+use super::{WidgetImpl, EventBubble};
 
 pub(crate) trait WidgetInnerExt {
     fn set_fixed_width_ration(&mut self, ration: f32);
 
     fn set_fixed_height_ration(&mut self, ration: f32);
+
+    fn event_bubble(&self) -> EventBubble;
+
+    fn set_event_bubble(&mut self, event_bubble: EventBubble);
+
+    fn detecting_width(&self) -> i32;
+
+    fn detecting_height(&self) -> i32;
+
+    fn set_detecting_width(&mut self, detecting_width: i32);
+
+    fn set_detecting_height(&mut self, detecting_height: i32);
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -16,6 +28,36 @@ macro_rules! widget_inner_ext_impl {
         #[inline]
         fn set_fixed_height_ration(&mut self, ration: f32) {
             self.widget_model_mut().fixed_height_ration = ration;
+        }
+
+        #[inline]
+        fn event_bubble(&self) -> EventBubble {
+            self.widget_model().event_bubble
+        }
+
+        #[inline]
+        fn set_event_bubble(&mut self, event_bubble: EventBubble) {
+            self.widget_model_mut().event_bubble = event_bubble;
+        }
+
+        #[inline]
+        fn detecting_width(&self) -> i32 {
+            self.widget_model().detecting_width
+        }
+
+        #[inline]
+        fn detecting_height(&self) -> i32 {
+            self.widget_model().detecting_height
+        }
+
+        #[inline]
+        fn set_detecting_width(&mut self, detecting_width: i32) {
+            self.widget_model_mut().detecting_width = detecting_width
+        }
+
+        #[inline]
+        fn set_detecting_height(&mut self, detecting_height: i32) {
+            self.widget_model_mut().detecting_height = detecting_height
         }
     };
 }

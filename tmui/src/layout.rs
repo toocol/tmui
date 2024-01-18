@@ -140,6 +140,10 @@ impl SizeCalculation for dyn WidgetImpl {
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
                 }
+            } else {
+                if self.detecting_width() != 0 {
+                    self.set_fixed_width(self.detecting_width())
+                }
             }
         }
 
@@ -173,6 +177,10 @@ impl SizeCalculation for dyn WidgetImpl {
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                }
+            } else {
+                if self.detecting_height() != 0 {
+                    self.set_fixed_height(self.detecting_height())
                 }
             }
         }
@@ -247,7 +255,6 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_width() {
             if self.hexpand() {
-                let before = self.size();
                 if self.fixed_width_ration() == 0. {
                     let ration = self.get_width_request() as f32 / parent_size.width() as f32;
                     self.set_fixed_width_ration(ration);
@@ -256,9 +263,6 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.set_fixed_width(
                     (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
                 );
-
-                let after = self.size();
-                println!("{} resize here, before: {:?}, after: {:?}", self.name(), before, after);
             } else {
                 self.set_fixed_width(self.get_width_request());
             }
@@ -277,6 +281,10 @@ impl SizeCalculation for dyn WidgetImpl {
                 } else if !parent_hscale.is_dismiss() {
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                }
+            } else {
+                if self.detecting_width() != 0 {
+                    self.set_fixed_width(self.detecting_width())
                 }
             }
         }
@@ -309,6 +317,10 @@ impl SizeCalculation for dyn WidgetImpl {
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                }
+            } else {
+                if self.detecting_height() != 0 {
+                    self.set_fixed_height(self.detecting_height())
                 }
             }
         }

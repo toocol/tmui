@@ -847,6 +847,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn disable_bubble(&mut self, event_bubble: EventBubble) {
                 self.#(#widget_path).*.disable_bubble(event_bubble)
             }
+
+            #[inline]
+            fn is_passing_event_bubble(&self) -> bool {
+                self.#(#widget_path).*.is_passing_event_bubble()
+            }
+
+            #[inline]
+            fn set_passing_event_bubble(&mut self, is: bool) {
+                self.#(#widget_path).*.set_passing_event_bubble(is)
+            }
+
+            #[inline]
+            fn is_passing_mouse_tracking(&self) -> bool {
+                self.#(#widget_path).*.is_passing_mouse_tracking()
+            }
+
+            #[inline]
+            fn set_passing_mouse_tracking(&mut self, is: bool) {
+                self.#(#widget_path).*.set_passing_mouse_tracking(is)
+            }
         }
 
         impl WidgetImplExt for #name {

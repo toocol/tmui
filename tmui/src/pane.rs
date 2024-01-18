@@ -88,10 +88,12 @@ impl ObjectImpl for Pane {
         self.parent_construct();
 
         self.set_mouse_tracking(true);
+        self.set_passing_mouse_tracking(true);
 
         self.enable_bubble(EventBubble::MOUSE_MOVE);
         self.enable_bubble(EventBubble::MOUSE_PRESSED);
         self.enable_bubble(EventBubble::MOUSE_RELEASED);
+        self.set_passing_event_bubble(true);
     }
 
     fn type_register(&self, type_registry: &mut TypeRegistry) {
@@ -263,10 +265,6 @@ impl ContainerImplExt for Pane {
             error!("`Pane` can only have two child component.");
             return;
         }
-
-        child.enable_bubble(EventBubble::MOUSE_MOVE);
-        child.enable_bubble(EventBubble::MOUSE_PRESSED);
-        child.enable_bubble(EventBubble::MOUSE_RELEASED);
 
         child.set_mouse_tracking(true);
         child.set_parent(self);

@@ -59,6 +59,9 @@ pub struct Widget {
     width_request: i32,
     height_request: i32,
 
+    detecting_width: i32,
+    detecting_height: i32,
+
     /// Widget's width was fixed or not,
     /// `true` when user invoke [`width_request`](WidgetExt::width_request)
     fixed_width: bool,
@@ -125,6 +128,10 @@ pub struct Widget {
 
     #[derivative(Default(value = "EventBubble::empty()"))]
     event_bubble: EventBubble,
+    /// When true, widget will passing it's [`event_bubble`] setting to child automatically.
+    passing_event_bubble: bool,
+    /// When true, widget will passing it's [`mouse_tracking`] setting to child automatically.
+    passing_mouse_tracking: bool,
 }
 
 bitflags! {

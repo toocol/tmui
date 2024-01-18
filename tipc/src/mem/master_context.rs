@@ -248,12 +248,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     }
 
     fn create_buffer(&mut self, width: u32, height: u32) {
-        let buffer_name = format!(
-            "{}{}_{}",
-            self.name.to_string(),
-            IPC_MEM_BUFFER_NAME,
-            0
-        );
+        let buffer_name = format!("{}{}_{}", self.name.to_string(), IPC_MEM_BUFFER_NAME, 0);
 
         self.buffer = Some(
             ShmemConf::new()
