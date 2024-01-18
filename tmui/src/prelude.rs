@@ -48,7 +48,7 @@ pub use crate::widget::{
     Transparency, Widget, WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals,
     WindowAcquire, InnerCustomizeEventProcess, ReflectInnerCustomizeEventProcess
 };
-pub use crate::pane::{PaneExt, ReflectPaneExt};
+pub use crate::pane::{Pane, PaneExt, ReflectPaneExt, PaneDirection};
 pub use tlib::tokio;
 pub use tlib::{
     figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size, SizeHint},

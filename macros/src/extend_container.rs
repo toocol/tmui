@@ -1,6 +1,6 @@
 use crate::{
     extend_element, extend_object, extend_widget,
-    scroll_area::generate_scroll_area_inner_init, general_attr::GeneralAttr,
+    scroll_area::generate_scroll_area_inner_init, general_attr::GeneralAttr, pane::{generate_pane_inner_init, generate_pane_type_register},
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -17,6 +17,7 @@ pub(crate) fn expand(
     is_split_pane: bool,
     is_stack: bool,
     is_scroll_area: bool,
+    is_pane: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
 
@@ -74,6 +75,17 @@ pub(crate) fn expand(
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             area: Option<Box<dyn WidgetImpl>>
+                        })?);
+                    }
+                    if is_pane {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            direction: PaneDirection 
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            resize_zone: bool 
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            resize_pressed: bool 
                         })?);
                     }
 
@@ -189,7 +201,6 @@ pub(crate) fn expand(
             let reflect_split_infos_getter = if is_split_pane {
                 quote!(
                     type_registry.register::<#name, ReflectSplitInfosGetter>();
-                    type_registry.register::<#name, ReflectSizeUnifiedAdjust>();
                 )
             } else {
                 proc_macro2::TokenStream::new()
@@ -207,8 +218,20 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
+            let reflect_pane = if is_pane {
+                generate_pane_type_register(name)?
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
             let scroll_area_inner_init = if is_scroll_area {
                 generate_scroll_area_inner_init()?
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let pane_inner_init = if is_pane {
+                generate_pane_inner_init()?
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -259,12 +282,14 @@ pub(crate) fn expand(
                         #popupable_reflect_clause
                         #animation_reflect
                         #animation_state_holder_reflect
+                        #reflect_pane
                     }
 
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
                         #scroll_area_inner_init
+                        #pane_inner_init
                     }
 
                     #[inline]

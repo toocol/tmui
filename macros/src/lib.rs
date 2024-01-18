@@ -15,6 +15,7 @@ mod extend_widget;
 mod general_attr;
 mod layout;
 mod loadable;
+mod pane;
 mod popupable;
 mod reflect_trait;
 mod scroll_area;
@@ -87,7 +88,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false, false) {
+        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false, false, false) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -229,6 +230,32 @@ pub fn split_pane_impl(input: TokenStream) -> TokenStream {
 pub fn stack_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
     match stack::generate_stack_impl(&ident, "crate") {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn pane_impl(input: TokenStream) -> TokenStream {
+    let ident = parse_macro_input!(input as Ident);
+    match pane::generate_pane_impl(&ident) {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn pane_init(_: TokenStream) -> TokenStream {
+    match pane::generate_pane_inner_init() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+#[proc_macro]
+pub fn pane_type_register(input: TokenStream) -> TokenStream {
+    let ident = parse_macro_input!(input as Ident);
+    match pane::generate_pane_type_register(&ident) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }

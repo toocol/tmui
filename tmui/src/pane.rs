@@ -8,6 +8,7 @@ use crate::{
     widget::{InnerCustomizeEventProcess, WidgetImpl},
 };
 use log::error;
+use tlib::{pane_impl, pane_init, pane_type_register};
 
 #[extends(Container)]
 pub struct Pane {
@@ -43,63 +44,19 @@ pub trait PaneExt: ContainerImpl {
     fn set_resize_pressed(&mut self, resize_pressed: bool);
 }
 
-impl PaneExt for Pane {
-    #[inline]
-    fn direction(&self) -> Direction {
-        self.direction
-    }
-
-    #[inline]
-    fn set_direction(&mut self, direction: Direction) {
-        self.direction = direction;
-
-        if self.window().initialized() {
-            self.window().layout_change(self)
-        }
-    }
-
-    #[inline]
-    fn is_resize_zone(&self) -> bool {
-        self.resize_zone
-    }
-
-    #[inline]
-    fn set_resize_zone(&mut self, resize_zone: bool) {
-        self.resize_zone = resize_zone;
-    }
-
-    #[inline]
-    fn is_resize_pressed(&self) -> bool {
-        self.resize_pressed
-    }
-
-    #[inline]
-    fn set_resize_pressed(&mut self, resize_pressed: bool) {
-        self.resize_pressed = resize_pressed
-    }
-}
+pane_impl!(Pane);
 
 impl ObjectSubclass for Pane {
     const NAME: &'static str = "Pane";
 }
 
 impl ObjectImpl for Pane {
-    fn construct(&mut self) {
-        self.parent_construct();
-
-        self.set_mouse_tracking(true);
-        self.set_passing_mouse_tracking(true);
-
-        self.enable_bubble(EventBubble::MOUSE_MOVE);
-        self.enable_bubble(EventBubble::MOUSE_PRESSED);
-        self.enable_bubble(EventBubble::MOUSE_RELEASED);
-        self.set_passing_event_bubble(true);
+    fn initialize(&mut self) {
+        pane_init!();
     }
 
     fn type_register(&self, type_registry: &mut TypeRegistry) {
-        type_registry.register::<Self, ReflectPaneExt>();
-        type_registry.register::<Self, ReflectSizeUnifiedAdjust>();
-        type_registry.register::<Self, ReflectInnerCustomizeEventProcess>();
+        pane_type_register!(Pane);
     }
 }
 
@@ -266,7 +223,6 @@ impl ContainerImplExt for Pane {
             return;
         }
 
-        child.set_mouse_tracking(true);
         child.set_parent(self);
         ApplicationWindow::initialize_dynamic_component(child.as_mut());
         self.container.children.push(child);
@@ -376,6 +332,8 @@ impl ContainerLayout for Pane {
         }
     }
 }
+
+pub type PaneDirection = Direction;
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub enum Direction {

@@ -63,6 +63,10 @@ name = "multi_window"
 path = "multi_window/main.rs"
 
 [[bin]]
+name = "pane_layout"
+path = "pane_layout/main.rs"
+
+[[bin]]
 name = "pane_widget"
 path = "pane_widget/main.rs"
 
