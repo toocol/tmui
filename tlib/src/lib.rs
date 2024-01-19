@@ -31,6 +31,10 @@ pub mod skia_safe {
     pub use skia_safe::*;
 }
 
+pub mod bitflags {
+    pub use bitflags::*;
+}
+
 #[cfg(test)]
 mod tests {
     use macros::extends;

@@ -2375,6 +2375,7 @@ dependencies = [
 name = "tlib"
 version = "0.1.0"
 dependencies = [
+ "bitflags 2.4.1",
  "derivative",
  "hex_color",
  "lazy_static",

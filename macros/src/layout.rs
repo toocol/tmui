@@ -1,13 +1,17 @@
 use crate::{
     extend_container,
+    scroll_area::{
+        generate_scroll_area_add_child, generate_scroll_area_get_children,
+        generate_scroll_area_impl,
+    },
     split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
-    stack::{generate_stack_add_child, generate_stack_impl}, scroll_area::{generate_scroll_area_add_child, generate_scroll_area_get_children, generate_scroll_area_impl},
+    stack::{generate_stack_add_child, generate_stack_impl}, pane::{generate_pane_add_child, generate_pane_impl},
 };
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
 
-const SUPPORTED_LAYOUTS: [&'static str; 5] = ["Stack", "VBox", "HBox", "SplitPane", "ScrollArea"];
+const SUPPORTED_LAYOUTS: [&'static str; 6] = ["Stack", "VBox", "HBox", "SplitPane", "ScrollArea", "Pane"];
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
@@ -49,14 +53,20 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
     children_idents
 }
 
-fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn::Result<proc_macro2::TokenStream> {
+fn gen_layout_clause(
+    ast: &mut DeriveInput,
+    layout: &str,
+    internal: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
-    let has_size_unified_adjust = has_content_alignment;
-    let is_vbox = layout == "VBox";
+    let has_size_unified_adjust =
+        layout == "VBox" || layout == "HBox" || layout == "SplitPane";
     let is_hbox = layout == "HBox";
+    let is_vbox = layout == "VBox";
     let is_split_pane = layout == "SplitPane";
     let is_stack = layout == "Stack";
     let is_scroll_area = layout == "ScrollArea";
+    let is_pane = layout == "Pane";
 
     let mut token = extend_container::expand(
         ast,
@@ -66,6 +76,7 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
         is_split_pane,
         is_stack,
         is_scroll_area,
+        is_pane,
     )?;
 
     let name = &ast.ident;
@@ -138,12 +149,21 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
                 }
             }
         )
+    } else if is_pane {
+        quote!(
+            impl SizeUnifiedAdjust for #name {
+                #[inline]
+                fn size_unified_adjust(&mut self) {
+                    Pane::static_size_unified_adjust(self)
+                }
+            }
+        )
     } else {
         proc_macro2::TokenStream::new()
     };
 
-    let add_child_clause = match (is_split_pane, is_stack, is_scroll_area) {
-        (false, false, false) => {
+    let add_child_clause = match (is_split_pane, is_stack, is_scroll_area, is_pane) {
+        (false, false, false, false) => {
             quote! {
                 use tmui::application_window::ApplicationWindow;
                 child.set_parent(self);
@@ -152,10 +172,10 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
                 self.update();
             }
         }
-        (true, false, false) => generate_split_pane_add_child()?,
-        (false, true, false) => generate_stack_add_child()?,
-        (false, false, true) => generate_scroll_area_add_child(name)?,
-        _ => unreachable!(),
+        (true, _, _, _) => generate_split_pane_add_child()?,
+        (_, true, _, _) => generate_stack_add_child()?,
+        (_, _, true, _) => generate_scroll_area_add_child(name)?,
+        (_, _, _, true) => generate_pane_add_child()?,
     };
 
     let get_children_clause = if is_scroll_area {
@@ -196,6 +216,12 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
 
     let impl_scroll_area = if is_scroll_area {
         generate_scroll_area_impl(name, use_prefix)?
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    let impl_pane = if is_pane {
+        generate_pane_impl(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
@@ -262,6 +288,8 @@ fn gen_layout_clause(ast: &mut DeriveInput, layout: &str, internal: bool) -> syn
         #impl_stack_trait
 
         #impl_scroll_area
+
+        #impl_pane
 
         impl ChildContainerDiffRender for #name {
             fn container_diff_render(&mut self, painter: &mut Painter, background: Color) {

@@ -10,7 +10,7 @@ use crate::{
     prelude::*,
     primitive::Message,
     runtime::{wed, window_context::OutputSender},
-    widget::{WidgetImpl, WidgetSignals, ZIndexStep},
+    widget::{WidgetImpl, WidgetSignals, ZIndexStep, widget_inner::WidgetInnerExt},
     window::win_builder::WindowBuilder,
 };
 use log::{debug, error};
@@ -412,6 +412,23 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
                 .expect("Fatal error: the child widget does not have parent.");
             let zindex = parent.z_index() + parent.z_index_step();
             child_ref.set_z_index(zindex);
+        }
+
+        if let Some(parent) = child_ref.get_parent_ref() {
+            let is_passing_event_bubble = parent.is_passing_event_bubble();
+            let is_passing_mouse_tracking = parent.is_passing_mouse_tracking();
+            let mouse_tracking = parent.mouse_tracking();
+
+            if is_passing_event_bubble {
+                let event_bubble = parent.event_bubble();
+                child_ref.set_event_bubble(event_bubble);
+                child_ref.set_passing_event_bubble(true);
+            }
+
+            if is_passing_mouse_tracking {
+                child_ref.set_mouse_tracking(mouse_tracking);
+                child_ref.set_passing_mouse_tracking(true);
+            }
         }
 
         child_ref.set_initialized(true);

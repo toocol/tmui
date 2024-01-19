@@ -1,8 +1,12 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_ADAPTION, StaticSizeUnifiedAdjust},
+    container::{
+        ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
+        SCALE_ADAPTION,
+    },
+    graphics::painter::Painter,
     layout::LayoutManager,
-    prelude::*, graphics::painter::Painter,
+    prelude::*,
 };
 use derivative::Derivative;
 use log::debug;
@@ -136,7 +140,7 @@ impl VBox {
     }
 }
 
-fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
+pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     widget: &mut T,
     content_halign: Align,
     content_valign: Align,
@@ -265,13 +269,16 @@ impl StaticContainerScaleCalculate for VBox {
 
     #[inline]
     fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32 {
-        c.children().iter().map(|c| c.vscale()).sum()
+        c.children()
+            .iter()
+            .filter(|c| !c.fixed_height())
+            .map(|c| c.vscale())
+            .sum()
     }
 }
 
 impl ChildContainerDiffRender for VBox {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {
-    }
+    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
 
 impl SizeUnifiedAdjust for VBox {
@@ -286,7 +293,7 @@ impl StaticSizeUnifiedAdjust for VBox {
         let mut children_height = 0;
         let children_cnt = container.children().len();
         if children_cnt == 0 {
-            return
+            return;
         }
 
         container.children().iter().for_each(|c| {
@@ -294,7 +301,9 @@ impl StaticSizeUnifiedAdjust for VBox {
         });
 
         let height = container.size().height();
-        debug_assert!(height < children_height);
+        if height >= children_height {
+            return;
+        }
 
         let exceed_height = children_height - height;
         let height_to_reduce = (exceed_height as f32 / children_cnt as f32).round() as i32;
@@ -302,24 +311,28 @@ impl StaticSizeUnifiedAdjust for VBox {
 
         let strict_children_layout = container.is_strict_children_layout();
 
-        container.children_mut().iter_mut().enumerate().for_each(|(i, c)| {
-            let mut ch = (c.size().height() - height_to_reduce).max(0);
+        container
+            .children_mut()
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, c)| {
+                let mut ch = (c.size().height() - height_to_reduce).max(0);
 
-            // Handle to ensure that there are no gaps between all subcomponents:
-            if i == children_cnt - 1 {
-                ch -= gap;
-            }
-            
-            if strict_children_layout {
-                let (minimum_hint, _) = c.size_hint();
-                if let Some(minimum_hint) = minimum_hint {
-                    if ch < minimum_hint.height() {
-                        ch = minimum_hint.height();
+                // Handle to ensure that there are no gaps between all subcomponents:
+                if i == children_cnt - 1 {
+                    ch -= gap;
+                }
+
+                if strict_children_layout {
+                    let size_hint = c.size_hint();
+                    if let Some(min_height) = size_hint.min_height() {
+                        if ch < min_height {
+                            ch = min_height;
+                        }
                     }
                 }
-            }
 
-            c.set_fixed_height(ch);
-        });
+                c.set_fixed_height(ch);
+            });
     }
 }

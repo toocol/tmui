@@ -204,6 +204,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
     Ok(quote!(
         impl WidgetExt for #name {
             #[inline]
+            fn widget_model(&self) -> &Widget {
+                self.#(#widget_path).*.widget_model()
+            }
+
+            #[inline]
+            fn widget_model_mut(&mut self) -> &mut Widget {
+                self.#(#widget_path).*.widget_model_mut()
+            }
+
+            #[inline]
             fn name(&self) -> String {
                 self.#(#widget_path).*.name()
             }
@@ -822,14 +832,50 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn set_size_hint(&mut self, size_hint: SizeHint) {
                 self.#(#widget_path).*.set_size_hint(size_hint)
             }
+
+            #[inline]
+            fn is_event_bubbled(&self, event_bubble: EventBubble) -> bool {
+                self.#(#widget_path).*.is_event_bubbled(event_bubble)
+            }
+
+            #[inline]
+            fn enable_bubble(&mut self, event_bubble: EventBubble) {
+                self.#(#widget_path).*.enable_bubble(event_bubble)
+            }
+
+            #[inline]
+            fn disable_bubble(&mut self, event_bubble: EventBubble) {
+                self.#(#widget_path).*.disable_bubble(event_bubble)
+            }
+
+            #[inline]
+            fn is_passing_event_bubble(&self) -> bool {
+                self.#(#widget_path).*.is_passing_event_bubble()
+            }
+
+            #[inline]
+            fn set_passing_event_bubble(&mut self, is: bool) {
+                self.#(#widget_path).*.set_passing_event_bubble(is)
+            }
+
+            #[inline]
+            fn is_passing_mouse_tracking(&self) -> bool {
+                self.#(#widget_path).*.is_passing_mouse_tracking()
+            }
+
+            #[inline]
+            fn set_passing_mouse_tracking(&mut self, is: bool) {
+                self.#(#widget_path).*.set_passing_mouse_tracking(is)
+            }
         }
 
         impl WidgetImplExt for #name {
             #[inline]
-            fn child<T: WidgetImpl>(&mut self, child: Box<T>) {
+            fn child<T: WidgetImpl>(&mut self, mut child: Box<T>) {
                 if self.super_type().is_a(Container::static_type()) {
                     panic!("function `child()` was invalid in `Container`")
                 }
+                child.set_parent(self);
                 self.#(#widget_path).*.child_internal(child)
             }
 
@@ -838,7 +884,9 @@ pub(crate) fn gen_widget_trait_impl_clause(
                 if self.super_type().is_a(Container::static_type()) {
                     panic!("function `child()` was invalid in `Container`")
                 }
-                self.#(#widget_path).*.child_ref_internal(child)
+                let child_mut = tlib::ptr_mut!(child);
+                child_mut.set_parent(self);
+                self.#(#widget_path).*.child_ref_internal(child_mut)
             }
         }
 

@@ -1,4 +1,5 @@
 pub mod widget_ext;
+pub mod widget_inner;
 
 use crate::{
     application_window::ApplicationWindow,
@@ -17,19 +18,15 @@ use derivative::Derivative;
 use log::error;
 use std::{ptr::NonNull, slice::Iter};
 use tlib::{
+    bitflags::bitflags,
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
-    figure::{Color, Size},
+    figure::Color,
     namespace::{Align, BlendMode, Coordinate},
     object::{ObjectImpl, ObjectSubclass},
-    ptr_mut, signals,
+    signals,
     skia_safe::{region::RegionOp, ClipOp},
 };
-
-/// Size hint for widget: <br>
-/// 0: minimum size hint <br>
-/// 1: maximum size hint
-pub type SizeHint = (Option<Size>, Option<Size>);
 
 pub type Transparency = u8;
 
@@ -61,6 +58,9 @@ pub struct Widget {
 
     width_request: i32,
     height_request: i32,
+
+    detecting_width: i32,
+    detecting_height: i32,
 
     /// Widget's width was fixed or not,
     /// `true` when user invoke [`width_request`](WidgetExt::width_request)
@@ -125,6 +125,25 @@ pub struct Widget {
     /// - Container layout will strictly respect the `size_hint` of each subcomponent,
     ///   the parts beyond the size range will be hidden.
     size_hint: SizeHint,
+
+    #[derivative(Default(value = "EventBubble::empty()"))]
+    event_bubble: EventBubble,
+    /// When true, widget will passing it's [`event_bubble`] setting to child automatically.
+    passing_event_bubble: bool,
+    /// When true, widget will passing it's [`mouse_tracking`] setting to child automatically.
+    passing_mouse_tracking: bool,
+}
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct EventBubble: u8 {
+        const MOUSE_PRESSED = 1;
+        const MOUSE_RELEASED = 1 << 1;
+        const MOUSE_MOVE = 1 << 2;
+        const MOUSE_WHEEL = 1 << 3;
+        const KEY_PRESSED = 1 << 4;
+        const KEY_RELEASED = 1 << 5;
+    }
 }
 
 ////////////////////////////////////// Widget Signals //////////////////////////////////////
@@ -208,8 +227,6 @@ impl Widget {
     where
         T: WidgetImpl,
     {
-        child.set_parent(self);
-
         ApplicationWindow::initialize_dynamic_component(child.as_mut());
 
         self.child = Some(child);
@@ -217,11 +234,8 @@ impl Widget {
     }
 
     #[inline]
-    pub fn child_ref_internal(&mut self, child: *mut dyn WidgetImpl) {
-        let child_mut = ptr_mut!(child);
-        child_mut.set_parent(self);
-
-        ApplicationWindow::initialize_dynamic_component(child_mut);
+    pub fn child_ref_internal(&mut self, child: &mut dyn WidgetImpl) {
+        ApplicationWindow::initialize_dynamic_component(child);
 
         self.child = None;
         self.child_ref = NonNull::new(child);
@@ -639,10 +653,10 @@ impl ChildRegionAcquirer for Widget {
 ////////////////////////////////////// InnerEventProcess //////////////////////////////////////
 pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse pressed event.
-    fn inner_mouse_pressed(&mut self, event: &MouseEvent);
+    fn inner_mouse_pressed(&mut self, event: &MouseEvent, bubbled: bool);
 
     /// Invoke when widget's receive mouse released event.
-    fn inner_mouse_released(&mut self, event: &MouseEvent);
+    fn inner_mouse_released(&mut self, event: &MouseEvent, bubbled: bool);
 
     /// Invoke when widget's receive mouse move event.
     fn inner_mouse_move(&mut self, event: &MouseEvent);
@@ -667,54 +681,209 @@ pub trait InnerEventProcess {
 }
 impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     #[inline]
-    fn inner_mouse_pressed(&mut self, event: &MouseEvent) {
-        if self.enable_focus() {
-            self.set_focus(true)
+    fn inner_mouse_pressed(&mut self, event: &MouseEvent, bubbled: bool) {
+        if !bubbled {
+            if self.enable_focus() {
+                self.set_focus(true)
+            }
+            self.window().set_pressed_widget(self.id());
         }
-        self.window().set_pressed_widget(self.id());
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_pressed(event)
+        }
+
         emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_PRESSED) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = event.clone();
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_pressed(&evt);
+            parent.inner_mouse_pressed(&evt, true);
+        }
     }
 
     #[inline]
-    fn inner_mouse_released(&mut self, event: &MouseEvent) {
-        self.window().set_pressed_widget(0);
+    fn inner_mouse_released(&mut self, event: &MouseEvent, bubbled: bool) {
+        if !bubbled {
+            self.window().set_pressed_widget(0);
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_released(event)
+        }
+
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_RELEASED) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = event.clone();
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_released(&evt);
+            parent.inner_mouse_released(&evt, true);
+        }
     }
 
     #[inline]
     fn inner_mouse_move(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_move(event)
+        }
+
         emit!(Widget::inner_mouse_move => self.mouse_move(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_MOVE) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = event.clone();
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_move(&evt);
+            parent.inner_mouse_move(&evt);
+        }
     }
 
     #[inline]
     fn inner_mouse_wheel(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_wheel(event)
+        }
+
         emit!(Widget::inner_mouse_wheel => self.mouse_wheel(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_WHEEL) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = event.clone();
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_wheel(&evt);
+            parent.inner_mouse_wheel(&evt);
+        }
     }
 
     #[inline]
     fn inner_mouse_enter(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_enter(event)
+        }
+
         emit!(Widget::inner_mouse_enter => self.mouse_enter(), event);
     }
 
     #[inline]
     fn inner_mouse_leave(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_leave(event)
+        }
+
         emit!(Widget::inner_mouse_leave => self.mouse_leave(), event);
     }
 
     #[inline]
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_key_pressed(event)
+        }
+
         emit!(Widget::inner_key_pressed => self.key_pressed(), event);
+
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::KEY_PRESSED) {
+                return;
+            }
+
+            parent.on_key_pressed(event);
+            parent.inner_key_pressed(event);
+        }
     }
 
     #[inline]
     fn inner_key_released(&mut self, event: &KeyEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_key_released(event)
+        }
+
         emit!(Widget::inner_key_released => self.key_released(), event);
+
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::KEY_RELEASED) {
+                return;
+            }
+
+            parent.on_key_released(event);
+            parent.inner_key_released(event);
+        }
     }
 
     #[inline]
     fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_receive_character(event)
+        }
+
         emit!(Widget::inner_receive_character => self.receive_character(), event);
     }
+}
+
+#[reflect_trait]
+#[allow(unused_variables)]
+pub trait InnerCustomizeEventProcess {
+    /// Invoke when widget's receive mouse pressed event.
+    fn inner_customize_mouse_pressed(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse released event.
+    fn inner_customize_mouse_released(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse move event.
+    fn inner_customize_mouse_move(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse wheel event.
+    fn inner_customize_mouse_wheel(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse enter event.
+    fn inner_customize_mouse_enter(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse leave event.
+    fn inner_customize_mouse_leave(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive key pressed event.
+    fn inner_customize_key_pressed(&mut self, event: &KeyEvent) {}
+
+    /// Invoke when widget's receive key released event.
+    fn inner_customize_key_released(&mut self, event: &KeyEvent) {}
+
+    /// Invoke when widget's receive character event.
+    fn inner_customize_receive_character(&mut self, event: &ReceiveCharacterEvent) {}
 }
 
 ////////////////////////////////////// WidgetImpl //////////////////////////////////////

@@ -1,5 +1,5 @@
 use crate::{
-    graphics::painter::Painter, layout::ContentAlignment, prelude::*, skia_safe, widget::WidgetImpl,
+    graphics::painter::Painter, layout::ContentAlignment, prelude::*, skia_safe, widget::{WidgetImpl, widget_inner::WidgetInnerExt},
 };
 use log::debug;
 use tlib::{
@@ -158,11 +158,15 @@ impl WidgetImpl for Label {
 
         if size.width() == 0 || size.height() == 0 {
             if self.paragraph_width != 0. {
-                self.set_fixed_width(self.paragraph_width as i32 + 1);
+                let width = self.paragraph_width as i32 + 1;
+                self.set_fixed_width(width);
+                self.set_detecting_width(width);
             }
 
             if self.paragraph_height != 0. {
-                self.set_fixed_height(self.paragraph_height as i32);
+                let height = self.paragraph_height as i32;
+                self.set_fixed_height(height);
+                self.set_detecting_height(height);
             }
         }
         if self.window_id() != 0 && self.window().initialized() {
