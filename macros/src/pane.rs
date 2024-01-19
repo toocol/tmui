@@ -6,7 +6,7 @@ pub(crate) fn generate_pane_add_child() -> syn::Result<proc_macro2::TokenStream>
         use tmui::application_window::ApplicationWindow;
 
         if self.container.children.len() >= 2 {
-            log::error!("`Pane` can only have two child component.");
+            tlib::log::error!("`Pane` can only have two child component.");
             return;
         }
 

@@ -4,8 +4,9 @@ use tmui::{
     label::Label,
     prelude::*,
     scroll_area::ScrollArea,
+    scroll_bar::ScrollBarPosition,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl, scroll_bar::ScrollBarPosition,
+    widget::WidgetImpl,
 };
 
 #[extends(Widget)]
@@ -31,7 +32,12 @@ impl ObjectImpl for ScrollWindow {
         label.set_vexpand(true);
         label.set_size(30);
 
-        connect!(label, mouse_wheel(), self, when_laebl_receive_wheel(MouseEvent));
+        connect!(
+            label,
+            mouse_wheel(),
+            self,
+            when_laebl_receive_wheel(MouseEvent)
+        );
 
         let mut scroll_area: Box<ScrollArea> = Object::new(&[]);
         scroll_area.set_area(label);

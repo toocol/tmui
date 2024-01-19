@@ -1,11 +1,7 @@
 mod tree_view_holder;
 
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 use tree_view_holder::TreeViewHolder;
-use tmui::{
-    application::Application,
-    application_window::ApplicationWindow,
-    prelude::*,
-};
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();

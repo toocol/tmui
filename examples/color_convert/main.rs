@@ -3,8 +3,7 @@ mod color_convert;
 use color_convert::ColorConvert;
 use tlib::Object;
 use tmui::{
-    application::Application,
-    application_window::ApplicationWindow, widget::WidgetImplExt,
+    application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
 };
 
 fn main() {

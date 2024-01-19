@@ -1,6 +1,6 @@
 use derivative::Derivative;
 use tlib::object::ObjectSubclass;
-use tmui::{prelude::*, label::Label};
+use tmui::{label::Label, prelude::*};
 
 #[extends(Widget, Layout(HBox))]
 #[derive(Childrenable)]

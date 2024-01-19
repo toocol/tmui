@@ -41,6 +41,7 @@ pub struct ApplicationWindow {
     raw_window_handle: Option<RawWindowHandle>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
+    shared_widget_size_changed: bool,
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
@@ -185,6 +186,16 @@ impl ApplicationWindow {
             }
         }
         finds
+    }
+
+    #[inline]
+    pub(crate) fn shared_widget_size_changed(&self) -> bool {
+        self.shared_widget_size_changed
+    }
+
+    #[inline]
+    pub(crate) fn set_shared_widget_size_changed(&mut self, changed: bool) {
+        self.shared_widget_size_changed = changed;
     }
 
     #[inline]

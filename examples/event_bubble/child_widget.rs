@@ -1,14 +1,14 @@
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Widget)]
 pub struct ChildWidget {}
 
 impl ObjectSubclass for ChildWidget {
-   const NAME: &'static str = "ChildWidget";
+    const NAME: &'static str = "ChildWidget";
 }
 
 impl ObjectImpl for ChildWidget {
@@ -49,7 +49,7 @@ impl WidgetImpl for ChildWidget {
         println!("Child => key pressed {:?}", event)
     }
 
-    fn on_key_released(&mut self,event: &tlib::events::KeyEvent) {
+    fn on_key_released(&mut self, event: &tlib::events::KeyEvent) {
         println!("Child => key released {:?}", event)
     }
 }

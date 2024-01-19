@@ -76,6 +76,14 @@ impl RemainSize for dyn WidgetImpl {
                     size.set_height(size.height() - cs.height());
                 }
             }
+
+            if size.width() < 0 {
+                size.set_width(0);
+            }
+            if size.height() < 0 {
+                size.set_height(0);
+            }
+
             size
         } else {
             self.size()

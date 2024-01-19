@@ -20,22 +20,28 @@ impl ObjectImpl for AsyncTaskWidget {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.async_task(async { 
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            println!("{} => async do", thread::current().name().unwrap());
-            12
-         }, Some(|_, val| {
-            println!("{} => then", thread::current().name().unwrap());
-            assert_eq!(val, 12)
-        }));
+        self.async_task(
+            async {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                println!("{} => async do", thread::current().name().unwrap());
+                12
+            },
+            Some(|_, val| {
+                println!("{} => then", thread::current().name().unwrap());
+                assert_eq!(val, 12)
+            }),
+        );
 
-        self.async_task2(async {
-            println!("{} => async do 2", thread::current().name().unwrap());
-            3.1
-        }, Some(|_, val| {
-            println!("{} => then 2", thread::current().name().unwrap());
-            assert_eq!(val, 3.1)
-        }));
+        self.async_task2(
+            async {
+                println!("{} => async do 2", thread::current().name().unwrap());
+                3.1
+            },
+            Some(|_, val| {
+                println!("{} => then 2", thread::current().name().unwrap());
+                assert_eq!(val, 3.1)
+            }),
+        );
 
         self.async_task3(async {}, Some(|_, _val| {}));
     }

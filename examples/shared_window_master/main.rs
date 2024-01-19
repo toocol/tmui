@@ -4,10 +4,15 @@ use log::info;
 use shared_widget::MasterSharedWidget;
 use std::{sync::atomic::AtomicI32, time::Instant};
 use tmui::{
-    application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
+    application::Application,
+    application_window::ApplicationWindow,
+    container::ContainerImplExt,
+    label::Label,
+    pane::Pane,
+    widget::{widget_ext::WidgetExt, WidgetImplExt},
 };
 
-pub const IPC_NAME: &'static str = "shmem_ipc137";
+pub const IPC_NAME: &'static str = "shmem_ipc140";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]
@@ -43,7 +48,18 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(MasterSharedWidget::new());
+    let mut pane = Pane::new();
+    pane.set_vexpand(true);
+    pane.set_hexpand(true);
+
+    let mut label = Label::new(Some("Left label."));
+    label.set_vexpand(true);
+    label.width_request(300);
+
+    pane.add_child(label);
+    pane.add_child(MasterSharedWidget::new());
+
+    window.child(pane);
 }
 
 fn user_events_receive(_: &mut ApplicationWindow, evt: UserEvent) {

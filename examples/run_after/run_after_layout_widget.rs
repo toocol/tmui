@@ -1,8 +1,9 @@
 use tlib::run_after;
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl, label::Label,
+    label::Label,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Widget, Layout(VBox))]
@@ -10,11 +11,11 @@ use tmui::{
 #[run_after]
 pub struct RunAfterLayoutWidget {
     #[children]
-    label: Box<Label>
+    label: Box<Label>,
 }
 
 impl ObjectSubclass for RunAfterLayoutWidget {
-   const NAME: &'static str = "RunAfterLayoutWidget";
+    const NAME: &'static str = "RunAfterLayoutWidget";
 }
 
 impl ObjectImpl for RunAfterLayoutWidget {

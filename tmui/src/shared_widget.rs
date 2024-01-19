@@ -155,6 +155,7 @@ impl SharedWidget {
             bridge.pretreat_resize(size.width(), size.height());
 
             self.image_info = create_image_info((size.width(), size.height()));
+            self.window().set_shared_widget_size_changed(true);
         }
     }
 

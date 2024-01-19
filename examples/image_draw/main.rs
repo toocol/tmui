@@ -1,22 +1,20 @@
 use tlib::namespace::ImageOption;
 use tmui::{
-   prelude::*,
-   application::Application,
-   application_window::ApplicationWindow, image::Image,
+    application::Application, application_window::ApplicationWindow, image::Image, prelude::*,
 };
 
 fn main() {
-   log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
+    log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
-   let app = Application::builder()
-       .width(1280)
-       .height(800)
-       .title("Image draw")
-       .build();
+    let app = Application::builder()
+        .width(1280)
+        .height(800)
+        .title("Image draw")
+        .build();
 
-   app.connect_activate(build_ui);
+    app.connect_activate(build_ui);
 
-   app.run();
+    app.run();
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
