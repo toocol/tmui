@@ -654,25 +654,35 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::disable_bubble) (Defined in [`WidgetExt`])
     fn disable_bubble(&mut self, event_bubble: EventBubble);
 
-    /// Get the value of [`passing_event_bubble`](Widget::passing_event_bubble).
+    /// Get the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
     ///
     /// Go to[`Function defination`](WidgetExt::is_passing_event_bubble) (Defined in [`WidgetExt`])
-    fn is_passing_event_bubble(&self) -> bool;
+    fn is_propagate_event_bubble(&self) -> bool;
 
-    /// Set the value of [`passing_event_bubble`](Widget::passing_event_bubble).
+    /// Set the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
     ///
     /// Go to[`Function defination`](WidgetExt::set_passing_event_bubble) (Defined in [`WidgetExt`])
-    fn set_passing_event_bubble(&mut self, is: bool);
+    fn set_propagate_event_bubble(&mut self, is: bool);
 
-    /// Get the value of [`passing_mouse_tracking`](Widget::passing_mouse_tracking).
+    /// Get the value of [`propagate_mouse_tracking`](Widget::propagate_mouse_tracking).
     ///
     /// Go to[`Function defination`](WidgetExt::is_passing_mouse_tracking) (Defined in [`WidgetExt`])
-    fn is_passing_mouse_tracking(&self) -> bool;
+    fn is_propagate_mouse_tracking(&self) -> bool;
 
-    /// Set the value of [`passing_event_bubble`](Widget::passing_event_bubble).
+    /// Set the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
     ///
     /// Go to[`Function defination`](WidgetExt::set_passing_mouse_tracking) (Defined in [`WidgetExt`])
-    fn set_passing_mouse_tracking(&mut self, is: bool);
+    fn set_propagate_mouse_tracking(&mut self, is: bool);
+
+    /// Get the value of [`strict_clip_widget`](Widget::strict_clip_widget).
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_passing_mouse_tracking) (Defined in [`WidgetExt`])
+    fn is_strict_clip_widget(&self) -> bool;
+
+    /// Set the value of [`strict_clip_widget`](Widget::strict_clip_widget).
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_passing_mouse_tracking) (Defined in [`WidgetExt`])
+    fn set_strict_clip_widget(&mut self, strict_clip_widget: bool);
 }
 
 impl WidgetExt for Widget {
@@ -1633,22 +1643,32 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn is_passing_event_bubble(&self) -> bool {
-        self.passing_event_bubble
+    fn is_propagate_event_bubble(&self) -> bool {
+        self.propagate_event_bubble
     }
 
     #[inline]
-    fn set_passing_event_bubble(&mut self, is: bool) {
-        self.passing_event_bubble = is
+    fn set_propagate_event_bubble(&mut self, is: bool) {
+        self.propagate_event_bubble = is
     }
 
     #[inline]
-    fn is_passing_mouse_tracking(&self) -> bool {
-        self.passing_mouse_tracking
+    fn is_propagate_mouse_tracking(&self) -> bool {
+        self.propagate_mouse_tracking
     }
 
     #[inline]
-    fn set_passing_mouse_tracking(&mut self, is: bool) {
-        self.passing_mouse_tracking = is
+    fn set_propagate_mouse_tracking(&mut self, is: bool) {
+        self.propagate_mouse_tracking = is
+    }
+
+    #[inline]
+    fn is_strict_clip_widget(&self) -> bool {
+        self.strict_clip_widget
+    }
+
+    #[inline]
+    fn set_strict_clip_widget(&mut self, strict_clip_widget: bool) {
+        self.strict_clip_widget = strict_clip_widget
     }
 }

@@ -28,12 +28,12 @@ pub(crate) fn generate_pane_type_register(name: &Ident) -> syn::Result<proc_macr
 pub(crate) fn generate_pane_inner_init() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         self.set_mouse_tracking(true);
-        self.set_passing_mouse_tracking(true);
+        self.set_propagate_mouse_tracking(true);
 
         self.enable_bubble(EventBubble::MOUSE_MOVE);
         self.enable_bubble(EventBubble::MOUSE_PRESSED);
         self.enable_bubble(EventBubble::MOUSE_RELEASED);
-        self.set_passing_event_bubble(true);
+        self.set_propagate_event_bubble(true);
     ))
 }
 

@@ -63,6 +63,10 @@ name = "multi_window"
 path = "multi_window/main.rs"
 
 [[bin]]
+name = "non_strict_clip"
+path = "non_strict_clip/main.rs"
+
+[[bin]]
 name = "pane_layout"
 path = "pane_layout/main.rs"
 

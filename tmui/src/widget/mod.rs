@@ -128,10 +128,13 @@ pub struct Widget {
 
     #[derivative(Default(value = "EventBubble::empty()"))]
     event_bubble: EventBubble,
-    /// When true, widget will passing it's [`event_bubble`] setting to child automatically.
-    passing_event_bubble: bool,
-    /// When true, widget will passing it's [`mouse_tracking`] setting to child automatically.
-    passing_mouse_tracking: bool,
+    /// When true, widget will propagate it's [`event_bubble`] setting to child automatically.
+    propagate_event_bubble: bool,
+    /// When true, widget will propagate it's [`mouse_tracking`] setting to child automatically.
+    propagate_mouse_tracking: bool,
+
+    #[derivative(Default(value = "true"))]
+    strict_clip_widget: bool,
 }
 
 bitflags! {
@@ -472,10 +475,12 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         painter.reset();
         painter.set_font(self.font().to_skia_font());
 
-        painter.clip_rect(
-            self.contents_rect(Some(Coordinate::Widget)),
-            ClipOp::Intersect,
-        );
+        if self.is_strict_clip_widget() {
+            painter.clip_rect(
+                self.contents_rect(Some(Coordinate::Widget)),
+                ClipOp::Intersect,
+            );
+        }
 
         painter_clip(self, &mut painter, self.redraw_region().iter());
 
