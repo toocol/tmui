@@ -452,6 +452,21 @@ impl<'a> Painter<'a> {
         self.canvas.draw_line(p1, p2, &self.paint);
     }
 
+    /// Draw a line from (x1, y1) to (x2, y2). <br>
+    #[inline]
+    pub fn draw_line_global(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
+        self.draw_line_f_global(x1 as f32, y1 as f32, x2 as f32, y2 as f32)
+    }
+
+    /// Draw a line from (x1, y1) to (x2, y2) with the float numbers. <br>
+    #[inline]
+    pub fn draw_line_f_global(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
+        let p1: Point = (x1, y1).into();
+        let p2: Point = (x2, y2).into();
+
+        self.canvas.draw_line(p1, p2, &self.paint);
+    }
+
     /// Draw the arc. <br>
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)

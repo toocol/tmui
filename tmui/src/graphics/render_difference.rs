@@ -70,6 +70,11 @@ pub trait ChildWidgetDiffRender: WidgetImpl {
                 painter.fill_rect(rec_rect, background);
                 painter.restore();
             }
+
+            // Customize difference render:
+            if let Some(custom_render_diff) = cast!(child as CustomRenderDiff) {
+                custom_render_diff.custom_render_diff(painter, background);
+            }
         }
     }
 }
@@ -78,4 +83,9 @@ impl<T: WidgetImpl> ChildWidgetDiffRender for T {}
 #[reflect_trait]
 pub trait ChildContainerDiffRender {
     fn container_diff_render(&mut self, painter: &mut Painter, background: Color);
+}
+
+#[reflect_trait]
+pub trait CustomRenderDiff {
+    fn custom_render_diff(&self, painter: &mut Painter, parent_background: Color);
 }
