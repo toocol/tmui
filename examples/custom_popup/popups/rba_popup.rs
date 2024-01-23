@@ -11,7 +11,13 @@ use tmui::{
 /// Rect based animation popup.
 #[extends(Popup)]
 #[async_task(name = "TestAsyncTask", value = "&'static str")]
-#[animatable(ty = "Linear", direction = "RightBottomToLeftTop", duration = 450, mode = "Flex", effect = "Slide")]
+#[animatable(
+    ty = "Linear",
+    direction = "RightBottomToLeftTop",
+    duration = 450,
+    mode = "Flex",
+    effect = "Slide"
+)]
 #[derive(Childable)]
 #[run_after]
 pub struct RbaPopup {

@@ -1,14 +1,15 @@
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl, label::Label,
+    label::Label,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Widget)]
 pub struct SelfAdaptionWidget {}
 
 impl ObjectSubclass for SelfAdaptionWidget {
-   const NAME: &'static str = "SelfAdaptionWidget";
+    const NAME: &'static str = "SelfAdaptionWidget";
 }
 
 impl ObjectImpl for SelfAdaptionWidget {

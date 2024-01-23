@@ -115,7 +115,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         self.bitmap.clone()
     }
 
-    pub fn resize(&self, width: u32, height: u32) {
+    pub fn resize(&self, width: u32, height: u32, ipc_only: bool) {
         let mut bitmap_guard = self.bitmap.write();
         let _guard = self.lock.as_ref().and_then(|l| Some(l.write()));
 
@@ -129,7 +129,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
                 slave.height(),
             )
         } else {
-            bitmap_guard.resize(width, height);
+            if !ipc_only {
+                bitmap_guard.resize(width, height);
+            }
 
             if let Some(ref master) = self.master {
                 master.write().recreate_buffer();

@@ -849,23 +849,33 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
-            fn is_passing_event_bubble(&self) -> bool {
-                self.#(#widget_path).*.is_passing_event_bubble()
+            fn is_propagate_event_bubble(&self) -> bool {
+                self.#(#widget_path).*.is_propagate_event_bubble()
             }
 
             #[inline]
-            fn set_passing_event_bubble(&mut self, is: bool) {
-                self.#(#widget_path).*.set_passing_event_bubble(is)
+            fn set_propagate_event_bubble(&mut self, is: bool) {
+                self.#(#widget_path).*.set_propagate_event_bubble(is)
             }
 
             #[inline]
-            fn is_passing_mouse_tracking(&self) -> bool {
-                self.#(#widget_path).*.is_passing_mouse_tracking()
+            fn is_propagate_mouse_tracking(&self) -> bool {
+                self.#(#widget_path).*.is_propagate_mouse_tracking()
             }
 
             #[inline]
-            fn set_passing_mouse_tracking(&mut self, is: bool) {
-                self.#(#widget_path).*.set_passing_mouse_tracking(is)
+            fn set_propagate_mouse_tracking(&mut self, is: bool) {
+                self.#(#widget_path).*.set_propagate_mouse_tracking(is)
+            }
+
+            #[inline]
+            fn is_strict_clip_widget(&self) -> bool {
+                self.#(#widget_path).*.is_strict_clip_widget()
+            }
+
+            #[inline]
+            fn set_strict_clip_widget(&mut self, strict_clip_widget: bool) {
+                self.#(#widget_path).*.set_strict_clip_widget(strict_clip_widget)
             }
         }
 

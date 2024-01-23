@@ -1,17 +1,17 @@
+use crate::run_after_layout_widget::RunAfterLayoutWidget;
 use tlib::run_after;
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
-use crate::run_after_layout_widget::RunAfterLayoutWidget;
 
 #[extends(Widget)]
 #[run_after]
 pub struct RunAfterWidget {}
 
 impl ObjectSubclass for RunAfterWidget {
-   const NAME: &'static str = "RunAfterWidget";
+    const NAME: &'static str = "RunAfterWidget";
 }
 
 impl ObjectImpl for RunAfterWidget {

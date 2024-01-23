@@ -2,11 +2,7 @@ mod run_after_layout_widget;
 mod run_after_widget;
 
 use run_after_widget::RunAfterWidget;
-use tmui::{
-    prelude::*,
-    application::Application,
-    application_window::ApplicationWindow,
-};
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();

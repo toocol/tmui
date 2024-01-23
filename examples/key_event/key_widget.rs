@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use tlib::{events::KeyEvent, timer::Timer, connect};
+use tlib::{connect, events::KeyEvent, timer::Timer};
 use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},

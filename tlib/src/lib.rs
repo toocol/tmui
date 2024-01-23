@@ -35,6 +35,10 @@ pub mod bitflags {
     pub use bitflags::*;
 }
 
+pub mod log {
+    pub use log::*;
+}
+
 #[cfg(test)]
 mod tests {
     use macros::extends;

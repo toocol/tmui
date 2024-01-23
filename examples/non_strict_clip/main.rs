@@ -1,8 +1,11 @@
-mod child_widget;
-mod my_widget;
+mod non_strict_clip_widget;
 
-use my_widget::MyWidget;
-use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
+use non_strict_clip_widget::NonStrictClipWidget;
+use tmui::{
+    prelude::*,
+    application::Application,
+    application_window::ApplicationWindow,
+};
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
@@ -10,7 +13,7 @@ fn main() {
     let app = Application::builder()
         .width(1280)
         .height(800)
-        .title("Event Bubble")
+        .title("Non strict clip")
         .build();
 
     app.connect_activate(build_ui);
@@ -19,5 +22,5 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(MyWidget::new())
+    window.child(NonStrictClipWidget::new())
 }

@@ -1,8 +1,9 @@
-use tlib::{events::MouseEvent, connect};
+use tlib::{connect, events::MouseEvent};
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl, label::Label,
+    label::Label,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 use crate::popups::{rba_popup::RbaPopup, tba_popup::TbaPopup};
@@ -18,7 +19,7 @@ pub struct MyWidget {
 }
 
 impl ObjectSubclass for MyWidget {
-   const NAME: &'static str = "MyWidget";
+    const NAME: &'static str = "MyWidget";
 }
 
 impl ObjectImpl for MyWidget {
@@ -27,8 +28,10 @@ impl ObjectImpl for MyWidget {
         self.set_strict_children_layout(true);
         // self.set_homogeneous(true);
 
-        self.label_1.set_text("Rect based animated popup. (click me)");
-        self.label_2.set_text("Transparency based animated popup. (click me)");
+        self.label_1
+            .set_text("Rect based animated popup. (click me)");
+        self.label_2
+            .set_text("Transparency based animated popup. (click me)");
 
         self.label_1.add_popup(RbaPopup::new());
         self.label_2.add_popup(TbaPopup::new());
@@ -45,27 +48,39 @@ impl ObjectImpl for MyWidget {
         // self.label_1.set_size_hint((Some((150, 0).into()), None));
         // self.label_2.set_size_hint((Some((150, 0).into()), None));
 
-        connect!(self.label_1, mouse_pressed(), self, handle_label_1_popup(MouseEvent));
-        connect!(self.label_2, mouse_pressed(), self, handle_label_2_popup(MouseEvent));
+        connect!(
+            self.label_1,
+            mouse_pressed(),
+            self,
+            handle_label_1_popup(MouseEvent)
+        );
+        connect!(
+            self.label_2,
+            mouse_pressed(),
+            self,
+            handle_label_2_popup(MouseEvent)
+        );
     }
 }
 
 impl WidgetImpl for MyWidget {}
 
 impl MyWidget {
-    fn handle_label_1_popup(&mut self, event: MouseEvent ) {
+    fn handle_label_1_popup(&mut self, event: MouseEvent) {
         if self.label_1.get_popup_ref().unwrap().visible() {
             self.label_1.hide_popup();
         } else {
-            self.label_1.show_popup(self.label_1.map_to_global(&event.position().into()));
+            self.label_1
+                .show_popup(self.label_1.map_to_global(&event.position().into()));
         }
     }
 
-    fn handle_label_2_popup(&mut self, event: MouseEvent ) {
+    fn handle_label_2_popup(&mut self, event: MouseEvent) {
         if self.label_2.get_popup_ref().unwrap().visible() {
             self.label_2.hide_popup();
         } else {
-            self.label_2.show_popup(self.label_2.map_to_global(&event.position().into()));
+            self.label_2
+                .show_popup(self.label_2.map_to_global(&event.position().into()));
         }
     }
 }

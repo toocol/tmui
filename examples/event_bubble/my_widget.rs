@@ -58,7 +58,7 @@ impl WidgetImpl for MyWidget {
         println!("Parent bubble => key pressed {:?}", event)
     }
 
-    fn on_key_released(&mut self,event: &tlib::events::KeyEvent) {
+    fn on_key_released(&mut self, event: &tlib::events::KeyEvent) {
         println!("Parent bubble => key released {:?}", event)
     }
 }

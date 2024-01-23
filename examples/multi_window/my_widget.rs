@@ -1,8 +1,9 @@
 use tmui::{
+    label::Label,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
-    window::{win_builder::WindowBuilder, win_config::WindowConfig}, label::Label,
+    window::{win_builder::WindowBuilder, win_config::WindowConfig},
 };
 
 #[extends(Widget)]
@@ -27,7 +28,10 @@ impl WidgetImpl for MyWidget {
             WindowBuilder::new()
                 .config(WindowConfig::builder().width(300).height(100).build())
                 .on_activate(|window| {
-                    println!("{} => Child window created.", std::thread::current().name().unwrap());
+                    println!(
+                        "{} => Child window created.",
+                        std::thread::current().name().unwrap()
+                    );
                     let label = Label::new(Some("Hello World!"));
                     window.child(label);
                 }),

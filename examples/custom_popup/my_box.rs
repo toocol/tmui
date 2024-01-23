@@ -1,9 +1,9 @@
-use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl,
-};
 use crate::my_widget::MyWidget;
+use tmui::{
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
+};
 
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
@@ -16,7 +16,7 @@ pub struct MyBox {
 }
 
 impl ObjectSubclass for MyBox {
-   const NAME: &'static str = "MyBox";
+    const NAME: &'static str = "MyBox";
 }
 
 impl ObjectImpl for MyBox {
@@ -38,8 +38,7 @@ impl ObjectImpl for MyBox {
     }
 }
 
-impl WidgetImpl for MyBox {
-}
+impl WidgetImpl for MyBox {}
 
 impl MyBox {
     #[inline]

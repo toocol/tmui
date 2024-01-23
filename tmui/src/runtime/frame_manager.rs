@@ -52,11 +52,14 @@ impl FrameManager {
 
         if elapsed.as_micros() >= FRAME_INTERVAL || Board::is_force_update() {
             if *resized {
-                logic_window.resize(size_record.0, size_record.1);
+                logic_window.resize(size_record.0, size_record.1, false);
                 board.resize();
                 *resized = false;
                 application::request_high_load(false);
+            } else if window.shared_widget_size_changed() {
+                logic_window.resize(size_record.0, size_record.1, true);
             }
+            window.set_shared_widget_size_changed(false);
 
             self.last_frame = Instant::now();
             let frame_time = elapsed.as_micros() as f32 / 1000.;

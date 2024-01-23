@@ -1,11 +1,7 @@
 pub mod hbox_layout;
 pub mod vbox_layout;
 
-use tmui::{
-    application::Application,
-    application_window::ApplicationWindow,
-    prelude::*,
-};
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 use vbox_layout::VBoxLayout;
 
 fn main() {
