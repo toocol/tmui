@@ -17,6 +17,7 @@ fn main() {
         .height(800)
         .title("window")
         .transparent(true)
+        .opti_track(true)
         .build();
 
     app.connect_activate(build_ui);

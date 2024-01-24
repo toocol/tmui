@@ -16,6 +16,7 @@ use crate::{
     runtime::{start_ui_runtime, windows_process::WindowsProcess},
     window::win_config::{WindowConfig, WindowConfigBuilder},
 };
+use log::error;
 use std::{
     any::Any,
     cell::RefCell,
@@ -26,11 +27,7 @@ use std::{
     },
 };
 use tipc::{WithIpcMaster, WithIpcSlave};
-use tlib::{
-    events::Event,
-    figure::Size,
-    winit::window::WindowButtons,
-};
+use tlib::{events::Event, figure::Size, winit::window::WindowButtons};
 
 thread_local! {
     pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
@@ -118,6 +115,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         let join = start_ui_runtime(0, self.ui_stack_size, logic_window);
 
         WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context).process(physical_window);
+
+        crate::opti::tracker::Tracker::output_file()
+            .unwrap_or_else(|err| error!("Output tracker file failed, error = {:?}", err));
 
         join.join().unwrap();
     }
@@ -344,6 +344,7 @@ pub struct ApplicationBuilder<T: 'static + Copy + Sync + Send, M: 'static + Copy
     ui_stack_size: usize,
     shared_mem_name: Option<&'static str>,
     shared_widget_id: Option<&'static str>,
+    opti_track: bool,
     _user_event: PhantomData<T>,
     _request: PhantomData<M>,
 }
@@ -361,6 +362,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             win_cfg_bld: WindowConfigBuilder::default(),
             shared_mem_name,
             shared_widget_id: None,
+            opti_track: false,
             _user_event: PhantomData::default(),
             _request: PhantomData::default(),
         }
@@ -413,6 +415,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         if let Some(backend) = self.backend {
             app.backend_type = backend
+        }
+
+        if self.opti_track {
+            crate::opti::tracker::set_tracked();
         }
 
         if app.platform_type == PlatformType::Ipc && app.shared_widget_id.is_none() {
@@ -581,6 +587,15 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     #[inline]
     pub fn cpu_payload_threshold(self, threshold: usize) -> Self {
         CpuBalance::set_payload_threshold(threshold);
+        self
+    }
+
+    /// Allow the program to record optimization tracking information.
+    ///
+    /// The default value was `false`.
+    #[inline]
+    pub fn opti_track(mut self, track: bool) -> Self {
+        self.opti_track = track;
         self
     }
 }

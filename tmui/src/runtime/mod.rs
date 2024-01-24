@@ -12,7 +12,7 @@ use crate::{
     graphics::board::Board,
     platform::logic_window::LogicWindow,
     prelude::*,
-    primitive::{cpu_balance::CpuBalance, Message},
+    primitive::{cpu_balance::CpuBalance, Message}, opti::tracker::Tracker,
 };
 use std::{
     sync::atomic::Ordering,
@@ -48,6 +48,7 @@ where
     T: 'static + Copy + Sync + Send,
     M: 'static + Copy + Sync + Send,
 {
+    let track = Tracker::start("window_initialize");
     let on_activate = logic_window.on_activate.take();
     let on_user_event_receive = logic_window.on_user_event_receive.take();
     let on_request_receive = logic_window.on_request_receive.take();
@@ -114,12 +115,12 @@ where
     let mut size_record = (size.width() as u32, size.height() as u32);
 
     Application::<T, M>::set_app_started();
+    drop(track);
 
     loop {
         if APP_STOPPED.load(Ordering::Relaxed) {
             break;
         }
-
         cpu_balance.loop_start();
 
         let update = frame_manager.process(
@@ -203,6 +204,7 @@ where
         if window.is_high_load_requested() {
             cpu_balance.request_high_load();
         }
+
         cpu_balance.sleep(update);
     }
 }

@@ -1,7 +1,7 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{
     backend::Backend, primitive::bitmap::Bitmap, shared_widget::ReflectSharedWidgetImpl,
-    skia_safe::Surface,
+    skia_safe::Surface, opti::tracker::Tracker,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -96,6 +96,8 @@ impl Board {
             let mut bitmap_guard = self.bitmap.write();
 
             if *notify_update.borrow() || bitmap_guard.is_shared_invalidate() {
+                let _track = Tracker::start("invalidate_visual");
+
                 // Invoke `ipc_write()` here, so that the following code can
                 // be executed with cross process lock,
                 // when program was under cross process rendering.

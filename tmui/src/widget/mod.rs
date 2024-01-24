@@ -12,7 +12,7 @@ use crate::{
     },
     layout::LayoutManager,
     prelude::*,
-    skia_safe,
+    skia_safe, opti::tracker::Tracker,
 };
 use derivative::Derivative;
 use log::error;
@@ -416,6 +416,13 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         if !self.visible() && !self.is_animation_progressing() {
             return;
         }
+        let mut geometry = self.rect();
+        if geometry.width() == 0 || geometry.height() == 0 {
+            return;
+        }
+        geometry.set_point(&(0, 0).into());
+
+        let _track = Tracker::start(format!("single_render_{}", self.name()));
 
         let mut painter = Painter::new(cr.canvas(), self);
 
@@ -430,12 +437,6 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         if self.is_animation_progressing() {
             painter.set_blend_mode(BlendMode::SrcOver);
         }
-
-        let mut geometry = self.rect();
-        if geometry.width() == 0 || geometry.height() == 0 {
-            return;
-        }
-        geometry.set_point(&(0, 0).into());
 
         painter.save();
         painter.clip_region(self.child_region(), ClipOp::Difference);
