@@ -10,7 +10,7 @@ use crate::{
     loading::LoadingManager,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
-    widget::widget_ext::WidgetExt,
+    widget::widget_ext::WidgetExt, opti::tracker::Tracker,
 };
 
 pub const FRAME_INTERVAL: u128 = 16000;
@@ -52,11 +52,13 @@ impl FrameManager {
 
         if elapsed.as_micros() >= FRAME_INTERVAL || Board::is_force_update() {
             if *resized {
+                let _track = Tracker::start("window_resize");
                 logic_window.resize(size_record.0, size_record.1, false);
                 board.resize();
                 *resized = false;
                 application::request_high_load(false);
             } else if window.shared_widget_size_changed() {
+                let _track = Tracker::start("shared_widget_resize");
                 logic_window.resize(size_record.0, size_record.1, true);
             }
             window.set_shared_widget_size_changed(false);

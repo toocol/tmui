@@ -36,6 +36,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("Shared Window")
+        .opti_track(true)
         .build();
 
     app.connect_activate(build_ui);

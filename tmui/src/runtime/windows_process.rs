@@ -11,7 +11,7 @@ use crate::{
     winit::{
         self,
         event::{Event, WindowEvent},
-    },
+    }, opti::tracker::Tracker,
 };
 use log::{debug, error};
 use std::{
@@ -180,6 +180,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                         match event {
                             // Window redraw event.
                             WindowEvent::RedrawRequested => {
+                                let _track = Tracker::start("physical_window_redraw");
                                 window.redraw();
                             }
 

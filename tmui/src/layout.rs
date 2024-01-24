@@ -1,7 +1,8 @@
 use crate::{
     container::{Container, ContainerImpl, ReflectSizeUnifiedAdjust, ScaleMeasure},
+    opti::tracker::Tracker,
     prelude::*,
-    widget::{ScaleCalculate, WidgetImpl, WidgetSignals, widget_inner::WidgetInnerExt},
+    widget::{widget_inner::WidgetInnerExt, ScaleCalculate, WidgetImpl, WidgetSignals},
 };
 use log::debug;
 use std::collections::VecDeque;
@@ -96,7 +97,7 @@ pub(crate) trait SizeCalculation {
     ///
     /// Determine widget's size before calc child's size based on `expand`,`fixed`... <br>
     /// Mainly for processing expanded widgets. <br>
-    /// 
+    ///
     /// @return: (actual_size, remain_size)
     fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> (Size, Size);
 
@@ -397,6 +398,8 @@ impl LayoutManager {
     }
 
     pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl, is_animation: bool) {
+        let _track = Tracker::start(format!("layout_change_{}", widget.name()));
+
         if !is_animation {
             // Deal with the size first
             Self::child_size_probe(self.window_size, widget.size(), widget);
@@ -447,14 +450,19 @@ impl LayoutManager {
 
             widget.image_rect().size()
         } else {
-            let (actual_size, remain_size) = ptr_mut!(widget_ptr).pre_calc_size(window_size, parent_size);
+            let (actual_size, remain_size) =
+                ptr_mut!(widget_ptr).pre_calc_size(window_size, parent_size);
 
             let child_size = if is_container {
                 let mut child_size = Size::default();
                 match composition {
                     Composition::Stack => {
                         children.unwrap().iter_mut().for_each(|child| {
-                            child_size.max(Self::child_size_probe(window_size, remain_size, *child));
+                            child_size.max(Self::child_size_probe(
+                                window_size,
+                                remain_size,
+                                *child,
+                            ));
                         });
                     }
                     Composition::HorizontalArrange => {

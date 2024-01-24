@@ -28,6 +28,7 @@ fn main() {
     let app = Application::<UserEvent, Request>::shared_builder(IPC_NAME)
         .platform(PlatformType::Ipc)
         .shared_widget_id("shmem_widget")
+        .opti_track(true)
         .build();
 
     app.connect_activate(build_ui);
