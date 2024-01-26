@@ -1,7 +1,10 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{
-    backend::Backend, primitive::bitmap::Bitmap, shared_widget::ReflectSharedWidgetImpl,
-    skia_safe::Surface, opti::tracker::Tracker,
+    backend::{Backend, BackendType},
+    opti::tracker::Tracker,
+    primitive::bitmap::Bitmap,
+    shared_widget::ReflectSharedWidgetImpl,
+    skia_safe::Surface,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -132,14 +135,16 @@ impl Board {
                     }
                 }
 
-                // let row_bytes = bitmap_guard.row_bytes();
-                // let pixels = bitmap_guard.get_pixels_mut();
-                // self.surface().read_pixels(
-                //     self.backend.image_info(),
-                //     pixels,
-                //     row_bytes,
-                //     (0, 0),
-                // );
+                if self.backend.ty() == BackendType::OpenGL {
+                    let row_bytes = bitmap_guard.row_bytes();
+                    let pixels = bitmap_guard.get_pixels_mut();
+                    self.surface().read_pixels(
+                        self.backend.image_info(),
+                        pixels,
+                        row_bytes,
+                        (0, 0),
+                    );
+                }
 
                 bitmap_guard.prepared();
 

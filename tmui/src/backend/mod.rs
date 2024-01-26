@@ -18,6 +18,8 @@ pub enum BackendType {
 
 /// Renderer backend, provide skia Surface
 pub(crate) trait Backend: 'static {
+    fn ty(&self) -> BackendType;
+
     fn resize(&mut self, bitmap: Arc<RwLock<Bitmap>>);
 
     fn surface(&self) -> Surface;

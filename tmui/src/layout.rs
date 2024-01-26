@@ -421,6 +421,9 @@ impl LayoutManager {
         );
 
         if widget.repaint_when_resize() {
+            if widget.first_rendered() {
+                widget.set_resize_redraw(true)
+            }
             widget.update();
             widget.set_rerender_styles(true);
         }

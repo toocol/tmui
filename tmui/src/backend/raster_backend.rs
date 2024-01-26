@@ -5,7 +5,7 @@ use tipc::{
 };
 use tlib::ptr_ref;
 
-use super::{create_image_info, Backend};
+use super::{create_image_info, Backend, BackendType};
 use crate::{
     primitive::bitmap::Bitmap,
     skia_safe::{ImageInfo, Surface},
@@ -42,6 +42,11 @@ impl RasterBackend {
 }
 
 impl Backend for RasterBackend {
+    #[inline]
+    fn ty(&self) -> BackendType {
+        BackendType::OpenGL
+    }
+
     fn resize(&mut self, bitmap: Arc<RwLock<Bitmap>>) {
         let mut guard = bitmap.write();
         let _guard = ptr_ref!(&guard as *const RwLockWriteGuard<'_, RawRwLock, Bitmap>).ipc_write();

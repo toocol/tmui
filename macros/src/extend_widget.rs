@@ -204,13 +204,13 @@ pub(crate) fn gen_widget_trait_impl_clause(
     Ok(quote!(
         impl WidgetExt for #name {
             #[inline]
-            fn widget_model(&self) -> &Widget {
-                self.#(#widget_path).*.widget_model()
+            fn widget_props(&self) -> &Widget {
+                self.#(#widget_path).*.widget_props()
             }
 
             #[inline]
-            fn widget_model_mut(&mut self) -> &mut Widget {
-                self.#(#widget_path).*.widget_model_mut()
+            fn widget_props_mut(&mut self) -> &mut Widget {
+                self.#(#widget_path).*.widget_props_mut()
             }
 
             #[inline]
@@ -876,6 +876,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn set_strict_clip_widget(&mut self, strict_clip_widget: bool) {
                 self.#(#widget_path).*.set_strict_clip_widget(strict_clip_widget)
+            }
+
+            #[inline]
+            fn is_resize_redraw(&self) -> bool {
+                self.#(#widget_path).*.is_resize_redraw()
             }
         }
 

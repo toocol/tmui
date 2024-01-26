@@ -28,6 +28,8 @@ use tlib::{
     skia_safe::{region::RegionOp, ClipOp},
 };
 
+use self::widget_inner::WidgetInnerExt;
+
 pub type Transparency = u8;
 
 #[extends(Element)]
@@ -135,6 +137,8 @@ pub struct Widget {
 
     #[derivative(Default(value = "true"))]
     strict_clip_widget: bool,
+
+    resize_redraw: bool,
 }
 
 bitflags! {
@@ -411,7 +415,7 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 /// Renderering function for Widget.
 /////////////////////////////////////////////////////////////////////////////////
-impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
+impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         if !self.visible() && !self.is_animation_progressing() {
             return;
@@ -496,6 +500,8 @@ impl<T: WidgetImpl + WidgetExt> ElementImpl for T {
         }
 
         painter.restore();
+
+        self.set_resize_redraw(false);
     }
 }
 
