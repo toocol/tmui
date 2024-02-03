@@ -1,3 +1,4 @@
+#![cfg(egl_backend)]
 use crate::primitive::Message;
 use glutin::{
     api::egl::{device::Device, display::Display},
