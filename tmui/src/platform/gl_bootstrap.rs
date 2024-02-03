@@ -15,7 +15,7 @@ use tlib::{
     },
 };
 
-#[cfg(egl_backend)]
+#[cfg(not(apple))]
 use glutin::api::egl::{device::Device, display::Display};
 
 pub(crate) fn bootstrap_gl_window(
@@ -90,7 +90,7 @@ pub(crate) fn bootstrap_gl_window(
 }
 
 /// Use Egl to create an off-screen gl context.
-#[cfg(egl_backend)]
+#[cfg(not(apple))]
 pub(crate) fn bootstrap_off_screen_gl() -> Result<(Config, Option<NotCurrentContext>), Box<dyn Error>>
 {
     let devices = Device::query_devices()
