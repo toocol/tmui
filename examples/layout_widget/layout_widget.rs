@@ -38,6 +38,7 @@ impl ObjectImpl for LayoutWidget {
         self.parent_construct();
 
         self.label.set_background(Color::CYAN);
+        self.label.set_text("Hello World");
         let font = self.label.font_mut();
         font.set_typeface(
             FontTypeface::builder()
@@ -53,6 +54,7 @@ impl ObjectImpl for LayoutWidget {
         self.label.set_valign(Align::Center);
         self.label.width_request(200);
         self.label.height_request(100);
+        self.label.font_changed();
 
         self.set_background(Color::RED);
         self.set_halign(Align::Center);
@@ -62,7 +64,6 @@ impl ObjectImpl for LayoutWidget {
 
         connect!(self.label, text_changed(), self, text_changed(String:0, String:1));
         connect!(self.timer, timeout(), self, change_text());
-        self.label.set_text("Hello World");
         self.timer.start(Duration::from_millis(10));
     }
 }

@@ -82,6 +82,11 @@ fn gen_layout_clause(
     let name = &ast.ident;
     let span = ast.span();
 
+    let use_prefix = if internal { "crate" } else { "tmui" };
+    let use_prefix = Ident::new(use_prefix, name.span());
+    let layout_ident = Ident::new(layout, name.span());
+
+
     let children_fields = get_childrened_fields(ast);
 
     if is_split_pane && children_fields.len() > 0 {
@@ -178,7 +183,7 @@ fn gen_layout_clause(
         (_, _, _, true) => generate_pane_add_child()?,
     };
 
-    let get_children_clause = if is_scroll_area {
+    let children_clause = if is_scroll_area {
         generate_scroll_area_get_children()?
     } else {
         quote!(
@@ -200,22 +205,20 @@ fn gen_layout_clause(
         )
     };
 
-    let use_prefix = if internal { "crate" } else { "tmui" };
-
     let impl_split_pane = if is_split_pane {
-        generate_split_pane_impl(name, use_prefix)?
+        generate_split_pane_impl(name, &use_prefix)?
     } else {
         proc_macro2::TokenStream::new()
     };
 
     let impl_stack_trait = if is_stack {
-        generate_stack_impl(name, use_prefix)?
+        generate_stack_impl(name, &use_prefix)?
     } else {
         proc_macro2::TokenStream::new()
     };
 
     let impl_scroll_area = if is_scroll_area {
-        generate_scroll_area_impl(name, use_prefix)?
+        generate_scroll_area_impl(name, &use_prefix)?
     } else {
         proc_macro2::TokenStream::new()
     };
@@ -228,7 +231,12 @@ fn gen_layout_clause(
 
     token.extend(quote!(
         impl ContainerImpl for #name {
-            #get_children_clause
+            #children_clause
+
+            #[inline]
+            fn container_layout(&self) -> #use_prefix::container::ContainerLayoutEnum {
+                #use_prefix::container::ContainerLayoutEnum::#layout_ident
+            }
         }
 
         impl ContainerImplExt for #name {
@@ -249,9 +257,8 @@ fn gen_layout_clause(
                 &mut self,
                 previous: Option<&dyn WidgetImpl>,
                 parent: Option<&dyn WidgetImpl>,
-                manage_by_container: bool,
             ) {
-                #layout::container_position_layout(self, previous, parent, manage_by_container)
+                #layout::container_position_layout(self, previous, parent)
             }
         }
 

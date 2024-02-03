@@ -46,10 +46,8 @@ pub(crate) fn generate_scroll_area_inner_init() -> syn::Result<proc_macro2::Toke
 
 pub(crate) fn generate_scroll_area_impl(
     name: &Ident,
-    use_prefix: &str,
+    use_prefix: &Ident,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let use_prefix = Ident::new(use_prefix, name.span());
-
     Ok(quote!(
         use #use_prefix::scroll_bar::{ScrollBar, ScrollBarPosition};
         use #use_prefix::scroll_area::ScrollArea;

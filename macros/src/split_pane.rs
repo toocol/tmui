@@ -24,8 +24,7 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
     })
 }
 
-pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &str) -> syn::Result<proc_macro2::TokenStream> {
-    let use_prefix = Ident::new(use_prefix, name.span());
+pub(crate) fn generate_split_pane_impl(name: &Ident, use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         impl SizeUnifiedAdjust for #name {
             fn size_unified_adjust(&mut self) {

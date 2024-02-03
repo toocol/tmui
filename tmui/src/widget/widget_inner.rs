@@ -18,6 +18,10 @@ pub(crate) trait WidgetInnerExt {
     fn set_detecting_height(&mut self, detecting_height: i32);
 
     fn set_resize_redraw(&mut self, is: bool);
+
+    fn is_manage_by_container(&self) -> bool;
+
+    fn set_manage_by_container(&mut self, manage_by_container: bool);
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -65,6 +69,16 @@ macro_rules! widget_inner_ext_impl {
         #[inline]
         fn set_resize_redraw(&mut self, is: bool) {
             self.widget_props_mut().resize_redraw = is
+        }
+
+        #[inline]
+        fn is_manage_by_container(&self) -> bool {
+            self.widget_props().manage_by_container
+        }
+
+        #[inline]
+        fn set_manage_by_container(&mut self, manage_by_container: bool) {
+            self.widget_props_mut().manage_by_container = manage_by_container
         }
     };
 }

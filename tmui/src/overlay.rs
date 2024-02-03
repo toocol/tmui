@@ -1,8 +1,10 @@
 use crate::{
+    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS, ContainerLayoutEnum},
+    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl, container::{ContainerScaleCalculate, SCALE_DISMISS, StaticContainerScaleCalculate}, graphics::painter::Painter,
+    widget::WidgetImpl,
 };
 
 #[extends(Container)]
@@ -46,6 +48,10 @@ impl ContainerImpl for Overlay {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::Overlay
+    }
 }
 
 impl ContainerImplExt for Overlay {
@@ -66,9 +72,8 @@ impl Layout for Overlay {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        Self::container_position_layout(self, previous, parent, manage_by_container)
+        Self::container_position_layout(self, previous, parent)
     }
 }
 
@@ -81,9 +86,8 @@ impl ContainerLayout for Overlay {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container)
+        LayoutManager::base_widget_position_layout(widget, previous, parent)
 
         // Do nothing, users need to manually specify the position coordinates of overlay subcomponents
     }

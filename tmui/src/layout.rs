@@ -29,7 +29,6 @@ pub trait Layout {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     );
 }
 
@@ -40,7 +39,6 @@ pub trait ContainerLayout {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     );
 }
 
@@ -524,12 +522,18 @@ impl LayoutManager {
         let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
         while let Some(widget_ptr) = widget {
             let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
-            debug!("Widget position probe: {}", widget_ref.name());
             let previous_ref = unsafe { previous.as_ref().and_then(|p| p.as_ref()) };
             let parent_ref = unsafe { parent.as_ref().and_then(|p| p.as_ref()) };
 
             // Deal with the widget's postion.
-            widget_ref.position_layout(previous_ref, parent_ref, false);
+            widget_ref.position_layout(previous_ref, parent_ref);
+            debug!(
+                "Widget position probe: {}, position: {:?}, is_manage_by_container: {}",
+                widget_ref.name(),
+                widget_ref.rect(),
+                widget_ref.is_manage_by_container()
+            );
+
             if widget_ref.need_update_geometry() {
                 widget_ref.update_geometry()
             }
@@ -560,11 +564,16 @@ impl LayoutManager {
                 container_children
                     .unwrap()
                     .iter_mut()
-                    .for_each(|c| children.push_back(Some(*c)));
+                    .for_each(|c| { 
+                        children.push_back(Some(*c)) 
+                    });
             } else {
-                children.push_back(widget_ref.get_raw_child_mut());
+                let crm = widget_ref.get_raw_child_mut();
+                if crm.is_some() {
+                    children.push_back(crm);
+                }
             }
-            widget = children.pop_front().take().map_or(None, |widget| widget);
+            widget = children.pop_front().map_or(None, |widget| widget);
             previous = Some(widget_ptr);
             parent = if let Some(c) = widget.as_ref() {
                 unsafe { c.as_mut().unwrap().get_raw_parent_mut() }
@@ -578,15 +587,15 @@ impl LayoutManager {
         widget: &mut dyn WidgetImpl,
         _: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
         if parent.is_none() || cast!(widget as Overlaid).is_some() {
             return;
         }
-        let parent = parent.unwrap();
-        if parent.super_type().is_a(Container::static_type()) && !manage_by_container {
+        if widget.is_manage_by_container() {
             return;
         }
+
+        let parent = parent.unwrap();
         let widget_rect = widget.rect();
         let parent_rect = parent.rect();
 

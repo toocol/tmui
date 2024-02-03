@@ -18,9 +18,8 @@ pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream
 
 pub(crate) fn generate_stack_impl(
     name: &Ident,
-    use_prefix: &str,
+    use_prefix: &Ident,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let use_prefix = Ident::new(use_prefix, name.span());
     Ok(quote! {
         impl StackTrait for #name {
             fn current_child(&self) -> Option<&dyn WidgetImpl> {

@@ -1,6 +1,6 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS},
+    container::{ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS, ContainerLayoutEnum},
     graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
@@ -178,6 +178,10 @@ impl ContainerImpl for ScrollArea {
         }
         children
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::ScrollArea
+    }
 }
 
 impl ContainerImplExt for ScrollArea {
@@ -198,9 +202,8 @@ impl Layout for ScrollArea {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        Self::container_position_layout(self, previous, parent, manage_by_container);
+        Self::container_position_layout(self, previous, parent);
     }
 }
 
@@ -217,9 +220,8 @@ impl ContainerLayout for ScrollArea {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+        LayoutManager::base_widget_position_layout(widget, previous, parent);
 
         let widget = cast_mut!(widget as ScrollAreaExt).unwrap();
 

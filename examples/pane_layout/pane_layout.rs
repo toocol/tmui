@@ -44,6 +44,7 @@ impl WidgetImpl for PaneLayout {}
 
 impl PaneLayout {
     #[inline]
+    #[allow(dead_code)]
     pub fn new() -> Box<Self> {
         Object::new(&[])
     }

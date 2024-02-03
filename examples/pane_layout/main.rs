@@ -1,6 +1,7 @@
+mod central_pane;
 mod pane_layout;
 
-use pane_layout::PaneLayout;
+use central_pane::CentralPane;
 use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
@@ -18,5 +19,5 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(PaneLayout::new())
+    window.child(CentralPane::new())
 }

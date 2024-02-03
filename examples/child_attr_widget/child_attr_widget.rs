@@ -21,7 +21,6 @@ impl ObjectImpl for ChildAttrWidget {
         self.parent_construct();
 
         self.label.set_text("Hello, World!");
-        self.label.set_size(50);
         self.label.set_background(Color::from_rgb(100, 100, 100));
     }
 }

@@ -2,14 +2,13 @@ use crate::{
     application_window::ApplicationWindow,
     container::{
         ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
-        SCALE_ADAPTION,
+        SCALE_ADAPTION, ContainerLayoutEnum,
     },
     graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
 };
 use derivative::Derivative;
-use log::debug;
 use tlib::object::ObjectSubclass;
 
 #[extends(Container)]
@@ -45,6 +44,10 @@ impl ContainerImpl for VBox {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::VBox
+    }
 }
 
 impl ContainerImplExt for VBox {
@@ -68,9 +71,8 @@ impl Layout for VBox {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        VBox::container_position_layout(self, previous, parent, manage_by_container)
+        VBox::container_position_layout(self, previous, parent)
     }
 }
 
@@ -83,9 +85,8 @@ impl ContainerLayout for VBox {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+        LayoutManager::base_widget_position_layout(widget, previous, parent);
 
         let content_align = cast!(widget as ContentAlignment).unwrap();
         let homogeneous = content_align.homogeneous();
@@ -169,7 +170,6 @@ pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     };
 
     for child in widget.children_mut().iter_mut() {
-        debug!("Layout widget position: {}", child.type_name());
         match content_halign {
             Align::Start => child.set_fixed_x(parent_rect.x() + child.margin_left()),
             Align::Center => {

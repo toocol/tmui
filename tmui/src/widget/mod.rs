@@ -48,6 +48,7 @@ pub struct Widget {
 
     initialized: bool,
     first_rendered: bool,
+    #[derivative(Default(value = "false"))]
     rerender_difference: bool,
 
     #[derivative(Default(value = "Color::WHITE"))]
@@ -139,6 +140,7 @@ pub struct Widget {
     strict_clip_widget: bool,
 
     resize_redraw: bool,
+    manage_by_container: bool,
 }
 
 bitflags! {
@@ -1052,9 +1054,8 @@ impl<T: WidgetAcquire> Layout for T {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(self, previous, parent, manage_by_container)
+        LayoutManager::base_widget_position_layout(self, previous, parent)
     }
 }
 
@@ -1063,7 +1064,7 @@ impl Layout for Widget {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>) {
     }
 }
 
