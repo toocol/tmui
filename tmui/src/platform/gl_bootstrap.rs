@@ -1,13 +1,11 @@
-#![cfg(egl_backend)]
+
 use crate::primitive::Message;
 use glutin::{
-    api::egl::{device::Device, display::Display},
     config::{ConfigSurfaceTypes, ConfigTemplateBuilder, GlConfig, Config},
     context::{ContextApi, ContextAttributesBuilder, Version, NotCurrentContext},
     display::{GetGlDisplay, GlDisplay},
 };
 use glutin_winit::DisplayBuilder;
-use log::info;
 use std::error::Error;
 use tlib::{
     typedef::WinitWindow,
@@ -16,6 +14,9 @@ use tlib::{
         window::WindowBuilder,
     },
 };
+
+#[cfg(egl_backend)]
+use glutin::api::egl::{device::Device, display::Display};
 
 pub(crate) fn bootstrap_gl_window(
     target: &EventLoopWindowTarget<Message>,
@@ -89,6 +90,7 @@ pub(crate) fn bootstrap_gl_window(
 }
 
 /// Use Egl to create an off-screen gl context.
+#[cfg(egl_backend)]
 pub(crate) fn bootstrap_off_screen_gl() -> Result<(Config, Option<NotCurrentContext>), Box<dyn Error>>
 {
     let devices = Device::query_devices()
@@ -126,7 +128,7 @@ pub(crate) fn bootstrap_off_screen_gl() -> Result<(Config, Option<NotCurrentCont
         })
         .expect("No available configs");
 
-    info!("Picked a config with {} samples", config.num_samples());
+    println!("Picked a config with {} samples", config.num_samples());
 
     // Context creation.
     //
