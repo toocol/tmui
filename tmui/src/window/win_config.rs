@@ -19,41 +19,7 @@ pub(crate) fn build_window(
     target: &EventLoopWindowTarget<Message>,
     parent: Option<RawWindowHandle>,
 ) -> Result<Window, OsError> {
-    let (width, height) = win_config.size();
-
-    let mut window_bld = WindowBuilder::new()
-        .with_title(&win_config.title)
-        .with_inner_size(WinitSize::Physical(PhysicalSize::new(width, height)))
-        .with_decorations(win_config.decoration)
-        .with_transparent(win_config.transparent)
-        .with_blur(win_config.blur)
-        .with_visible(win_config.visible)
-        .with_resizable(win_config.resizable)
-        .with_maximized(win_config.maximized)
-        .with_active(win_config.active)
-        .with_enabled_buttons(win_config.enable_buttons);
-
-    unsafe { window_bld = window_bld.with_parent_window(parent) };
-
-    if let Some(max_size) = win_config.max_size {
-        window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(
-            max_size.width() as u32,
-            max_size.height() as u32,
-        )))
-    }
-
-    if let Some(min_size) = win_config.min_size {
-        window_bld = window_bld.with_min_inner_size(WinitSize::Physical(PhysicalSize::new(
-            min_size.width() as u32,
-            min_size.height() as u32,
-        )))
-    }
-
-    if let Some(icon) = win_config.win_icon {
-        window_bld = window_bld.with_window_icon(Some(icon.into()))
-    }
-
-    window_bld.build(target)
+    win_config.to_window_builder(parent).build(target)
 }
 
 #[derive(Debug, Clone)]
@@ -176,6 +142,44 @@ impl WindowConfig {
     #[inline]
     pub fn active(&self) -> bool {
         self.active
+    }
+
+    pub(crate) fn to_window_builder(self, parent: Option<RawWindowHandle>) -> WindowBuilder {
+        let (width, height) = self.size();
+
+        let mut window_bld = WindowBuilder::new()
+            .with_title(&self.title)
+            .with_inner_size(WinitSize::Physical(PhysicalSize::new(width, height)))
+            .with_decorations(self.decoration)
+            .with_transparent(self.transparent)
+            .with_blur(self.blur)
+            .with_visible(self.visible)
+            .with_resizable(self.resizable)
+            .with_maximized(self.maximized)
+            .with_active(self.active)
+            .with_enabled_buttons(self.enable_buttons);
+
+        unsafe { window_bld = window_bld.with_parent_window(parent) };
+
+        if let Some(max_size) = self.max_size {
+            window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(
+                max_size.width() as u32,
+                max_size.height() as u32,
+            )))
+        }
+
+        if let Some(min_size) = self.min_size {
+            window_bld = window_bld.with_min_inner_size(WinitSize::Physical(PhysicalSize::new(
+                min_size.width() as u32,
+                min_size.height() as u32,
+            )))
+        }
+
+        if let Some(icon) = self.win_icon {
+            window_bld = window_bld.with_window_icon(Some(icon.into()))
+        }
+
+        window_bld
     }
 }
 

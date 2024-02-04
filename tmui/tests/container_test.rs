@@ -1,6 +1,6 @@
 use tlib::object::{ObjectImpl, ObjectSubclass};
 use tmui::{
-    container::{ContainerImpl, ContainerImplExt, ContainerScaleCalculate, SCALE_ADAPTION},
+    container::{ContainerImpl, ContainerImplExt, ContainerScaleCalculate, SCALE_ADAPTION, ContainerLayoutEnum},
     label::Label,
     prelude::*,
     widget::{Widget, WidgetImpl},
@@ -35,6 +35,10 @@ impl ContainerImpl for TestContainer {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::Stack
+    }
 }
 
 impl ContainerImplExt for TestContainer {
@@ -51,8 +55,7 @@ impl Layout for TestContainer {
         tmui::layout::Composition::HorizontalArrange
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>, _: bool) {
-    }
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>) {}
 }
 
 impl ContainerScaleCalculate for TestContainer {

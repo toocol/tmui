@@ -2,7 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     container::{
         ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
-        SCALE_ADAPTION,
+        SCALE_ADAPTION, ContainerLayoutEnum,
     },
     graphics::painter::Painter,
     layout::LayoutManager,
@@ -42,6 +42,10 @@ impl ContainerImpl for HBox {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::HBox
+    }
 }
 
 impl ContainerImplExt for HBox {
@@ -65,9 +69,8 @@ impl Layout for HBox {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        HBox::container_position_layout(self, previous, parent, manage_by_container)
+        HBox::container_position_layout(self, previous, parent)
     }
 }
 
@@ -80,9 +83,8 @@ impl ContainerLayout for HBox {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+        LayoutManager::base_widget_position_layout(widget, previous, parent);
 
         let content_align = cast!(widget as ContentAlignment).unwrap();
         let homogeneous = content_align.homogeneous();

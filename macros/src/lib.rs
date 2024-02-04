@@ -220,7 +220,8 @@ pub fn cast_boxed(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn split_pane_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    match split_pane::generate_split_pane_impl(&ident, "crate") {
+    let use_prefix  = Ident::new("crate", ident.span());
+    match split_pane::generate_split_pane_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
@@ -229,7 +230,8 @@ pub fn split_pane_impl(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn stack_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    match stack::generate_stack_impl(&ident, "crate") {
+    let use_prefix  = Ident::new("crate", ident.span());
+    match stack::generate_stack_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }

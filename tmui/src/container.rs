@@ -5,6 +5,17 @@ use crate::{
 };
 use tlib::{object::{ObjectImpl, ObjectSubclass}, skia_safe::region::RegionOp};
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum ContainerLayoutEnum {
+    Stack,
+    VBox,
+    HBox,
+    SplitPane,
+    ScrollArea,
+    Pane,
+    Overlay,
+}
+
 #[extends(Widget)]
 pub struct Container {
     pub children: Vec<Box<dyn WidgetImpl>>,
@@ -132,12 +143,15 @@ impl ContainerExt for Container {
 #[reflect_trait]
 pub trait ContainerImpl: WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
-    /// Get all the children ref in `Container`
+    /// Get all the children ref in `Container`.
     fn children(&self) -> Vec<&dyn WidgetImpl>;
 
     /// Go to[`Function defination`](ContainerImpl::children_mut) (Defined in [`ContainerImpl`])
-    /// Get all the mut children ref in `Container`
+    /// Get all the mut children ref in `Container`.
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl>;
+
+    /// Get the layout of container.
+    fn container_layout(&self) -> ContainerLayoutEnum;
 }
 
 pub trait ContainerImplExt: ContainerImpl {

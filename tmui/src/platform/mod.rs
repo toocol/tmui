@@ -1,5 +1,6 @@
 pub(crate) mod ipc;
 pub(crate) mod linux;
+pub(crate) mod gl_bootstrap;
 pub(crate) mod logic_window;
 pub(crate) mod macos;
 pub(crate) mod physical_window;

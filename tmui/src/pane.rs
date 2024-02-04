@@ -1,5 +1,5 @@
 use crate::{
-    container::SCALE_ADAPTION,
+    container::{SCALE_ADAPTION, ContainerLayoutEnum},
     hbox::hbox_layout_homogeneous,
     layout::LayoutManager,
     prelude::*,
@@ -70,7 +70,8 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
         }
 
         let pos = event.position();
-        let first_rect = children[0].rect();
+        let mut first_rect = children[0].rect();
+        first_rect.set_point(&self.map_to_widget(&first_rect.top_left()));
 
         match self.direction() {
             Direction::Horizontal => {
@@ -211,6 +212,10 @@ impl ContainerImpl for Pane {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::Pane
+    }
 }
 
 impl ContainerImplExt for Pane {
@@ -300,9 +305,8 @@ impl Layout for Pane {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        Self::container_position_layout(self, previous, parent, manage_by_container);
+        Self::container_position_layout(self, previous, parent);
     }
 }
 
@@ -320,9 +324,8 @@ impl ContainerLayout for Pane {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+        LayoutManager::base_widget_position_layout(widget, previous, parent);
 
         let pane = cast!(widget as PaneExt).unwrap();
 

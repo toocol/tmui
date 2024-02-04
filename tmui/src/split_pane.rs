@@ -2,7 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     container::{
         ContainerScaleCalculate, ReflectSizeUnifiedAdjust, StaticContainerScaleCalculate,
-        SCALE_DISMISS,
+        SCALE_DISMISS, ContainerLayoutEnum,
     },
     graphics::painter::Painter,
     layout::LayoutManager,
@@ -50,6 +50,10 @@ impl ContainerImpl for SplitPane {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::SplitPane
+    }
 }
 
 impl ContainerImplExt for SplitPane {
@@ -85,9 +89,8 @@ impl Layout for SplitPane {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        SplitPane::container_position_layout(self, previous, parent, manage_by_container)
+        SplitPane::container_position_layout(self, previous, parent)
     }
 }
 
@@ -113,9 +116,8 @@ impl ContainerLayout for SplitPane {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+        LayoutManager::base_widget_position_layout(widget, previous, parent);
 
         let parent_rect = widget.contents_rect(None);
         let split_infos_getter = cast_mut!(widget as SplitInfosGetter).unwrap();

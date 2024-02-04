@@ -1,7 +1,7 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{
-        ContainerImpl, ContainerImplExt, ContainerScaleCalculate, StaticContainerScaleCalculate,
+        ContainerImpl, ContainerImplExt, ContainerScaleCalculate, StaticContainerScaleCalculate, ContainerLayoutEnum,
     },
     layout::{ContainerLayout, LayoutManager},
     prelude::*, graphics::painter::Painter,
@@ -40,6 +40,10 @@ impl ContainerImpl for Stack {
             .map(|c| c.as_mut())
             .collect()
     }
+
+    fn container_layout(&self) -> ContainerLayoutEnum {
+        ContainerLayoutEnum::Stack
+    }
 }
 
 impl ContainerImplExt for Stack {
@@ -70,9 +74,8 @@ impl Layout for Stack {
         &mut self,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        Stack::container_position_layout(self, previous, parent, manage_by_container)
+        Stack::container_position_layout(self, previous, parent)
     }
 }
 
@@ -85,9 +88,8 @@ impl ContainerLayout for Stack {
         widget: &mut T,
         previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
-        manage_by_container: bool,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent, manage_by_container);
+        LayoutManager::base_widget_position_layout(widget, previous, parent);
 
         // deal with the children's position
         let widget_ptr = widget as *const dyn WidgetImpl;
@@ -97,7 +99,7 @@ impl ContainerLayout for Stack {
         let index = stack_trait_obj.current_index();
 
         if let Some(child) = widget.children_mut().get_mut(index) {
-            child.position_layout(previous, previous, true);
+            child.position_layout(previous, previous);
         }
     }
 }

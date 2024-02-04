@@ -10,7 +10,7 @@ use crate::{
         object::{ObjectImpl, ObjectSubclass},
         run_after,
     },
-    widget::WidgetImpl,
+    widget::WidgetImpl, opti::tracker::Tracker,
 };
 
 lazy_static! {
@@ -128,13 +128,18 @@ impl SharedWidgetExt for SharedWidget {
             .ipc_bridge()
             .unwrap();
 
+        let tracker = Tracker::start("shared_widget_wait_prepared");
         bridge.wait_prepared();
+        drop(tracker);
 
+        let tracker = Tracker::start("shared_widget_locked_read_buffer");
         let (buffer, _guard) = bridge.buffer();
+        drop(tracker);
 
         let size = self.size();
         let row_bytes = size.width() as usize * 4;
 
+        let _tracker = Tracker::start("shared_widget_draw_pixels");
         painter.draw_pixels(self.image_info(), buffer, row_bytes, (0, 0));
     }
 }

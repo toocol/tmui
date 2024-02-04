@@ -1,5 +1,6 @@
 use crate::{
     animation::manager::AnimationManager,
+    container::ContainerLayoutEnum,
     graphics::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
@@ -428,6 +429,13 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         if let Some(parent) = child_ref.get_parent_ref() {
             let is_passing_event_bubble = parent.is_propagate_event_bubble();
             let is_passing_mouse_tracking = parent.is_propagate_mouse_tracking();
+            let is_manage_by_container = parent.is_manage_by_container() || {
+                let container = cast!(parent as ContainerImpl);
+                match container {
+                    Some(c) => c.container_layout() != ContainerLayoutEnum::Stack,
+                    None => false,
+                }
+            };
             let mouse_tracking = parent.mouse_tracking();
 
             if is_passing_event_bubble {
@@ -439,6 +447,10 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             if is_passing_mouse_tracking {
                 child_ref.set_mouse_tracking(mouse_tracking);
                 child_ref.set_propagate_mouse_tracking(true);
+            }
+
+            if is_manage_by_container {
+                child_ref.set_manage_by_container(true);
             }
         }
 

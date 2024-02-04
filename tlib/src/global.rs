@@ -186,6 +186,26 @@ macro_rules! ptr_mut {
     };
 }
 
+#[macro_export]
+macro_rules! escape_check_ref {
+    ( $st:ident, $type:ty ) => {
+        unsafe { ($st as *const $type).as_ref().unwrap() }
+    };
+    ( $st:expr, $type:ty ) => {
+        unsafe { ($st as *const $type).as_ref().unwrap() }
+    };
+}
+
+#[macro_export]
+macro_rules! escape_check_mut {
+    ( $st:ident, $type:ty ) => {
+        unsafe { ($st as *mut $type).as_mut().unwrap() }
+    };
+    ( $st:expr, $type:ty ) => {
+        unsafe { ($st as *mut $type).as_mut().unwrap() }
+    };
+}
+
 pub trait SemanticExt: Sized {
     #[inline]
     fn boxed(self) -> Box<Self> {

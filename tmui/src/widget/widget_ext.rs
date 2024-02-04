@@ -23,12 +23,12 @@ pub trait WidgetExt {
     /// Get the ref of widget model.
     /// 
     /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
-    fn widget_model(&self) -> &Widget;
+    fn widget_props(&self) -> &Widget;
 
     /// Get the mutable ref of widget model.
     /// 
     /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
-    fn widget_model_mut(&mut self) -> &mut Widget;
+    fn widget_props_mut(&mut self) -> &mut Widget;
 
     /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
     fn name(&self) -> String;
@@ -656,43 +656,48 @@ pub trait WidgetExt {
 
     /// Get the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
     ///
-    /// Go to[`Function defination`](WidgetExt::is_passing_event_bubble) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::is_propagate_event_bubble) (Defined in [`WidgetExt`])
     fn is_propagate_event_bubble(&self) -> bool;
 
     /// Set the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
     ///
-    /// Go to[`Function defination`](WidgetExt::set_passing_event_bubble) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::set_propagate_event_bubble) (Defined in [`WidgetExt`])
     fn set_propagate_event_bubble(&mut self, is: bool);
 
     /// Get the value of [`propagate_mouse_tracking`](Widget::propagate_mouse_tracking).
     ///
-    /// Go to[`Function defination`](WidgetExt::is_passing_mouse_tracking) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::is_propagate_mouse_tracking) (Defined in [`WidgetExt`])
     fn is_propagate_mouse_tracking(&self) -> bool;
 
     /// Set the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
     ///
-    /// Go to[`Function defination`](WidgetExt::set_passing_mouse_tracking) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::set_propagate_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_propagate_mouse_tracking(&mut self, is: bool);
 
     /// Get the value of [`strict_clip_widget`](Widget::strict_clip_widget).
     ///
-    /// Go to[`Function defination`](WidgetExt::set_passing_mouse_tracking) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::is_strict_clip_widget) (Defined in [`WidgetExt`])
     fn is_strict_clip_widget(&self) -> bool;
 
     /// Set the value of [`strict_clip_widget`](Widget::strict_clip_widget).
     ///
-    /// Go to[`Function defination`](WidgetExt::set_passing_mouse_tracking) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::set_strict_clip_widget) (Defined in [`WidgetExt`])
     fn set_strict_clip_widget(&mut self, strict_clip_widget: bool);
+
+    /// Get the value of [`strict_clip_widget`](Widget::resize_redraw).
+    ///
+    /// Go to[`Function defination`](WidgetExt::is_resize_redraw) (Defined in [`WidgetExt`])
+    fn is_resize_redraw(&self) -> bool;
 }
 
 impl WidgetExt for Widget {
     #[inline]
-    fn widget_model(&self) -> &Widget {
+    fn widget_props(&self) -> &Widget {
         self
     }
 
     #[inline]
-    fn widget_model_mut(&mut self) -> &mut Widget {
+    fn widget_props_mut(&mut self) -> &mut Widget {
         self
     }
 
@@ -1670,5 +1675,10 @@ impl WidgetExt for Widget {
     #[inline]
     fn set_strict_clip_widget(&mut self, strict_clip_widget: bool) {
         self.strict_clip_widget = strict_clip_widget
+    }
+
+    #[inline]
+    fn is_resize_redraw(&self) -> bool {
+        self.resize_redraw
     }
 }
