@@ -35,7 +35,12 @@ impl<T: WidgetImpl> RenderDiffence for T {}
 pub trait ChildWidgetDiffRender: WidgetImpl {
     fn widget_diff_render(&mut self, painter: &mut Painter, background: Color) {
         if let Some(child) = self.get_child_ref() {
-            handle_child_diff(child, painter, background)
+            painter.save();
+            painter.clip_rect_global(self.contents_rect(None), ClipOp::Intersect);
+
+            handle_child_diff(child, painter, background);
+
+            painter.restore();
         }
     }
 }
@@ -47,10 +52,14 @@ pub trait ChildContainerDiffRender {
 }
 impl<T: ContainerImpl> ChildContainerDiffRender for T {
     fn container_diff_render(&mut self, painter: &mut Painter, background: Color) {
+        painter.save();
+        painter.clip_rect_global(self.contents_rect(None), ClipOp::Intersect);
+
         for c in self.children() {
-            println!("<Container> {} render child diff {}", self.name(), c.name());
             handle_child_diff(c, painter, background)
         }
+
+        painter.restore();
     }
 }
 
