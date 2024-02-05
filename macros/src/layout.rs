@@ -297,11 +297,6 @@ fn gen_layout_clause(
         #impl_scroll_area
 
         #impl_pane
-
-        impl ChildContainerDiffRender for #name {
-            fn container_diff_render(&mut self, painter: &mut Painter, background: Color) {
-            }
-        }
     ));
 
     Ok(token)

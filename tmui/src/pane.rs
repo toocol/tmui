@@ -274,10 +274,6 @@ impl StaticContainerScaleCalculate for Pane {
     }
 }
 
-impl ChildContainerDiffRender for Pane {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
-}
-
 impl SizeUnifiedAdjust for Pane {
     #[inline]
     fn size_unified_adjust(&mut self) {

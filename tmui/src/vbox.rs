@@ -4,7 +4,6 @@ use crate::{
         ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
         SCALE_ADAPTION, ContainerLayoutEnum,
     },
-    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
 };
@@ -275,10 +274,6 @@ impl StaticContainerScaleCalculate for VBox {
             .map(|c| c.vscale())
             .sum()
     }
-}
-
-impl ChildContainerDiffRender for VBox {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
 
 impl SizeUnifiedAdjust for VBox {

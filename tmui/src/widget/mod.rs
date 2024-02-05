@@ -11,8 +11,9 @@ use crate::{
         render_difference::RenderDiffence,
     },
     layout::LayoutManager,
+    opti::tracker::Tracker,
     prelude::*,
-    skia_safe, opti::tracker::Tracker,
+    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
@@ -444,16 +445,19 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             painter.set_blend_mode(BlendMode::SrcOver);
         }
 
+        // Clip difference the children region:
         painter.save();
-        painter.clip_region(self.child_region(), ClipOp::Difference);
+        painter.clip_region_global(self.child_region(), ClipOp::Difference);
         if let Some(parent) = self.get_parent_ref() {
             if let Some(_) = cast!(parent as ContainerImpl) {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
             }
         }
+
         painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
         if !self.first_rendered() || self.rerender_styles() {
+            let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
             // Draw the background color of the Widget.
             let mut background = self.background();
             background.set_transparency(self.transparency());
@@ -495,9 +499,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             if loading.is_loading() {
                 loading.render_loading(&mut painter);
             } else {
+                let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
                 self.paint(&mut painter);
             }
         } else {
+            let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
             self.paint(&mut painter);
         }
 
@@ -523,7 +529,7 @@ pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter, iter:
         op = true;
     }
     if op {
-        painter.clip_region(region, ClipOp::Intersect);
+        painter.clip_region_global(region, ClipOp::Intersect);
     }
 }
 
@@ -1064,8 +1070,7 @@ impl Layout for Widget {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>) {
-    }
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>) {}
 }
 
 ////////////////////////////////////// ZInddexStep //////////////////////////////////////

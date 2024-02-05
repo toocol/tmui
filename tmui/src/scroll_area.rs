@@ -1,7 +1,6 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS, ContainerLayoutEnum},
-    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
@@ -291,8 +290,4 @@ impl StaticContainerScaleCalculate for ScrollArea {
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_ADAPTION
     }
-}
-
-impl ChildContainerDiffRender for ScrollArea {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }

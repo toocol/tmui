@@ -1,7 +1,7 @@
 
 use crate::primitive::Message;
 use glutin::{
-    config::{ConfigSurfaceTypes, ConfigTemplateBuilder, GlConfig, Config},
+    config::{ConfigTemplateBuilder, GlConfig, Config},
     context::{ContextApi, ContextAttributesBuilder, Version, NotCurrentContext},
     display::{GetGlDisplay, GlDisplay},
 };
@@ -14,9 +14,6 @@ use tlib::{
         window::WindowBuilder,
     },
 };
-
-#[cfg(not(apple))]
-use glutin::api::egl::{device::Device, display::Display};
 
 pub(crate) fn bootstrap_gl_window(
     target: &EventLoopWindowTarget<Message>,
@@ -87,70 +84,4 @@ pub(crate) fn bootstrap_gl_window(
     // });
 
     todo!()
-}
-
-/// Use Egl to create an off-screen gl context.
-#[cfg(not(apple))]
-pub(crate) fn bootstrap_off_screen_gl() -> Result<(Config, Option<NotCurrentContext>), Box<dyn Error>>
-{
-    let devices = Device::query_devices()
-        .expect("Failed to query devices")
-        .collect::<Vec<_>>();
-
-    for (index, device) in devices.iter().enumerate() {
-        println!(
-            "Device {}: Name: {} Vendor: {}",
-            index,
-            device.name().unwrap_or("UNKNOWN"),
-            device.vendor().unwrap_or("UNKNOWN")
-        );
-    }
-
-    let device = devices.first().expect("No available devices");
-
-    // Create a display using the device.
-    let display = unsafe { Display::with_device(device, None)? };
-
-    let template = ConfigTemplateBuilder::default()
-        .with_alpha_size(8)
-        // Offscreen rendering has no support window surface support.
-        .with_surface_type(ConfigSurfaceTypes::empty())
-        .build();
-
-    let config = unsafe { display.find_configs(template) }
-        .unwrap()
-        .reduce(|config, acc| {
-            if config.num_samples() > acc.num_samples() {
-                config
-            } else {
-                acc
-            }
-        })
-        .expect("No available configs");
-
-    println!("Picked a config with {} samples", config.num_samples());
-
-    // Context creation.
-    //
-    // In particular, since we are doing offscreen rendering we have no raw window
-    // handle to provide.
-    let context_attributes = ContextAttributesBuilder::new().build(None);
-
-    // Since glutin by default tries to create OpenGL core context, which may not be
-    // present we should try gles.
-    let fallback_context_attributes = ContextAttributesBuilder::new()
-        .with_context_api(ContextApi::Gles(None))
-        .build(None);
-
-    let not_current_context = unsafe {
-        display
-            .create_context(&config, &context_attributes)
-            .unwrap_or_else(|_| {
-                display
-                    .create_context(&config, &fallback_context_attributes)
-                    .expect("failed to create context")
-            })
-    };
-
-    Ok((Config::Egl(config), Some(NotCurrentContext::Egl(not_current_context))))
 }

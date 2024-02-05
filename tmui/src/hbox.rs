@@ -4,7 +4,6 @@ use crate::{
         ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
         SCALE_ADAPTION, ContainerLayoutEnum,
     },
-    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
 };
@@ -275,10 +274,6 @@ impl StaticContainerScaleCalculate for HBox {
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_ADAPTION
     }
-}
-
-impl ChildContainerDiffRender for HBox {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
 
 impl SizeUnifiedAdjust for HBox {

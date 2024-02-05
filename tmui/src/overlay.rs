@@ -1,6 +1,5 @@
 use crate::{
     container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS, ContainerLayoutEnum},
-    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -114,10 +113,6 @@ impl StaticContainerScaleCalculate for Overlay {
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_DISMISS
     }
-}
-
-impl ChildContainerDiffRender for Overlay {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }
 
 #[reflect_trait]

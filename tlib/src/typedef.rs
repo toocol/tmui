@@ -10,6 +10,7 @@ pub type SkiaFontHiting = skia_safe::FontHinting;
 pub type SkiaPoint = skia_safe::Point;
 pub type SkiaRect = skia_safe::Rect;
 pub type SkiaRRect = skia_safe::RRect;
+pub type SkiaRegion = skia_safe::Region;
 pub type SkiaColor = skia_safe::Color;
 pub type SkiaBlendMode = skia_safe::BlendMode;
 
