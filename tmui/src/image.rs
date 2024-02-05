@@ -7,7 +7,10 @@ use std::path::Path;
 use tlib::{
     figure::ImageBuf,
     namespace::ImageOption,
-    skia_safe::{self, matrix::ScaleToFit, Matrix, SamplingOptions, TileMode, Paint, region::RegionOp, ClipOp},
+    skia_safe::{
+        self, matrix::ScaleToFit, region::RegionOp, ClipOp, Matrix, Paint, SamplingOptions,
+        TileMode,
+    },
 };
 
 #[extends(Widget)]
@@ -80,7 +83,7 @@ impl WidgetImpl for Image {
                 let contents_rect: skia_safe::IRect = contents_rect.into();
                 region.op_rect(contents_rect, RegionOp::Union);
 
-                painter.clip_region(region, ClipOp::Intersect);
+                painter.clip_region_global(region, ClipOp::Intersect);
                 painter.draw_paint(&paint);
             }
             ImageOption::Stretch => {

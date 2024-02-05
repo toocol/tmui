@@ -1,5 +1,5 @@
 use tmui::{
-    graphics::render_difference::{CustomRenderDiff, ReflectCustomRenderDiff},
+    graphics::render_difference::{CustomRenderChildDiff, ReflectCustomRenderChildDiff},
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
@@ -24,7 +24,7 @@ impl ObjectImpl for NonStrictClipWidget {
     }
 
     fn type_register(&self, type_registry: &mut TypeRegistry) {
-        type_registry.register::<Self, ReflectCustomRenderDiff>();
+        type_registry.register::<Self, ReflectCustomRenderChildDiff>();
     }
 }
 
@@ -37,7 +37,7 @@ impl WidgetImpl for NonStrictClipWidget {
     }
 }
 
-impl CustomRenderDiff for NonStrictClipWidget {
+impl CustomRenderChildDiff for NonStrictClipWidget {
     fn custom_render_diff(&self, painter: &mut Painter, parent_background: Color) {
         painter.save_pen();
         let rect = self.rect_record();

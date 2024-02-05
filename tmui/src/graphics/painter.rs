@@ -1,10 +1,14 @@
 #![allow(dead_code)]
 use crate::{
     skia_safe::{self, Canvas, Matrix, Paint, Path, Point},
-    widget::WidgetImpl, tlib,
+    tlib,
+    widget::WidgetImpl,
+};
+use ::tlib::{
+    namespace::BlendMode,
+    typedef::{SkiaBlendMode, SkiaFont, SkiaRect},
 };
 use log::{error, warn};
-use ::tlib::{typedef::{SkiaBlendMode, SkiaFont, SkiaRect}, namespace::BlendMode};
 use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
@@ -13,7 +17,8 @@ use tlib::{
         canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
             FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-        }, IPoint,
+        },
+        IPoint,
     },
 };
 
@@ -300,11 +305,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_round_rect<T: Into<SkiaRect>>(
-        &mut self,
-        rect: T,
-        border_radius: f32,
-    ) {
+    pub fn draw_round_rect<T: Into<SkiaRect>>(&mut self, rect: T, border_radius: f32) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
@@ -471,7 +472,16 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_arc(&mut self, x: i32, y: i32, w: i32, h: i32, angle: i32, sweep_angle: i32, use_center: bool) {
+    pub fn draw_arc(
+        &mut self,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        angle: i32,
+        sweep_angle: i32,
+        use_center: bool,
+    ) {
         self.draw_arc_f(
             x as f32,
             y as f32,
@@ -487,12 +497,22 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_arc_f(&mut self, x: f32, y: f32, w: f32, h: f32, angle: f32, sweep_angle: f32, use_center: bool) {
+    pub fn draw_arc_f(
+        &mut self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        angle: f32,
+        sweep_angle: f32,
+        use_center: bool,
+    ) {
         let rect: FRect = (x, y, w, h).into();
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
-        self.canvas.draw_arc(rect, angle, sweep_angle, use_center, &self.paint);
+        self.canvas
+            .draw_arc(rect, angle, sweep_angle, use_center, &self.paint);
     }
 
     /// Draw a point at (x, y) with offset.
@@ -529,7 +549,7 @@ impl<'a> Painter<'a> {
 
     /// Clip the region to draw.
     #[inline]
-    pub fn clip_region(&mut self, region: skia_safe::Region, op: skia_safe::ClipOp) {
+    pub fn clip_region_global(&mut self, region: skia_safe::Region, op: skia_safe::ClipOp) {
         self.canvas.clip_region(&region, Some(op));
     }
 

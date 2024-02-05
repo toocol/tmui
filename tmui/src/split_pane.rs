@@ -4,7 +4,6 @@ use crate::{
         ContainerScaleCalculate, ReflectSizeUnifiedAdjust, StaticContainerScaleCalculate,
         SCALE_DISMISS, ContainerLayoutEnum,
     },
-    graphics::painter::Painter,
     layout::LayoutManager,
     prelude::*,
     tlib::{
@@ -379,8 +378,4 @@ impl StaticContainerScaleCalculate for SplitPane {
     fn static_container_vscale_calculate(_: &dyn ContainerImpl) -> f32 {
         SCALE_DISMISS
     }
-}
-
-impl ChildContainerDiffRender for SplitPane {
-    fn container_diff_render(&mut self, _painter: &mut Painter, _background: Color) {}
 }

@@ -189,7 +189,7 @@ impl<T: ContainerImpl> ChildrenRegionAcquirer for T {
     fn children_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
         for c in self.children() {
-            if !c.visible() || !c.is_animation_progressing() {
+            if !c.visible() && !c.is_animation_progressing() {
                 continue;
             }
 

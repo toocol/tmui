@@ -1,6 +1,6 @@
 use log::debug;
 use skia_safe::textlayout::{FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle};
-use tlib::skia_safe::{canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider};
+use tlib::{skia_safe::{canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider, ClipOp, IRect}, typedef::SkiaRegion};
 use tmui::{
     graphics::painter::Painter,
     prelude::*,
@@ -19,6 +19,9 @@ impl ObjectSubclass for SkiaPaint {
 impl ObjectImpl for SkiaPaint {
     fn construct(&mut self) {
         self.parent_construct();
+
+        self.set_vexpand(true);
+        self.set_hexpand(true);
     }
 }
 
@@ -40,6 +43,8 @@ impl WidgetImpl for SkiaPaint {
         self.draw_layer(painter);
 
         self.draw_round_rect(painter);
+
+        self.draw_with_clip_difference(painter);
 
         println!("cnt: {}", painter.save_count());
     }
@@ -146,7 +151,7 @@ impl SkiaPaint {
         // painter.fill_region(&region, Color::BLACK);
         painter.save();
         painter.fill_rect(rect2, Color::BLUE);
-        painter.clip_region(region, skia_safe::ClipOp::Intersect);
+        painter.clip_region_global(region, skia_safe::ClipOp::Intersect);
         painter.fill_rect(rect2, Color::BLACK);
         painter.restore();
     }
@@ -174,12 +179,12 @@ impl SkiaPaint {
         let rect = skia_safe::IRect::new(400, 400, 650, 650);
         painter.save();
         painter.fill_rect(rect1, Color::BLUE);
-        painter.clip_region(region, skia_safe::ClipOp::Intersect);
+        painter.clip_region_global(region, skia_safe::ClipOp::Intersect);
         painter.fill_rect(rect, Color::BLACK);
         painter.restore();
 
         painter.save();
-        painter.clip_region(region_to_remove, skia_safe::ClipOp::Intersect);
+        painter.clip_region_global(region_to_remove, skia_safe::ClipOp::Intersect);
         painter.fill_rect(rect, Color::RED);
         painter.restore();
     }
@@ -193,7 +198,7 @@ impl SkiaPaint {
         region.op_rect(rect1, RegionOp::Difference);
 
         painter.save();
-        painter.clip_region(region, skia_safe::ClipOp::Intersect);
+        painter.clip_region_global(region, skia_safe::ClipOp::Intersect);
         painter.fill_rect(rect2, Color::BLACK);
         painter.restore();
     }
@@ -212,5 +217,24 @@ impl SkiaPaint {
 
     fn draw_round_rect(&mut self, painter: &mut Painter) {
         painter.fill_round_rect(Rect::new(600, 0, 100, 40), 10., Color::CYAN);
+    }
+
+    fn draw_with_clip_difference(&mut self, painter: &mut Painter) {
+        painter.save();
+
+        let mut region = SkiaRegion::new();
+        let diff = Rect::new(810, 10, 40, 20);
+        let rect: IRect = diff.into();
+        region.op_rect(rect, RegionOp::Union);
+
+        let diff = Rect::new(860, 10, 40, 20);
+        let rect: IRect = diff.into();
+        region.op_rect(rect, RegionOp::Union);
+
+        painter.clip_region_global(region, ClipOp::Difference);
+
+        painter.fill_rect(Rect::new(800, 0, 200, 80), Color::MAGENTA);
+
+        painter.restore();
     }
 }
