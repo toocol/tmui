@@ -20,7 +20,7 @@ use crate::{
 };
 use std::sync::{mpsc::channel, Arc};
 use tipc::{ipc_slave::IpcSlave, IpcNode, parking_lot::RwLock, WithIpcSlave};
-use tlib::winit::{raw_window_handle::RawWindowHandle, event_loop::{EventLoopWindowTarget, EventLoopProxy}};
+use tlib::winit::event_loop::{EventLoopWindowTarget, EventLoopProxy};
 
 pub(crate) struct PlatformIpc<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     /// Shared memory ipc slave
@@ -61,7 +61,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn create_window(
         &self,
         _: WindowConfig,
-        _: Option<RawWindowHandle>,
         _: Option<&EventLoopWindowTarget<Message>>,
         _: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {

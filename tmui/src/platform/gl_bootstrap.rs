@@ -6,11 +6,12 @@ use glutin::{
     display::{GetGlDisplay, GlDisplay},
 };
 use glutin_winit::DisplayBuilder;
+use raw_window_handle::HasRawWindowHandle;
 use std::error::Error;
 use tlib::{
     typedef::WinitWindow,
     winit::{
-        event_loop::EventLoopWindowTarget, raw_window_handle::HasWindowHandle,
+        event_loop::EventLoopWindowTarget,
         window::WindowBuilder,
     },
 };
@@ -43,7 +44,7 @@ pub(crate) fn bootstrap_gl_window(
 
     let raw_window_handle = window
         .as_ref()
-        .map(|window| window.window_handle().unwrap().as_raw());
+        .map(|window| window.raw_window_handle());
 
     // XXX The display could be obtained from any object created by it, so we can
     // query it from the config.

@@ -5,7 +5,6 @@ use crate::application_window::ApplicationWindow;
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
     on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-    child_window: bool,
 }
 
 impl WindowBuilder {
@@ -30,12 +29,6 @@ impl WindowBuilder {
     }
 
     #[inline]
-    pub fn child_window(mut self, child_window: bool) -> Self {
-        self.child_window = child_window;
-        self
-    }
-
-    #[inline]
     pub fn build(self) -> Window {
         let mut window = Window::new();
 
@@ -44,7 +37,6 @@ impl WindowBuilder {
                 .expect("build `Window` must specify the window config."),
         );
         window.on_activate = self.on_activate;
-        window.child_window = self.child_window;
 
         window
     }

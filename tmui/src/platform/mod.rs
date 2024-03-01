@@ -17,7 +17,6 @@ pub(crate) use linux::x11::*;
 #[cfg(macos_platform)]
 pub(crate) use macos::*;
 use tlib::winit::event_loop::{EventLoopWindowTarget, EventLoopProxy};
-use tlib::winit::raw_window_handle::RawWindowHandle;
 #[cfg(windows_platform)]
 pub(crate) use win32::*;
 
@@ -54,7 +53,6 @@ pub(crate) trait PlatformContext<T: 'static + Copy + Sync + Send, M: 'static + C
     fn create_window(
         &self,
         win_config: WindowConfig,
-        parent: Option<RawWindowHandle>,
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);

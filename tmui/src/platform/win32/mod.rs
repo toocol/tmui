@@ -22,11 +22,9 @@ use crate::{
     runtime::window_context::OutputSender,
 };
 use std::{sync::{mpsc::channel, Arc}, cell::Cell};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster, parking_lot::RwLock};
-use tlib::winit::{
-    event_loop::{EventLoopProxy, EventLoopWindowTarget},
-    raw_window_handle::{HasWindowHandle, RawWindowHandle},
-};
+use tlib::winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use windows::Win32::Foundation::HWND;
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -62,7 +60,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn create_window(
         &self,
         win_config: WindowConfig,
-        parent: Option<RawWindowHandle>,
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
@@ -77,22 +74,22 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
 
         let (window, event_loop) = if let Some(target) = target {
-            let window = win_config::build_window(win_config, target, parent).unwrap();
+            let window = win_config::build_window(win_config, target).unwrap();
 
             (window, None)
         } else {
             let event_loop = EventLoopBuilder::<Message>::with_user_event()
                 .build()
                 .unwrap();
-            let window = win_config::build_window(win_config, &event_loop, parent).unwrap();
+            let window = win_config::build_window(win_config, &event_loop).unwrap();
 
             (window, Some(event_loop))
         };
 
         let window_id = window.id();
-        let window_handle = window.window_handle().unwrap().as_raw();
+        let window_handle = window.raw_window_handle();
         let hwnd = match window_handle {
-            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd.into()),
+            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd as isize),
             _ => unreachable!(),
         };
         let event_loop_proxy = if let Some(proxy) = proxy {

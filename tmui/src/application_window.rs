@@ -16,6 +16,7 @@ use crate::{
 };
 use log::{debug, error};
 use once_cell::sync::Lazy;
+use raw_window_handle::RawWindowHandle;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
@@ -28,7 +29,7 @@ use tlib::{
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
-    winit::{raw_window_handle::RawWindowHandle, window::WindowId},
+    winit::window::WindowId,
 };
 
 thread_local! {
@@ -290,16 +291,7 @@ impl ApplicationWindow {
             return;
         }
 
-        let mut window = window_bld.build();
-        if window.is_child_window() {
-            window.set_parent(
-                self.raw_window_handle.expect(
-                    "Can not create child window on slave side of shared memory application.",
-                ),
-            );
-        }
-
-        self.send_message(Message::CreateWindow(window));
+        self.send_message(Message::CreateWindow(window_bld.build()));
     }
 
     #[inline]
