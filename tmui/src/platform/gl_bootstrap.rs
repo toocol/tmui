@@ -50,39 +50,36 @@ pub(crate) fn bootstrap_gl_window(
     // query it from the config.
     let gl_display = gl_config.display();
 
-    // TODO: Waiting `glutin` to bump `raw-window-handle` version to `0.6.0`
-    // https://github.com/rust-windowing/glutin/pull/1582#issuecomment-1896218932
-
     // The context creation part. It can be created before surface and that's how
     // it's expected in multithreaded + multiwindow operation mode, since you
     // can send NotCurrentContext, but not Surface.
-    // let context_attributes = ContextAttributesBuilder::new().build(raw_window_handle);
+    let context_attributes = ContextAttributesBuilder::new().build(raw_window_handle);
 
     // Since glutin by default tries to create OpenGL core context, which may not be
     // present we should try gles.
-    // let fallback_context_attributes = ContextAttributesBuilder::new()
-    //     .with_context_api(ContextApi::Gles(None))
-    //     .build(raw_window_handle);
+    let fallback_context_attributes = ContextAttributesBuilder::new()
+        .with_context_api(ContextApi::Gles(None))
+        .build(raw_window_handle);
 
     // There are also some old devices that support neither modern OpenGL nor GLES.
     // To support these we can try and create a 2.1 context.
-    // let legacy_context_attributes = ContextAttributesBuilder::new()
-    //     .with_context_api(ContextApi::OpenGl(Some(Version::new(2, 1))))
-    //     .build(raw_window_handle);
+    let legacy_context_attributes = ContextAttributesBuilder::new()
+        .with_context_api(ContextApi::OpenGl(Some(Version::new(2, 1))))
+        .build(raw_window_handle);
 
-    // let mut not_current_gl_context = Some(unsafe {
-    //     gl_display
-    //         .create_context(&gl_config, &context_attributes)
-    //         .unwrap_or_else(|_| {
-    //             gl_display
-    //                 .create_context(&gl_config, &fallback_context_attributes)
-    //                 .unwrap_or_else(|_| {
-    //                     gl_display
-    //                         .create_context(&gl_config, &legacy_context_attributes)
-    //                         .expect("failed to create context")
-    //                 })
-    //         })
-    // });
+    let not_current_gl_context = Some(unsafe {
+        gl_display
+            .create_context(&gl_config, &context_attributes)
+            .unwrap_or_else(|_| {
+                gl_display
+                    .create_context(&gl_config, &fallback_context_attributes)
+                    .unwrap_or_else(|_| {
+                        gl_display
+                            .create_context(&gl_config, &legacy_context_attributes)
+                            .expect("failed to create context")
+                    })
+            })
+    });
 
-    todo!()
+    Ok((window.unwrap(), gl_config, not_current_gl_context))
 }
