@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use glutin::config::Config;
 use raw_window_handle::RawWindowHandle;
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave,
@@ -12,13 +13,13 @@ use crate::{
     runtime::window_context::LogicWindowContext,
 };
 use super::{
-    ipc_bridge::{IpcBridge, IpcBridgeModel},
-    PlatformType,
+    gl_bootstrap::GlState, ipc_bridge::{IpcBridge, IpcBridgeModel}, PlatformType
 };
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     window_id: Option<WindowId>,
     raw_window_handle: Option<RawWindowHandle>,
+    gl_state: Option<Arc<GlState>>,
 
     bitmap: Arc<RwLock<Bitmap>>,
     lock: Option<Arc<MemRwLock>>,
@@ -49,6 +50,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     pub fn master(
         window_id: WindowId,
         raw_window_handle: RawWindowHandle,
+        gl_state: Option<Arc<GlState>>,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         shared_channel: Option<SharedChannel<T, M>>,
@@ -58,6 +60,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         Self {
             window_id: Some(window_id),
             raw_window_handle: Some(raw_window_handle),
+            gl_state,
             bitmap,
             lock,
             shared_widget_id: None,
@@ -85,6 +88,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         Self {
             window_id: None,
             raw_window_handle: None,
+            gl_state: None,
             bitmap,
             lock,
             shared_widget_id: Some(shared_widget_id),
@@ -151,5 +155,24 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             self.master.clone(),
             self.slave.clone(),
         ))
+    }
+
+    #[inline]
+    pub fn gl_make_current(&self) {
+        if let Some(ref gl_state) = self.gl_state {
+            gl_state.make_current()
+        }
+    }
+
+    #[inline]
+    pub fn gl_load(&self) {
+        if let Some(ref gl_state) = self.gl_state {
+            gl_state.gl_load()
+        }
+    }
+
+    #[inline]
+    pub fn gl_config_unwrap(&self) -> &Config {
+        self.gl_state.as_ref().unwrap().config()
     }
 }

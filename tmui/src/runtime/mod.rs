@@ -76,11 +76,15 @@ where
     let height = read_guard.height();
     drop(read_guard);
 
+    // Load gl if the backend was `OpenGl`
+    logic_window.gl_make_current();
+    logic_window.gl_load();
+
     // Create the [`Backend`] based on the backend type specified by the user.
     let backend: Box<dyn Backend>;
     match logic_window.backend_type {
         BackendType::Raster => backend = RasterBackend::new(bitmap),
-        BackendType::OpenGL => backend = OpenGLBackend::new(bitmap),
+        BackendType::OpenGL => backend = OpenGLBackend::new(bitmap, logic_window.gl_config_unwrap()),
     }
 
     // Prepare ApplicationWindow env: Create the `Board`.

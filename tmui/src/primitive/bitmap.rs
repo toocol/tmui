@@ -62,6 +62,15 @@ pub(crate) enum Bitmap {
         /// Inner ipc agent to access shared memory related methods.
         inner_agent: Box<dyn IpcInnerAgent>,
     },
+
+    Empty {
+        /// The width of bitmap.
+        width: u32,
+        /// The height of bitmap.
+        height: u32,
+        /// Is this bitmap rendered.
+        prepared: bool,
+    },
 }
 
 unsafe impl Send for Bitmap {}
@@ -80,6 +89,11 @@ impl Bitmap {
             resized: false,
             inner_agent,
         }
+    }
+
+    #[inline]
+    pub fn empty(width: u32, height: u32) -> Self {
+        Self::Empty { width, height, prepared: false }
     }
 
     #[inline]
@@ -124,6 +138,11 @@ impl Bitmap {
                 *height = h;
                 *prepared = false;
                 *resized = true;
+            }
+            Self::Empty { width, height, prepared } => {
+                *width = w;
+                *height = h;
+                *prepared = false;
             }
             _ => {}
         }
@@ -172,6 +191,9 @@ impl Bitmap {
             Self::Direct { pixels, .. } => {
                 return pixels.as_ref().unwrap().as_ref();
             }
+            Self::Empty { .. } => {
+                unreachable!()
+            }
         }
     }
 
@@ -195,6 +217,9 @@ impl Bitmap {
             Self::Direct { pixels, .. } => {
                 return pixels.as_mut().unwrap().as_mut();
             }
+            Self::Empty { .. } => {
+                unreachable!()
+            }
         }
     }
 
@@ -203,6 +228,7 @@ impl Bitmap {
         match self {
             Self::Direct { row_bytes, .. } => *row_bytes,
             Self::Shared { row_bytes, .. } => *row_bytes,
+            Self::Empty { .. } => unreachable!(),
         }
     }
 
@@ -211,6 +237,7 @@ impl Bitmap {
         match self {
             Self::Direct { width, .. } => *width,
             Self::Shared { width, .. } => *width,
+            Self::Empty { width, .. } => *width,
         }
     }
 
@@ -219,6 +246,7 @@ impl Bitmap {
         match self {
             Self::Direct { height, .. } => *height,
             Self::Shared { height, .. } => *height,
+            Self::Empty { height, .. } => *height,
         }
     }
 
@@ -227,6 +255,7 @@ impl Bitmap {
         match self {
             Self::Direct { prepared, .. } => *prepared = true,
             Self::Shared { inner_agent, .. } => inner_agent.prepared(),
+            Self::Empty { prepared, .. } => *prepared = true,
         }
     }
 
@@ -234,6 +263,7 @@ impl Bitmap {
     pub fn is_prepared(&self) -> bool {
         match self {
             Self::Direct { prepared, .. } => *prepared,
+            Self::Empty { prepared, .. } => *prepared,
             _ => unreachable!(),
         }
     }
@@ -255,6 +285,7 @@ impl Bitmap {
             Self::Shared { inner_agent, .. } => {
                 inner_agent.release_retention();
             }
+            Self::Empty { .. } => {},
         }
     }
 
@@ -264,6 +295,7 @@ impl Bitmap {
         match self {
             Self::Direct { .. } => None,
             Self::Shared { lock, .. } => Some(lock.read()),
+            Self::Empty { .. } => None,
         }
     }
 
@@ -273,6 +305,7 @@ impl Bitmap {
         match self {
             Self::Direct { .. } => None,
             Self::Shared { lock, .. } => Some(lock.write()),
+            Self::Empty { .. } => None,
         }
     }
 
@@ -282,6 +315,7 @@ impl Bitmap {
         match self {
             Self::Direct { resized, .. } => *resized,
             Self::Shared { resized, .. } => *resized,
+            Self::Empty { .. } => unreachable!(),
         }
     }
 
@@ -291,6 +325,7 @@ impl Bitmap {
         match self {
             Self::Direct { resized, .. } => *resized = false,
             Self::Shared { resized, .. } => *resized = false,
+            Self::Empty { .. } => unreachable!(),
         }
     }
 
@@ -304,7 +339,8 @@ impl Bitmap {
                     return false;
                 }
             }
-            Self::Shared { .. } => return false,
+            Self::Shared { .. } => false,
+            Self::Empty { .. } => false,
         }
     }
 

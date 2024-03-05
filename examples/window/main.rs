@@ -18,6 +18,7 @@ fn main() {
         .title("window")
         .transparent(true)
         .opti_track(true)
+        .backend(tmui::backend::BackendType::OpenGL)
         .build();
 
     app.connect_activate(build_ui);

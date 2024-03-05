@@ -136,14 +136,7 @@ impl Board {
                 }
 
                 if self.backend.ty() == BackendType::OpenGL {
-                    let row_bytes = bitmap_guard.row_bytes();
-                    let pixels = bitmap_guard.get_pixels_mut();
-                    self.surface().read_pixels(
-                        self.backend.image_info(),
-                        pixels,
-                        row_bytes,
-                        (0, 0),
-                    );
+                    self.surface().flush_submit_and_sync_cpu();
                 }
 
                 bitmap_guard.prepared();

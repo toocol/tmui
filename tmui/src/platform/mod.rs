@@ -1,6 +1,6 @@
+pub(crate) mod gl_bootstrap;
 pub(crate) mod ipc;
 pub(crate) mod linux;
-pub(crate) mod gl_bootstrap;
 pub(crate) mod logic_window;
 pub(crate) mod macos;
 pub(crate) mod physical_window;
@@ -9,6 +9,8 @@ pub(crate) mod win32;
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");
 
+use std::sync::Arc;
+
 pub(crate) use ipc::*;
 #[cfg(wayland_platform)]
 pub(crate) use linux::wayland::*;
@@ -16,13 +18,16 @@ pub(crate) use linux::wayland::*;
 pub(crate) use linux::x11::*;
 #[cfg(macos_platform)]
 pub(crate) use macos::*;
-use tlib::winit::event_loop::{EventLoopWindowTarget, EventLoopProxy};
+use tlib::typedef::WinitWindow;
+use tlib::winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 #[cfg(windows_platform)]
 pub(crate) use win32::*;
 
+use crate::backend::BackendType;
 use crate::primitive::Message;
-use crate::window::win_config::WindowConfig;
+use crate::window::win_config::{self, WindowConfig};
 
+use self::gl_bootstrap::GlState;
 use self::logic_window::LogicWindow;
 use self::physical_window::PhysicalWindow;
 
@@ -56,4 +61,21 @@ pub(crate) trait PlatformContext<T: 'static + Copy + Sync + Send, M: 'static + C
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>);
+}
+
+pub(crate) fn make_window(
+    win_config: WindowConfig,
+    target: &EventLoopWindowTarget<Message>,
+    backend_type: BackendType,
+) -> (WinitWindow, Option<Arc<GlState>>) {
+    if backend_type == BackendType::OpenGL {
+        let (win, gl_state) =
+            gl_bootstrap::bootstrap_gl_window(target, win_config.to_window_builder())
+                .expect("bootstrap gl window failed.");
+
+        (win, Some(gl_state))
+    } else {
+        let window = win_config::build_window(win_config, target).expect("build_window failed.");
+        (window, None)
+    }
 }

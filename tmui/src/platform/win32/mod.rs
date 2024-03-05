@@ -7,12 +7,13 @@ use super::{
     PlatformContext, PlatformType,
 };
 use crate::{
+    backend::BackendType,
     primitive::Message,
     runtime::window_context::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, PhysicalWindowContext,
     },
-    window::win_config::{self, WindowConfig},
-    winit::event_loop::EventLoopBuilder, backend::BackendType,
+    window::win_config::WindowConfig,
+    winit::event_loop::EventLoopBuilder,
 };
 use crate::{
     primitive::{
@@ -21,9 +22,12 @@ use crate::{
     },
     runtime::window_context::OutputSender,
 };
-use std::{sync::{mpsc::channel, Arc}, cell::Cell};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tipc::{ipc_master::IpcMaster, WithIpcMaster, parking_lot::RwLock};
+use std::{
+    cell::Cell,
+    sync::{mpsc::channel, Arc},
+};
+use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
 use tlib::winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use windows::Win32::Foundation::HWND;
 
@@ -71,19 +75,23 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         };
 
         let (width, height) = win_config.size();
-        let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
+        let bitmap = Arc::new(RwLock::new(if self.backend_type == BackendType::OpenGL {
+            Bitmap::empty(width, height)
+        } else {
+            Bitmap::new(width, height, inner_agent)
+        }));
 
-        let (window, event_loop) = if let Some(target) = target {
-            let window = win_config::build_window(win_config, target).unwrap();
+        let (window, event_loop, gl_state) = if let Some(target) = target {
+            let (window, gl_state) = super::make_window(win_config, target, self.backend_type);
 
-            (window, None)
+            (window, None, gl_state)
         } else {
             let event_loop = EventLoopBuilder::<Message>::with_user_event()
                 .build()
                 .unwrap();
-            let window = win_config::build_window(win_config, &event_loop).unwrap();
+            let (window, gl_state) = super::make_window(win_config, &event_loop, self.backend_type);
 
-            (window, Some(event_loop))
+            (window, Some(event_loop), gl_state)
         };
 
         let window_id = window.id();
@@ -119,6 +127,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             LogicWindow::master(
                 window_id,
                 window_handle,
+                gl_state.clone(),
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -132,6 +141,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 window,
                 hwnd,
                 bitmap,
+                gl_state,
                 self.master.clone(),
                 PhysicalWindowContext(
                     OutputReceiver::EventLoop(event_loop),

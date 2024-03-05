@@ -1,7 +1,6 @@
 #![cfg(windows_platform)]
 use crate::{
-    primitive::{bitmap::Bitmap, Message},
-    runtime::window_context::{OutputReceiver, PhysicalWindowContext},
+    platform::gl_bootstrap::GlState, primitive::{bitmap::Bitmap, Message}, runtime::window_context::{OutputReceiver, PhysicalWindowContext}
 };
 use std::{
     ffi::c_void,
@@ -23,6 +22,8 @@ pub(crate) struct Win32Window<T: 'static + Copy + Send + Sync, M: 'static + Copy
     hwnd: HWND,
     bitmap: Arc<RwLock<Bitmap>>,
 
+    gl_state: Option<Arc<GlState>>,
+
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     pub context: PhysicalWindowContext,
     pub user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -35,6 +36,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
         winit_window: WinitWindow,
         hwnd: HWND,
         bitmap: Arc<RwLock<Bitmap>>,
+        gl_state: Option<Arc<GlState>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         context: PhysicalWindowContext,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -44,10 +46,16 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
             winit_window: Some(winit_window),
             hwnd,
             bitmap,
+            gl_state,
             master,
             context: context,
             user_ipc_event_sender,
         }
+    }
+
+    #[inline]
+    pub fn is_gl_backend(&self) -> bool {
+        self.gl_state.is_some()
     }
 
     #[inline]
@@ -90,8 +98,12 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
     /// Request to redraw the window.
     #[inline]
     pub fn request_redraw(&self) {
-        unsafe {
-            InvalidateRect(self.hwnd, None, false);
+        if self.is_gl_backend() {
+            self.winit_window().request_redraw();
+        } else {
+            unsafe {
+                InvalidateRect(self.hwnd, None, false);
+            }
         }
     }
 
@@ -99,6 +111,11 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
     pub fn redraw(&self) {
         let bitmap_guard = self.bitmap.read();
         if !bitmap_guard.is_prepared() {
+            return;
+        }
+
+        if self.is_gl_backend() {
+            self.gl_state.as_ref().unwrap().swap_buffers();
             return;
         }
 

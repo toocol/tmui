@@ -1,3 +1,4 @@
+use glutin::config::{Config, GlConfig};
 use std::sync::Arc;
 use tipc::parking_lot::RwLock;
 use tlib::{
@@ -11,7 +12,7 @@ use tlib::{
     },
 };
 
-use super::{Backend, create_image_info, BackendType};
+use super::{create_image_info, Backend, BackendType};
 use crate::{primitive::bitmap::Bitmap, skia_safe::Surface};
 
 /// Backend for OpenGL,
@@ -21,44 +22,49 @@ use crate::{primitive::bitmap::Bitmap, skia_safe::Surface};
 pub struct OpenGLBackend {
     image_info: ImageInfo,
     surface: Surface,
+    context: DirectContext,
+    num_samples: usize,
+    stencil_size: usize,
 }
 
 impl OpenGLBackend {
-    pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>) -> Box<Self> {
+    pub(crate) fn new(bitmap: Arc<RwLock<Bitmap>>, config: &Config) -> Box<Self> {
         let mut context = DirectContext::new_gl(None, None).expect("Create `DirectContext` failed");
-        // 设置 Skia BackendRenderTarget
+        // Setting Skia BackendRenderTarget
         let fb_info = FramebufferInfo {
-            fboid: 0, // 默认的帧缓冲区
+            fboid: 0, 
             format: Format::RGBA8.into(),
         };
 
         let guard = bitmap.read();
-        // let pixel_format = windowed_context.get_pixel_format();
         let backend_render_target = BackendRenderTarget::new_gl(
             (guard.width() as i32, guard.height() as i32),
-            None,
-            0,
+            Some(config.num_samples() as usize),
+            config.stencil_size() as usize,
             fb_info,
         );
 
-        // 创建 Skia Surface
+        // Create Skia Surface
         let surface = Surface::from_backend_render_target(
             &mut context,
             &backend_render_target,
-            SurfaceOrigin::TopLeft,
+            SurfaceOrigin::BottomLeft,
             ColorType::RGBA8888,
             None,
             None,
         )
         .unwrap();
 
-
         let image_info = create_image_info((guard.width() as i32, guard.height() as i32));
 
         Self {
             image_info,
             surface,
-        }.boxed()
+            context,
+            num_samples: config.num_samples() as usize,
+            stencil_size: config.stencil_size() as usize,
+        }
+        .boxed()
     }
 }
 
@@ -68,8 +74,41 @@ impl Backend for OpenGLBackend {
         BackendType::OpenGL
     }
 
-    fn resize(&mut self, _bitmap: Arc<RwLock<Bitmap>>) {
-        todo!()
+    fn resize(&mut self, bitmap: Arc<RwLock<Bitmap>>) {
+        let guard = bitmap.write();
+
+        let dimensitions = (guard.width() as i32, guard.height() as i32);
+
+        self.image_info = create_image_info(dimensitions);
+
+        let fb_info = FramebufferInfo {
+            fboid: 0, 
+            format: Format::RGBA8.into(),
+        };
+
+        let backend_render_target = BackendRenderTarget::new_gl(
+            (guard.width() as i32, guard.height() as i32),
+            Some(self.num_samples),
+            self.stencil_size as usize,
+            fb_info,
+        );
+
+        // Create Skia Surface
+        let mut new_surface = Surface::from_backend_render_target(
+            &mut self.context,
+            &backend_render_target,
+            SurfaceOrigin::BottomLeft,
+            ColorType::RGBA8888,
+            None,
+            None,
+        )
+        .unwrap();
+
+        new_surface
+            .canvas()
+            .draw_image(self.surface.image_snapshot(), (0, 0), None);
+
+        self.surface = new_surface;
     }
 
     #[inline]
