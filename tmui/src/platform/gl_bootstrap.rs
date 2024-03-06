@@ -14,6 +14,7 @@ use raw_window_handle::HasRawWindowHandle;
 use std::{
     error::Error,
     ffi::{CStr, CString},
+    num::NonZeroU32,
     sync::{Arc, Once},
 };
 use tipc::parking_lot::RwLock;
@@ -25,7 +26,7 @@ use tlib::{
 pub(crate) fn bootstrap_gl_window(
     target: &EventLoopWindowTarget<Message>,
     win_builder: WindowBuilder,
-) -> Result<(WinitWindow, Arc<GlState>), Box<dyn Error>> {
+) -> Result<(WinitWindow, Arc<GlEnv>), Box<dyn Error>> {
     let template = ConfigTemplateBuilder::new()
         .with_alpha_size(8)
         .with_transparency(cfg!(cgl_backend));
@@ -96,7 +97,7 @@ pub(crate) fn bootstrap_gl_window(
 
     Ok((
         window,
-        Arc::new(GlState(
+        Arc::new(GlEnv(
             gl_config,
             RwLock::new(GlCtx::new(not_current_gl_context)),
             gl_surface,
@@ -104,10 +105,10 @@ pub(crate) fn bootstrap_gl_window(
     ))
 }
 
-pub(crate) struct GlState(Config, RwLock<GlCtx>, Surface<WindowSurface>);
+pub(crate) struct GlEnv(Config, RwLock<GlCtx>, Surface<WindowSurface>);
 static ONCE: Once = Once::new();
 
-impl GlState {
+impl GlEnv {
     #[inline]
     pub(crate) fn config(&self) -> &Config {
         &self.0
@@ -154,12 +155,16 @@ impl GlState {
             self.2.swap_buffers(ctx).expect("gl swap buffers failed.")
         }
     }
-}
 
-pub(crate) fn get_gl_string(variant: gl::types::GLenum) -> Option<&'static CStr> {
-    unsafe {
-        let s = gl::GetString(variant);
-        (!s.is_null()).then(|| CStr::from_ptr(s.cast()))
+    #[inline]
+    pub(crate) fn resize(&self, width: u32, height: u32) {
+        if let Some(ctx) = self.1.read().possibly_current_ctx() {
+            self.2.resize(
+                ctx,
+                NonZeroU32::new(width.max(1)).unwrap(),
+                NonZeroU32::new(height.max(1)).unwrap(),
+            );
+        }
     }
 }
 
@@ -195,10 +200,17 @@ impl GlCtx {
     fn make_not_current(&mut self) {
         if let Some(possibly_current_ctx) = self.possibly_current_ctx.take() {
             self.not_current_ctx = Some(
-                possibly_current_ctx 
+                possibly_current_ctx
                     .make_not_current()
                     .expect("Make current context failed."),
             );
         }
+    }
+}
+
+pub(crate) fn get_gl_string(variant: gl::types::GLenum) -> Option<&'static CStr> {
+    unsafe {
+        let s = gl::GetString(variant);
+        (!s.is_null()).then(|| CStr::from_ptr(s.cast()))
     }
 }

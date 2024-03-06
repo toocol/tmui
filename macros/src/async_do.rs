@@ -68,9 +68,10 @@ impl AsyncDoParser {
 
         quote!(
             {
-                let join_handler = tokio::spawn(async #move_clause { #body });
-                let task = AsyncTask::new(join_handler)#then_clause;
-                async_tasks().entry(std::thread::current().id()).or_insert(vec![]).push(task);
+                use tlib::values::ToValue;
+                let join_handler = tlib::tokio::spawn(async #move_clause { #body });
+                let task = tlib::r#async::AsyncTask::new(join_handler)#then_clause;
+                tlib::r#async::async_tasks().entry(std::thread::current().id()).or_insert(vec![]).push(task);
             }
         )
     }

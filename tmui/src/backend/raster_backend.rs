@@ -26,8 +26,6 @@ impl RasterBackend {
 
         let image_info = create_image_info((guard.width() as i32, guard.height() as i32));
 
-        // let surface = Surface::new_raster_n32_premul((width, height)).unwrap();
-
         let row_bytes = guard.row_bytes();
         let surface =
             Surface::new_raster_direct(&image_info, guard.get_pixels_mut(), row_bytes, None)
@@ -55,11 +53,6 @@ impl Backend for RasterBackend {
         let dimensitions = (guard.width() as i32, guard.height() as i32);
 
         self.image_info = create_image_info(dimensitions);
-
-        // let mut new_surface = self
-        //     .surface
-        //     .new_surface_with_dimensions((width, height))
-        //     .unwrap();
 
         let mut new_surface =
             Surface::new_raster_direct(&self.image_info, guard.get_pixels_mut(), row_bytes, None)

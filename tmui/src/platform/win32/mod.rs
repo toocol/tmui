@@ -81,17 +81,17 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             Bitmap::new(width, height, inner_agent)
         }));
 
-        let (window, event_loop, gl_state) = if let Some(target) = target {
-            let (window, gl_state) = super::make_window(win_config, target, self.backend_type);
+        let (window, event_loop, gl_env) = if let Some(target) = target {
+            let (window, gl_env) = super::make_window(win_config, target, self.backend_type);
 
-            (window, None, gl_state)
+            (window, None, gl_env)
         } else {
             let event_loop = EventLoopBuilder::<Message>::with_user_event()
                 .build()
                 .unwrap();
-            let (window, gl_state) = super::make_window(win_config, &event_loop, self.backend_type);
+            let (window, gl_env) = super::make_window(win_config, &event_loop, self.backend_type);
 
-            (window, Some(event_loop), gl_state)
+            (window, Some(event_loop), gl_env)
         };
 
         let window_id = window.id();
@@ -127,7 +127,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             LogicWindow::master(
                 window_id,
                 window_handle,
-                gl_state.clone(),
+                gl_env.clone(),
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -141,7 +141,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 window,
                 hwnd,
                 bitmap,
-                gl_state,
+                gl_env,
                 self.master.clone(),
                 PhysicalWindowContext(
                     OutputReceiver::EventLoop(event_loop),

@@ -1,25 +1,27 @@
-use std::sync::Arc;
-use glutin::config::Config;
-use raw_window_handle::RawWindowHandle;
-use tipc::{
-    ipc_master::IpcMaster, ipc_slave::IpcSlave,
-    mem::mem_rw_lock::MemRwLock, IpcNode, IpcType, parking_lot::RwLock,
+use super::{
+    gl_bootstrap::GlEnv,
+    ipc_bridge::{IpcBridge, IpcBridgeModel},
+    PlatformType,
 };
-use tlib::winit::window::WindowId;
 use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
     primitive::{bitmap::Bitmap, shared_channel::SharedChannel},
     runtime::window_context::LogicWindowContext,
 };
-use super::{
-    gl_bootstrap::GlState, ipc_bridge::{IpcBridge, IpcBridgeModel}, PlatformType
+use glutin::config::Config;
+use raw_window_handle::RawWindowHandle;
+use std::sync::Arc;
+use tipc::{
+    ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
+    IpcNode, IpcType,
 };
+use tlib::winit::window::WindowId;
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     window_id: Option<WindowId>,
     raw_window_handle: Option<RawWindowHandle>,
-    gl_state: Option<Arc<GlState>>,
+    gl_env: Option<Arc<GlEnv>>,
 
     bitmap: Arc<RwLock<Bitmap>>,
     lock: Option<Arc<MemRwLock>>,
@@ -50,7 +52,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     pub fn master(
         window_id: WindowId,
         raw_window_handle: RawWindowHandle,
-        gl_state: Option<Arc<GlState>>,
+        gl_env: Option<Arc<GlEnv>>,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         shared_channel: Option<SharedChannel<T, M>>,
@@ -60,7 +62,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         Self {
             window_id: Some(window_id),
             raw_window_handle: Some(raw_window_handle),
-            gl_state,
+            gl_env,
             bitmap,
             lock,
             shared_widget_id: None,
@@ -88,7 +90,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         Self {
             window_id: None,
             raw_window_handle: None,
-            gl_state: None,
+            gl_env: None,
             bitmap,
             lock,
             shared_widget_id: Some(shared_widget_id),
@@ -159,20 +161,27 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
 
     #[inline]
     pub fn gl_make_current(&self) {
-        if let Some(ref gl_state) = self.gl_state {
-            gl_state.make_current()
+        if let Some(ref gl_env) = self.gl_env {
+            gl_env.make_current()
         }
     }
 
     #[inline]
     pub fn gl_load(&self) {
-        if let Some(ref gl_state) = self.gl_state {
-            gl_state.gl_load()
+        if let Some(ref gl_env) = self.gl_env {
+            gl_env.gl_load()
+        }
+    }
+
+    #[inline]
+    pub fn gl_resize(&self, width: u32, height: u32) {
+        if let Some(ref gl_env) = self.gl_env {
+            gl_env.resize(width, height)
         }
     }
 
     #[inline]
     pub fn gl_config_unwrap(&self) -> &Config {
-        self.gl_state.as_ref().unwrap().config()
+        self.gl_env.as_ref().unwrap().config()
     }
 }

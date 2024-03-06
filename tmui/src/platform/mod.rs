@@ -27,7 +27,7 @@ use crate::backend::BackendType;
 use crate::primitive::Message;
 use crate::window::win_config::{self, WindowConfig};
 
-use self::gl_bootstrap::GlState;
+use self::gl_bootstrap::GlEnv;
 use self::logic_window::LogicWindow;
 use self::physical_window::PhysicalWindow;
 
@@ -67,13 +67,13 @@ pub(crate) fn make_window(
     win_config: WindowConfig,
     target: &EventLoopWindowTarget<Message>,
     backend_type: BackendType,
-) -> (WinitWindow, Option<Arc<GlState>>) {
+) -> (WinitWindow, Option<Arc<GlEnv>>) {
     if backend_type == BackendType::OpenGL {
-        let (win, gl_state) =
+        let (win, gl_env) =
             gl_bootstrap::bootstrap_gl_window(target, win_config.to_window_builder())
                 .expect("bootstrap gl window failed.");
 
-        (win, Some(gl_state))
+        (win, Some(gl_env))
     } else {
         let window = win_config::build_window(win_config, target).expect("build_window failed.");
         (window, None)
