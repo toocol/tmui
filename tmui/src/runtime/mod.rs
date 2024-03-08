@@ -10,9 +10,10 @@ use crate::{
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
+    opti::tracker::Tracker,
     platform::logic_window::LogicWindow,
     prelude::*,
-    primitive::{cpu_balance::CpuBalance, Message}, opti::tracker::Tracker,
+    primitive::{cpu_balance::CpuBalance, Message},
 };
 use std::{
     sync::atomic::Ordering,
@@ -76,15 +77,17 @@ where
     let height = read_guard.height();
     drop(read_guard);
 
-    // Load gl if the backend was `OpenGl`
-    logic_window.gl_make_current();
-    logic_window.gl_load();
-
     // Create the [`Backend`] based on the backend type specified by the user.
     let backend: Box<dyn Backend>;
     match logic_window.backend_type {
         BackendType::Raster => backend = RasterBackend::new(bitmap),
-        BackendType::OpenGL => backend = OpenGLBackend::new(bitmap, logic_window.gl_config_unwrap()),
+        BackendType::OpenGL => {
+            // Make gl context current and load if the backend was `OpenGl`.
+            logic_window.gl_make_current();
+            logic_window.gl_load();
+
+            backend = OpenGLBackend::new(bitmap, logic_window.gl_config_unwrap())
+        }
     }
 
     // Prepare ApplicationWindow env: Create the `Board`.
@@ -98,9 +101,6 @@ where
 
     if let Some(window_id) = logic_window.window_id() {
         window.set_winit_id(window_id)
-    }
-    if let Some(raw_window_handle) = logic_window.raw_window_handle() {
-        window.set_raw_window_handle(raw_window_handle)
     }
 
     if let Some(on_activate) = on_activate {

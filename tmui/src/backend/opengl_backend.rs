@@ -13,15 +13,13 @@ use std::{
 };
 use tipc::parking_lot::RwLock;
 use tlib::{
-    async_do,
-    global::SemanticExt,
-    skia_safe::{
+    async_do, global::SemanticExt, skia_safe::{
         gpu::{
             gl::{Format, FramebufferInfo},
             BackendRenderTarget, DirectContext, SurfaceOrigin,
         },
         ColorType, ImageInfo,
-    },
+    }
 };
 
 use super::{create_image_info, Backend, BackendType};
@@ -65,13 +63,16 @@ impl OpenGLBackend {
             format: Format::RGBA8.into(),
         };
 
+        let num_samples = config.num_samples() as usize;
+        let stencil_size = config.stencil_size() as usize;
+
         let guard = bitmap.read();
         // Create Skia Surface:
         let surface = create_gl_surface(
             &mut context,
             fb_info,
-            config.num_samples() as usize,
-            config.stencil_size() as usize,
+            num_samples,
+            stencil_size,
             guard.width() as i32,
             guard.height() as i32,
         );
@@ -83,8 +84,8 @@ impl OpenGLBackend {
             image_info,
             surface,
             context,
-            num_samples: config.num_samples() as usize,
-            stencil_size: config.stencil_size() as usize,
+            num_samples,
+            stencil_size,
         }
         .boxed()
     }
@@ -114,18 +115,18 @@ impl Backend for OpenGLBackend {
         );
 
         let snapshot = self.surface.image_snapshot();
-        let data = snapshot
-            .encode_to_data(tlib::skia_safe::EncodedImageFormat::PNG)
-            .unwrap();
-        async_do!(move {
-            let mut file = std::fs::File::create(format!(
-                "snapshot-{}.png",
-                COUNTER.fetch_add(1, Ordering::Release)
-            ))
-            .unwrap();
-            file.write_all(data.as_bytes()).unwrap();
-            ()
-        });
+        // let data = snapshot
+        //     .encode_to_data(tlib::skia_safe::EncodedImageFormat::PNG)
+        //     .unwrap();
+        // async_do!(move {
+        //     let mut file = std::fs::File::create(format!(
+        //         "snapshot-{}.png",
+        //         COUNTER.fetch_add(1, Ordering::Release)
+        //     ))
+        //     .unwrap();
+        //     file.write_all(data.as_bytes()).unwrap();
+        //     ()
+        // });
 
         new_surface.canvas().draw_image(snapshot, (0, 0), None);
 

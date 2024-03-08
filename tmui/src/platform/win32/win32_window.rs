@@ -100,12 +100,8 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
     /// Request to redraw the window.
     #[inline]
     pub fn request_redraw(&self) {
-        if self.is_gl_backend() {
-            self.winit_window().request_redraw();
-        } else {
-            unsafe {
-                InvalidateRect(self.hwnd, None, false);
-            }
+        unsafe {
+            InvalidateRect(self.hwnd, None, false);
         }
     }
 
@@ -117,7 +113,6 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
         }
 
         if self.is_gl_backend() {
-            self.gl_env.as_ref().unwrap().swap_buffers();
             return;
         }
 

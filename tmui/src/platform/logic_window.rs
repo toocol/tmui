@@ -10,7 +10,6 @@ use crate::{
     runtime::window_context::LogicWindowContext,
 };
 use glutin::config::Config;
-use raw_window_handle::RawWindowHandle;
 use std::sync::Arc;
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
@@ -20,7 +19,6 @@ use tlib::winit::window::WindowId;
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     window_id: Option<WindowId>,
-    raw_window_handle: Option<RawWindowHandle>,
     gl_env: Option<Arc<GlEnv>>,
 
     bitmap: Arc<RwLock<Bitmap>>,
@@ -51,7 +49,6 @@ unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Se
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWindow<T, M> {
     pub fn master(
         window_id: WindowId,
-        raw_window_handle: RawWindowHandle,
         gl_env: Option<Arc<GlEnv>>,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
@@ -61,7 +58,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         let lock = master.as_ref().and_then(|m| Some(m.read().buffer_lock()));
         Self {
             window_id: Some(window_id),
-            raw_window_handle: Some(raw_window_handle),
             gl_env,
             bitmap,
             lock,
@@ -89,7 +85,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         let lock = Some(slave.read().buffer_lock());
         Self {
             window_id: None,
-            raw_window_handle: None,
             gl_env: None,
             bitmap,
             lock,
@@ -110,11 +105,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     #[inline]
     pub fn window_id(&self) -> Option<WindowId> {
         self.window_id
-    }
-
-    #[inline]
-    pub fn raw_window_handle(&self) -> Option<RawWindowHandle> {
-        self.raw_window_handle
     }
 
     #[inline]
@@ -169,7 +159,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     #[inline]
     pub fn gl_load(&self) {
         if let Some(ref gl_env) = self.gl_env {
-            gl_env.gl_load()
+            gl_env.load()
         }
     }
 
@@ -183,5 +173,17 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     #[inline]
     pub fn gl_config_unwrap(&self) -> &Config {
         self.gl_env.as_ref().unwrap().config()
+    }
+
+    #[inline]
+    pub fn gl_swap_buffers(&self) {
+        if let Some(ref gl_env) = self.gl_env {
+            gl_env.swap_buffers();
+        }
+    }
+
+    #[inline]
+    pub fn is_gl_backend(&self) -> bool {
+        self.gl_env.is_some()
     }
 }

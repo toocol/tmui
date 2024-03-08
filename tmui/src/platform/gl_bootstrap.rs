@@ -29,7 +29,7 @@ pub(crate) fn bootstrap_gl_window(
 ) -> Result<(WinitWindow, Arc<GlEnv>), Box<dyn Error>> {
     let template = ConfigTemplateBuilder::new()
         .with_alpha_size(8)
-        .with_transparency(cfg!(cgl_backend));
+        .with_transparency(win_builder.transparent());
 
     let display_builder = DisplayBuilder::new().with_window_builder(Some(win_builder));
     let (window, gl_config) = display_builder.build(target, template, |configs| {
@@ -126,7 +126,7 @@ impl GlEnv {
     }
 
     #[inline]
-    pub(crate) fn gl_load(&self) {
+    pub(crate) fn load(&self) {
         ONCE.call_once(|| {
             gl::load_with(|symbol| {
                 let symbol = CString::new(symbol).unwrap();

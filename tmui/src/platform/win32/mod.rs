@@ -126,7 +126,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
                 window_id,
-                window_handle,
                 gl_env.clone(),
                 bitmap.clone(),
                 self.master.clone(),

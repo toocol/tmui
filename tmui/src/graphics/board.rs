@@ -1,6 +1,6 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{
-    backend::{Backend, BackendType},
+    backend::Backend,
     opti::tracker::Tracker,
     primitive::bitmap::Bitmap,
     shared_widget::ReflectSharedWidgetImpl,
@@ -75,7 +75,7 @@ impl Board {
 
     #[inline]
     pub(crate) fn resize(&mut self) {
-        self.surface().flush_submit_and_sync_cpu();
+        self.surface().flush_and_submit();
         self.backend.resize(self.bitmap.clone());
 
         self.surface = RefCell::new(self.backend.surface());
@@ -135,9 +135,7 @@ impl Board {
                     }
                 }
 
-                if self.backend.ty() == BackendType::OpenGL {
-                    self.surface().flush_submit_and_sync_cpu();
-                }
+                self.surface().flush_and_submit();
 
                 bitmap_guard.prepared();
 

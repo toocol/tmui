@@ -16,7 +16,6 @@ use crate::{
 };
 use log::{debug, error};
 use once_cell::sync::Lazy;
-use raw_window_handle::RawWindowHandle;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
@@ -40,7 +39,6 @@ thread_local! {
 #[extends(Widget)]
 pub struct ApplicationWindow {
     winit_id: Option<WindowId>,
-    raw_window_handle: Option<RawWindowHandle>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
     shared_widget_size_changed: bool,
@@ -67,7 +65,7 @@ impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_rerender_difference(true)
+        // self.set_rerender_difference(true)
     }
 
     fn initialize(&mut self) {
@@ -198,11 +196,6 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_shared_widget_size_changed(&mut self, changed: bool) {
         self.shared_widget_size_changed = changed;
-    }
-
-    #[inline]
-    pub(crate) fn set_raw_window_handle(&mut self, raw_window_handle: RawWindowHandle) {
-        self.raw_window_handle = Some(raw_window_handle)
     }
 
     #[inline]
