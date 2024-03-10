@@ -107,12 +107,12 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
 
     /// Redraw the window.
     pub fn redraw(&self) {
-        let bitmap_guard = self.bitmap.read();
-        if !bitmap_guard.is_prepared() {
+        if self.is_gl_backend() {
             return;
         }
 
-        if self.is_gl_backend() {
+        let bitmap_guard = self.bitmap.read();
+        if !bitmap_guard.is_prepared() {
             return;
         }
 

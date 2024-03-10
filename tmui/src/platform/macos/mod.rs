@@ -9,7 +9,7 @@ use crate::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, OutputSender,
         PhysicalWindowContext,
     },
-    window::win_config::{self, WindowConfig},
+    window::win_config::WindowConfig,
 };
 use cocoa::{
     appkit::{
@@ -18,15 +18,13 @@ use cocoa::{
     base::id,
 };
 use objc::runtime::Object;
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::{
     cell::Cell,
     sync::{mpsc::channel, Arc},
 };
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
-use tlib::winit::{
-    event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
-    raw_window_handle::{HasWindowHandle, RawWindowHandle},
-};
+use tlib::winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
 
 use self::macos_window::MacosWindow;
 
@@ -68,7 +66,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn create_window(
         &self,
         win_config: WindowConfig,
-        parent: Option<RawWindowHandle>,
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
@@ -79,19 +76,23 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
             None
         };
         let (width, height) = win_config.size();
-        let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
+        let bitmap = Arc::new(RwLock::new(if self.backend_type == BackendType::OpenGL {
+            Bitmap::empty(width, height)
+        } else {
+            Bitmap::new(width, height, inner_agent)
+        }));
 
-        let (window, event_loop) = if let Some(target) = target {
-            let window = win_config::build_window(win_config, target, parent).unwrap();
+        let (window, event_loop, gl_env) = if let Some(target) = target {
+            let (window, gl_env) = super::make_window(win_config, target, self.backend_type);
 
-            (window, None)
+            (window, None, gl_env)
         } else {
             let event_loop = EventLoopBuilder::<Message>::with_user_event()
                 .build()
                 .unwrap();
-            let window = win_config::build_window(win_config, &event_loop, parent).unwrap();
+            let (window, gl_env) = super::make_window(win_config, &event_loop, self.backend_type);
 
-            (window, Some(event_loop))
+            (window, Some(event_loop), gl_env)
         };
 
         unsafe {
@@ -100,9 +101,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         }
 
         let window_id = window.id();
-        let window_handle = window.window_handle().unwrap().as_raw();
+        let window_handle = window.raw_window_handle();
         let ns_view: id = match window_handle {
-            RawWindowHandle::AppKit(id) => id.ns_view.as_ptr() as *mut Object,
+            RawWindowHandle::AppKit(id) => id.ns_view as *mut Object,
             _ => unreachable!(),
         };
 
@@ -132,7 +133,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
                 window_id,
-                window_handle,
+                gl_env.clone(),
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -146,6 +147,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 window,
                 ns_view,
                 bitmap,
+                gl_env,
                 self.master.clone(),
                 PhysicalWindowContext(
                     OutputReceiver::EventLoop(event_loop),

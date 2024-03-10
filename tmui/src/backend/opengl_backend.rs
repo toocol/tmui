@@ -103,7 +103,7 @@ impl Backend for OpenGLBackend {
         let dimensitions = (guard.width() as i32, guard.height() as i32);
 
         self.image_info = create_image_info(dimensitions);
-
+        
         // Create Skia Surface
         let mut new_surface = create_gl_surface(
             &mut self.context,
