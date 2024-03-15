@@ -134,6 +134,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
                 master.write().recreate_buffer();
             }
         }
+
+        if let Some(ref gl_env) = self.gl_env {
+            gl_env.resize(width, height)
+        }
     }
 
     #[inline]
@@ -160,13 +164,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     pub fn gl_load(&self) {
         if let Some(ref gl_env) = self.gl_env {
             gl_env.load()
-        }
-    }
-
-    #[inline]
-    pub fn gl_resize(&self, width: u32, height: u32) {
-        if let Some(ref gl_env) = self.gl_env {
-            gl_env.resize(width, height)
         }
     }
 

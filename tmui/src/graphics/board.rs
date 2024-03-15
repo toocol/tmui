@@ -135,6 +135,8 @@ impl Board {
                     }
                 }
 
+                std::thread::sleep(std::time::Duration::from_millis(16));
+
                 self.surface().flush_and_submit();
 
                 bitmap_guard.prepared();

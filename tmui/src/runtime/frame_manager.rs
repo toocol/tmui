@@ -56,7 +56,6 @@ impl FrameManager {
                 let _track = Tracker::start("window_resize");
                 logic_window.resize(size_record.0, size_record.1, false);
                 board.resize();
-                logic_window.gl_resize(size_record.0, size_record.1);
                 *resized = false;
                 application::request_high_load(false);
             } else if window.shared_widget_size_changed() {

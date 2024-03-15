@@ -30,7 +30,6 @@ static COUNTER: AtomicU32 = AtomicU32::new(0);
 /// Backend for OpenGL,
 /// Support cross platform GPU acceleration.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct OpenGLBackend {
     fb_info: FramebufferInfo,
     image_info: ImageInfo,
@@ -114,7 +113,7 @@ impl Backend for OpenGLBackend {
             dimensitions.1,
         );
 
-        let snapshot = self.surface.image_snapshot();
+        // let snapshot = self.surface.image_snapshot();
         // let data = snapshot
         //     .encode_to_data(tlib::skia_safe::EncodedImageFormat::PNG)
         //     .unwrap();
@@ -128,7 +127,7 @@ impl Backend for OpenGLBackend {
         //     ()
         // });
 
-        new_surface.canvas().draw_image(snapshot, (0, 0), None);
+        // new_surface.canvas().draw_image(snapshot, (0, 0), None);
 
         self.surface = new_surface;
     }

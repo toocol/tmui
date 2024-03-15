@@ -13,7 +13,7 @@ use tmui::{
 #[async_task(name = "TestAsyncTask", value = "&'static str")]
 #[animatable(
     ty = "Linear",
-    direction = "RightBottomToLeftTop",
+    direction = "BottomToTop",
     duration = 450,
     mode = "Flex",
     effect = "Slide"

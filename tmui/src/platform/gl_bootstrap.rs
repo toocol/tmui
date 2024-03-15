@@ -139,6 +139,7 @@ impl GlEnv {
             if let Some(renderer) = get_gl_string(gl::RENDERER) {
                 info!("Running on {}", renderer.to_string_lossy());
             }
+
             if let Some(version) = get_gl_string(gl::VERSION) {
                 info!("OpenGL Version {}", version.to_string_lossy());
             }
@@ -186,6 +187,7 @@ impl GlCtx {
         self.possibly_current_ctx.as_ref()
     }
 
+    #[inline]
     fn make_current(&mut self, gl_surface: &Surface<WindowSurface>) {
         if let Some(not_current_ctx) = self.not_current_ctx.take() {
             self.possibly_current_ctx = Some(
@@ -196,6 +198,7 @@ impl GlCtx {
         }
     }
 
+    #[inline]
     #[allow(dead_code)]
     fn make_not_current(&mut self) {
         if let Some(possibly_current_ctx) = self.possibly_current_ctx.take() {
@@ -208,6 +211,7 @@ impl GlCtx {
     }
 }
 
+#[inline]
 pub(crate) fn get_gl_string(variant: gl::types::GLenum) -> Option<&'static CStr> {
     unsafe {
         let s = gl::GetString(variant);
