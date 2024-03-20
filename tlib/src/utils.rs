@@ -1,6 +1,11 @@
 #![allow(dead_code)]
-use std::{error::Error, sync::Mutex, time::{Duration, SystemTime}};
+use chrono::{DateTime, Local};
 use crate::global::From;
+use std::{
+    error::Error,
+    sync::Mutex,
+    time::{Duration, SystemTime},
+};
 
 const LONG_BIT: u32 = 64;
 const UNIQUE_ID_BITS: u32 = 2;
@@ -105,35 +110,51 @@ impl From<u128> for u16 {
 }
 
 /// Get the timestamp since unix epoch.
-pub struct Timestamp(Duration);
+pub struct Timestamp(SystemTime);
 
 impl Timestamp {
     #[inline]
     pub fn now() -> Self {
         Self(
             SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
         )
     }
 
     #[inline]
     pub fn as_millis<T: From<u128>>(&self) -> T {
-        T::from(self.0.as_millis())
+        T::from(self.duration().as_millis())
     }
 
     #[inline]
     pub fn as_micros<T: From<u128>>(&self) -> T {
-        T::from(self.0.as_micros())
+        T::from(self.duration().as_micros())
     }
 
     #[inline]
     pub fn as_u16(&self) -> u16 {
-        let mut ts = (self.0.as_millis() % 65536) as u16;
+        let mut ts = (self.duration().as_millis() % 65536) as u16;
         if ts == u16::MAX {
             ts += 1;
         }
         ts
+    }
+
+    /// Default format: "%Y-%m-%d %H:%M:%S"
+    /// 
+    /// See the [`chrono::format::strftime`] module for the whole supported escape sequences.
+    #[inline]
+    pub fn format_string<'a>(&self, format: Option<&'a str>) -> String {
+        let format = format.or(Some("%Y-%m-%d %H:%M:%S")).unwrap();
+
+        let date_time: DateTime<Local> = self.0.into();
+        date_time.format(format).to_string()
+    }
+}
+
+impl Timestamp {
+    #[inline]
+    fn duration(&self) -> Duration {
+        self.0.duration_since(SystemTime::UNIX_EPOCH).unwrap()
     }
 }
 
@@ -167,5 +188,11 @@ mod tests {
         for h in vec {
             h.join().unwrap();
         }
+    }
+
+    #[test]
+    fn test_timestamp_format_string() {
+        let timestamp = Timestamp::now();
+        println!("{}", timestamp.format_string(None));
     }
 }
