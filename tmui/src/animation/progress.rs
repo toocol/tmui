@@ -1,15 +1,12 @@
 use std::ops::{Add, Div, Mul, Sub};
-use tlib::{
-    figure::{Color, FPoint, FRect, Point, Rect},
-    global::CreateBy,
-};
+use tlib::figure::{Color, FPoint, FRect, Point, Rect};
 
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub(crate) struct Progress(pub(crate) f32);
 
-impl CreateBy<f32> for Progress {
+impl From<f32> for Progress {
     #[inline]
-    fn create_by(t: f32) -> Self {
+    fn from(t: f32) -> Self {
         Self(t)
     }
 }

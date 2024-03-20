@@ -9,7 +9,7 @@ use crate::application_window::ApplicationWindow;
 
 use self::{inner::AnimationsHolder, progress::Progress};
 use std::{ptr::NonNull, time::Duration};
-use tlib::{figure::Rect, prelude::*, reflect_trait, utils::TimeStamp};
+use tlib::{figure::Rect, prelude::*, reflect_trait, utils::Timestamp};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Animation {
@@ -142,7 +142,7 @@ impl AnimationModel {
 
         self.win_id = win_id;
         self.animation_holder = Some(holder);
-        self.start_time = TimeStamp::timestamp();
+        self.start_time = Timestamp::now().as_millis();
         self.end_time = self.start_time + self.duration.as_millis() as u64;
         self.state = AnimationState::Playing;
         self.progress = Progress(0.);

@@ -1,4 +1,4 @@
-use tlib::{global::same_second, utils::TimeStamp};
+use tlib::{global::same_second, utils::Timestamp};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Frame {
@@ -22,7 +22,7 @@ impl Frame {
 
     #[inline]
     pub(crate) fn next(&self) -> Frame {
-        let now = TimeStamp::timestamp();
+        let now = Timestamp::now().as_millis();
         let (id, nth) = if same_second(now, self.timestamp) {
             (self.id, self.nth + 1)
         } else {

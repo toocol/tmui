@@ -2,8 +2,11 @@ use std::{
     env,
     time::{Duration, Instant},
 };
-use tipc::mem::{mem_queue::{MemQueue, MemQueueBuilder}, BuildType};
-use tlib::utils::TimeStamp;
+use tipc::mem::{
+    mem_queue::{MemQueue, MemQueueBuilder},
+    BuildType,
+};
+use tlib::utils::Timestamp;
 
 const SIZE: usize = 10000;
 const TEXT_SIZE: usize = 4096;
@@ -90,11 +93,11 @@ fn slave() {
             let bytes = TEXT.as_bytes();
             let mut data = [b'\0'; TEXT_SIZE];
             data[0..bytes.len()].copy_from_slice(bytes);
-            if let Ok(_) = queue.try_write(Event::Foo(cnt, data, TimeStamp::timestamp_micros())) {
+            if let Ok(_) = queue.try_write(Event::Foo(cnt, data, Timestamp::now().as_micros())) {
                 cnt += 1;
             }
         } else {
-            if let Ok(_) = queue.try_write(Event::Bar(true, TimeStamp::timestamp_micros())) {
+            if let Ok(_) = queue.try_write(Event::Bar(true, Timestamp::now().as_micros())) {
                 cnt += 1;
             }
         }
