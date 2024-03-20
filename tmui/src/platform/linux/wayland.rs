@@ -8,7 +8,7 @@ use crate::{
 };
 use std::{cell::Cell, sync::Arc};
 use tipc::{ipc_master::IpcMaster, WithIpcMaster};
-use tlib::winit::{raw_window_handle::RawWindowHandle, event_loop::{EventLoopWindowTarget, EventLoopProxy}};
+use tlib::winit::event_loop::{EventLoopWindowTarget, EventLoopProxy};
 
 pub(crate) struct PlatformWayland<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send>
 {
@@ -43,7 +43,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 {
     fn create_window(&self, 
         win_config: WindowConfig,
-        parent: Option<RawWindowHandle>,
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
