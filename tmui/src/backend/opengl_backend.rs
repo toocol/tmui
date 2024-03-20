@@ -3,29 +3,21 @@ use glutin::{
     config::{Config, GlConfig},
     display::{GetGlDisplay, GlDisplay},
 };
-use std::{
-    ffi::CString,
-    io::Write,
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
-    },
-};
+use std::{ffi::CString, sync::Arc};
 use tipc::parking_lot::RwLock;
 use tlib::{
-    async_do, global::SemanticExt, skia_safe::{
+    global::SemanticExt,
+    skia_safe::{
         gpu::{
             gl::{Format, FramebufferInfo},
             BackendRenderTarget, DirectContext, SurfaceOrigin,
         },
         ColorType, ImageInfo,
-    }
+    },
 };
 
 use super::{create_image_info, Backend, BackendType};
 use crate::{primitive::bitmap::Bitmap, skia_safe::Surface};
-
-static COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// Backend for OpenGL,
 /// Support cross platform GPU acceleration.
@@ -102,7 +94,7 @@ impl Backend for OpenGLBackend {
         let dimensitions = (guard.width() as i32, guard.height() as i32);
 
         self.image_info = create_image_info(dimensitions);
-        
+
         // Create Skia Surface
         let mut new_surface = create_gl_surface(
             &mut self.context,
@@ -113,21 +105,25 @@ impl Backend for OpenGLBackend {
             dimensitions.1,
         );
 
-        // let snapshot = self.surface.image_snapshot();
+        let snapshot = self.surface.image_snapshot();
+
+        // use std::io::Write;
+        // use std::sync::atomic::AtomicUsize;
+        // static COUNTER: AtomicUsize = AtomicUsize::new(0);
         // let data = snapshot
         //     .encode_to_data(tlib::skia_safe::EncodedImageFormat::PNG)
         //     .unwrap();
-        // async_do!(move {
+        // tlib::async_do!(move {
         //     let mut file = std::fs::File::create(format!(
         //         "snapshot-{}.png",
-        //         COUNTER.fetch_add(1, Ordering::Release)
+        //         COUNTER.fetch_add(1, std::sync::atomic::Ordering::Release)
         //     ))
         //     .unwrap();
         //     file.write_all(data.as_bytes()).unwrap();
         //     ()
         // });
 
-        // new_surface.canvas().draw_image(snapshot, (0, 0), None);
+        new_surface.canvas().draw_image(snapshot, (0, 0), None);
 
         self.surface = new_surface;
     }

@@ -1,10 +1,7 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{
-    backend::Backend,
-    opti::tracker::Tracker,
-    primitive::bitmap::Bitmap,
-    shared_widget::ReflectSharedWidgetImpl,
-    skia_safe::Surface,
+    backend::Backend, opti::tracker::Tracker, primitive::bitmap::Bitmap,
+    shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -134,8 +131,6 @@ impl Board {
                         update = true;
                     }
                 }
-
-                std::thread::sleep(std::time::Duration::from_millis(16));
 
                 self.surface().flush_and_submit();
 

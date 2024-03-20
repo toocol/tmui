@@ -65,7 +65,7 @@ impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
 
-        // self.set_rerender_difference(true)
+        self.set_rerender_difference(true)
     }
 
     fn initialize(&mut self) {
