@@ -7,12 +7,13 @@ use super::{
     PlatformContext, PlatformType,
 };
 use crate::{
+    backend::BackendType,
     primitive::Message,
     runtime::window_context::{
         InputReceiver, InputSender, LogicWindowContext, OutputReceiver, PhysicalWindowContext,
     },
-    window::win_config::{self, WindowConfig},
-    winit::event_loop::EventLoopBuilder, backend::BackendType,
+    window::win_config::WindowConfig,
+    winit::event_loop::EventLoopBuilder,
 };
 use crate::{
     primitive::{
@@ -21,12 +22,13 @@ use crate::{
     },
     runtime::window_context::OutputSender,
 };
-use std::{sync::{mpsc::channel, Arc}, cell::Cell};
-use tipc::{ipc_master::IpcMaster, WithIpcMaster, parking_lot::RwLock};
-use tlib::winit::{
-    event_loop::{EventLoopProxy, EventLoopWindowTarget},
-    raw_window_handle::{HasWindowHandle, RawWindowHandle},
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use std::{
+    cell::Cell,
+    sync::{mpsc::channel, Arc},
 };
+use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
+use tlib::winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use windows::Win32::Foundation::HWND;
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
@@ -62,7 +64,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
     fn create_window(
         &self,
         win_config: WindowConfig,
-        parent: Option<RawWindowHandle>,
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
@@ -74,25 +75,29 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         };
 
         let (width, height) = win_config.size();
-        let bitmap = Arc::new(RwLock::new(Bitmap::new(width, height, inner_agent)));
+        let bitmap = Arc::new(RwLock::new(if self.backend_type == BackendType::OpenGL {
+            Bitmap::empty(width, height)
+        } else {
+            Bitmap::new(width, height, inner_agent)
+        }));
 
-        let (window, event_loop) = if let Some(target) = target {
-            let window = win_config::build_window(win_config, target, parent).unwrap();
+        let (window, event_loop, gl_env) = if let Some(target) = target {
+            let (window, gl_env) = super::make_window(win_config, target, self.backend_type);
 
-            (window, None)
+            (window, None, gl_env)
         } else {
             let event_loop = EventLoopBuilder::<Message>::with_user_event()
                 .build()
                 .unwrap();
-            let window = win_config::build_window(win_config, &event_loop, parent).unwrap();
+            let (window, gl_env) = super::make_window(win_config, &event_loop, self.backend_type);
 
-            (window, Some(event_loop))
+            (window, Some(event_loop), gl_env)
         };
 
         let window_id = window.id();
-        let window_handle = window.window_handle().unwrap().as_raw();
+        let window_handle = window.raw_window_handle();
         let hwnd = match window_handle {
-            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd.into()),
+            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd as isize),
             _ => unreachable!(),
         };
         let event_loop_proxy = if let Some(proxy) = proxy {
@@ -121,7 +126,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
                 window_id,
-                window_handle,
+                gl_env.clone(),
                 bitmap.clone(),
                 self.master.clone(),
                 shared_channel,
@@ -135,6 +140,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 window,
                 hwnd,
                 bitmap,
+                gl_env,
                 self.master.clone(),
                 PhysicalWindowContext(
                     OutputReceiver::EventLoop(event_loop),

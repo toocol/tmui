@@ -7,7 +7,6 @@ use tlib::{
         dpi::PhysicalSize,
         error::OsError,
         event_loop::EventLoopWindowTarget,
-        raw_window_handle::RawWindowHandle,
         window::{Window, WindowBuilder, WindowButtons},
     },
 };
@@ -17,9 +16,8 @@ type WinitSize = tlib::winit::dpi::Size;
 pub(crate) fn build_window(
     win_config: WindowConfig,
     target: &EventLoopWindowTarget<Message>,
-    parent: Option<RawWindowHandle>,
 ) -> Result<Window, OsError> {
-    win_config.to_window_builder(parent).build(target)
+    win_config.to_window_builder().build(target)
 }
 
 #[derive(Debug, Clone)]
@@ -144,7 +142,7 @@ impl WindowConfig {
         self.active
     }
 
-    pub(crate) fn to_window_builder(self, parent: Option<RawWindowHandle>) -> WindowBuilder {
+    pub(crate) fn to_window_builder(self) -> WindowBuilder {
         let (width, height) = self.size();
 
         let mut window_bld = WindowBuilder::new()
@@ -158,8 +156,6 @@ impl WindowConfig {
             .with_maximized(self.maximized)
             .with_active(self.active)
             .with_enabled_buttons(self.enable_buttons);
-
-        unsafe { window_bld = window_bld.with_parent_window(parent) };
 
         if let Some(max_size) = self.max_size {
             window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(

@@ -28,7 +28,7 @@ use tlib::{
     figure::{Color, Size},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
-    winit::{raw_window_handle::RawWindowHandle, window::WindowId},
+    winit::window::WindowId,
 };
 
 thread_local! {
@@ -39,7 +39,6 @@ thread_local! {
 #[extends(Widget)]
 pub struct ApplicationWindow {
     winit_id: Option<WindowId>,
-    raw_window_handle: Option<RawWindowHandle>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
     shared_widget_size_changed: bool,
@@ -200,11 +199,6 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn set_raw_window_handle(&mut self, raw_window_handle: RawWindowHandle) {
-        self.raw_window_handle = Some(raw_window_handle)
-    }
-
-    #[inline]
     pub(crate) fn winit_id(&self) -> Option<WindowId> {
         self.winit_id
     }
@@ -290,16 +284,7 @@ impl ApplicationWindow {
             return;
         }
 
-        let mut window = window_bld.build();
-        if window.is_child_window() {
-            window.set_parent(
-                self.raw_window_handle.expect(
-                    "Can not create child window on slave side of shared memory application.",
-                ),
-            );
-        }
-
-        self.send_message(Message::CreateWindow(window));
+        self.send_message(Message::CreateWindow(window_bld.build()));
     }
 
     #[inline]

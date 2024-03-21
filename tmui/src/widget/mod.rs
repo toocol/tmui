@@ -447,7 +447,9 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         // Clip difference the children region:
         painter.save();
-        painter.clip_region_global(self.child_region(), ClipOp::Difference);
+        if self.id() != self.window_id() {
+            painter.clip_region_global(self.child_region(), ClipOp::Difference);
+        }
         if let Some(parent) = self.get_parent_ref() {
             if let Some(_) = cast!(parent as ContainerImpl) {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);

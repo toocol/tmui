@@ -25,7 +25,7 @@ const DATA_SIZE: i32 = 500000;
 pub struct TreeViewHolder {
     #[child]
     tree_view: Box<TreeView>,
-    // task: Option<Box<AsyncTLOADING_COLOR,
+    // task: Option<Box<AsyncTask>>,
 }
 
 impl ObjectSubclass for TreeViewHolder {

@@ -432,7 +432,6 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                         let (mut logic_window, physical_window) =
                             self.platform_context.create_window(
                                 win.take_config(),
-                                win.parent(),
                                 Some(target),
                                 Some(self.proxy()),
                             );

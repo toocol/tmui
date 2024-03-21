@@ -1,10 +1,7 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{
-    backend::{Backend, BackendType},
-    opti::tracker::Tracker,
-    primitive::bitmap::Bitmap,
-    shared_widget::ReflectSharedWidgetImpl,
-    skia_safe::Surface,
+    backend::Backend, opti::tracker::Tracker, primitive::bitmap::Bitmap,
+    shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -75,7 +72,7 @@ impl Board {
 
     #[inline]
     pub(crate) fn resize(&mut self) {
-        self.surface().flush_submit_and_sync_cpu();
+        self.surface().flush_and_submit();
         self.backend.resize(self.bitmap.clone());
 
         self.surface = RefCell::new(self.backend.surface());
@@ -135,16 +132,7 @@ impl Board {
                     }
                 }
 
-                if self.backend.ty() == BackendType::OpenGL {
-                    let row_bytes = bitmap_guard.row_bytes();
-                    let pixels = bitmap_guard.get_pixels_mut();
-                    self.surface().read_pixels(
-                        self.backend.image_info(),
-                        pixels,
-                        row_bytes,
-                        (0, 0),
-                    );
-                }
+                self.surface().flush_and_submit();
 
                 bitmap_guard.prepared();
 

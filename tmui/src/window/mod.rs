@@ -7,16 +7,13 @@ use std::{
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
-use tlib::winit::raw_window_handle::RawWindowHandle;
 
 static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 pub struct Window {
     index: usize,
-    parent: Option<RawWindowHandle>,
     win_cfg: Option<WindowConfig>,
     on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-    child_window: bool,
 }
 
 unsafe impl Send for Window {}
@@ -27,7 +24,6 @@ impl Debug for Window {
             .field("index", &self.index)
             .field("win_cfg", &self.win_cfg)
             .field("on_activate", &self.on_activate.is_some())
-            .field("child_window", &self.child_window)
             .finish()
     }
 }
@@ -37,10 +33,8 @@ impl Window {
     pub(crate) fn new() -> Self {
         Self {
             index: WINDOW_COUNTER.fetch_add(1, Ordering::Acquire),
-            parent: None,
             win_cfg: None,
             on_activate: None,
-            child_window: false,
         }
     }
 }
@@ -64,22 +58,7 @@ impl Window {
     }
 
     #[inline]
-    pub(crate) fn set_parent(&mut self, handle: RawWindowHandle) {
-        self.parent = Some(handle)
-    }
-
-    #[inline]
     pub fn index(&self) -> usize {
         self.index
-    }
-
-    #[inline]
-    pub fn parent(&self) -> Option<RawWindowHandle> {
-        self.parent
-    }
-
-    #[inline]
-    pub fn is_child_window(&self) -> bool {
-        self.child_window
     }
 }

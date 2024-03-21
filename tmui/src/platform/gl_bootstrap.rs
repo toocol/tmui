@@ -1,27 +1,35 @@
-
 use crate::primitive::Message;
 use glutin::{
-    config::{ConfigTemplateBuilder, GlConfig, Config},
-    context::{ContextApi, ContextAttributesBuilder, Version, NotCurrentContext},
+    config::{Config, ConfigTemplateBuilder, GlConfig},
+    context::{
+        ContextApi, ContextAttributesBuilder, NotCurrentContext, NotCurrentGlContext,
+        PossiblyCurrentContext, PossiblyCurrentGlContext, Version,
+    },
     display::{GetGlDisplay, GlDisplay},
+    surface::{GlSurface, Surface, WindowSurface},
 };
-use glutin_winit::DisplayBuilder;
-use std::error::Error;
+use glutin_winit::{DisplayBuilder, GlWindow};
+use log::info;
+use raw_window_handle::HasRawWindowHandle;
+use std::{
+    error::Error,
+    ffi::{CStr, CString},
+    num::NonZeroU32,
+    sync::{Arc, Once},
+};
+use tipc::parking_lot::RwLock;
 use tlib::{
     typedef::WinitWindow,
-    winit::{
-        event_loop::EventLoopWindowTarget, raw_window_handle::HasWindowHandle,
-        window::WindowBuilder,
-    },
+    winit::{event_loop::EventLoopWindowTarget, window::WindowBuilder},
 };
 
 pub(crate) fn bootstrap_gl_window(
     target: &EventLoopWindowTarget<Message>,
     win_builder: WindowBuilder,
-) -> Result<(WinitWindow, Config, Option<NotCurrentContext>), Box<dyn Error>> {
+) -> Result<(WinitWindow, Arc<GlEnv>), Box<dyn Error>> {
     let template = ConfigTemplateBuilder::new()
         .with_alpha_size(8)
-        .with_transparency(cfg!(cgl_backend));
+        .with_transparency(win_builder.transparent());
 
     let display_builder = DisplayBuilder::new().with_window_builder(Some(win_builder));
     let (window, gl_config) = display_builder.build(target, template, |configs| {
@@ -40,48 +48,173 @@ pub(crate) fn bootstrap_gl_window(
             })
             .unwrap()
     })?;
+    let window = window.expect("gl_bootstrap create window failed.");
 
-    let raw_window_handle = window
-        .as_ref()
-        .map(|window| window.window_handle().unwrap().as_raw());
+    let raw_window_handle = Some(window.raw_window_handle());
 
     // XXX The display could be obtained from any object created by it, so we can
     // query it from the config.
     let gl_display = gl_config.display();
 
-    // TODO: Waiting `glutin` to bump `raw-window-handle` version to `0.6.0`
-    // https://github.com/rust-windowing/glutin/pull/1582#issuecomment-1896218932
-
     // The context creation part. It can be created before surface and that's how
     // it's expected in multithreaded + multiwindow operation mode, since you
     // can send NotCurrentContext, but not Surface.
-    // let context_attributes = ContextAttributesBuilder::new().build(raw_window_handle);
+    let context_attributes = ContextAttributesBuilder::new().build(raw_window_handle);
 
     // Since glutin by default tries to create OpenGL core context, which may not be
     // present we should try gles.
-    // let fallback_context_attributes = ContextAttributesBuilder::new()
-    //     .with_context_api(ContextApi::Gles(None))
-    //     .build(raw_window_handle);
+    let fallback_context_attributes = ContextAttributesBuilder::new()
+        .with_context_api(ContextApi::Gles(None))
+        .build(raw_window_handle);
 
     // There are also some old devices that support neither modern OpenGL nor GLES.
     // To support these we can try and create a 2.1 context.
-    // let legacy_context_attributes = ContextAttributesBuilder::new()
-    //     .with_context_api(ContextApi::OpenGl(Some(Version::new(2, 1))))
-    //     .build(raw_window_handle);
+    let legacy_context_attributes = ContextAttributesBuilder::new()
+        .with_context_api(ContextApi::OpenGl(Some(Version::new(2, 1))))
+        .build(raw_window_handle);
 
-    // let mut not_current_gl_context = Some(unsafe {
-    //     gl_display
-    //         .create_context(&gl_config, &context_attributes)
-    //         .unwrap_or_else(|_| {
-    //             gl_display
-    //                 .create_context(&gl_config, &fallback_context_attributes)
-    //                 .unwrap_or_else(|_| {
-    //                     gl_display
-    //                         .create_context(&gl_config, &legacy_context_attributes)
-    //                         .expect("failed to create context")
-    //                 })
-    //         })
-    // });
+    let not_current_gl_context = unsafe {
+        gl_display
+            .create_context(&gl_config, &context_attributes)
+            .unwrap_or_else(|_| {
+                gl_display
+                    .create_context(&gl_config, &fallback_context_attributes)
+                    .unwrap_or_else(|_| {
+                        gl_display
+                            .create_context(&gl_config, &legacy_context_attributes)
+                            .expect("failed to create context")
+                    })
+            })
+    };
 
-    todo!()
+    // Create window surface.
+    let attrs = window.build_surface_attributes(Default::default());
+    let gl_surface = unsafe {
+        gl_display
+            .create_window_surface(&gl_config, &attrs)
+            .unwrap()
+    };
+
+    Ok((
+        window,
+        Arc::new(GlEnv(
+            gl_config,
+            RwLock::new(GlCtx::new(not_current_gl_context)),
+            gl_surface,
+        )),
+    ))
+}
+
+pub(crate) struct GlEnv(Config, RwLock<GlCtx>, Surface<WindowSurface>);
+static ONCE: Once = Once::new();
+
+impl GlEnv {
+    #[inline]
+    pub(crate) fn config(&self) -> &Config {
+        &self.0
+    }
+
+    #[inline]
+    pub(crate) fn make_current(&self) {
+        self.1.write().make_current(&self.2)
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub(crate) fn make_not_current(&self) {
+        self.1.write().make_not_current()
+    }
+
+    #[inline]
+    pub(crate) fn load(&self) {
+        ONCE.call_once(|| {
+            gl::load_with(|symbol| {
+                let symbol = CString::new(symbol).unwrap();
+                self.config()
+                    .display()
+                    .get_proc_address(symbol.as_c_str())
+                    .cast()
+            });
+
+            if let Some(renderer) = get_gl_string(gl::RENDERER) {
+                info!("Running on {}", renderer.to_string_lossy());
+            }
+
+            if let Some(version) = get_gl_string(gl::VERSION) {
+                info!("OpenGL Version {}", version.to_string_lossy());
+            }
+
+            if let Some(shaders_version) = get_gl_string(gl::SHADING_LANGUAGE_VERSION) {
+                info!("Shaders version on {}", shaders_version.to_string_lossy());
+            }
+        })
+    }
+
+    #[inline]
+    pub(crate) fn swap_buffers(&self) {
+        if let Some(ctx) = self.1.read().possibly_current_ctx() {
+            self.2.swap_buffers(ctx).expect("gl swap buffers failed.")
+        }
+    }
+
+    #[inline]
+    pub(crate) fn resize(&self, width: u32, height: u32) {
+        if let Some(ctx) = self.1.read().possibly_current_ctx() {
+            self.2.resize(
+                ctx,
+                NonZeroU32::new(width.max(1)).unwrap(),
+                NonZeroU32::new(height.max(1)).unwrap(),
+            );
+        }
+    }
+}
+
+struct GlCtx {
+    not_current_ctx: Option<NotCurrentContext>,
+    possibly_current_ctx: Option<PossiblyCurrentContext>,
+}
+impl GlCtx {
+    #[inline]
+    fn new(not_current_ctx: NotCurrentContext) -> Self {
+        Self {
+            not_current_ctx: Some(not_current_ctx),
+            possibly_current_ctx: None,
+        }
+    }
+
+    #[inline]
+    fn possibly_current_ctx(&self) -> Option<&PossiblyCurrentContext> {
+        self.possibly_current_ctx.as_ref()
+    }
+
+    #[inline]
+    fn make_current(&mut self, gl_surface: &Surface<WindowSurface>) {
+        if let Some(not_current_ctx) = self.not_current_ctx.take() {
+            self.possibly_current_ctx = Some(
+                not_current_ctx
+                    .make_current(gl_surface)
+                    .expect("Make current context failed."),
+            );
+        }
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    fn make_not_current(&mut self) {
+        if let Some(possibly_current_ctx) = self.possibly_current_ctx.take() {
+            self.not_current_ctx = Some(
+                possibly_current_ctx
+                    .make_not_current()
+                    .expect("Make current context failed."),
+            );
+        }
+    }
+}
+
+#[inline]
+pub(crate) fn get_gl_string(variant: gl::types::GLenum) -> Option<&'static CStr> {
+    unsafe {
+        let s = gl::GetString(variant);
+        (!s.is_null()).then(|| CStr::from_ptr(s.cast()))
+    }
 }

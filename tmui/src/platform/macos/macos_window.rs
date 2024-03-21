@@ -1,7 +1,6 @@
 #![cfg(target_os = "macos")]
 use crate::{
-    primitive::{bitmap::Bitmap, Message},
-    runtime::window_context::{OutputReceiver, PhysicalWindowContext},
+    platform::gl_bootstrap::GlEnv, primitive::{bitmap::Bitmap, Message}, runtime::window_context::{OutputReceiver, PhysicalWindowContext}
 };
 use cocoa::{
     appkit::{NSEvent, NSImage, NSImageView, NSView, NSWindow},
@@ -33,6 +32,8 @@ pub(crate) struct MacosWindow<T: 'static + Copy + Send + Sync, M: 'static + Copy
 
     bitmap: Arc<RwLock<Bitmap>>,
 
+    gl_env: Option<Arc<GlEnv>>,
+
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     pub context: PhysicalWindowContext,
     pub user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -45,6 +46,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWind
         winit_window: WinitWindow,
         ns_view: id,
         bitmap: Arc<RwLock<Bitmap>>,
+        gl_env: Option<Arc<GlEnv>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         context: PhysicalWindowContext,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -56,10 +58,16 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWind
             ns_image_view: None,
             color_space: unsafe { CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap() },
             bitmap,
+            gl_env,
             master,
             context,
             user_ipc_event_sender,
         }
+    }
+
+    #[inline]
+    pub fn is_gl_backend(&self) -> bool {
+        self.gl_env.is_some()
     }
 
     #[inline]
@@ -107,6 +115,10 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWind
     }
 
     pub fn redraw(&mut self) {
+        if self.is_gl_backend() {
+            return;
+        }
+
         let bitmap_guard = self.bitmap.read();
         if !bitmap_guard.is_prepared() {
             return;

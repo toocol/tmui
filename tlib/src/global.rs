@@ -234,8 +234,8 @@ pub trait SemanticExt: Sized {
 }
 impl<T: Sized> SemanticExt for T {}
 
-pub trait CreateBy<T> {
-    fn create_by(t: T) -> Self;
+pub trait From<T> {
+    fn from(t: T) -> Self;
 }
 
 #[cfg(test)]

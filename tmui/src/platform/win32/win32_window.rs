@@ -1,14 +1,15 @@
 #![cfg(windows_platform)]
 use crate::{
+    platform::gl_bootstrap::GlEnv,
     primitive::{bitmap::Bitmap, Message},
     runtime::window_context::{OutputReceiver, PhysicalWindowContext},
 };
+use log::error;
 use std::{
     ffi::c_void,
     mem::size_of,
     sync::{mpsc::Sender, Arc},
 };
-use log::error;
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock};
 use tlib::{
     typedef::WinitWindow,
@@ -23,6 +24,8 @@ pub(crate) struct Win32Window<T: 'static + Copy + Send + Sync, M: 'static + Copy
     hwnd: HWND,
     bitmap: Arc<RwLock<Bitmap>>,
 
+    gl_env: Option<Arc<GlEnv>>,
+
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     pub context: PhysicalWindowContext,
     pub user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -35,6 +38,7 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
         winit_window: WinitWindow,
         hwnd: HWND,
         bitmap: Arc<RwLock<Bitmap>>,
+        gl_env: Option<Arc<GlEnv>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         context: PhysicalWindowContext,
         user_ipc_event_sender: Option<Sender<Vec<T>>>,
@@ -44,10 +48,16 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
             winit_window: Some(winit_window),
             hwnd,
             bitmap,
+            gl_env,
             master,
             context: context,
             user_ipc_event_sender,
         }
+    }
+
+    #[inline]
+    pub fn is_gl_backend(&self) -> bool {
+        self.gl_env.is_some()
     }
 
     #[inline]
@@ -97,6 +107,10 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
 
     /// Redraw the window.
     pub fn redraw(&self) {
+        if self.is_gl_backend() {
+            return;
+        }
+
         let bitmap_guard = self.bitmap.read();
         if !bitmap_guard.is_prepared() {
             return;

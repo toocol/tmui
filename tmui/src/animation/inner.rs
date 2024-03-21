@@ -5,7 +5,6 @@ use std::{
 };
 use tlib::{
     figure::Rect,
-    global::CreateBy,
     nonnull_mut,
 };
 
@@ -34,7 +33,7 @@ impl InnerAnimations {
             + Sub<P, Output = P>
             + Mul<P, Output = P>
             + Div<P, Output = P>
-            + CreateBy<f32>
+            + From<f32>
             + Copy,
     >(
         &self,
@@ -45,12 +44,12 @@ impl InnerAnimations {
         match self {
             Self::Linear => start + t * (end - start),
             Self::EaseIn => {
-                let ft = t * t * (P::create_by(3.) + P::create_by(2.) * t);
+                let ft = t * t * (P::from(3.) + P::from(2.) * t);
                 start + ft * (end - start)
             }
             Self::EaseOut => {
-                let tp = P::create_by(1.) - t;
-                let ft = P::create_by(1.) - tp * tp * tp;
+                let tp = P::from(1.) - t;
+                let ft = P::from(1.) - tp * tp * tp;
                 start + ft * (end - start)
             }
         }

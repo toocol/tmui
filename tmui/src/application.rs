@@ -98,7 +98,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             self.win_config.borrow_mut().take().unwrap(),
             None,
             None,
-            None,
         );
 
         // Get the customize event handle functions.
