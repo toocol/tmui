@@ -51,6 +51,10 @@ name = "image_draw"
 path = "image_draw/main.rs"
 
 [[bin]]
+name = "input_element"
+path = "input_element/main.rs"
+
+[[bin]]
 name = "key_event"
 path = "key_event/main.rs"
 

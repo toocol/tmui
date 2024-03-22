@@ -1,7 +1,7 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Meta, MetaList, MetaNameValue, NestedMeta};
-use crate::{SplitGenericsRef};
+use crate::SplitGenericsRef;
 
 static POSITION_BASED_ANIMATIONS: [&'static str; 3] = ["Linear", "EaseIn", "EaseOut"];
 

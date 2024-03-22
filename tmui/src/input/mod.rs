@@ -1,12 +1,14 @@
 pub mod checkbox;
+pub mod ctrl;
 pub mod date;
 pub mod password;
 pub mod radio;
 pub mod text;
 
-use std::cell::RefCell;
+use std::cell::{Cell, Ref, RefCell};
 
-use tlib::prelude::*;
+use log::warn;
+use tlib::object::ObjectId;
 
 #[derive(Debug, Clone, Copy, Hash)]
 pub enum InputType {
@@ -17,68 +19,132 @@ pub enum InputType {
     Date,
 }
 
-#[reflect_trait]
+/// All the input widget should implement this trait.
+/// Provide some common function related to input.
 pub trait Input {
+    /// The associated type of the input value.
+    type Value: InputBounds;
+
+    /**
+     * Functions need to be rewritten.
+     */
     /// Get the type of input widget.
     fn input_type(&self) -> InputType;
 
+    /// Get the immutable reference of input wrapper.
+    fn input_wrapper(&self) -> &InputWrapper<Self::Value>;
+
+    /**
+     * Functions have already defined:
+     */
     /// Disable the input widget, make it unable to interact.
-    fn disable(&mut self);
+    #[inline]
+    fn disable(&mut self) {
+        self.input_wrapper().disable()
+    }
 
     /// Enable the input widget, make it able to interact.
-    fn enable(&mut self);
+    #[inline]
+    fn enable(&mut self) {
+        self.input_wrapper().enable()
+    }
 
     /// Whether the widget is enabled or not.
-    fn is_enable(&self) -> bool;
+    #[inline]
+    fn is_enable(&self) -> bool {
+        self.input_wrapper().is_enable()
+    }
 
-    /// The name of input widget.
-    fn input_name(&self) -> &str;
+    /// Get the value of the input widget.
+    #[inline]
+    fn value(&self) -> Self::Value {
+        self.input_wrapper().value()
+    }
+
+    /// Get the reference of the value of the input widget.
+    #[inline]
+    fn value_ref(&self) -> Ref<Self::Value> {
+        self.input_wrapper().value_ref()
+    }
+
+    /// Set the value of the input widget.
+    #[inline]
+    fn set_value(&mut self, val: Self::Value) {
+        self.input_wrapper().set_value(val)
+    }
 }
 
-pub trait InputValueBounds: Clone + Default + 'static {}
-impl<T: Clone + Default + 'static> InputValueBounds for T {}
+pub trait InputBounds: Clone + Default + 'static {}
+impl<T: Clone + Default + 'static> InputBounds for T {}
 
 #[derive(Debug, Default)]
-pub enum InputValueWrapper<T: InputValueBounds> {
-    #[default]
-    None,
-    Init {
-        name: String,
-        value: RefCell<T>,
-    },
+pub struct InputWrapper<T: InputBounds> {
+    id: Cell<ObjectId>,
+    initialized: Cell<bool>,
+    enable: Cell<bool>,
+    value: RefCell<T>,
 }
 
-impl<T: InputValueBounds> InputValueWrapper<T> {
+const INPUT_WRAPPER_UNINITIALIZED: &'static str = "Input wrapper has not initialized.";
+
+impl<T: InputBounds> InputWrapper<T> {
     #[inline]
-    pub fn init(&mut self, name: impl ToString, value: Option<T>) {
-        let value = value.or(Some(T::default())).unwrap();
-        *self = Self::Init {
-            name: name.to_string(),
-            value: RefCell::new(value),
+    fn check_init(&self) {
+        if !self.initialized.get() {
+            panic!("{}", INPUT_WRAPPER_UNINITIALIZED)
         }
+    }
+
+    #[inline]
+    pub fn init(&self, id: ObjectId) {
+        if self.initialized.get() {
+            warn!("Input wrapper can only initialize once.");
+            return;
+        }
+
+        self.id.set(id);
+        self.initialized.set(true);
+        self.enable.set(true);
+    }
+
+    #[inline]
+    pub fn id(&self) -> ObjectId {
+        self.check_init();
+        self.id.get()
     }
 
     #[inline]
     pub fn set_value(&self, val: T) {
-        match self {
-            Self::Init { value, .. } => *value.borrow_mut() = val,
-            _ => panic!("Value wrapper was not initialized."),
-        }
+        self.check_init();
+        *self.value.borrow_mut() = val;
     }
 
     #[inline]
     pub fn value(&self) -> T {
-        match self {
-            Self::Init { value, .. } => value.borrow().clone(),
-            _ => panic!("Value wrapper was not initialized."),
-        }
+        self.check_init();
+        self.value.borrow().clone()
     }
 
     #[inline]
-    pub fn name(&self) -> String {
-        match self {
-            Self::Init { name, .. } => name.clone(),
-            _ => panic!("Value wrapper was not initialized."),
-        }
+    pub fn value_ref(&self) -> Ref<T> {
+        self.value.borrow()
+    }
+
+    #[inline]
+    pub fn enable(&self) {
+        self.check_init();
+        self.enable.set(true);
+    }
+
+    #[inline]
+    pub fn disable(&self) {
+        self.check_init();
+        self.enable.set(false);
+    }
+
+    #[inline]
+    pub fn is_enable(&self) -> bool {
+        self.check_init();
+        self.enable.get()
     }
 }
