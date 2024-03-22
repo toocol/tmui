@@ -1,6 +1,9 @@
 use crate::{
     extend_element, extend_object, extend_widget,
-    scroll_area::generate_scroll_area_inner_init, general_attr::GeneralAttr, pane::{generate_pane_inner_init, generate_pane_type_register},
+    general_attr::GeneralAttr,
+    pane::{generate_pane_inner_init, generate_pane_type_register},
+    scroll_area::generate_scroll_area_inner_init,
+    SplitGenericsRef,
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -20,8 +23,9 @@ pub(crate) fn expand(
     is_pane: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let general_attr = GeneralAttr::parse(ast)?;
+    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -79,13 +83,13 @@ pub(crate) fn expand(
                     }
                     if is_pane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            direction: PaneDirection 
+                            direction: PaneDirection
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            resize_zone: bool 
+                            resize_zone: bool
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            resize_pressed: bool 
+                            resize_pressed: bool
                         })?);
                     }
 
@@ -164,25 +168,32 @@ pub(crate) fn expand(
                 "container",
                 vec!["container", "widget", "element", "object"],
                 true,
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let element_trait_impl_clause = extend_element::gen_element_trait_impl_clause(
                 name,
                 vec!["container", "widget", "element"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
                 name,
                 Some("container"),
                 vec!["container", "widget"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
-            let container_trait_impl_clause = gen_container_trait_impl_clause(name, vec!["container"])?;
+            let container_trait_impl_clause = gen_container_trait_impl_clause(
+                name,
+                vec!["container"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             let mut children_construct_clause = proc_macro2::TokenStream::new();
             if impl_children_construct {
                 children_construct_clause.extend(quote!(
-                    impl ObjectChildrenConstruct for #name {}
+                    impl #impl_generics ObjectChildrenConstruct for #name #ty_generics #where_clause {}
                 ))
             }
 
@@ -258,16 +269,16 @@ pub(crate) fn expand(
 
                 #popupable_impl_clause
 
-                impl ContainerAcquire for #name {}
+                impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
 
-                impl SuperType for #name {
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         Container::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
@@ -298,21 +309,21 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl PointEffective for #name {
+                impl #impl_generics PointEffective for #name #ty_generics #where_clause {
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
                         self.container_point_effective(point)
                     }
                 }
 
-                impl ChildRegionAcquirer for #name {
+                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.children_region()
                     }
                 }
 
-                impl #name {
+                impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
             ))
@@ -324,17 +335,18 @@ pub(crate) fn expand(
     }
 }
 
-pub(crate) fn gen_container_trait_impl_clause(
+pub(crate) fn gen_container_trait_impl_clause<'a>(
     name: &Ident,
     container_path: Vec<&'static str>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let container_path: Vec<_> = container_path 
+    let container_path: Vec<_> = container_path
         .iter()
         .map(|s| Ident::new(s, name.span()))
         .collect();
 
     Ok(quote!(
-        impl ContainerExt for #name {
+        impl #impl_generics ContainerExt for #name #ty_generics #where_clause {
             #[inline]
             fn is_strict_children_layout(&self) -> bool {
                 self.#(#container_path).*.is_strict_children_layout()

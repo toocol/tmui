@@ -2,15 +2,15 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, popupable::Popupable, loadable::Loadable};
+use crate::{animation::Animation, async_task::AsyncTask, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
 
-pub(crate) struct GeneralAttr {
+pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
     pub(crate) run_after_clause: TokenStream,
 
     // fields about `animation`
     pub(crate) is_animation: bool,
-    pub(crate) animation: Option<Animation>,
+    pub(crate) animation: Option<Animation<'a>>,
     pub(crate) animation_clause: TokenStream,
     pub(crate) animation_field: TokenStream,
     pub(crate) animation_reflect: TokenStream,
@@ -37,9 +37,10 @@ pub(crate) struct GeneralAttr {
     pub(crate) loadable_reflect_clause: TokenStream,
 }
 
-impl GeneralAttr {
-    pub(crate) fn parse(ast: &DeriveInput) -> syn::Result<Self> {
+impl<'a> GeneralAttr<'a> {
+    pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
         let name = &ast.ident;
+        let (_, ty_generics, _) = generics;
 
         let mut is_run_after = false;
 
@@ -62,15 +63,15 @@ impl GeneralAttr {
                     "animatable" => {
                         animation = {
                             is_animation = true;
-                            Some(Animation::parse(attr)?)
+                            Some(Animation::parse(attr, generics)?)
                         }
                     }
                     "async_task" => {
                         is_async_task = true;
-                        async_tasks.push(AsyncTask::parse_attr(attr));
+                        async_tasks.push(AsyncTask::parse_attr(attr, generics));
                     }
-                    "popupable" => popupable = Some(Popupable::parse(ast)?),
-                    "loadable" => loadable = Some(Loadable::parse(ast)?),
+                    "popupable" => popupable = Some(Popupable::parse(ast, generics)?),
+                    "loadable" => loadable = Some(Loadable::parse(ast, generics)?),
                     _ => {}
                 }
             }
@@ -130,7 +131,7 @@ impl GeneralAttr {
                 let field = task.field.as_ref().unwrap();
 
                 async_task_fields.push(quote! {
-                    #field: Option<Box<#task_name>>
+                    #field: Option<Box<#task_name #ty_generics>>
                 });
             }
         }

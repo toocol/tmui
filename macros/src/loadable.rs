@@ -2,14 +2,18 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::DeriveInput;
 
-pub(crate) struct Loadable {
+use crate::SplitGenericsRef;
+
+pub(crate) struct Loadable<'a> {
     name: Ident,
+    generics: SplitGenericsRef<'a>,
 }
 
-impl Loadable {
-    pub(crate) fn parse(ast: &DeriveInput) -> syn::Result<Loadable> {
+impl<'a> Loadable<'a> {
+    pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
         Ok(Self {
-            name: ast.ident.clone()
+            name: ast.ident.clone(),
+            generics,
         })
     }
 
@@ -19,17 +23,19 @@ impl Loadable {
 
     pub(crate) fn loadable_reflect(&self) -> TokenStream {
         let name = &self.name;
+        let (_, ty_generics, _) = self.generics;
 
         quote!(
-            type_registry.register::<#name, ReflectLoadable>();
+            type_registry.register::<#name #ty_generics, ReflectLoadable>();
         )
     }
 
     pub(crate) fn loadable_impl(&self) -> TokenStream {
         let name = &self.name;
+        let (impl_generics, ty_generics, where_clause) = self.generics;
 
         quote!(
-            impl Loadable for #name {
+            impl #impl_generics Loadable for #name #ty_generics #where_clause {
                 fn loading_model(&self) -> &LoadingModel {
                     &self.loading_model
                 }

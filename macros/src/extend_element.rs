@@ -1,10 +1,12 @@
-use crate::extend_object;
+use crate::{extend_object, SplitGenericsRef};
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -26,9 +28,14 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 "element",
                 vec!["element", "object"],
                 false,
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
-            let element_trait_impl_clause = gen_element_trait_impl_clause(name, vec!["element"])?;
+            let element_trait_impl_clause = gen_element_trait_impl_clause(
+                name,
+                vec!["element"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             Ok(quote! {
                 #[derive(Derivative)]
@@ -39,19 +46,19 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 #element_trait_impl_clause
 
-                impl ElementAcquire for #name {}
+                impl #impl_generics ElementAcquire for #name #ty_generics #where_clause {}
 
-                impl SuperType for #name {
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         Element::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
-                        type_registry.register::<#name, ReflectElementImpl>();
+                        type_registry.register::<#name #ty_generics, ReflectElementImpl>();
                     }
                 }
             })
@@ -63,9 +70,10 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
     }
 }
 
-pub(crate) fn gen_element_trait_impl_clause(
+pub(crate) fn gen_element_trait_impl_clause<'a>(
     name: &Ident,
     element_path: Vec<&'static str>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let element_path: Vec<_> = element_path
         .iter()
@@ -73,7 +81,7 @@ pub(crate) fn gen_element_trait_impl_clause(
         .collect();
 
     Ok(quote!(
-        impl ElementExt for #name {
+        impl #impl_generics ElementExt for #name #ty_generics #where_clause {
             #[inline]
             fn set_window_id(&mut self, id: ObjectId) {
                 self.#(#element_path).*.set_window_id(id)
@@ -178,6 +186,6 @@ pub(crate) fn gen_element_trait_impl_clause(
             }
         }
 
-        impl IsA<Element> for #name {}
+        impl #impl_generics IsA<Element> for #name #ty_generics #where_clause {}
     ))
 }

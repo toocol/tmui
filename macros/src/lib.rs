@@ -23,13 +23,19 @@ mod split_pane;
 mod stack;
 mod trait_info;
 
+use async_do::AsyncDoParser;
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use async_do::AsyncDoParser;
-use syn::{self, parse_macro_input, DeriveInput};
+use syn::{self, parse_macro_input, DeriveInput, ImplGenerics, TypeGenerics, WhereClause};
 use trait_info::TraitInfo;
+
+pub(crate) type SplitGenericsRef<'a> = (
+    &'a ImplGenerics<'a>,
+    &'a TypeGenerics<'a>,
+    &'a Option<&'a WhereClause>,
+);
 
 /// Let struct to extend specific type.<br>
 /// This macro will implement a large number of traits automatically,
@@ -88,14 +94,17 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false, false, false) {
-            Ok(tkn) => tkn.into(),
-            Err(e) => e.to_compile_error().into(),
-        },
+        "Container" => {
+            match extend_container::expand(&mut ast, true, false, false, false, false, false, false)
+            {
+                Ok(tkn) => tkn.into(),
+                Err(e) => e.to_compile_error().into(),
+            }
+        }
         "Popup" => match extend_popup::expand(&mut ast) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
-        }
+        },
         _ => syn::Error::new_spanned(
             ast,
             format!("`{}` was not supported to extends.", extend_str),
@@ -181,9 +190,9 @@ pub fn async_do(input: TokenStream) -> TokenStream {
 }
 
 /// arguments:
-/// 
+///
 /// `name`: Upper camel case needed, the name of async task struct, same as the async function.
-/// 
+///
 /// `value``: General param of async block's return value
 #[proc_macro_attribute]
 pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -220,7 +229,7 @@ pub fn cast_boxed(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn split_pane_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix  = Ident::new("crate", ident.span());
+    let use_prefix = Ident::new("crate", ident.span());
     match split_pane::generate_split_pane_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
@@ -230,7 +239,7 @@ pub fn split_pane_impl(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn stack_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix  = Ident::new("crate", ident.span());
+    let use_prefix = Ident::new("crate", ident.span());
     match stack::generate_stack_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
@@ -264,17 +273,16 @@ pub fn pane_type_register(input: TokenStream) -> TokenStream {
 }
 
 /// arguments:
-/// 
+///
 /// `ty`: the type([`tmui::animation::Animation`]) of animation.
-/// 
+///
 /// `direction`: the direction([`tmui::animation::Direction`]) of animation.
-/// 
+///
 /// `duration`: the time duration of animation(millis).
 #[proc_macro_attribute]
 pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
-
 
 #[proc_macro_attribute]
 pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {

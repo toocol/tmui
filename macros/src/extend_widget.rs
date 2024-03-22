@@ -1,5 +1,6 @@
 use crate::{
     childable::Childable, extend_element, extend_object, general_attr::GeneralAttr, layout,
+    SplitGenericsRef,
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -7,8 +8,9 @@ use syn::{parse::Parser, DeriveInput, Meta};
 
 pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let general_attr = GeneralAttr::parse(ast)?;
+    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -86,13 +88,21 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 "widget",
                 vec!["widget", "element", "object"],
                 false,
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
-            let element_trait_impl_clause =
-                extend_element::gen_element_trait_impl_clause(name, vec!["widget", "element"])?;
+            let element_trait_impl_clause = extend_element::gen_element_trait_impl_clause(
+                name,
+                vec!["widget", "element"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
-            let widget_trait_impl_clause =
-                gen_widget_trait_impl_clause(name, Some("widget"), vec!["widget"])?;
+            let widget_trait_impl_clause = gen_widget_trait_impl_clause(
+                name,
+                Some("widget"),
+                vec!["widget"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             let child_ref_clause = childable.get_child_ref();
 
@@ -116,19 +126,19 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 #loadable_impl_clause
 
-                impl WidgetAcquire for #name {}
+                impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
-                impl SuperType for #name {
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         Widget::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
-                        type_registry.register::<#name, ReflectWidgetImpl>();
+                        type_registry.register::<#name #ty_generics, ReflectWidgetImpl>();
                         #popupable_reflect_clause
                         #animation_reflect
                         #animation_state_holder_reflect
@@ -146,21 +156,21 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     }
                 }
 
-                impl PointEffective for #name {
+                impl #impl_generics PointEffective for #name #ty_generics #where_clause {
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
                         self.widget.point_effective(point)
                     }
                 }
 
-                impl ChildRegionAcquirer for #name {
+                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.widget.child_region()
                     }
                 }
 
-                impl #name {
+                impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
             })
@@ -181,10 +191,11 @@ pub(crate) fn expand_with_layout(
     layout::expand(ast, layout_meta, layout, internal)
 }
 
-pub(crate) fn gen_widget_trait_impl_clause(
+pub(crate) fn gen_widget_trait_impl_clause<'a>(
     name: &Ident,
     super_field: Option<&'static str>,
     widget_path: Vec<&'static str>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let widget_path: Vec<_> = widget_path
         .iter()
@@ -202,7 +213,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
     };
 
     Ok(quote!(
-        impl WidgetExt for #name {
+        impl #impl_generics WidgetExt for #name #ty_generics #where_clause {
             #[inline]
             fn widget_props(&self) -> &Widget {
                 self.#(#widget_path).*.widget_props()
@@ -884,9 +895,9 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
         }
 
-        impl WidgetImplExt for #name {
+        impl #impl_generics WidgetImplExt for #name #ty_generics #where_clause {
             #[inline]
-            fn child<T: WidgetImpl>(&mut self, mut child: Box<T>) {
+            fn child<_T: WidgetImpl>(&mut self, mut child: Box<_T>) {
                 if self.super_type().is_a(Container::static_type()) {
                     panic!("function `child()` was invalid in `Container`")
                 }
@@ -905,6 +916,6 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
         }
 
-        impl IsA<Widget> for #name {}
+        impl #impl_generics IsA<Widget> for #name #ty_generics #where_clause {}
     ))
 }

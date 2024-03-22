@@ -1,20 +1,22 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Meta, MetaList, MetaNameValue, NestedMeta};
+use crate::{SplitGenericsRef};
 
 static POSITION_BASED_ANIMATIONS: [&'static str; 3] = ["Linear", "EaseIn", "EaseOut"];
 
-pub(crate) struct Animation {
+pub(crate) struct Animation<'a> {
     pub(crate) mode: Option<Ident>,
     pub(crate) ty: Option<Ident>,
     pub(crate) direction: Option<Ident>,
     pub(crate) effect: Option<Ident>,
     pub(crate) duration: Option<i32>,
     attr: Attribute,
+    generics: SplitGenericsRef<'a>,
 }
 
-impl Animation {
-    pub fn parse(attr: &Attribute) -> syn::Result<Self> {
+impl<'a> Animation<'a> {
+    pub fn parse(attr: &Attribute, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
         let mut animation = Self {
             mode: None,
             ty: None,
@@ -22,6 +24,7 @@ impl Animation {
             effect: None,
             duration: None,
             attr: attr.clone(),
+            generics,
         };
 
         if let Ok(meta) = attr.parse_meta() {
@@ -149,8 +152,10 @@ impl Animation {
     }
 
     pub(crate) fn generate_animation(&self, name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+        let (impl_generics, ty_generics, where_clause) = &self.generics;
+
         let clause = quote!(
-            impl Animatable for #name {
+            impl #impl_generics Animatable for #name #ty_generics #where_clause {
                 #[inline]
                 fn set_animation(&mut self, animation: Animation) {
                     self.animation.set_animation(animation)
@@ -172,7 +177,7 @@ impl Animation {
                 }
             }
 
-            impl Snapshot for #name {
+            impl #impl_generics Snapshot for #name #ty_generics #where_clause {
                 #[inline]
                 fn as_snapshot(&self) -> &dyn Snapshot {
                     self
@@ -225,8 +230,9 @@ impl Animation {
     }
 
     pub(crate) fn animation_reflect(&self, name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+        let (_, ty_generics, _) = &self.generics;
         Ok(quote!(
-            type_registry.register::<#name, ReflectSnapshot>();
+            type_registry.register::<#name #ty_generics, ReflectSnapshot>();
         ))
     }
 
@@ -236,12 +242,12 @@ impl Animation {
     ) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
         match self.ty.as_ref() {
             Some(ty) => match ty.to_string().as_str() {
-                "Linear" => rect_holder(name),
-                "EaseIn" => rect_holder(name),
-                "EaseOut" => rect_holder(name),
-                "FadeLinear" => transparency_holder(name),
-                "FadeEaseIn" => transparency_holder(name),
-                "FadeEaseOut" => transparency_holder(name),
+                "Linear" => rect_holder(name, self.generics),
+                "EaseIn" => rect_holder(name, self.generics),
+                "EaseOut" => rect_holder(name, self.generics),
+                "FadeLinear" => transparency_holder(name, self.generics),
+                "FadeEaseIn" => transparency_holder(name, self.generics),
+                "FadeEaseOut" => transparency_holder(name, self.generics),
                 str => Err(syn::Error::new_spanned(
                     self.attr.clone(),
                     format!("Unexpected animation type: {}", str),
@@ -255,13 +261,16 @@ impl Animation {
     }
 }
 
-fn rect_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
+fn rect_holder<'a>(
+    name: &Ident,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     Ok((
         quote!(
             animated_rect: Box<Rect>
         ),
         quote!(
-            impl RectHolder for #name {
+            impl #impl_generics RectHolder for #name #ty_generics #where_clause {
                 #[inline]
                 fn animated_rect(&self) -> Rect {
                     *self.animated_rect.as_ref()
@@ -274,18 +283,21 @@ fn rect_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, TokenStre
             }
         ),
         quote!(
-            type_registry.register::<#name, ReflectRectHolder>();
+            type_registry.register::<#name #ty_generics, ReflectRectHolder>();
         ),
     ))
 }
 
-fn transparency_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
+fn transparency_holder<'a>(
+    name: &Ident,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     Ok((
         quote!(
             animated_transparency: Box<i32>
         ),
         quote!(
-            impl TransparencyHolder for #name {
+            impl #impl_generics TransparencyHolder for #name #ty_generics #where_clause {
                 #[inline]
                 fn animated_transparency(&self) -> i32 {
                     *self.animated_transparency.as_ref()
@@ -298,7 +310,7 @@ fn transparency_holder(name: &Ident) -> syn::Result<(TokenStream, TokenStream, T
             }
         ),
         quote!(
-            type_registry.register::<#name, ReflectTransparencyHolder>();
+            type_registry.register::<#name #ty_generics, ReflectTransparencyHolder>();
         ),
     ))
 }

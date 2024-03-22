@@ -31,6 +31,7 @@ pub mod tree_view;
 pub mod vbox;
 pub mod hbox;
 pub mod image;
+pub mod input;
 
 pub mod skia_safe {
     pub use tlib::skia_safe::*;
