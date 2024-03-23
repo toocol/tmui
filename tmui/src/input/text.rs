@@ -20,15 +20,20 @@ impl ObjectImpl for Text {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.input_wrapper.init(self.id())
+        self.input_wrapper.init(self.id());
+        self.set_mouse_tracking(true);
     }
 }
 
 impl WidgetImpl for Text {
+    #[inline]
+    fn enable_focus(&self) -> bool {
+        true
+    }
+
     fn paint(&mut self, painter: &mut Painter) {
         let val_ref = self.value_ref();
         let val = val_ref.as_str();
-        println!("memory size: {}", std::mem::size_of_val(self));
     }
 }
 

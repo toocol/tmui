@@ -85,13 +85,11 @@ pub struct InputWrapper<T: InputBounds> {
     value: RefCell<T>,
 }
 
-const INPUT_WRAPPER_UNINITIALIZED: &'static str = "Input wrapper has not initialized.";
-
 impl<T: InputBounds> InputWrapper<T> {
     #[inline]
     fn check_init(&self) {
         if !self.initialized.get() {
-            panic!("{}", INPUT_WRAPPER_UNINITIALIZED)
+            panic!("Input wrapper has not initialized.")
         }
     }
 

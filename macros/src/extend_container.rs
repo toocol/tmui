@@ -14,6 +14,7 @@ use syn::{
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
+    ignore_default: bool,
     impl_children_construct: bool,
     has_content_alignment: bool,
     has_size_unified_adjust: bool,
@@ -163,6 +164,15 @@ pub(crate) fn expand(
                 }
             }
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
                 "container",
@@ -248,8 +258,7 @@ pub(crate) fn expand(
             };
 
             Ok(quote!(
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause

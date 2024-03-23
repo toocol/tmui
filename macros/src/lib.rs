@@ -71,7 +71,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Element" => match extend_element::expand(&mut ast) {
+        "Element" => match extend_element::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -81,27 +81,37 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 extend_attr.layout_meta.as_ref().unwrap(),
                 layout,
                 extend_attr.internal,
+                extend_attr.ignore_default,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             },
-            None => match extend_widget::expand(&mut ast) {
+            None => match extend_widget::expand(&mut ast, extend_attr.ignore_default) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "SharedWidget" => match extend_shared_widget::expand(&mut ast, extend_attr.id.as_ref()) {
+        "SharedWidget" => match extend_shared_widget::expand(&mut ast, extend_attr.id.as_ref(), extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
         "Container" => {
-            match extend_container::expand(&mut ast, true, false, false, false, false, false, false)
-            {
+            match extend_container::expand(
+                &mut ast,
+                extend_attr.ignore_default,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+            ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             }
         }
-        "Popup" => match extend_popup::expand(&mut ast) {
+        "Popup" => match extend_popup::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },

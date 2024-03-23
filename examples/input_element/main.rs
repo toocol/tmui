@@ -1,3 +1,6 @@
+mod holder;
+
+use holder::Holder;
 use tmui::{
     prelude::*,
     application::Application,
@@ -19,4 +22,5 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
+    window.child(Holder::new())
 }

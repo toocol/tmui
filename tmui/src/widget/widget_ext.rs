@@ -21,12 +21,12 @@ use tlib::{
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
     /// Get the ref of widget model.
-    /// 
+    ///
     /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
     fn widget_props(&self) -> &Widget;
 
     /// Get the mutable ref of widget model.
-    /// 
+    ///
     /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
     fn widget_props_mut(&mut self) -> &mut Widget;
 
@@ -891,7 +891,16 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_focus(&mut self, focus: bool) {
-        let id = if focus { self.id() } else { 0 };
+        let id = if focus {
+            if self.is_focus() {
+                return
+            }
+
+            self.on_get_focus();
+            self.id()
+        } else {
+            0
+        };
         ApplicationWindow::window_of(self.window_id()).set_focused_widget(id)
     }
 
@@ -922,12 +931,12 @@ impl WidgetExt for Widget {
         let size_hint = self.size_hint();
         if let Some(min_width) = size_hint.min_width() {
             if width < min_width {
-                return
+                return;
             }
         }
-        if let Some(max_width)= size_hint.max_width() {
+        if let Some(max_width) = size_hint.max_width() {
             if width > max_width {
-                return
+                return;
             }
         }
         self.set_property("width", width.to_value());
@@ -943,12 +952,12 @@ impl WidgetExt for Widget {
         let size_hint = self.size_hint();
         if let Some(min_height) = size_hint.min_height() {
             if height < min_height {
-                return
+                return;
             }
         }
-        if let Some(max_height)= size_hint.max_height() {
+        if let Some(max_height) = size_hint.max_height() {
             if height > max_height {
-                return
+                return;
             }
         }
         self.set_property("height", height.to_value());

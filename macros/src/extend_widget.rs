@@ -6,7 +6,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Meta};
 
-pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
@@ -83,6 +83,15 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 }
             }
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
                 "widget",
@@ -107,8 +116,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
             let child_ref_clause = childable.get_child_ref();
 
             Ok(quote! {
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause
@@ -187,8 +195,9 @@ pub(crate) fn expand_with_layout(
     layout_meta: &Meta,
     layout: &str,
     internal: bool,
+    ignore_default: bool
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout, internal)
+    layout::expand(ast, layout_meta, layout, internal, ignore_default)
 }
 
 pub(crate) fn gen_widget_trait_impl_clause<'a>(

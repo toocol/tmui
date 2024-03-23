@@ -7,6 +7,7 @@ use syn::{parse::Parser, DeriveInput, Ident};
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     id: Option<&String>,
+    ignore_default: bool
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -57,6 +58,15 @@ pub(crate) fn expand(
                 }
             }
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
                 "shared_widget",
@@ -85,8 +95,7 @@ pub(crate) fn expand(
             )?;
 
             Ok(quote! {
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause

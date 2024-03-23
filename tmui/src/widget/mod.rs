@@ -881,30 +881,39 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 #[allow(unused_variables)]
 pub trait InnerCustomizeEventProcess {
     /// Invoke when widget's receive mouse pressed event.
+    #[inline]
     fn inner_customize_mouse_pressed(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse released event.
+    #[inline]
     fn inner_customize_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
+    #[inline]
     fn inner_customize_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.
+    #[inline]
     fn inner_customize_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    #[inline]
     fn inner_customize_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    #[inline]
     fn inner_customize_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
+    #[inline]
     fn inner_customize_key_pressed(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive key released event.
+    #[inline]
     fn inner_customize_key_released(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive character event.
+    #[inline]
     fn inner_customize_receive_character(&mut self, event: &ReceiveCharacterEvent) {}
 }
 
@@ -929,14 +938,17 @@ pub trait WidgetImpl:
     + ActionExt
 {
     /// The widget can be focused or not, default value was false.
+    #[inline]
     fn enable_focus(&self) -> bool {
         false
     }
 
     /// Invoke this function when renderering.
+    #[inline]
     fn paint(&mut self, painter: &mut Painter) {}
 
     /// Invoke when widget's font was changed.
+    #[inline]
     fn font_changed(&mut self) {}
 
     /// `run_after()` will be invoked when application was started. <br>
@@ -944,41 +956,60 @@ pub trait WidgetImpl:
     /// ### Should annotated macro `[run_after]` to enable this function.
     ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
+    #[inline]
     fn run_after(&mut self) {
         self.parent_run_after();
     }
 
     /// Invoke when widget's receive mouse pressed event.
+    #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse released event.
+    #[inline]
     fn on_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
     ///
     /// The widget does not track mouse movement by default. If need, call function [`set_mouse_tracking`](WidgetExt::set_mouse_tracking)
+    #[inline]
     fn on_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.
+    #[inline]
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    #[inline]
     fn on_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    #[inline]
     fn on_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
+    #[inline]
     fn on_key_pressed(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive key released event.
+    #[inline]
     fn on_key_released(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive character event.
+    #[inline]
     fn on_receive_character(&mut self, event: &ReceiveCharacterEvent) {}
 
     /// Invoke when widget's receive input method event.
+    #[inline]
     fn on_input_method(&mut self, input_method: &InputMethodEvent) {}
+
+    /// Invoke when widget getting focus.
+    #[inline]
+    fn on_get_focus(&mut self) {}
+
+    /// Invoke when widget losing focus.
+    #[inline]
+    fn on_lose_focus(&mut self) {}
 }
 
 impl dyn WidgetImpl {

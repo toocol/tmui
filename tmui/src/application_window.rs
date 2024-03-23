@@ -159,12 +159,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds<'a, T>(id: ObjectId) -> Vec<&'a T>
+    pub fn finds<'a, T>(&self) -> Vec<&'a T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
         let mut finds = vec![];
-        for (_, widget) in Self::widgets_of(id).iter() {
+        for (_, widget) in Self::widgets_of(self.id()).iter() {
             let widget = nonnull_ref!(widget);
             if widget.object_type().is_a(T::static_type()) {
                 finds.push(widget.downcast_ref::<T>().unwrap())
@@ -174,18 +174,43 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_mut<'a, T>(id: ObjectId) -> Vec<&'a mut T>
+    pub fn finds_mut<'a, T>(&self) -> Vec<&'a mut T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
         let mut finds = vec![];
-        for (_, widget) in Self::widgets_of(id).iter_mut() {
+        for (_, widget) in Self::widgets_of(self.id()).iter_mut() {
             let widget = nonnull_mut!(widget);
             if widget.object_type().is_a(T::static_type()) {
                 finds.push(widget.downcast_mut::<T>().unwrap())
             }
         }
         finds
+    }
+
+
+    #[inline]
+    pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
+        let mut find = None;
+        for (_, widget) in Self::widgets_of(self.id()).iter() {
+            let widget = nonnull_ref!(widget);
+            if widget.id() == id {
+                find = Some(widget);
+            }
+        }
+        find
+    }
+
+    #[inline]
+    pub fn finds_by_id_mut(&self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
+        let mut find = None;
+        for (_, widget) in Self::widgets_of(self.id()).iter_mut() {
+            let widget = nonnull_mut!(widget);
+            if widget.id() == id {
+                find = Some(widget);
+            }
+        }
+        find
     }
 
     #[inline]
@@ -230,6 +255,11 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn set_focused_widget(&mut self, id: ObjectId) {
+        if self.focused_widget != 0 && self.focused_widget != id {
+            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+                widget.on_lose_focus();
+            }
+        }
         self.focused_widget = id
     }
 

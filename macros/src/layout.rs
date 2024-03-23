@@ -18,9 +18,10 @@ pub(crate) fn expand(
     layout_meta: &Meta,
     layout: &str,
     internal: bool,
+    ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     if SUPPORTED_LAYOUTS.contains(&layout) {
-        gen_layout_clause(ast, layout, internal)
+        gen_layout_clause(ast, layout, internal, ignore_default)
     } else {
         Err(syn::Error::new_spanned(
             layout_meta,
@@ -57,6 +58,7 @@ fn gen_layout_clause(
     ast: &mut DeriveInput,
     layout: &str,
     internal: bool,
+    ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let has_content_alignment = layout == "VBox" || layout == "HBox";
     let has_size_unified_adjust =
@@ -70,6 +72,7 @@ fn gen_layout_clause(
 
     let mut token = extend_container::expand(
         ast,
+        ignore_default,
         false,
         has_content_alignment,
         has_size_unified_adjust,
