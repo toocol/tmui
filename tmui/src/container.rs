@@ -3,7 +3,11 @@ use crate::{
     prelude::*,
     widget::{ScaleCalculate, WidgetImpl, WindowAcquire},
 };
-use tlib::{object::{ObjectImpl, ObjectSubclass}, skia_safe::region::RegionOp};
+use tlib::{
+    namespace::Orientation,
+    object::{ObjectImpl, ObjectSubclass},
+    skia_safe::region::RegionOp,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum ContainerLayoutEnum {
@@ -21,14 +25,14 @@ pub struct Container {
     pub children: Vec<Box<dyn WidgetImpl>>,
 
     /// The container will restrictly respect childrens' `size_hint` or not.
-    /// 
+    ///
     /// `false`: <br>
-    /// - Container layout will attempt to respect the `size_hint` of each subcomponent. 
-    ///   But when space is insufficient, it will compress these components, 
+    /// - Container layout will attempt to respect the `size_hint` of each subcomponent.
+    ///   But when space is insufficient, it will compress these components,
     ///   which may result in them being smaller than the size specified by their `size_hint`.
-    /// 
+    ///
     /// `true`: <br>
-    /// - Container layout will strictly respect the `size_hint` of each subcomponent, 
+    /// - Container layout will strictly respect the `size_hint` of each subcomponent,
     ///   the parts beyond the size range will be hidden.
     strict_children_layout: bool,
 }
@@ -141,7 +145,9 @@ impl ContainerExt for Container {
 }
 
 #[reflect_trait]
-pub trait ContainerImpl: WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt {
+pub trait ContainerImpl:
+    WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt
+{
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`.
     fn children(&self) -> Vec<&dyn WidgetImpl>;
@@ -255,4 +261,40 @@ pub trait SizeUnifiedAdjust {
 }
 pub trait StaticSizeUnifiedAdjust {
     fn static_size_unified_adjust(container: &mut dyn ContainerImpl);
+}
+
+const SPACING_PROPERTY_NAME: &'static str = "_container_spacing";
+#[reflect_trait]
+pub trait SpacingCapable: ContainerImpl {
+    fn orientation(&self) -> Orientation;
+
+    #[inline]
+    fn get_spacing(&self) -> u16 {
+        self.get_property(SPACING_PROPERTY_NAME)
+            .and_then(|v| Some(v.get::<u16>()))
+            .or(Some(0))
+            .unwrap()
+    }
+
+    #[inline]
+    fn set_spacing(&mut self, spacing: u16) {
+        self.set_property(SPACING_PROPERTY_NAME, spacing.to_value())
+    }
+
+    #[inline]
+    fn size_exclude_spacing(&self) -> Size {
+        let mut size = self.size();
+        let spacing = self.get_spacing() as i32;
+
+        match self.orientation() {
+            Orientation::Horizontal => {
+                size.set_width(size.width() - spacing * (self.children().len() as i32 - 1))
+            }
+            Orientation::Vertical => {
+                size.set_height(size.height() - spacing * (self.children().len() as i32 - 1))
+            }
+        }
+
+        size
+    }
 }

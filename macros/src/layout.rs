@@ -11,7 +11,53 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
 
-const SUPPORTED_LAYOUTS: [&'static str; 6] = ["Stack", "VBox", "HBox", "SplitPane", "ScrollArea", "Pane"];
+const STR_STACK: &'static str = "Stack";
+const STR_VBOX: &'static str = "VBox";
+const STR_HBOX: &'static str = "HBox";
+const STR_SPLIT_PANE: &'static str = "SplitPane";
+const STR_SCROLL_AREA: &'static str = "ScrollArea";
+const STR_PANE: &'static str = "Pane";
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub(crate) enum LayoutType {
+    Non,
+    Stack,
+    VBox,
+    HBox,
+    SplitPane,
+    ScrollArea,
+    Pane,
+}
+impl LayoutType {
+    pub fn from(meta: &Meta, value: &str) -> syn::Result<Self> {
+        match value {
+            STR_STACK => Ok(Self::Stack),
+            STR_VBOX => Ok(Self::VBox),
+            STR_HBOX => Ok(Self::HBox),
+            STR_SPLIT_PANE => Ok(Self::SplitPane),
+            STR_SCROLL_AREA => Ok(Self::ScrollArea),
+            STR_PANE => Ok(Self::Pane),
+            _ => Err(syn::Error::new_spanned(meta, format!("Unsupported layout type {}.", value))),
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Stack => STR_STACK,
+            Self::VBox => STR_VBOX,
+            Self::HBox => STR_HBOX,
+            Self::SplitPane => STR_SPLIT_PANE,
+            Self::ScrollArea => STR_SCROLL_AREA,
+            Self::Pane => STR_PANE,
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline]
+    pub fn is(&self, o: Self) -> bool {
+        *self == o
+    }
+}
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
@@ -20,14 +66,7 @@ pub(crate) fn expand(
     internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    if SUPPORTED_LAYOUTS.contains(&layout) {
-        gen_layout_clause(ast, layout, internal, ignore_default)
-    } else {
-        Err(syn::Error::new_spanned(
-            layout_meta,
-            format!("Invalid layout: {}", layout),
-        ))
-    }
+    gen_layout_clause(ast, LayoutType::from(layout_meta, layout)?, internal, ignore_default)
 }
 
 /// Get the fileds' Ident which defined the attribute `#[children]` provided by the derive macro [`Childrenable`](crate::Childrenable)
@@ -56,19 +95,20 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
 
 fn gen_layout_clause(
     ast: &mut DeriveInput,
-    layout: &str,
+    layout: LayoutType,
     internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let has_content_alignment = layout == "VBox" || layout == "HBox";
+    use LayoutType::*;
+    let has_content_alignment = layout == VBox || layout == HBox;
     let has_size_unified_adjust =
-        layout == "VBox" || layout == "HBox" || layout == "SplitPane";
-    let is_hbox = layout == "HBox";
-    let is_vbox = layout == "VBox";
-    let is_split_pane = layout == "SplitPane";
-    let is_stack = layout == "Stack";
-    let is_scroll_area = layout == "ScrollArea";
-    let is_pane = layout == "Pane";
+        layout == VBox || layout == HBox || layout == SplitPane;
+    let is_hbox = layout == HBox;
+    let is_vbox = layout == VBox;
+    let is_split_pane = layout == SplitPane;
+    let is_stack = layout == Stack;
+    let is_scroll_area = layout == ScrollArea;
+    let is_pane = layout == Pane;
 
     let mut token = extend_container::expand(
         ast,
@@ -76,10 +116,7 @@ fn gen_layout_clause(
         false,
         has_content_alignment,
         has_size_unified_adjust,
-        is_split_pane,
-        is_stack,
-        is_scroll_area,
-        is_pane,
+        layout,
     )?;
 
     let name = &ast.ident;
@@ -87,8 +124,7 @@ fn gen_layout_clause(
 
     let use_prefix = if internal { "crate" } else { "tmui" };
     let use_prefix = Ident::new(use_prefix, name.span());
-    let layout_ident = Ident::new(layout, name.span());
-
+    let layout_ident = Ident::new(layout.as_str(), name.span());
 
     let children_fields = get_childrened_fields(ast);
 
@@ -99,7 +135,7 @@ fn gen_layout_clause(
         ));
     }
 
-    let layout = Ident::new(layout, span);
+    let layout = Ident::new(layout.as_str(), span);
 
     let impl_content_alignment = if has_content_alignment {
         quote!(
@@ -163,6 +199,28 @@ fn gen_layout_clause(
                 #[inline]
                 fn size_unified_adjust(&mut self) {
                     Pane::static_size_unified_adjust(self)
+                }
+            }
+        )
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    let impl_spacing_capable = if is_vbox {
+        quote!(
+            impl SpacingCapable for #name {
+                #[inline]
+                fn orientation(&self) -> #use_prefix::tlib::namespace::Orientation {
+                    #use_prefix::tlib::namespace::Orientation::Vertical
+                }
+            }
+        )
+    } else if is_hbox {
+        quote!(
+            impl SpacingCapable for #name {
+                #[inline]
+                fn orientation(&self) -> #use_prefix::tlib::namespace::Orientation {
+                    #use_prefix::tlib::namespace::Orientation::Horizontal
                 }
             }
         )
@@ -292,6 +350,8 @@ fn gen_layout_clause(
         #impl_content_alignment
 
         #impl_size_unified_adjust
+
+        #impl_spacing_capable
 
         #impl_split_pane
 

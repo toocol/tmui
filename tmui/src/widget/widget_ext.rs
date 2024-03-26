@@ -1,4 +1,4 @@
-use super::{EventBubble, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
+use super::{EventBubble, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -943,7 +943,16 @@ impl WidgetExt for Widget {
         self.fixed_width = true;
         self.width_request = width;
         if let Some(parent) = self.get_parent_ref() {
-            self.fixed_width_ration = width as f32 / parent.size().width() as f32;
+            let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
+                s.size_exclude_spacing()
+            } else {
+                parent.size()
+            };
+            if parent_size.width() == 0 {
+                return;
+            }
+
+            self.fixed_width_ration = width as f32 / parent_size.width() as f32;
         }
     }
 
@@ -964,7 +973,16 @@ impl WidgetExt for Widget {
         self.fixed_height = true;
         self.height_request = height;
         if let Some(parent) = self.get_parent_ref() {
-            self.fixed_height_ration = height as f32 / parent.size().height() as f32;
+            let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
+                s.size_exclude_spacing()
+            } else {
+                parent.size()
+            };
+            if parent_size.height() == 0 {
+                return;
+            }
+
+            self.fixed_height_ration = height as f32 / parent_size.height() as f32;
         }
     }
 

@@ -26,6 +26,7 @@ mod trait_info;
 use async_do::AsyncDoParser;
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
+use layout::LayoutType;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use syn::{self, parse_macro_input, DeriveInput, ImplGenerics, TypeGenerics, WhereClause};
@@ -102,10 +103,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 true,
                 false,
                 false,
-                false,
-                false,
-                false,
-                false,
+                LayoutType::Non
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),

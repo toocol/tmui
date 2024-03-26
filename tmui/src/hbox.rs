@@ -7,7 +7,7 @@ use crate::{
     layout::LayoutManager,
     prelude::*,
 };
-use tlib::object::ObjectSubclass;
+use tlib::{namespace::Orientation, object::ObjectSubclass};
 
 #[extends(Container)]
 pub struct HBox {
@@ -24,6 +24,7 @@ impl ObjectImpl for HBox {
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<HBox, ReflectContentAlignment>();
         type_registry.register::<HBox, ReflectSizeUnifiedAdjust>();
+        type_registry.register::<HBox, ReflectSpacingCapable>();
     }
 }
 
@@ -143,22 +144,22 @@ pub(crate) fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     content_halign: Align,
     content_valign: Align,
 ) {
-    let is_strict_children_layout = widget.is_strict_children_layout();
     let parent_rect = widget.contents_rect(None);
+    let mut spacing_cnt = 0;
     let children_total_width: i32 =
         if content_halign == Align::Center || content_halign == Align::End {
             widget
                 .children()
                 .iter()
-                .map(|c| c.image_rect().width())
+                .map(|c| { 
+                    spacing_cnt += 1;
+                    c.image_rect().width() 
+                })
                 .sum()
         } else {
             0
         };
-
-    if !is_strict_children_layout {
-        debug_assert!(parent_rect.width() >= children_total_width);
-    }
+    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
 
     let mut offset = match content_halign {
         Align::Start => parent_rect.x(),
@@ -166,9 +167,11 @@ pub(crate) fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         Align::End => parent_rect.width() - children_total_width + parent_rect.x(),
     };
 
-    for child in widget.children_mut().iter_mut() {
-        child.set_fixed_x(offset + child.margin_left());
-        offset += child.image_rect().width();
+    for (idx, child) in widget.children_mut().iter_mut().enumerate() {
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_x(offset + child.margin_left() + spacing);
+        offset += child.image_rect().width() + spacing;
 
         match content_valign {
             Align::Start => child.set_fixed_y(parent_rect.y() + child.margin_top()),
@@ -190,15 +193,14 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let mut start_childs = vec![];
     let mut center_childs = vec![];
     let mut end_childs = vec![];
-    let mut totoal_children_width = 0;
-    let is_strict_children_layout = widget.is_strict_children_layout();
+    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
     let mut children = widget.children_mut();
 
     let mut center_childs_width = 0;
     let mut end_childs_width = 0;
+    let mut idx = 0;
 
     for child in children.iter_mut() {
-        totoal_children_width += child.image_rect().width();
         match child.valign() {
             Align::Start => child.set_fixed_y(parent_rect.y() + child.margin_top()),
             Align::Center => {
@@ -225,27 +227,35 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
         }
     }
 
-    if !is_strict_children_layout {
-        debug_assert!(parent_rect.width() >= totoal_children_width);
-    }
-
     let mut offset = parent_rect.x();
     for child in start_childs {
-        child.set_fixed_x(offset);
-        offset += child.image_rect().width();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_x(offset + child.margin_left() + spacing);
+        offset += child.image_rect().width() + spacing;
+
+        idx += 1;
     }
 
     let middle_point = parent_rect.width() / 2 + parent_rect.x();
     offset = middle_point - (center_childs_width / 2);
     for child in center_childs {
-        child.set_fixed_x(offset);
-        offset += child.image_rect().width();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_x(offset + child.margin_left() + spacing);
+        offset += child.image_rect().width() + spacing;
+
+        idx += 1;
     }
 
     offset = parent_rect.x() + parent_rect.width() - end_childs_width;
     for child in end_childs {
-        child.set_fixed_x(offset);
-        offset += child.image_rect().width();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_x(offset + child.margin_left() + spacing);
+        offset += child.image_rect().width() + spacing;
+
+        idx += 1;
     }
 }
 
@@ -329,5 +339,12 @@ impl StaticSizeUnifiedAdjust for HBox {
 
                 c.set_fixed_width(cw);
             });
+    }
+}
+
+impl SpacingCapable for HBox {
+    #[inline]
+    fn orientation(&self) -> Orientation {
+        Orientation::Horizontal
     }
 }

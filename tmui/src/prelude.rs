@@ -13,7 +13,7 @@ pub use crate::container::{
     ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerExt, ContainerImpl,
     ContainerImplExt, ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
     ReflectSizeUnifiedAdjust, SizeUnifiedAdjust, StaticContainerScaleCalculate,
-    StaticSizeUnifiedAdjust,
+    StaticSizeUnifiedAdjust, ReflectSpacingCapable, SpacingCapable,
 };
 pub use crate::graphics::board::Board;
 pub use crate::graphics::border::Border;

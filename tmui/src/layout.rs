@@ -90,7 +90,7 @@ impl RemainSize for dyn WidgetImpl {
     }
 }
 
-pub(crate) trait SizeCalculation {
+pub(crate) trait SizeCalculation: WidgetImpl {
     /// Widget has child:
     ///
     /// Determine widget's size before calc child's size based on `expand`,`fixed`... <br>
@@ -107,6 +107,16 @@ pub(crate) trait SizeCalculation {
 
     /// Checking `size_hint` of widget to adjust size.
     fn check_size_hint(&mut self);
+
+    #[inline]
+    fn parent_size_exclude_spacing(&self) -> Option<Size> {
+        let parent = self.get_parent_ref();
+        if let Some(p) = parent {
+            cast!(p as SpacingCapable).and_then(|s| Some(s.size_exclude_spacing()))
+        } else {
+            None
+        }
+    }
 }
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> (Size, Size) {
@@ -115,9 +125,12 @@ impl SizeCalculation for dyn WidgetImpl {
         }
         let size = self.size();
         let mut resized = false;
+        let parent_size_exclude_spacing = self.parent_size_exclude_spacing();
 
         if self.fixed_width() {
             if self.hexpand() {
+                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                 if self.fixed_width_ration() == 0. {
                     let ration = self.get_width_request() as f32 / parent_size.width() as f32;
                     self.set_fixed_width_ration(ration);
@@ -144,6 +157,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_hscale.is_adaption() {
                     self.set_fixed_width(parent_size.width());
                 } else if !parent_hscale.is_dismiss() {
+                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
                 }
@@ -156,6 +171,8 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_height() {
             if self.vexpand() {
+                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                 if self.fixed_height_ration() == 0. {
                     let ration = self.get_height_request() as f32 / parent_size.height() as f32;
                     self.set_fixed_height_ration(ration);
@@ -182,6 +199,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_vscale.is_adaption() {
                     self.set_fixed_height(parent_size.height());
                 } else if !parent_vscale.is_dismiss() {
+                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 }
@@ -258,10 +277,13 @@ impl SizeCalculation for dyn WidgetImpl {
             return;
         }
         let size = self.size();
+        let parent_size_exclude_spacing = self.parent_size_exclude_spacing();
         let mut resized = false;
 
         if self.fixed_width() {
             if self.hexpand() {
+                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                 if self.fixed_width_ration() == 0. {
                     let ration = self.get_width_request() as f32 / parent_size.width() as f32;
                     self.set_fixed_width_ration(ration);
@@ -286,6 +308,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_hscale.is_adaption() {
                     self.set_fixed_width(parent_size.width());
                 } else if !parent_hscale.is_dismiss() {
+                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
                 }
@@ -298,6 +322,8 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_height() {
             if self.vexpand() {
+                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                 if self.fixed_height_ration() == 0. {
                     let ration = self.get_height_request() as f32 / parent_size.height() as f32;
                     self.set_fixed_height_ration(ration);
@@ -322,6 +348,8 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_vscale.is_adaption() {
                     self.set_fixed_height(parent_size.height());
                 } else if !parent_vscale.is_dismiss() {
+                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 }
@@ -432,9 +460,15 @@ impl LayoutManager {
         let widget_ptr = widget.as_ptr_mut();
         let composition = widget.composition();
 
+        let mut spacing = 0;
+
         // Determine whether the widget is a container.
         let is_container = widget.super_type().is_a(Container::static_type());
         let container_ref = if is_container {
+            if let Some(spacing_widget) = cast!(widget as SpacingCapable) {
+                spacing = spacing_widget.get_spacing() as i32;
+            };
+
             cast_mut!(widget as ContainerImpl)
         } else {
             None
@@ -467,30 +501,48 @@ impl LayoutManager {
                         });
                     }
                     Composition::HorizontalArrange => {
-                        children.unwrap().iter_mut().for_each(|child| {
-                            let parent_size = if child.hexpand() && child.fixed_width() {
-                                actual_size
-                            } else {
-                                remain_size
-                            };
+                        children
+                            .unwrap()
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(idx, child)| {
+                                let parent_size = if child.hexpand() && child.fixed_width() {
+                                    actual_size
+                                } else {
+                                    remain_size
+                                };
 
-                            let inner = Self::child_size_probe(window_size, parent_size, *child);
-                            child_size.set_height(child_size.height().max(inner.height()));
-                            child_size.add_width(inner.width());
-                        });
+                                let inner =
+                                    Self::child_size_probe(window_size, parent_size, *child);
+
+                                child_size.set_height(child_size.height().max(inner.height()));
+                                child_size.add_width(inner.width());
+                                if idx != 0 && spacing != 0 {
+                                    child_size.add_width(spacing);
+                                }
+                            });
                     }
                     Composition::VerticalArrange => {
-                        children.unwrap().iter_mut().for_each(|child| {
-                            let parent_size = if child.vexpand() && child.fixed_height() {
-                                actual_size
-                            } else {
-                                remain_size
-                            };
+                        children
+                            .unwrap()
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(idx, child)| {
+                                let parent_size = if child.vexpand() && child.fixed_height() {
+                                    actual_size
+                                } else {
+                                    remain_size
+                                };
 
-                            let inner = Self::child_size_probe(window_size, parent_size, *child);
-                            child_size.set_width(child_size.width().max(inner.width()));
-                            child_size.add_height(inner.height());
-                        });
+                                let inner =
+                                    Self::child_size_probe(window_size, parent_size, *child);
+
+                                child_size.set_width(child_size.width().max(inner.width()));
+                                child_size.add_height(inner.height());
+                                if idx != 0 && spacing != 0 {
+                                    child_size.add_height(spacing);
+                                }
+                            });
                     }
                     Composition::FixedContainer => {
                         let widget = ptr_mut!(widget_ptr);
@@ -564,9 +616,7 @@ impl LayoutManager {
                 container_children
                     .unwrap()
                     .iter_mut()
-                    .for_each(|c| { 
-                        children.push_back(Some(*c)) 
-                    });
+                    .for_each(|c| children.push_back(Some(*c)));
             } else {
                 let crm = widget_ref.get_raw_child_mut();
                 if crm.is_some() {

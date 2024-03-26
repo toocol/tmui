@@ -1,9 +1,5 @@
 use crate::{
-    extend_element, extend_object, extend_widget,
-    general_attr::GeneralAttr,
-    pane::{generate_pane_inner_init, generate_pane_type_register},
-    scroll_area::generate_scroll_area_inner_init,
-    SplitGenericsRef,
+    extend_element, extend_object, extend_widget, general_attr::GeneralAttr, layout::LayoutType, pane::{generate_pane_inner_init, generate_pane_type_register}, scroll_area::generate_scroll_area_inner_init, SplitGenericsRef
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -18,10 +14,7 @@ pub(crate) fn expand(
     impl_children_construct: bool,
     has_content_alignment: bool,
     has_size_unified_adjust: bool,
-    is_split_pane: bool,
-    is_stack: bool,
-    is_scroll_area: bool,
-    is_pane: bool,
+    layout: LayoutType,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -60,7 +53,7 @@ pub(crate) fn expand(
                             homogeneous: bool
                         })?);
                     }
-                    if is_split_pane {
+                    if layout == LayoutType::SplitPane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             split_infos: std::collections::HashMap<ObjectId, Box<SplitInfo>>
                         })?);
@@ -68,12 +61,12 @@ pub(crate) fn expand(
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>
                         })?);
                     }
-                    if is_stack {
+                    if layout == LayoutType::Stack {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             current_index: usize
                         })?);
                     }
-                    if is_scroll_area {
+                    if layout == LayoutType::ScrollArea {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #[derivative(Default(value = "Object::new(&[])"))]
                             scroll_bar: Box<ScrollBar>
@@ -82,7 +75,7 @@ pub(crate) fn expand(
                             area: Option<Box<dyn WidgetImpl>>
                         })?);
                     }
-                    if is_pane {
+                    if layout == LayoutType::Pane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             direction: PaneDirection
                         })?);
@@ -219,7 +212,13 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_split_infos_getter = if is_split_pane {
+            let reflect_spacing_capable = if layout.is(LayoutType::VBox) || layout.is(LayoutType::HBox) {
+                quote!(type_registry.register::<#name, ReflectSpacingCapable>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let reflect_split_infos_getter = if layout.is(LayoutType::SplitPane) {
                 quote!(
                     type_registry.register::<#name, ReflectSplitInfosGetter>();
                 )
@@ -227,31 +226,31 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_stack_trait = if is_stack {
+            let reflect_stack_trait = if layout.is(LayoutType::Stack) {
                 quote!(type_registry.register::<#name, ReflectStackTrait>();)
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_scroll_area = if is_scroll_area {
+            let reflect_scroll_area = if layout.is(LayoutType::ScrollArea) {
                 quote!(type_registry.register::<#name, ReflectScrollAreaExt>();)
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_pane = if is_pane {
+            let reflect_pane = if layout.is(LayoutType::Pane) {
                 generate_pane_type_register(name)?
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let scroll_area_inner_init = if is_scroll_area {
+            let scroll_area_inner_init = if layout.is(LayoutType::ScrollArea) {
                 generate_scroll_area_inner_init()?
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let pane_inner_init = if is_pane {
+            let pane_inner_init = if layout.is(LayoutType::Pane) {
                 generate_pane_inner_init()?
             } else {
                 proc_macro2::TokenStream::new()
@@ -296,6 +295,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectChildContainerDiffRender>();
                         #reflect_content_alignment
                         #reflect_size_unified_adjust
+                        #reflect_spacing_capable
                         #reflect_split_infos_getter
                         #reflect_stack_trait
                         #reflect_scroll_area
