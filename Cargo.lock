@@ -168,6 +168,7 @@ dependencies = [
  "tipc",
  "tlib",
  "tmui",
+ "widestring",
  "windows 0.43.0",
 ]
 

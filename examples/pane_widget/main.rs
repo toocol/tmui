@@ -23,7 +23,7 @@ fn build_ui(window: &mut ApplicationWindow) {
     pane.set_hexpand(true);
 
     let mut left = Label::new(Some("Left child."));
-    left.set_background(Color::GREY);
+    left.set_background(Color::GREY_MEDIUM);
     left.set_hexpand(true);
     left.set_vexpand(true);
     left.set_size_hint(SizeHint::new().with_min_width(200).with_min_height(200));

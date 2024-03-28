@@ -1,5 +1,13 @@
 use lazy_static::__Deref;
-use skia_safe::{self, font_style::Slant, FontStyle};
+use skia_safe::{
+    self,
+    font_style::Slant,
+    textlayout::{
+        FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+    },
+    FontStyle,
+};
+use widestring::U16String;
 use FontWeight::*;
 use FontWidth::*;
 
@@ -572,11 +580,107 @@ impl Into<FontHinting> for SkiaFontHiting {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontCalculation`]
+/////////////////////////////////////////////////////////////////////////////////////////
+pub trait FontCalculation {
+    const REPCHAR: &'static str = concat!(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "abcdefgjijklmnopqrstuvwxyz",
+        "0123456789./+@*()#$!"
+    );
+
+    fn calc_font_dimension(&self) -> (f32, f32);
+
+    fn calc_text_dimension(&self, text: &str, letter_spacing: f32) -> (f32, f32);
+
+    fn is_fixed_font(&self) -> bool;
+}
+impl FontCalculation for SkiaFont {
+    fn calc_font_dimension(&self) -> (f32, f32) {
+        let (w, h) = calc_text_dimension(self, Self::REPCHAR, 0.);
+        (w / Self::REPCHAR.len() as f32, h)
+    }
+
+    fn calc_text_dimension(&self, text: &str, letter_spacing: f32) -> (f32, f32) {
+        calc_text_dimension(self, text, letter_spacing)
+    }
+
+    fn is_fixed_font(&self) -> bool {
+        let wstr = U16String::from_str(Self::REPCHAR);
+        let slice = wstr.as_slice();
+        let mut widths = vec![0.; slice.len()];
+        self.get_widths(slice, &mut widths);
+
+        let wedge = widths[0];
+        for &w in widths[1..].iter() {
+            if w != wedge {
+                return false
+            }
+        }
+
+        true
+    }
+}
+#[inline]
+fn calc_text_dimension(font: &SkiaFont, text: &str, letter_spacing: f32) -> (f32, f32) {
+    let typeface = font.typeface();
+    if typeface.is_none() {
+        return (0., 0.);
+    }
+    let typeface = typeface.unwrap();
+
+    let mut typeface_provider = TypefaceFontProvider::new();
+    let family = typeface.family_name();
+    typeface_provider.register_typeface(typeface, Some(family.clone()));
+
+    let mut font_collection = FontCollection::new();
+    font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
+
+    // define text style
+    let mut style = ParagraphStyle::new();
+    let mut text_style = TextStyle::new();
+    text_style.set_font_size(font.size());
+    text_style.set_font_families(&vec![family]);
+    text_style.set_letter_spacing(letter_spacing);
+    style.set_text_style(&text_style);
+
+    // layout the paragraph
+    let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
+    paragraph_builder.add_text(text);
+    let mut paragraph = paragraph_builder.build();
+    paragraph.layout(f32::MAX);
+
+    (
+        paragraph.max_intrinsic_width(),
+        paragraph.height(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use widestring::U16String;
+    use crate::{global::fuzzy_compare_32, typedef::SkiaFont};
+    use super::{Font, FontCalculation, FontTypeface};
 
-    use super::{Font, FontTypeface};
+    #[test]
+    fn test_font_calc() {
+        let font = Font::with_family("Courier New");
+        let skia_font: SkiaFont = font.into();
+        let fd = skia_font.calc_font_dimension();
+        let td = skia_font.calc_text_dimension("hello world", 0.);
+        assert_eq!(fd.1, td.1);
+
+        let us = U16String::from_str(SkiaFont::REPCHAR);
+        let slice = us.as_slice();
+        let mut widths = vec![0.; slice.len()];
+        skia_font.get_widths(slice, &mut widths);
+        let w = widths.iter().sum::<f32>() / widths.len() as f32;
+        assert!(fuzzy_compare_32(fd.0, w));
+
+        assert!(skia_font.is_fixed_font());
+        assert!(!Font::default().to_skia_font().is_fixed_font());
+    }
 
     #[test]
     fn test_font_typeface() {
@@ -614,11 +718,11 @@ mod tests {
         let font_width = sum_width as f64 / wchar_t_repchar.len() as f64;
 
         println!(
-            "metrics > height: {}, width: {}",
+            "metrics => height: {}, width: {}",
             metrics.1.cap_height, font_width
         );
         println!(
-            "measure > height: {}, width: {}",
+            "measure => height: {}, width: {}",
             measure.1.height(),
             measure.1.width() / REPCHAR.len() as f32
         );

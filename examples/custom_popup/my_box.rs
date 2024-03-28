@@ -30,7 +30,7 @@ impl ObjectImpl for MyBox {
 
         self.content_widget.set_vexpand(true);
         self.content_widget.set_hexpand(true);
-        self.content_widget.set_background(Color::GREY);
+        self.content_widget.set_background(Color::GREY_MEDIUM);
 
         self.bottom_bar.height_request(25);
         self.bottom_bar.set_hexpand(true);

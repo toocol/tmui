@@ -120,7 +120,8 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::visible) (Defined in [`WidgetExt`])
     fn visible(&self) -> bool;
 
-    /// Setter of property `focus`.
+    /// Setter of property `focus`. <br>
+    /// Only effected after phase `run_after`.
     ///
     /// Go to[`Function defination`](WidgetExt::set_focus) (Defined in [`WidgetExt`])
     fn set_focus(&mut self, focus: bool);
@@ -896,11 +897,11 @@ impl WidgetExt for Widget {
                 return
             }
 
-            self.on_get_focus();
             self.id()
         } else {
             0
         };
+
         ApplicationWindow::window_of(self.window_id()).set_focused_widget(id)
     }
 

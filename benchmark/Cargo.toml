@@ -18,6 +18,7 @@ windows = { version = "0.43.0", features = [
     "Win32_Graphics_Gdi",
     "Win32_System_LibraryLoader",
 ] }
+widestring = "1.0.2"
 
 [[bench]]
 name = "value_benchmark"
@@ -25,6 +26,10 @@ harness = false
 
 [[bench]]
 name = "action_benchmark"
+harness = false
+
+[[bench]]
+name = "font_benchmark"
 harness = false
 
 [[bench]]

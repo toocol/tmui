@@ -260,6 +260,13 @@ impl ApplicationWindow {
                 widget.on_lose_focus();
             }
         }
+        if id != 0 {
+            if let Some(widget) = self.finds_by_id_mut(id) {
+                widget.on_get_focus();
+            } else {
+                return
+            }
+        }
         self.focused_widget = id
     }
 

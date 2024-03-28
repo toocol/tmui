@@ -2,7 +2,7 @@ use std::time::Instant;
 use test_widget::TestWidget;
 use tmui::{
     application::Application, application_window::ApplicationWindow, label::Label,
-    platform::PlatformType, prelude::*, 
+    platform::PlatformType, prelude::*,
 };
 
 mod test_widget;
@@ -68,6 +68,6 @@ fn build_ui(window: &mut ApplicationWindow) {
     test_widget.set_valign(Align::Center);
 
     test_widget.child(label);
-    window.set_background(Color::GREY);
+    window.set_background(Color::GREY_MEDIUM);
     window.child(test_widget)
 }

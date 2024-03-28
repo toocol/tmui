@@ -1,3 +1,4 @@
+use tlib::run_after;
 use tmui::{
     input::text::Text,
     prelude::*,
@@ -7,6 +8,7 @@ use tmui::{
 
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
+#[run_after]
 pub struct Holder {
     #[children]
     text1: Box<Text>,
@@ -26,33 +28,39 @@ impl ObjectImpl for Holder {
     fn initialize(&mut self) {
         // self.text1.set_background(Color::RED);
         self.text1.width_request(200);
-        self.text1.height_request(40);
+        self.text1.height_request(25);
         self.text1.set_margin_left(20);
-        // self.text1.set_margin_top(20);
+        self.text1.set_margin_top(10);
+        self.text1.set_hexpand(true);
         // self.text1.set_vexpand(true);
 
         // self.text2.set_background(Color::BLUE);
-        self.text2.width_request(200);
-        self.text2.height_request(40);
+        // self.text2.width_request(200);
+        // self.text2.height_request(25);
         self.text2.set_margin_left(20);
-        // self.text2.set_margin_top(20);
+        self.text2.set_margin_top(10);
         // self.text2.set_vexpand(true);
 
-        self.text3.width_request(200);
-        self.text3.height_request(40);
+        // self.text3.width_request(200);
+        // self.text3.height_request(25);
         self.text3.set_margin_left(20);
-        // self.text3.set_margin_top(20);
+        self.text3.set_margin_top(10);
         // self.text3.set_vexpand(true);
 
-        // self.set_homogeneous(true);
         self.set_vexpand(true);
         self.set_spacing(30);
         self.set_hexpand(true);
-        self.set_background(Color::GREY);
+        self.set_background(Color::GREY_LIGHT);
     }
 }
 
-impl WidgetImpl for Holder {}
+impl WidgetImpl for Holder {
+    fn run_after(&mut self) {
+        self.parent_run_after();
+
+        self.text1.set_focus(true);
+    }
+}
 
 impl Holder {
     #[inline]

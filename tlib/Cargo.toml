@@ -21,9 +21,7 @@ libc = "0.2.144"
 hex_color = "2.0.0"
 derivative = "2.2.0"
 bitflags = "2.4.1"
+widestring = "1.0.2"
 skia-safe = { version = "0.57.0", features = ["gl", "textlayout"] }
 winit = { version = "0.29.10", default-features = false, features = ["wayland", "x11", "rwh_05"]}
 tokio = { version = "1.28.0", features = ["full"] }
-
-[dev-dependencies]
-widestring = "1.0.2"

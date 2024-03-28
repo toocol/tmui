@@ -1,6 +1,11 @@
 use once_cell::sync::Lazy;
 use skia_safe::Font;
-use std::{any::Any, cell::{RefCell, Cell}, rc::Rc, sync::Arc};
+use std::{
+    any::Any,
+    cell::{Cell, RefCell},
+    rc::Rc,
+    sync::Arc,
+};
 
 #[inline]
 pub fn bound<T: Ord>(min: T, val: T, max: T) -> T {
@@ -238,9 +243,48 @@ pub trait From<T> {
     fn from(t: T) -> Self;
 }
 
+pub trait PrecisionOps {
+    fn round(self) -> Self;
+
+    fn ceil(self) -> Self;
+
+    fn floor(self) -> Self;
+}
+macro_rules! impl_precision_ops {
+    ($($type:ident),+ => $($index:tt),+) => {
+        impl PrecisionOps for ($($type,)+) {
+            #[inline]
+            fn round(self) -> Self {
+                ($(self.$index.round(),)+)
+            }
+
+            #[inline]
+            fn ceil(self) -> Self {
+                ($(self.$index.ceil(),)+)
+            }
+
+            #[inline]
+            fn floor(self) -> Self {
+                ($(self.$index.floor(),)+)
+            }
+        }
+    };
+}
+impl_precision_ops!(f32,f32 => 0,1);
+impl_precision_ops!(f32,f32,f32 => 0,1,2);
+impl_precision_ops!(f32,f32,f32,f32 => 0,1,2,3);
+impl_precision_ops!(f32,f32,f32,f32,f32 => 0,1,2,3,4);
+impl_precision_ops!(f32,f32,f32,f32,f32,f32 => 0,1,2,3,4,5);
+
+impl_precision_ops!(f64,f64 => 0,1);
+impl_precision_ops!(f64,f64,f64 => 0,1,2);
+impl_precision_ops!(f64,f64,f64,f64 => 0,1,2,3);
+impl_precision_ops!(f64,f64,f64,f64,f64 => 0,1,2,3,4);
+impl_precision_ops!(f64,f64,f64,f64,f64,f64 => 0,1,2,3,4,5);
+
 #[cfg(test)]
 mod tests {
-    use super::SemanticExt;
+    use super::{PrecisionOps, SemanticExt};
 
     #[test]
     fn test_semantic_ext() {
@@ -249,5 +293,17 @@ mod tests {
         let p = p.cell();
         let p = p.rc();
         let _ = p.arc();
+    }
+
+    #[test]
+    fn test_precision_ops() {
+        let t = (32.3, 32.54).round();
+        assert_eq!(t, (32.0, 33.0));
+
+        let t = (32.3, 32.54).ceil();
+        assert_eq!(t, (33.0, 33.0));
+
+        let t = (32.3, 32.54).floor();
+        assert_eq!(t, (32.0, 32.0));
     }
 }

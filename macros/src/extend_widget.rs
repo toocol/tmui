@@ -353,6 +353,9 @@ pub(crate) fn gen_widget_trait_impl_clause<'a>(
 
             #[inline]
             fn set_focus(&mut self, focus: bool) {
+                if !self.enable_focus() {
+                    return
+                }
                 self.#(#widget_path).*.set_focus(focus)
             }
 

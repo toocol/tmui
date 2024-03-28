@@ -26,7 +26,7 @@ impl ObjectImpl for KeyWidget {
         self.set_hexpand(true);
         self.set_hscale(0.7);
         self.set_vscale(0.6);
-        self.set_background(Color::GREY);
+        self.set_background(Color::GREY_MEDIUM);
 
         self.set_halign(Align::End);
         self.set_valign(Align::End);

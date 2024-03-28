@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
     types::StaticType,
@@ -70,6 +70,17 @@ impl Color {
     }
 
     #[inline]
+    pub const fn grey_with(value: u8) -> Self {
+        Self {
+            r: value as i16,
+            g: value as i16,
+            b: value as i16,
+            a: 255,
+            valid: true,
+        }
+    }
+
+    #[inline]
     pub fn from_hex(hex_code: &str) -> Self {
         let color = HexColor::parse(hex_code)
             .expect(format!("Parse hex color failed, {}", hex_code).as_str());
@@ -106,7 +117,7 @@ impl Color {
     pub fn a(&self) -> u8 {
         self.a as u8
     }
- 
+
     #[inline]
     pub fn r_i16(&self) -> i16 {
         self.r
@@ -212,10 +223,24 @@ impl Color {
         a: 255,
         valid: true,
     };
-    pub const GREY: Color = Color {
+    pub const GREY_DARK: Color = Color {
+        r: 64,
+        g: 64,
+        b: 64,
+        a: 255,
+        valid: true,
+    };
+    pub const GREY_MEDIUM: Color = Color {
         r: 128,
         g: 128,
         b: 128,
+        a: 255,
+        valid: true,
+    };
+    pub const GREY_LIGHT: Color = Color {
+        r: 192,
+        g: 192,
+        b: 192,
         a: 255,
         valid: true,
     };

@@ -50,6 +50,7 @@ pub(crate) fn expand(
                             content_valign: Align
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #[derivative(Default(value = "true"))]
                             homogeneous: bool
                         })?);
                     }
