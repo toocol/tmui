@@ -271,6 +271,12 @@ impl FPoint {
     pub fn y_mut(&mut self) -> &mut f32 {
         &mut self.y
     }
+
+    #[inline]
+    pub fn offset(&mut self, x_off: f32, y_off: f32) {
+        self.x += x_off;
+        self.y += y_off;
+    }
 }
 
 impl Add for FPoint {

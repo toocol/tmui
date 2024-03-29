@@ -5,10 +5,10 @@ pub mod password;
 pub mod radio;
 pub mod text;
 
-use std::cell::{Cell, Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 
 use log::warn;
-use tlib::object::ObjectId;
+use tlib::{object::ObjectId, prelude::*, signals, signal};
 
 #[derive(Debug, Clone, Copy, Hash)]
 pub enum InputType {
@@ -21,7 +21,7 @@ pub enum InputType {
 
 /// All the input widget should implement this trait.
 /// Provide some common function related to input.
-pub trait Input {
+pub trait Input: InputSignals {
     /// The associated type of the input value.
     type Value: InputBounds;
 
@@ -40,13 +40,17 @@ pub trait Input {
     /// Disable the input widget, make it unable to interact.
     #[inline]
     fn disable(&mut self) {
-        self.input_wrapper().disable()
+        self.input_wrapper().disable();
+
+        emit!(self.available_changed(), false)
     }
 
     /// Enable the input widget, make it able to interact.
     #[inline]
     fn enable(&mut self) {
-        self.input_wrapper().enable()
+        self.input_wrapper().enable();
+
+        emit!(self.available_changed(), true)
     }
 
     /// Whether the widget is enabled or not.
@@ -70,7 +74,9 @@ pub trait Input {
     /// Set the value of the input widget.
     #[inline]
     fn set_value(&mut self, val: Self::Value) {
-        self.input_wrapper().set_value(val)
+        self.input_wrapper().set_value(val);
+
+        emit!(self.value_changed())
     }
 }
 
@@ -83,6 +89,20 @@ pub struct InputWrapper<T: InputBounds> {
     initialized: Cell<bool>,
     enable: Cell<bool>,
     value: RefCell<T>,
+}
+
+pub trait InputSignals: ActionExt {
+    signals! {
+        InputSignals:
+
+        /// Emit when input elements' value has changed.
+        value_changed();
+
+        /// Emit when input elements were enabled/disabled.
+        /// 
+        /// @param [`bool`]
+        available_changed();
+    }
 }
 
 impl<T: InputBounds> InputWrapper<T> {
@@ -126,6 +146,11 @@ impl<T: InputBounds> InputWrapper<T> {
     #[inline]
     pub fn value_ref(&self) -> Ref<T> {
         self.value.borrow()
+    }
+
+    #[inline]
+    pub fn value_ref_mut(&self) -> RefMut<T> {
+        self.value.borrow_mut()
     }
 
     #[inline]

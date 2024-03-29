@@ -4,13 +4,15 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };
-use super::{ctrl::RadioControl, Input, InputBounds, InputWrapper};
+use super::{ctrl::RadioControl, Input, InputBounds, InputSignals, InputWrapper};
 
 #[extends(Widget)]
 pub struct Radio<T: InputBounds> {
     input_wrapper: Rc<InputWrapper<T>>,
     radio_ctrl: Option<Rc<RadioControl<T>>>,
 }
+
+impl<T: InputBounds> InputSignals for Radio<T> {}
 
 impl<T: InputBounds> ObjectSubclass for Radio<T> {
     const NAME: &'static str = "Radio";

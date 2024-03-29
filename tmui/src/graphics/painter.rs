@@ -256,11 +256,21 @@ impl<'a> Painter<'a> {
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn fill_rect<T: Into<SkiaRect>>(&mut self, rect: T, color: Color) {
+        let mut rect: SkiaRect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        self.fill_rect_global(rect, color)
+    }
+
+    /// Stroke and fill the specified Rect without offset. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn fill_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
-        let mut rect: SkiaRect = rect.into();
-        rect.offset((self.x_offset, self.y_offset));
+        let rect: SkiaRect = rect.into();
 
         self.canvas.draw_rect(rect, &self.paint);
         if let Some(color) = self.color {
@@ -268,8 +278,27 @@ impl<'a> Painter<'a> {
         }
     }
 
+    /// Stroke and Fill the specified rect with border radius and offset. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn fill_round_rect<T: Into<SkiaRect>>(
+        &mut self,
+        rect: T,
+        border_radius: f32,
+        color: Color,
+    ) {
+        let mut rect: SkiaRect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        self.fill_round_rect_global(rect, border_radius, color);
+    }
+
+    /// Stroke and Fill the specified rect with border radius. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn fill_round_rect_global<T: Into<SkiaRect>>(
         &mut self,
         rect: T,
         border_radius: f32,
@@ -278,8 +307,7 @@ impl<'a> Painter<'a> {
         self.paint.set_color(color);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
-        let mut rect: SkiaRect = rect.into();
-        rect.offset((self.x_offset, self.y_offset));
+        let rect: SkiaRect = rect.into();
 
         let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
         self.canvas.draw_rrect(rrect, &self.paint);
@@ -288,33 +316,56 @@ impl<'a> Painter<'a> {
         }
     }
 
-    /// Stroke the specified Rect with offset. <br>
+    /// Stroke the specified rect with offset. <br>
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_rect<T: Into<SkiaRect>>(&mut self, rect: T) {
-        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
+
+        self.draw_rect_global(rect);
+    }
+
+    /// Stroke the specified rect without offset. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_rect_global<T: Into<SkiaRect>>(&mut self, rect: T) {
+        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
+        let rect: SkiaRect = rect.into();
 
         self.canvas.draw_rect(rect, &self.paint);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 
-    /// Strike the specified rect with border radius and offset.
+    /// Stroke the specified rect with border radius and offset. <br>
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_round_rect<T: Into<SkiaRect>>(&mut self, rect: T, border_radius: f32) {
-        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
+
+        self.draw_round_rect_global(rect, border_radius);
+    }
+
+    /// Stroke the specified rect with border radius. <br>
+    ///
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_round_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, border_radius: f32) {
+        self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
+        let rect: SkiaRect = rect.into();
 
         let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
         self.canvas.draw_rrect(rrect, &self.paint);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 
+    /// Stroke and Fill the specified region with the specified color. <br>
+    ///
+    /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn fill_region(&mut self, region: &skia_safe::Region, color: Color) {
         self.paint.set_color(color);
@@ -327,6 +378,9 @@ impl<'a> Painter<'a> {
         }
     }
 
+    /// Stroke the specified region. <br>
+    ///
+    /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_region(&mut self, region: &skia_safe::Region) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
@@ -340,9 +394,31 @@ impl<'a> Painter<'a> {
     /// letter_spacing: The spacing betweeen characters.
     /// width_layout: The specified width of a text paragraph.
     ///
-    /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    /// the origin point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_paragraph<T: Into<Point>>(
+        &mut self,
+        text: &str,
+        origin: T,
+        letter_spacing: f32,
+        width_layout: f32,
+        max_lines: Option<usize>,
+        ellipsis: bool,
+    ) {
+        let mut origin: Point = origin.into();
+        origin.offset((self.x_offset, self.y_offset));
+
+        self.draw_paragraph_global(text, origin, letter_spacing, width_layout, max_lines, ellipsis)
+    }
+
+    /// Draw text paragraph at specified position `origin` without offset. <br>
+    ///
+    /// letter_spacing: The spacing betweeen characters.
+    /// width_layout: The specified width of a text paragraph.
+    ///
+    /// the origin point's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_paragraph_global<T: Into<Point>>(
         &mut self,
         text: &str,
         origin: T,
@@ -380,9 +456,6 @@ impl<'a> Painter<'a> {
             paragraph_builder.add_text(text);
             let mut paragraph = paragraph_builder.build();
             paragraph.layout(width_layout);
-
-            let mut origin: Point = origin.into();
-            origin.offset((self.x_offset, self.y_offset));
 
             paragraph.paint(&mut self.canvas, origin);
         } else {

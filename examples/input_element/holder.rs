@@ -1,9 +1,10 @@
-use tlib::run_after;
+use tlib::{connect, run_after};
 use tmui::{
     input::text::Text,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
+    input::InputSignals,
 };
 
 #[extends(Widget, Layout(VBox))]
@@ -33,6 +34,7 @@ impl ObjectImpl for Holder {
         self.text1.set_margin_top(10);
         self.text1.set_hexpand(true);
         // self.text1.set_vexpand(true);
+        connect!(self.text1, value_changed(), self, text_value_changed());
 
         // self.text2.set_background(Color::BLUE);
         // self.text2.width_request(200);
@@ -67,4 +69,7 @@ impl Holder {
     pub fn new() -> Box<Self> {
         Object::new(&[])
     }
+
+    #[inline]
+    pub fn text_value_changed(&self) {}
 }

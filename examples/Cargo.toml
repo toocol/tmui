@@ -31,10 +31,6 @@ name = "child_attr_widget"
 path = "child_attr_widget/main.rs"
 
 [[bin]]
-name = "color_convert"
-path = "color_convert/main.rs"
-
-[[bin]]
 name = "custom_diff_handle"
 path = "custom_diff_handle/main.rs"
 
