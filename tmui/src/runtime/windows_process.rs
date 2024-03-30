@@ -33,7 +33,7 @@ use tlib::{
     winit::{
         event::{ElementState, MouseScrollDelta},
         event_loop::{ControlFlow, EventLoopProxy},
-        keyboard::{Key, ModifiersState, PhysicalKey},
+        keyboard::{Key, ModifiersState, NamedKey, PhysicalKey},
         window::WindowId,
     },
 };
@@ -345,6 +345,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 }
                                 let text = match logical_key {
                                     Key::Character(str) => to_static(str.to_string()),
+                                    Key::Named(NamedKey::Space) => " ",
                                     _ => "",
                                 };
                                 let evt = KeyEvent::new(
