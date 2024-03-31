@@ -11,7 +11,6 @@ use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
     figure::FontCalculation,
-    global::fuzzy_compare_32,
     namespace::KeyCode,
     run_after,
     skia_safe::ClipOp,
@@ -508,7 +507,7 @@ impl Text {
                 .0;
 
             let diff = (offset - actual_len).abs();
-            if diff > last_diff {
+            if diff >= last_diff {
                 predict_idx = last_idx;
                 break;
             }
