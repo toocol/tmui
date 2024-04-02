@@ -12,8 +12,8 @@ pub use crate::application_window::{current_window_id, ApplicationWindow};
 pub use crate::container::{
     ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerExt, ContainerImpl,
     ContainerImplExt, ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
-    ReflectSizeUnifiedAdjust, SizeUnifiedAdjust, StaticContainerScaleCalculate,
-    StaticSizeUnifiedAdjust, ReflectSpacingCapable, SpacingCapable,
+    ReflectSizeUnifiedAdjust, ReflectSpacingCapable, SizeUnifiedAdjust, SpacingCapable,
+    StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
 };
 pub use crate::graphics::board::Board;
 pub use crate::graphics::border::Border;
@@ -32,7 +32,9 @@ pub use crate::layout::{
 };
 pub use crate::loading::{Loadable, LoadingModel, ReflectLoadable};
 pub use crate::overlay::{Overlaid, ReflectOverlaid};
+pub use crate::pane::{Pane, PaneDirection, PaneExt, ReflectPaneExt};
 pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
+pub use crate::primitive::global_watch::{GlobalWatch, GlobalWatchImpl, ReflectGlobalWatch, GlobalWatchEvent};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::shared_widget::{
@@ -44,11 +46,10 @@ pub use crate::split_pane::{
 pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
-    widget_ext::WidgetExt, ChildRegionAcquirer, EventBubble, PointEffective, ReflectWidgetImpl,
-    Transparency, Widget, WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals,
-    WindowAcquire, InnerCustomizeEventProcess, ReflectInnerCustomizeEventProcess
+    widget_ext::WidgetExt, ChildRegionAcquirer, EventBubble, InnerCustomizeEventProcess,
+    PointEffective, ReflectInnerCustomizeEventProcess, ReflectWidgetImpl, Transparency, Widget,
+    WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
 };
-pub use crate::pane::{Pane, PaneExt, ReflectPaneExt, PaneDirection};
 pub use tlib::tokio;
 pub use tlib::{
     figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size, SizeHint},

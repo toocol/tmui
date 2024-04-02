@@ -4,7 +4,7 @@ use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
-    input::InputSignals,
+    input::{InputSignals, Input},
 };
 
 #[extends(Widget, Layout(VBox))]
@@ -33,6 +33,7 @@ impl ObjectImpl for Holder {
         self.text1.set_margin_left(20);
         self.text1.set_margin_top(10);
         self.text1.set_hexpand(true);
+        self.text1.set_value("Contents of text-1.".to_string());
         // self.text1.set_vexpand(true);
         connect!(self.text1, value_changed(), self, text_value_changed());
 
@@ -41,18 +42,21 @@ impl ObjectImpl for Holder {
         // self.text2.height_request(25);
         self.text2.set_margin_left(20);
         self.text2.set_margin_top(10);
+        self.text2.set_value("Contents of disabled text-2, some text may not be seen.".to_string());
+        self.text2.disable();
         // self.text2.set_vexpand(true);
 
         // self.text3.width_request(200);
         // self.text3.height_request(25);
         self.text3.set_margin_left(20);
         self.text3.set_margin_top(10);
+        self.text3.set_placeholder("Placeholder of text-3.");
         // self.text3.set_vexpand(true);
 
         self.set_vexpand(true);
         self.set_spacing(30);
         self.set_hexpand(true);
-        self.set_background(Color::GREY_LIGHT);
+        // self.set_background(Color::GREY_LIGHT);
     }
 }
 

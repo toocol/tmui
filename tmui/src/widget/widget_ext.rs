@@ -1,4 +1,6 @@
-use super::{EventBubble, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
+use super::{
+    EventBubble, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire,
+};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -231,6 +233,11 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::font_family) (Defined in [`WidgetExt`])
     fn font_family(&self) -> &str;
 
+    /// Get the rect of widget without borders.
+    ///
+    /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
+    fn borderless_rect(&self) -> FRect;
+
     /// Get the size of widget. The size does not include the margins.
     ///
     /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
@@ -422,7 +429,8 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_border_left_color) (Defined in [`WidgetExt`])
     fn set_border_left_color(&mut self, color: Color);
 
-    /// Get the borders of the widget.
+    /// Get the borders of the widget. <br>
+    /// @return (top, right, bottom, left)
     ///
     /// Go to[`Function defination`](WidgetExt::borders) (Defined in [`WidgetExt`])
     fn borders(&self) -> (f32, f32, f32, f32);
@@ -894,7 +902,7 @@ impl WidgetExt for Widget {
     fn set_focus(&mut self, focus: bool) {
         let id = if focus {
             if self.is_focus() {
-                return
+                return;
             }
 
             self.id()
@@ -1078,6 +1086,19 @@ impl WidgetExt for Widget {
     #[inline]
     fn font_family(&self) -> &str {
         &self.font_family
+    }
+
+    #[inline]
+    fn borderless_rect(&self) -> FRect {
+        let mut rect: FRect = self.rect().into();
+        let (top, right, bottom, left) = self.borders();
+
+        rect.set_x(rect.x() + left);
+        rect.set_y(rect.y() + top);
+        rect.set_width(rect.width() - (left + right));
+        rect.set_height(rect.height() - (top + bottom));
+
+        rect
     }
 
     #[inline]

@@ -29,6 +29,9 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
     let loadable_impl_clause = &general_attr.loadable_impl_clause;
     let loadable_reflect_clause = &general_attr.loadable_reflect_clause;
 
+    let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
+    let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -134,6 +137,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
 
                 #loadable_impl_clause
 
+                #global_watch_impl_clause
+
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -151,6 +156,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                         #animation_reflect
                         #animation_state_holder_reflect
                         #loadable_reflect_clause
+                        #global_watch_reflect_clause
                     }
 
                     #[inline]
@@ -464,6 +470,11 @@ pub(crate) fn gen_widget_trait_impl_clause<'a>(
             #[inline]
             fn size(&self) -> Size {
                 self.#(#widget_path).*.size()
+            }
+
+            #[inline]
+            fn borderless_rect(&self) -> FRect {
+                self.#(#widget_path).*.borderless_rect()
             }
 
             #[inline]

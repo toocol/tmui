@@ -11,7 +11,8 @@ use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
     figure::FontCalculation,
-    namespace::KeyCode,
+    global_watch,
+    namespace::{KeyCode, KeyboardModifier},
     run_after,
     skia_safe::ClipOp,
     timer::Timer,
@@ -21,12 +22,19 @@ use tlib::{
 const TEXT_DEFAULT_WIDTH: i32 = 150;
 const TEXT_DEFAULT_PADDING: f32 = 3.;
 
+const TEXT_DEFAULT_BORDER_COLOR: Color = Color::grey_with(150);
+
+const TEXT_DEFAULT_DISABLE_COLOR: Color = Color::grey_with(80);
+const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
+
+const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
+
 #[extends(Widget)]
 #[run_after]
 #[popupable]
+#[global_watch(MouseMove)]
 pub struct Text {
     input_wrapper: InputWrapper<String>,
-    clear_focus: bool,
 
     //////////////////////////// Cursor
     cursor_index: usize,
@@ -46,6 +54,7 @@ pub struct Text {
     text_color: Color,
     max_length: Option<usize>,
     letter_spacing: f32,
+    placeholder: String,
 
     //////////////////////////// Font
     font_dimension: (f32, f32),
@@ -53,8 +62,10 @@ pub struct Text {
 
     //////////////////////////// Selection
     drag_status: DragStatus,
-    selection_start: usize,
-    selection_end: usize,
+    #[derivative(Default(value = "-1"))]
+    selection_start: i32,
+    #[derivative(Default(value = "-1"))]
+    selection_end: i32,
     #[derivative(Default(value = "Color::from_rgb(51, 167, 255)"))]
     selection_background: Color,
     #[derivative(Default(value = "Color::WHITE"))]
@@ -67,6 +78,7 @@ enum DragStatus {
     #[default]
     None,
     Pending,
+    Dragging,
 }
 
 impl InputSignals for Text {}
@@ -78,10 +90,13 @@ impl ObjectSubclass for Text {
 impl ObjectImpl for Text {
     fn initialize(&mut self) {
         self.input_wrapper.init(self.id());
-        self.set_mouse_tracking(true);
         self.font_changed();
-        self.set_border_color(Color::GREY_MEDIUM);
+        self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
         self.set_borders(1., 1., 1., 1.);
+
+        if self.is_enable() {
+            self.cursor_index = self.input_wrapper.value_ref().len();
+        }
 
         connect!(self.blink_timer, timeout(), self, blink_event());
         connect!(
@@ -108,16 +123,16 @@ impl WidgetImpl for Text {
 
     #[inline]
     fn paint(&mut self, painter: &mut Painter) {
-        painter.save();
-        painter.clip_rect_global(self.text_window, ClipOp::Intersect);
-
         if self.is_enable() {
-            self.draw_enable(painter)
-        } else {
-            self.draw_disable(painter)
-        }
+            painter.save();
+            painter.clip_rect_global(self.text_window, ClipOp::Intersect);
 
-        painter.restore();
+            self.draw_enable(painter);
+
+            painter.restore();
+        } else {
+            self.draw_disable(painter);
+        }
     }
 
     #[inline]
@@ -127,19 +142,30 @@ impl WidgetImpl for Text {
 
     #[inline]
     fn on_get_focus(&mut self) {
-        self.update();
+        if !self.is_enable() {
+            return;
+        }
+
         self.check_blink_timer(true);
+        self.update();
     }
 
     #[inline]
     fn on_lose_focus(&mut self) {
-        self.update();
-        self.clear_focus = true;
+        if !self.is_enable() {
+            return;
+        }
+
         self.check_blink_timer(false);
+        self.update();
     }
 
     #[inline]
     fn on_key_pressed(&mut self, event: &KeyEvent) {
+        if !self.is_enable() {
+            return;
+        }
+
         self.handle_key_pressed(event);
 
         self.update();
@@ -147,11 +173,19 @@ impl WidgetImpl for Text {
 
     #[inline]
     fn on_key_released(&mut self, _: &KeyEvent) {
+        if !self.is_enable() {
+            return;
+        }
+
         self.start_blink_timer();
     }
 
     #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
+        if !self.is_enable() {
+            return;
+        }
+
         match event.n_press() {
             1 => self.handle_mouse_click(event),
             2 => self.handle_mouse_double_click(),
@@ -161,12 +195,22 @@ impl WidgetImpl for Text {
 
     #[inline]
     fn on_mouse_released(&mut self, _: &MouseEvent) {
+        if !self.is_enable() {
+            return;
+        }
+
         self.handle_mouse_release()
     }
+}
 
+impl GlobalWatchImpl for Text {
     #[inline]
-    fn on_mouse_move(&mut self, event: &MouseEvent) {
-        self.handle_mouse_move(event)
+    fn on_global_mouse_move(&mut self, evt: &MouseEvent) {
+        if !self.is_enable() {
+            return;
+        }
+
+        self.handle_mouse_move(evt)
     }
 }
 
@@ -238,6 +282,15 @@ impl Text {
     #[inline]
     pub fn set_caret_color(&mut self, caret_color: Color) {
         self.caret_color = Some(caret_color);
+
+        self.update();
+    }
+
+    #[inline]
+    pub fn set_placeholder<Placeholder: ToString>(&mut self, placeholder: Placeholder) {
+        self.placeholder = placeholder.to_string();
+
+        self.update();
     }
 }
 
@@ -246,6 +299,9 @@ impl Text {
         // Calculates the position of cursor, and adjust the `text_draw_position`:
         let cursor_x = self.sync_cursor_text_draw();
 
+        // Clear the text window:
+        painter.fill_rect_global(self.text_window, self.background());
+
         // Draw text:
         self.draw_text(painter);
 
@@ -253,14 +309,45 @@ impl Text {
         self.draw_cursor(painter, cursor_x);
     }
 
-    fn draw_disable(&mut self, painter: &mut Painter) {}
+    fn draw_disable(&mut self, painter: &mut Painter) {
+        let rect = self.borderless_rect();
+        painter.fill_rect_global(rect, TEXT_DEFAULT_DISABLE_BACKGROUND);
+
+        self.draw_text(painter);
+    }
 
     fn draw_text(&self, painter: &mut Painter) {
         let val_ref = self.value_ref();
 
-        painter.fill_rect_global(self.text_window, self.background());
+        // Draw placeholder:
+        if val_ref.len() == 0 {
+            if self.placeholder.len() > 0 {
+                self.draw_text_placeholder(painter);
+            }
 
-        painter.set_color(self.text_color);
+            return;
+        }
+
+        // Draw normal:
+        if self.selection_start == -1
+            || self.selection_end == -1
+            || self.selection_start == self.selection_end
+        {
+            self.draw_text_normal(painter, &val_ref)
+        }
+        // Draw selected:
+        else {
+            self.draw_text_selected(painter, &val_ref)
+        }
+    }
+
+    fn draw_text_normal(&self, painter: &mut Painter, val_ref: &Ref<String>) {
+        if self.is_enable() {
+            painter.set_color(self.text_color);
+        } else {
+            painter.set_color(TEXT_DEFAULT_DISABLE_COLOR);
+        }
+
         painter.draw_paragraph_global(
             val_ref.as_str(),
             *self.text_draw_position(),
@@ -271,8 +358,76 @@ impl Text {
         );
     }
 
-    fn draw_cursor(&mut self, painter: &mut Painter, cursor_x: f32) {
-        if !self.cursor_visible {
+    fn draw_text_selected(&self, painter: &mut Painter, val_ref: &Ref<String>) {
+        let str = val_ref.as_str();
+
+        /*
+         * Calculate the substring and the positions of both the selected and unselected text areas.
+         *
+         * pre(unselected) - mid(selected) - suf(unselected)
+         */
+        let (pre, mid, suf) = {
+            let font = self.skia_font();
+            let (start, end) = (
+                self.selection_start.min(self.selection_end) as usize,
+                self.selection_end.max(self.selection_start) as usize,
+            );
+
+            let pre_str = &str[0..start];
+            let mid_str = &str[start..end];
+            let suf_str = &str[end..];
+
+            let pre_w = font.calc_text_dimension(pre_str, self.letter_spacing).0;
+            let mid_w = font.calc_text_dimension(mid_str, self.letter_spacing).0;
+
+            let pre_point = *self.text_draw_position();
+            let mut mid_point = pre_point;
+            mid_point.offset(pre_w, 0.);
+            let mut suf_point = mid_point;
+            suf_point.offset(mid_w, 0.);
+
+            (
+                (pre_str, pre_point),
+                (
+                    mid_str,
+                    mid_point,
+                    FRect::new(mid_point.x(), mid_point.y(), mid_w, self.font_dimension.1),
+                ),
+                (suf_str, suf_point),
+            )
+        };
+
+        if pre.0.len() > 0 {
+            painter.set_color(self.text_color);
+            painter.draw_paragraph_global(pre.0, pre.1, self.letter_spacing, f32::MAX, None, false);
+        }
+        if suf.0.len() > 0 {
+            painter.set_color(self.text_color);
+            painter.draw_paragraph_global(suf.0, suf.1, self.letter_spacing, f32::MAX, None, false);
+        }
+        if mid.0.len() > 0 {
+            painter.fill_rect_global(mid.2, self.selection_background);
+
+            painter.set_color(self.selection_color);
+            painter.draw_paragraph_global(mid.0, mid.1, self.letter_spacing, f32::MAX, None, false);
+        }
+    }
+
+    fn draw_text_placeholder(&self, painter: &mut Painter) {
+        painter.set_color(TEXT_DEFAULT_PLACEHOLDER_COLOR);
+
+        painter.draw_paragraph_global(
+            &self.placeholder,
+            *self.text_draw_position(),
+            self.letter_spacing,
+            f32::MAX,
+            None,
+            false,
+        );
+    }
+
+    fn draw_cursor(&self, painter: &mut Painter, cursor_x: f32) {
+        if !self.cursor_visible || self.drag_status == DragStatus::Dragging {
             return;
         }
 
@@ -330,16 +485,16 @@ impl Text {
         // When cursor position exceeds the right side of the text window,
         // set the cursor to the end of the text window,
         // meanwhile the drawing position moves left.
-        if pos > self.text_window.right() - 1. {
-            let offset = pos - self.text_window.right() + 1.;
+        if pos > self.text_window.right() {
+            let offset = pos - self.text_window.right() + 2.;
             self.text_draw_position_mut().offset(-offset, 0.);
 
-            pos = self.text_window.right() - 1.;
+            pos = self.text_window.right() - 2.;
         }
         // When cursor position exceeds the left side of the text window,
         // set the cursor to the beginning of the text window,
         // meanwhile the drawing position moves right.
-        else if pos < self.text_window.left() + 2. {
+        else if pos < self.text_window.left() {
             let offset = self.text_window.left() + 2. - pos;
             self.text_draw_position_mut().offset(offset, 0.);
 
@@ -351,10 +506,10 @@ impl Text {
         else if self.cursor_index == self.value_ref().len()
             && self.text_draw_position().x() < self.text_window.x()
         {
-            let offset = self.text_window.right() - 1. - pos;
+            let offset = self.text_window.right() - 2. - pos;
             self.text_draw_position_mut().offset(offset, 0.);
 
-            pos = self.text_window.right() - 1.;
+            pos = self.text_window.right() - 2.;
         }
 
         pos
@@ -446,6 +601,12 @@ impl Text {
                 self.cursor_index = 0;
             }
             _ => {
+                if event.modifier() != KeyboardModifier::NoModifier {
+                    if self.handle_shortcut(event) {
+                        return
+                    }
+                }
+
                 let text = event.text();
                 if text.is_empty() {
                     return;
@@ -472,6 +633,35 @@ impl Text {
         self.cursor_visible = true;
     }
 
+    fn handle_shortcut(&mut self, evt: &KeyEvent) -> bool {
+        let modifier = evt.modifier();
+
+        match modifier {
+            KeyboardModifier::ControlModifier => {
+                match evt.key_code() {
+                    KeyCode::KeyA => {
+                        self.select_all();
+
+                        true
+                    }
+                    KeyCode::KeyC => {
+                        true
+                    }
+                    KeyCode::KeyV => {
+                        true
+                    }
+                    _ => { true },
+                }
+            }
+            KeyboardModifier::ShiftModifier => {
+                false
+            }
+            _ => {
+                true
+            }
+        }
+    }
+
     fn handle_mouse_click(&mut self, event: &MouseEvent) {
         self.drag_status = DragStatus::Pending;
 
@@ -479,6 +669,12 @@ impl Text {
         let pos = self.map_to_global_f(&pos);
 
         self.cursor_index = self.calc_cursor_index(pos.x());
+        if self.selection_end != -1 {
+            self.selection_start = -1;
+            self.selection_end = -1;
+        } else {
+            self.selection_start = self.cursor_index as i32;
+        }
 
         self.update();
         self.cursor_visible = true;
@@ -487,16 +683,31 @@ impl Text {
         }
     }
 
-    fn handle_mouse_move(&mut self, event: &MouseEvent) {}
+    fn handle_mouse_move(&mut self, event: &MouseEvent) {
+        if self.drag_status == DragStatus::None {
+            return;
+        }
+        if self.selection_start == -1 {
+            return;
+        }
+        self.drag_status = DragStatus::Dragging;
+
+        let pos: FPoint = event.position().into();
+        self.cursor_index = self.calc_cursor_index(pos.x());
+        self.selection_end = self.cursor_index as i32;
+
+        self.update();
+    }
 
     /// Calculate `cursor_index`(the index of the corresponding character in the text)
     /// based on the given x-coordinate.
     fn calc_cursor_index(&self, x_pos: f32) -> usize {
-        let offset = x_pos - self.text_draw_position().x();
-        let mut predict_idx = (offset / self.font_dimension.0) as usize;
-
         let str_ref = self.value_ref();
         let str = str_ref.as_str();
+
+        let offset = x_pos - self.text_draw_position().x();
+        let mut predict_idx = ((offset / self.font_dimension.0) as usize).min(str.len());
+
         let mut last_diff = f32::MAX;
         let mut last_idx = predict_idx;
 
@@ -535,9 +746,15 @@ impl Text {
 
     #[inline]
     fn handle_mouse_double_click(&mut self) {
-        let len = self.value_ref().len();
+        self.select_all();
+    }
+
+    #[inline]
+    fn select_all(&mut self) {
+        let len = self.value_ref().len() as i32;
         self.selection_start = 0;
         self.selection_end = len;
+        self.update();
     }
 
     #[inline]
@@ -548,7 +765,11 @@ impl Text {
     }
 
     #[inline]
-    fn handle_geometry_changed(&mut self, _: Rect) {
+    fn handle_geometry_changed(&mut self, rect: Rect) {
+        if rect.width() == 0 || rect.height() == 0 {
+            return;
+        }
+
         self.calc_text_geometry();
     }
 

@@ -9,7 +9,10 @@ use crate::{
     loading::LoadingManager,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
-    primitive::Message,
+    primitive::{
+        global_watch::GlobalWatchEvent,
+        Message,
+    },
     runtime::{wed, window_context::OutputSender},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep},
     window::win_builder::WindowBuilder,
@@ -18,7 +21,7 @@ use log::{debug, error};
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     ptr::NonNull,
     thread::{self, ThreadId},
 };
@@ -55,6 +58,7 @@ pub struct ApplicationWindow {
     high_load_request: bool,
 
     run_after: Option<Box<dyn FnOnce(&mut Self)>>,
+    watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -164,7 +168,7 @@ impl ApplicationWindow {
         T: StaticType + WidgetImpl + 'static,
     {
         let mut finds = vec![];
-        for (_, widget) in Self::widgets_of(self.id()).iter() {
+        for (_, widget) in self.widgets.iter() {
             let widget = nonnull_ref!(widget);
             if widget.object_type().is_a(T::static_type()) {
                 finds.push(widget.downcast_ref::<T>().unwrap())
@@ -174,12 +178,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_mut<'a, T>(&self) -> Vec<&'a mut T>
+    pub fn finds_mut<'a, T>(&mut self) -> Vec<&'a mut T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
         let mut finds = vec![];
-        for (_, widget) in Self::widgets_of(self.id()).iter_mut() {
+        for (_, widget) in self.widgets.iter_mut() {
             let widget = nonnull_mut!(widget);
             if widget.object_type().is_a(T::static_type()) {
                 finds.push(widget.downcast_mut::<T>().unwrap())
@@ -188,11 +192,10 @@ impl ApplicationWindow {
         finds
     }
 
-
     #[inline]
     pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
         let mut find = None;
-        for (_, widget) in Self::widgets_of(self.id()).iter() {
+        for (_, widget) in self.widgets.iter() {
             let widget = nonnull_ref!(widget);
             if widget.id() == id {
                 find = Some(widget);
@@ -202,9 +205,9 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_by_id_mut(&self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
+    pub fn finds_by_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
         let mut find = None;
-        for (_, widget) in Self::widgets_of(self.id()).iter_mut() {
+        for (_, widget) in self.widgets.iter_mut() {
             let widget = nonnull_mut!(widget);
             if widget.id() == id {
                 find = Some(widget);
@@ -264,7 +267,7 @@ impl ApplicationWindow {
             if let Some(widget) = self.finds_by_id_mut(id) {
                 widget.on_get_focus();
             } else {
-                return
+                return;
             }
         }
         self.focused_widget = id
@@ -301,6 +304,32 @@ impl ApplicationWindow {
             Some(OutputSender::Sender(ref sender)) => sender.send(message).unwrap(),
             Some(OutputSender::EventLoopProxy(ref sender)) => sender.send_event(message).unwrap(),
             None => panic!("`ApplicationWindow` did not register the output_sender."),
+        }
+    }
+
+    #[inline]
+    #[allow(dead_code)]
+    pub(crate) fn register_global_watch(&mut self, id: ObjectId, ty: GlobalWatchEvent) {
+        self.watch_map.entry(ty).or_default().insert(id);
+    }
+
+    #[inline]
+    pub(crate) fn handle_global_watch<F: Fn(&mut dyn GlobalWatch)>(
+        &mut self,
+        ty: GlobalWatchEvent,
+        f: F,
+    ) {
+        if let Some(ids) = self.watch_map.get(&ty) {
+            for &id in ids.clone().iter() {
+                if let Some(widget) = self.finds_by_id_mut(id) {
+                    let type_name = widget.type_name();
+
+                    f(cast_mut!(widget as GlobalWatch).expect(&format!(
+                        "Widget `{}` has not impl `GlobalWatchImpl`.",
+                        type_name
+                    )));
+                }
+            }
         }
     }
 
@@ -485,6 +514,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         }
         if let Some(loading) = cast_mut!(child_ref as Loadable) {
             LoadingManager::with(|m| m.borrow_mut().add_loading(loading))
+        }
+        if let Some(watch) = cast_mut!(child_ref as GlobalWatch) {
+            watch.register_global_watch();
         }
 
         // Determine whether the widget is a container.

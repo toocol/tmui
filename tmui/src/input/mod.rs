@@ -83,10 +83,12 @@ pub trait Input: InputSignals {
 pub trait InputBounds: Clone + Default + 'static {}
 impl<T: Clone + Default + 'static> InputBounds for T {}
 
-#[derive(Debug, Default)]
+#[derive(Debug, Derivative)]
+#[derivative(Default)]
 pub struct InputWrapper<T: InputBounds> {
     id: Cell<ObjectId>,
     initialized: Cell<bool>,
+    #[derivative(Default(value = "Cell::new(true)"))]
     enable: Cell<bool>,
     value: RefCell<T>,
 }
@@ -122,7 +124,6 @@ impl<T: InputBounds> InputWrapper<T> {
 
         self.id.set(id);
         self.initialized.set(true);
-        self.enable.set(true);
     }
 
     #[inline]
@@ -133,13 +134,11 @@ impl<T: InputBounds> InputWrapper<T> {
 
     #[inline]
     pub fn set_value(&self, val: T) {
-        self.check_init();
         *self.value.borrow_mut() = val;
     }
 
     #[inline]
     pub fn value(&self) -> T {
-        self.check_init();
         self.value.borrow().clone()
     }
 
@@ -155,19 +154,16 @@ impl<T: InputBounds> InputWrapper<T> {
 
     #[inline]
     pub fn enable(&self) {
-        self.check_init();
         self.enable.set(true);
     }
 
     #[inline]
     pub fn disable(&self) {
-        self.check_init();
         self.enable.set(false);
     }
 
     #[inline]
     pub fn is_enable(&self) -> bool {
-        self.check_init();
         self.enable.get()
     }
 }

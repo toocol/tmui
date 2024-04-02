@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
+use crate::{animation::Animation, async_task::AsyncTask, global_watch::GlobalWatch, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
 
 pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
@@ -35,6 +35,10 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) loadable_field_clause: TokenStream,
     pub(crate) loadable_impl_clause: TokenStream,
     pub(crate) loadable_reflect_clause: TokenStream,
+
+    // fields about `glboal_watch`
+    pub(crate) global_watch_impl_clause: TokenStream,
+    pub(crate) global_watch_reflect_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -54,6 +58,8 @@ impl<'a> GeneralAttr<'a> {
 
         let mut loadable = None;
 
+        let mut global_watch = None;
+
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
                 let attr_str = attr_ident.to_string();
@@ -72,6 +78,11 @@ impl<'a> GeneralAttr<'a> {
                     }
                     "popupable" => popupable = Some(Popupable::parse(ast, generics)?),
                     "loadable" => loadable = Some(Loadable::parse(ast, generics)?),
+                    "global_watch" => {
+                        let mut gw = attr.parse_args::<GlobalWatch>()?;
+                        gw.set_generics(generics);
+                        global_watch = Some(gw);
+                    },
                     _ => {}
                 }
             }
@@ -194,6 +205,19 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // Global watch
+        let global_watch_impl_clause = if let Some(global_watch) = global_watch.as_ref() {
+            global_watch.expand_impl(name)?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let global_watch_reflect_clause = if let Some(global_watch) = global_watch.as_ref() {
+            global_watch.expand_reflect(name)?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -216,6 +240,8 @@ impl<'a> GeneralAttr<'a> {
             loadable_field_clause,
             loadable_impl_clause,
             loadable_reflect_clause,
+            global_watch_impl_clause,
+            global_watch_reflect_clause,
         })
     }
 }

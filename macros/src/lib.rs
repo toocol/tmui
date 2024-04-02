@@ -13,6 +13,7 @@ mod extend_popup;
 mod extend_shared_widget;
 mod extend_widget;
 mod general_attr;
+mod global_watch;
 mod layout;
 mod loadable;
 mod pane;
@@ -299,5 +300,10 @@ pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn loadable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn global_watch(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

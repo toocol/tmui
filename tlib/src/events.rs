@@ -27,7 +27,7 @@ pub fn downcast_event_ref<T: EventTrait>(evt: &Event) -> Option<&T> {
 }
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default, Hash)]
 pub enum EventType {
     #[default]
     None = 0,
