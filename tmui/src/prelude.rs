@@ -34,12 +34,15 @@ pub use crate::loading::{Loadable, LoadingModel, ReflectLoadable};
 pub use crate::overlay::{Overlaid, ReflectOverlaid};
 pub use crate::pane::{Pane, PaneDirection, PaneExt, ReflectPaneExt};
 pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
-pub use crate::primitive::global_watch::{GlobalWatch, GlobalWatchImpl, ReflectGlobalWatch, GlobalWatchEvent};
+pub use crate::primitive::global_watch::{
+    GlobalWatch, GlobalWatchEvent, GlobalWatchImpl, ReflectGlobalWatch,
+};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::shared_widget::{
     ReflectSharedWidgetImpl, SharedWidget, SharedWidgetExt, SharedWidgetImpl,
 };
+pub use crate::shortcut::Shortcut;
 pub use crate::split_pane::{
     ReflectSplitInfosGetter, SplitInfo, SplitInfosGetter, SplitPane, SplitPaneExt, SplitType,
 };

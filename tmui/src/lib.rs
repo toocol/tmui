@@ -4,6 +4,7 @@ pub mod application;
 pub mod opti;
 pub mod primitive;
 pub mod runtime;
+pub mod shortcut;
 pub mod button;
 pub mod clipboard;
 pub mod backend;

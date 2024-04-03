@@ -35,6 +35,9 @@ pub(crate) fn expand(
     let popupable_impl_clause = &general_attr.popupable_impl_clause;
     let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
 
+    let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
+    let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -278,6 +281,8 @@ pub(crate) fn expand(
 
                 #popupable_impl_clause
 
+                #global_watch_impl_clause
+
                 impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -304,6 +309,7 @@ pub(crate) fn expand(
                         #animation_reflect
                         #animation_state_holder_reflect
                         #reflect_pane
+                        #global_watch_reflect_clause
                     }
 
                     #[inline]

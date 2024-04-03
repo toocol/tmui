@@ -20,6 +20,7 @@ mod pane;
 mod popupable;
 mod reflect_trait;
 mod scroll_area;
+mod shortcut;
 mod split_pane;
 mod stack;
 mod trait_info;
@@ -30,6 +31,7 @@ use extend_attr::ExtendAttr;
 use layout::LayoutType;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
+use shortcut::Shortcut;
 use syn::{self, parse_macro_input, DeriveInput, ImplGenerics, TypeGenerics, WhereClause};
 use trait_info::TraitInfo;
 
@@ -136,6 +138,7 @@ pub fn childable_derive(_: TokenStream) -> TokenStream {
 /// Enable the trait has the ability of reflect, create the trait reflect struct.<br>
 /// The struct implemented the reflected trait should defined [`extends`](crate::extends),
 /// and register the reflect info to [`TypeRegistry`] in function [`ObjectImpl::type_register()`], like: <br>
+/// 
 /// ```ignore
 /// ...
 /// #[reflect_trait]
@@ -164,6 +167,16 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// ### Only taing effect when struct annotated `#[extends(Widget)]`
 #[proc_macro_attribute]
 pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+/// arguments:
+///
+/// `name`: Upper camel case needed, the name of async task struct, same as the async function.
+///
+/// `value``: General param of async block's return value
+#[proc_macro_attribute]
+pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 
@@ -198,14 +211,43 @@ pub fn async_do(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as AsyncDoParser).expand().into()
 }
 
-/// arguments:
+/// The `shortcut!` procedural macro simplifies the construction of `Shortcut`
+/// for defining shortcuts involving key combinations.
 ///
-/// `name`: Upper camel case needed, the name of async task struct, same as the async function.
+/// This macro allows users to define a shortcut by specifying a series of keys
+/// separated by `+` symbols. Each shortcut is composed of one or more modifier
+/// keys (such as `Control`, `Alt`, `Shift`, `Meta`), followed by a specific key
+/// (e.g., the letter keys `A`, `B`, `C`, etc.).
 ///
-/// `value``: General param of async block's return value
-#[proc_macro_attribute]
-pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
-    input
+/// # Basic Usage
+///
+/// The following examples demonstrate how to use the `shortcut!` macro to define shortcuts:
+///
+/// ``` ignore
+/// let ctrl_a = shortcut!(Control + A);
+/// let ctrl_alt_b = shortcut!(Control + Alt + B);
+/// let alt_1 = shortcut!(Alt + 1);
+/// ```
+///
+/// These shortcuts can be used to define specific actions or behaviors within an application.
+///
+/// ### Parameters
+///
+/// - `Control`, `Alt`, `Shift`, `Meta`: Modifier key identifiers.
+/// - `A`..`Z`, `0`-`9`, `F1`-`F12`: Specific key identifiers.
+///
+/// These parameters are connected by `+` symbols to form a complete shortcut definition.
+///
+/// ### Return Value
+///
+/// The macro returns an instance of `Shortcut`, representing the defined shortcut.
+#[proc_macro]
+pub fn shortcut(input: TokenStream) -> TokenStream {
+    let shortcut = parse_macro_input!(input as Shortcut);
+    match shortcut.expand() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
 }
 
 #[proc_macro]
