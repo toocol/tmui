@@ -1,21 +1,11 @@
 use crate::{
-    animation::manager::AnimationManager,
-    container::ContainerLayoutEnum,
-    graphics::{
+    animation::manager::AnimationManager, container::ContainerLayoutEnum, graphics::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
-    },
-    layout::LayoutManager,
-    loading::LoadingManager,
-    platform::{ipc_bridge::IpcBridge, PlatformType},
-    prelude::*,
-    primitive::{
+    }, layout::LayoutManager, loading::LoadingManager, platform::{ipc_bridge::IpcBridge, PlatformType}, prelude::*, primitive::{
         global_watch::GlobalWatchEvent,
         Message,
-    },
-    runtime::{wed, window_context::OutputSender},
-    widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep},
-    window::win_builder::WindowBuilder,
+    }, runtime::{wed, window_context::OutputSender}, widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep}, window::win_builder::WindowBuilder
 };
 use log::{debug, error};
 use once_cell::sync::Lazy;

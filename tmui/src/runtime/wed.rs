@@ -1,7 +1,6 @@
 use crate::{
-    application_window::ApplicationWindow,
-    prelude::SharedWidget,
-    primitive::global_watch::{GlobalWatchEvent},
+    application_window::ApplicationWindow, prelude::SharedWidget,
+    primitive::global_watch::GlobalWatchEvent, shortcut::manager::ShortcutManager,
     widget::widget_ext::WidgetExt,
 };
 use std::ptr::NonNull;
@@ -210,13 +209,22 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             window.handle_global_watch(GlobalWatchEvent::KeyPress, |handle| {
                 handle.on_global_key_pressed(&evt);
             });
+            if ShortcutManager::with(|shortcut_manager| {
+                shortcut_manager.borrow_mut().trigger_global(&evt)
+            }) {
+                return None;
+            }
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
                 if widget.id() == window.focused_widget() {
-                    widget.on_key_pressed(&evt);
-                    widget.inner_key_pressed(&evt);
+                    if !ShortcutManager::with(|shortcut_manager| {
+                        shortcut_manager.borrow_mut().trigger(&evt, widget.id())
+                    }) {
+                        widget.on_key_pressed(&evt);
+                        widget.inner_key_pressed(&evt);
+                    }
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);

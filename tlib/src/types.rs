@@ -447,7 +447,7 @@ pub trait TypeDowncast: ObjectType + Sized {
         downcast_ref::<Self, R>(self)
     }
 
-    fn downcast_ref_mut<R: StaticType>(&mut self) -> Option<&mut R> {
+    fn downcast_mut<R: StaticType>(&mut self) -> Option<&mut R> {
         downcast_ref_mut::<Self, R>(self)
     }
 }

@@ -1,10 +1,9 @@
 use tlib::{connect, run_after};
 use tmui::{
-    input::text::Text,
+    input::{text::Text, Input, InputSignals},
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
-    input::{InputSignals, Input},
 };
 
 #[extends(Widget, Layout(VBox))]
@@ -42,7 +41,8 @@ impl ObjectImpl for Holder {
         // self.text2.height_request(25);
         self.text2.set_margin_left(20);
         self.text2.set_margin_top(10);
-        self.text2.set_value("Contents of disabled text-2, some text may not be seen.".to_string());
+        self.text2
+            .set_value("Contents of disabled text-2, some text may not be seen.".to_string());
         self.text2.disable();
         // self.text2.set_vexpand(true);
 

@@ -1,7 +1,7 @@
 use crate::{
     graphics::element::HierachyZ,
     prelude::*,
-    widget::{ScaleCalculate, WidgetImpl, WindowAcquire},
+    widget::{ScaleCalculate, WidgetImpl},
 };
 use tlib::{
     namespace::Orientation,
@@ -245,13 +245,6 @@ impl ScaleMeasure for f32 {
     #[inline]
     fn is_dismiss(&self) -> bool {
         *self == SCALE_DISMISS
-    }
-}
-
-impl WindowAcquire for dyn ContainerImpl {
-    #[inline]
-    fn window(&self) -> &'static mut ApplicationWindow {
-        ApplicationWindow::window_of(self.window_id())
     }
 }
 

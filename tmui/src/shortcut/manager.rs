@@ -1,10 +1,12 @@
-use std::{collections::HashMap, ptr::NonNull};
-
+use super::{Shortcut, ShortcutTrigger};
 use crate::widget::WidgetImpl;
+use std::{cell::RefCell, collections::HashMap, ptr::NonNull};
+use tlib::{events::KeyEvent, nonnull_mut, object::ObjectId};
 
-use super::Shortcut;
+thread_local! {
+    static INSTANCE: RefCell<ShortcutManager> = RefCell::new(ShortcutManager::new());
+}
 
-#[derive(Default)]
 pub(crate) struct ShortcutManager {
     shortcuts: HashMap<
         Shortcut,
@@ -24,19 +26,78 @@ pub(crate) struct ShortcutManager {
 }
 
 impl ShortcutManager {
-    pub(crate) fn register_shortcut<F: Fn(&mut dyn WidgetImpl)>(
-        &mut self,
-        shortcut: Shortcut,
-        widget: &mut dyn WidgetImpl,
-        f: F,
-    ) {
+    #[inline]
+    pub(crate) fn new() -> Self {
+        Self {
+            shortcuts: Default::default(),
+            global_shortcuts: Default::default(),
+        }
     }
 
-    pub(crate) fn register_global_shortcut<F: Fn(&mut dyn WidgetImpl)>(
+    #[inline]
+    pub(crate) fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&RefCell<ShortcutManager>) -> R,
+    {
+        INSTANCE.with(f)
+    }
+
+    #[inline]
+    pub(crate) fn register_shortcut<F: Fn(&mut dyn WidgetImpl) + 'static>(
         &mut self,
         shortcut: Shortcut,
         widget: &mut dyn WidgetImpl,
         f: F,
     ) {
+        self.shortcuts
+            .entry(shortcut)
+            .or_default()
+            .push((NonNull::new(widget), Box::new(f)));
+    }
+
+    #[inline]
+    pub(crate) fn register_global_shortcut<F: Fn(&mut dyn WidgetImpl) + 'static>(
+        &mut self,
+        shortcut: Shortcut,
+        widget: &mut dyn WidgetImpl,
+        f: F,
+    ) {
+        self.global_shortcuts
+            .entry(shortcut)
+            .or_default()
+            .push((NonNull::new(widget), Box::new(f)));
+    }
+
+    #[inline]
+    pub(crate) fn trigger(&mut self, evt: &KeyEvent, id: ObjectId) -> bool {
+        let mut trigged = false;
+
+        if let Some(widgets) = self.shortcuts.get_mut(&evt.trigger_shortcut()) {
+            widgets.iter_mut().for_each(|(widget, f)| {
+                let widget = nonnull_mut!(widget);
+                if id == widget.id() {
+                    f(widget);
+                    trigged = true;
+                }
+            })
+        }
+
+        trigged
+    }
+
+    #[inline]
+    pub(crate) fn trigger_global(&mut self, evt: &KeyEvent) -> bool {
+        let mut trigged = false;
+
+        if let Some(widgets) = self.global_shortcuts.get_mut(&evt.trigger_shortcut()) {
+            widgets
+                .iter_mut()
+                .for_each(|(widget, f)| { 
+                    f(nonnull_mut!(widget));
+                    trigged = true;
+                })
+        }
+
+        trigged
     }
 }

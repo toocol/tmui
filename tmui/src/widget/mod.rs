@@ -936,6 +936,7 @@ pub trait WidgetImpl:
     + PointEffective
     + ChildRegionAcquirer
     + ActionExt
+    + WindowAcquire
 {
     /// The widget can be focused or not, default value was false.
     #[inline]
@@ -1151,12 +1152,6 @@ pub trait WindowAcquire {
     fn window(&self) -> &'static mut ApplicationWindow;
 }
 impl<T: WidgetImpl> WindowAcquire for T {
-    #[inline]
-    fn window(&self) -> &'static mut ApplicationWindow {
-        ApplicationWindow::window_of(self.window_id())
-    }
-}
-impl WindowAcquire for dyn WidgetImpl {
     #[inline]
     fn window(&self) -> &'static mut ApplicationWindow {
         ApplicationWindow::window_of(self.window_id())

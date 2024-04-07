@@ -235,7 +235,7 @@ pub trait WidgetExt {
 
     /// Get the rect of widget without borders.
     ///
-    /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
+    /// Go to[`Function defination`](WidgetExt::borderless_rect) (Defined in [`WidgetExt`])
     fn borderless_rect(&self) -> FRect;
 
     /// Get the size of widget. The size does not include the margins.

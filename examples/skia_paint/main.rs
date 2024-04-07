@@ -1,8 +1,8 @@
 mod skia_paint;
 use skia_paint::SkiaPaint;
-use tlib::Object;
 use tmui::{
-    application::Application, application_window::ApplicationWindow, widget::WidgetImplExt,
+    application::Application, application_window::ApplicationWindow, tlib::Object,
+    widget::WidgetImplExt,
 };
 
 fn main() {

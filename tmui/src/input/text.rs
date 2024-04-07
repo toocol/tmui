@@ -2,6 +2,7 @@ use super::{Input, InputSignals, InputWrapper};
 use crate::{
     application,
     prelude::*,
+    shortcut::ShortcutRegister,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
@@ -12,8 +13,8 @@ use tlib::{
     events::{KeyEvent, MouseEvent},
     figure::FontCalculation,
     global_watch,
-    namespace::{KeyCode, KeyboardModifier},
-    run_after,
+    namespace::KeyCode,
+    run_after, shortcut,
     skia_safe::ClipOp,
     timer::Timer,
     typedef::SkiaFont,
@@ -93,6 +94,7 @@ impl ObjectImpl for Text {
         self.font_changed();
         self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
         self.set_borders(1., 1., 1., 1.);
+        self.register_shortcuts();
 
         if self.is_enable() {
             self.cursor_index = self.input_wrapper.value_ref().len();
@@ -601,12 +603,6 @@ impl Text {
                 self.cursor_index = 0;
             }
             _ => {
-                if event.modifier() != KeyboardModifier::NoModifier {
-                    if self.handle_shortcut(event) {
-                        return
-                    }
-                }
-
                 let text = event.text();
                 if text.is_empty() {
                     return;
@@ -633,33 +629,16 @@ impl Text {
         self.cursor_visible = true;
     }
 
-    fn handle_shortcut(&mut self, evt: &KeyEvent) -> bool {
-        let modifier = evt.modifier();
+    fn register_shortcuts(&mut self) {
+        self.register_shortcut(shortcut!(Control + A), |w| {
+            w.downcast_mut::<Text>().unwrap().select_all()
+        });
 
-        match modifier {
-            KeyboardModifier::ControlModifier => {
-                match evt.key_code() {
-                    KeyCode::KeyA => {
-                        self.select_all();
+        self.register_shortcut(shortcut!(Control + C), |w| {
+        });
 
-                        true
-                    }
-                    KeyCode::KeyC => {
-                        true
-                    }
-                    KeyCode::KeyV => {
-                        true
-                    }
-                    _ => { true },
-                }
-            }
-            KeyboardModifier::ShiftModifier => {
-                false
-            }
-            _ => {
-                true
-            }
-        }
+        self.register_shortcut(shortcut!(Control + V), |w| {
+        });
     }
 
     fn handle_mouse_click(&mut self, event: &MouseEvent) {
