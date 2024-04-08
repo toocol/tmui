@@ -1,6 +1,9 @@
 use tlib::{connect, run_after};
 use tmui::{
-    input::{text::Text, Input, InputSignals},
+    input::{
+        text::{Text, TextSignals},
+        Input, InputSignals,
+    },
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
@@ -27,7 +30,7 @@ impl ObjectSubclass for Holder {
 impl ObjectImpl for Holder {
     fn initialize(&mut self) {
         // self.text1.set_background(Color::RED);
-        self.text1.width_request(200);
+        self.text1.width_request(400);
         self.text1.height_request(25);
         self.text1.set_margin_left(20);
         self.text1.set_margin_top(10);
@@ -35,6 +38,12 @@ impl ObjectImpl for Holder {
         self.text1.set_value("Contents of text-1.".to_string());
         // self.text1.set_vexpand(true);
         connect!(self.text1, value_changed(), self, text_value_changed());
+        connect!(
+            self.text1,
+            selection_changed(),
+            self,
+            text_selection_changed()
+        );
 
         // self.text2.set_background(Color::BLUE);
         // self.text2.width_request(200);
@@ -76,4 +85,13 @@ impl Holder {
 
     #[inline]
     pub fn text_value_changed(&self) {}
+
+    #[inline]
+    pub fn text_selection_changed(&self) {
+        if let Some(s) = self.text1.get_selection() {
+            println!("Text selection => {}", s)
+        } else {
+            println!("Text selection => empty")
+        }
+    }
 }

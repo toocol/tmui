@@ -1,25 +1,31 @@
 use super::{Input, InputSignals, InputWrapper};
 use crate::{
-    application,
+    application, cast_do,
+    clipboard::ClipboardLevel,
     prelude::*,
     shortcut::ShortcutRegister,
+    system::System,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use log::warn;
-use std::time::Duration;
+use std::{
+    collections::VecDeque,
+    time::{Duration, Instant},
+};
 use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
     figure::FontCalculation,
     global_watch,
-    namespace::KeyCode,
-    run_after, shortcut,
+    namespace::{KeyCode, KeyboardModifier},
+    run_after, shortcut, signals,
     skia_safe::ClipOp,
     timer::Timer,
     typedef::SkiaFont,
 };
 
+const TEXT_DEFAULT_MAX_MEMORIES_SIZE: usize = 50;
 const TEXT_DEFAULT_WIDTH: i32 = 150;
 const TEXT_DEFAULT_PADDING: f32 = 3.;
 
@@ -36,6 +42,12 @@ const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 #[global_watch(MouseMove)]
 pub struct Text {
     input_wrapper: InputWrapper<String>,
+
+    //////////////////////////// Revoke/Redo
+    revoke_memories: VecDeque<TextMemory>,
+    redo_memories: VecDeque<TextMemory>,
+    #[derivative(Default(value = "Instant::now()"))]
+    last_key_strike: Instant,
 
     //////////////////////////// Cursor
     cursor_index: usize,
@@ -72,6 +84,16 @@ pub struct Text {
     #[derivative(Default(value = "Color::WHITE"))]
     selection_color: Color,
 }
+
+pub trait TextSignals: ActionExt {
+    signals! {
+        TextSignals:
+
+        /// Emit when text's selection was changed.
+        selection_changed();
+    }
+}
+impl TextSignals for Text {}
 
 #[repr(u8)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -294,6 +316,24 @@ impl Text {
 
         self.update();
     }
+
+    #[inline]
+    pub fn has_selection(&self) -> bool {
+        self.selection_start != -1
+            && self.selection_end != -1
+            && self.selection_start != self.selection_end
+    }
+
+    #[inline]
+    pub fn get_selection(&self) -> Option<String> {
+        if self.has_selection() {
+            let (i, j) = self.selection_range();
+            let str_ref = self.value_ref();
+            Some(str_ref.as_str()[i..j].to_string())
+        } else {
+            None
+        }
+    }
 }
 
 impl Text {
@@ -370,10 +410,7 @@ impl Text {
          */
         let (pre, mid, suf) = {
             let font = self.skia_font();
-            let (start, end) = (
-                self.selection_start.min(self.selection_end) as usize,
-                self.selection_end.max(self.selection_start) as usize,
-            );
+            let (start, end) = self.selection_range();
 
             let pre_str = &str[0..start];
             let mid_str = &str[start..end];
@@ -430,6 +467,9 @@ impl Text {
 
     fn draw_cursor(&self, painter: &mut Painter, cursor_x: f32) {
         if !self.cursor_visible || self.drag_status == DragStatus::Dragging {
+            return;
+        }
+        if self.has_selection() {
             return;
         }
 
@@ -568,18 +608,35 @@ impl Text {
     }
 
     fn handle_key_pressed(&mut self, event: &KeyEvent) {
+        if event.modifier() == KeyboardModifier::NoModifier {
+            if self.last_key_strike.elapsed().as_millis() > 1000 {
+                self.save_revoke();
+            }
+            self.last_key_strike = Instant::now();
+        }
+
         match event.key_code() {
             KeyCode::KeyBackspace => {
+                if self.has_selection() {
+                    let (start, end) = self.selection_range();
+                    self.input_wrapper.value_mut().replace_range(start..end, "");
+                    self.cursor_index = start;
+                    self.clear_selection();
+                    return;
+                }
+
                 if self.cursor_index == 0 {
                     self.start_blink_timer();
                     return;
                 }
+
                 self.cursor_index -= 1;
-                self.input_wrapper.value_ref_mut().remove(self.cursor_index);
+                self.input_wrapper.value_mut().remove(self.cursor_index);
 
                 emit!(self.value_changed());
             }
             KeyCode::KeyLeft => {
+                self.clear_selection();
                 if self.cursor_index > 0 {
                     self.cursor_index -= 1;
                 } else {
@@ -588,6 +645,7 @@ impl Text {
                 }
             }
             KeyCode::KeyRight => {
+                self.clear_selection();
                 if self.cursor_index < self.value_ref().len() {
                     self.cursor_index += 1;
                 } else {
@@ -596,17 +654,35 @@ impl Text {
                 }
             }
             KeyCode::KeyEnd => {
+                self.clear_selection();
                 let idx = self.value_ref().len();
                 self.cursor_index = idx;
             }
             KeyCode::KeyHome => {
+                self.clear_selection();
                 self.cursor_index = 0;
             }
             _ => {
+                let modifier = event.modifier();
+                if modifier != KeyboardModifier::NoModifier
+                    && modifier != KeyboardModifier::ShiftModifier
+                {
+                    return;
+                }
+
                 let text = event.text();
                 if text.is_empty() {
                     return;
                 }
+
+                // Clear the selection.
+                if self.has_selection() {
+                    let (i, j) = self.selection_range();
+                    self.input_wrapper.value_mut().replace_range(i..j, "");
+                    self.clear_selection();
+                    self.cursor_index = i;
+                }
+
                 if let Some(max_length) = self.max_length {
                     if self.value_ref().len() >= max_length {
                         self.start_blink_timer();
@@ -615,7 +691,7 @@ impl Text {
                 }
 
                 self.input_wrapper
-                    .value_ref_mut()
+                    .value_mut()
                     .insert_str(self.cursor_index, text);
                 self.cursor_index += 1;
 
@@ -629,16 +705,27 @@ impl Text {
         self.cursor_visible = true;
     }
 
+    #[rustfmt::skip]
     fn register_shortcuts(&mut self) {
-        self.register_shortcut(shortcut!(Control + A), |w| {
-            w.downcast_mut::<Text>().unwrap().select_all()
-        });
+        self.register_shortcut(shortcut!(Control + A), cast_do!(Text::select_all()));
 
-        self.register_shortcut(shortcut!(Control + C), |w| {
-        });
+        self.register_shortcut(shortcut!(Control + C), cast_do!(Text::copy()));
 
-        self.register_shortcut(shortcut!(Control + V), |w| {
-        });
+        self.register_shortcut(shortcut!(Control + X), cast_do!(Text::cut()));
+
+        self.register_shortcut(shortcut!(Control + V), cast_do!(Text::paste()));
+
+        self.register_shortcut(shortcut!(Control + Z), cast_do!(Text::revoke()));
+
+        self.register_shortcut(shortcut!(Control + Y), cast_do!(Text::redo()));
+
+        self.register_shortcut(shortcut!(Shift + Left), cast_do!(Text::shift_select(KeyCode::KeyLeft)));
+
+        self.register_shortcut(shortcut!(Shift + Right), cast_do!(Text::shift_select(KeyCode::KeyRight)));
+
+        self.register_shortcut(shortcut!(Shift + Home), cast_do!(Text::shift_select(KeyCode::KeyHome)));
+
+        self.register_shortcut(shortcut!(Shift + End), cast_do!(Text::shift_select(KeyCode::KeyEnd)));
     }
 
     fn handle_mouse_click(&mut self, event: &MouseEvent) {
@@ -649,10 +736,9 @@ impl Text {
 
         self.cursor_index = self.calc_cursor_index(pos.x());
         if self.selection_end != -1 {
-            self.selection_start = -1;
-            self.selection_end = -1;
+            self.clear_selection();
         } else {
-            self.selection_start = self.cursor_index as i32;
+            self.adjust_selection_range(Some(self.cursor_index as i32), None);
         }
 
         self.update();
@@ -673,7 +759,8 @@ impl Text {
 
         let pos: FPoint = event.position().into();
         self.cursor_index = self.calc_cursor_index(pos.x());
-        self.selection_end = self.cursor_index as i32;
+
+        self.adjust_selection_range(None, Some(self.cursor_index as i32));
 
         self.update();
     }
@@ -729,11 +816,48 @@ impl Text {
     }
 
     #[inline]
+    fn adjust_selection_range(&mut self, start: Option<i32>, end: Option<i32>) {
+        let mut changed = false;
+
+        if let Some(start) = start {
+            if self.selection_start != start {
+                self.selection_start = start;
+                changed = true;
+            }
+        }
+
+        if let Some(end) = end {
+            if self.selection_end != end {
+                self.selection_end = end;
+                changed = true;
+
+                emit!(self.selection_changed());
+            }
+        }
+
+        if changed {
+            self.update();
+        }
+    }
+
+    #[inline]
     fn select_all(&mut self) {
         let len = self.value_ref().len() as i32;
-        self.selection_start = 0;
-        self.selection_end = len;
-        self.update();
+
+        self.adjust_selection_range(Some(0), Some(len));
+    }
+
+    #[inline]
+    fn selection_range(&self) -> (usize, usize) {
+        (
+            self.selection_start.min(self.selection_end) as usize,
+            self.selection_end.max(self.selection_start) as usize,
+        )
+    }
+
+    #[inline]
+    fn clear_selection(&mut self) {
+        self.adjust_selection_range(Some(-1), Some(-1));
     }
 
     #[inline]
@@ -791,5 +915,167 @@ impl Text {
         self.skia_font
             .as_ref()
             .expect("Fatal error: `skia_font` of `Text` was None.")
+    }
+
+    #[inline]
+    fn copy(&self) {
+        if let Some(selection) = self.get_selection() {
+            System::clipboard().set_text(selection, ClipboardLevel::Os)
+        }
+    }
+
+    #[inline]
+    fn cut(&mut self) {
+        if !self.has_selection() {
+            return;
+        }
+        self.save_revoke();
+
+        let (start, end) = self.selection_range();
+
+        System::clipboard().set_text(&self.value_ref()[start..end], ClipboardLevel::Os);
+
+        self.input_wrapper.value_mut().replace_range(start..end, "");
+
+        self.cursor_index = start;
+        self.clear_selection();
+    }
+
+    #[inline]
+    fn paste(&mut self) {
+        if let Some(cp) = System::clipboard().text(ClipboardLevel::Os) {
+            self.save_revoke();
+
+            if self.has_selection() {
+                let (i, j) = self.selection_range();
+                self.input_wrapper.value_mut().replace_range(i..j, "");
+                self.cursor_index = i;
+                self.clear_selection();
+            }
+
+            let mut cut = false;
+            {
+                let mut value_mut = self.input_wrapper.value_mut();
+
+                value_mut.insert_str(self.cursor_index, &cp);
+                if let Some(max_length) = self.max_length {
+                    if value_mut.len() > max_length {
+                        value_mut.replace_range(max_length.., "");
+                        cut = true;
+                    }
+                }
+            }
+
+            if cut {
+                let len = self.value_ref().len();
+                self.cursor_index = len;
+            } else {
+                self.cursor_index += cp.len();
+            }
+
+            self.update();
+        }
+    }
+
+    #[inline]
+    fn save_revoke(&mut self) {
+        self.revoke_memories.push_back(TextMemory::new(self));
+        if self.revoke_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
+            self.revoke_memories.pop_front();
+        }
+    }
+
+    #[inline]
+    fn save_redo(&mut self) {
+        self.redo_memories.push_back(TextMemory::new(self));
+        if self.redo_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
+            self.redo_memories.pop_front();
+        }
+    }
+
+    #[inline]
+    fn revoke(&mut self) {
+        if let Some(mem) = self.revoke_memories.pop_back() {
+            self.save_redo();
+
+            self.cursor_index = mem.cursor_index;
+            self.selection_start = mem.selection_start;
+            self.selection_end = mem.selection_end;
+            self.input_wrapper.set_value(mem.value.clone());
+            self.text_draw_position = Some(mem.text_draw_position);
+
+            self.update();
+        }
+    }
+
+    #[inline]
+    fn redo(&mut self) {
+        if let Some(mem) = self.redo_memories.pop_back() {
+            self.save_revoke();
+
+            self.cursor_index = mem.cursor_index;
+            self.selection_start = mem.selection_start;
+            self.selection_end = mem.selection_end;
+            self.input_wrapper.set_value(mem.value.clone());
+            self.text_draw_position = Some(mem.text_draw_position);
+
+            self.update();
+        }
+    }
+
+    #[inline]
+    fn shift_select(&mut self, code: KeyCode) {
+        let start = if self.selection_start == -1 {
+            Some(self.cursor_index as i32)
+        } else {
+            None
+        };
+
+        match code {
+            KeyCode::KeyLeft => {
+                if self.cursor_index > 0 {
+                    self.cursor_index -= 1;
+                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
+                }
+            }
+            KeyCode::KeyRight => {
+                if self.cursor_index < self.value_ref().len() {
+                    self.cursor_index += 1;
+                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
+                }
+            }
+            KeyCode::KeyHome => {
+                self.cursor_index = 0;
+                self.adjust_selection_range(start, Some(0));
+            }
+            KeyCode::KeyEnd => {
+                let len = self.value_ref().len();
+                self.cursor_index = len;
+                self.adjust_selection_range(start, Some(len as i32));
+            }
+            _ => {}
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct TextMemory {
+    cursor_index: usize,
+    selection_start: i32,
+    selection_end: i32,
+    value: String,
+    text_draw_position: FPoint,
+}
+
+impl TextMemory {
+    #[inline]
+    fn new(text: &Text) -> Self {
+        TextMemory {
+            cursor_index: text.cursor_index,
+            selection_start: text.selection_start,
+            selection_end: text.selection_end,
+            value: text.value(),
+            text_draw_position: *text.text_draw_position(),
+        }
     }
 }

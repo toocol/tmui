@@ -8,7 +8,7 @@ pub mod text;
 use std::cell::{Cell, Ref, RefCell, RefMut};
 
 use log::warn;
-use tlib::{object::ObjectId, prelude::*, signals, signal};
+use tlib::{object::ObjectId, prelude::*, signal, signals};
 
 #[derive(Debug, Clone, Copy, Hash)]
 pub enum InputType {
@@ -101,7 +101,7 @@ pub trait InputSignals: ActionExt {
         value_changed();
 
         /// Emit when input elements were enabled/disabled.
-        /// 
+        ///
         /// @param [`bool`]
         available_changed();
     }
@@ -148,7 +148,7 @@ impl<T: InputBounds> InputWrapper<T> {
     }
 
     #[inline]
-    pub fn value_ref_mut(&self) -> RefMut<T> {
+    pub fn value_mut(&self) -> RefMut<T> {
         self.value.borrow_mut()
     }
 

@@ -112,6 +112,13 @@ impl From<u128> for u16 {
 /// Get the timestamp since unix epoch.
 pub struct Timestamp(SystemTime);
 
+impl Default for Timestamp {
+    #[inline]
+    fn default() -> Self {
+        Self::now()
+    }
+}
+
 impl Timestamp {
     #[inline]
     pub fn now() -> Self {

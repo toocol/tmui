@@ -70,6 +70,18 @@ bitflags! {
         const F10 = 1 << 49;
         const F11 = 1 << 50;
         const F12 = 1 << 51;
+
+        // Some funcional keys:
+        const Insert = 1 << 52;
+        const Delete = 1 << 53;
+        const Home = 1 << 54;
+        const End = 1 << 55;
+        const PageUp = 1 << 56;
+        const PageDown = 1 << 57;
+        const Left = 1 << 58;
+        const Up = 1 << 59;
+        const Right = 1 << 60;
+        const Down = 1 << 61;
     }
 }
 
@@ -177,11 +189,31 @@ impl ShortcutTrigger for KeyEvent {
             KeyCode::KeyF10 => shortcut.insert(Shortcut::F10),
             KeyCode::KeyF11 => shortcut.insert(Shortcut::F11),
             KeyCode::KeyF12 => shortcut.insert(Shortcut::F12),
+
+            KeyCode::KeyInsert => shortcut.insert(Shortcut::Insert),
+            KeyCode::KeyDelete => shortcut.insert(Shortcut::Delete),
+            KeyCode::KeyHome => shortcut.insert(Shortcut::Home),
+            KeyCode::KeyEnd => shortcut.insert(Shortcut::End),
+            KeyCode::KeyPageUp => shortcut.insert(Shortcut::PageUp),
+            KeyCode::KeyPageDown => shortcut.insert(Shortcut::PageDown),
+            KeyCode::KeyLeft => shortcut.insert(Shortcut::Left),
+            KeyCode::KeyUp => shortcut.insert(Shortcut::Up),
+            KeyCode::KeyRight => shortcut.insert(Shortcut::Right),
+            KeyCode::KeyDown => shortcut.insert(Shortcut::Down),
             _ => {}
         }
 
         shortcut
     }
+}
+
+#[macro_export]
+macro_rules! cast_do {
+    ( $ty:ident::$fn:ident($($arg:expr),*) ) => {
+        |w| {
+            w.downcast_mut::<$ty>().unwrap().$fn($($arg),*);
+        }
+    };
 }
 
 #[cfg(test)]

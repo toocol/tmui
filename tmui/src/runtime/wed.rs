@@ -210,7 +210,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_key_pressed(&evt);
             });
             if ShortcutManager::with(|shortcut_manager| {
-                shortcut_manager.borrow_mut().trigger_global(&evt)
+                let mut shortcut_manager = shortcut_manager.borrow_mut();
+                shortcut_manager.receive_key_event(&evt);
+                shortcut_manager.trigger_global()
             }) {
                 return None;
             }
@@ -220,7 +222,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
 
                 if widget.id() == window.focused_widget() {
                     if !ShortcutManager::with(|shortcut_manager| {
-                        shortcut_manager.borrow_mut().trigger(&evt, widget.id())
+                        shortcut_manager.borrow_mut().trigger(widget.id())
                     }) {
                         widget.on_key_pressed(&evt);
                         widget.inner_key_pressed(&evt);
@@ -241,6 +243,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
 
             window.handle_global_watch(GlobalWatchEvent::KeyRelease, |handle| {
                 handle.on_global_key_released(&evt)
+            });
+            ShortcutManager::with(|shortcut_manager| {
+                shortcut_manager.borrow_mut().receive_key_event(&evt)
             });
 
             for (_name, widget_opt) in widgets_map.iter_mut() {

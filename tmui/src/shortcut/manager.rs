@@ -1,13 +1,19 @@
 use super::{Shortcut, ShortcutTrigger};
 use crate::widget::WidgetImpl;
 use std::{cell::RefCell, collections::HashMap, ptr::NonNull};
-use tlib::{events::KeyEvent, nonnull_mut, object::ObjectId};
+use tlib::{
+    events::{EventTrait, EventType, KeyEvent},
+    nonnull_mut,
+    object::ObjectId,
+};
 
 thread_local! {
     static INSTANCE: RefCell<ShortcutManager> = RefCell::new(ShortcutManager::new());
 }
 
 pub(crate) struct ShortcutManager {
+    shortcut: Shortcut,
+
     shortcuts: HashMap<
         Shortcut,
         Vec<(
@@ -29,6 +35,7 @@ impl ShortcutManager {
     #[inline]
     pub(crate) fn new() -> Self {
         Self {
+            shortcut: Shortcut::empty(),
             shortcuts: Default::default(),
             global_shortcuts: Default::default(),
         }
@@ -69,10 +76,10 @@ impl ShortcutManager {
     }
 
     #[inline]
-    pub(crate) fn trigger(&mut self, evt: &KeyEvent, id: ObjectId) -> bool {
+    pub(crate) fn trigger(&mut self, id: ObjectId) -> bool {
         let mut trigged = false;
 
-        if let Some(widgets) = self.shortcuts.get_mut(&evt.trigger_shortcut()) {
+        if let Some(widgets) = self.shortcuts.get_mut(&self.shortcut) {
             widgets.iter_mut().for_each(|(widget, f)| {
                 let widget = nonnull_mut!(widget);
                 if id == widget.id() {
@@ -86,18 +93,29 @@ impl ShortcutManager {
     }
 
     #[inline]
-    pub(crate) fn trigger_global(&mut self, evt: &KeyEvent) -> bool {
+    pub(crate) fn trigger_global(&mut self) -> bool {
         let mut trigged = false;
 
-        if let Some(widgets) = self.global_shortcuts.get_mut(&evt.trigger_shortcut()) {
-            widgets
-                .iter_mut()
-                .for_each(|(widget, f)| { 
-                    f(nonnull_mut!(widget));
-                    trigged = true;
-                })
+        if let Some(widgets) = self.global_shortcuts.get_mut(&self.shortcut) {
+            widgets.iter_mut().for_each(|(widget, f)| {
+                f(nonnull_mut!(widget));
+                trigged = true;
+            })
         }
 
         trigged
+    }
+
+    #[inline]
+    pub(crate) fn receive_key_event(&mut self, evt: &KeyEvent) {
+        match evt.event_type() {
+            EventType::KeyPress => {
+                self.shortcut.insert(evt.trigger_shortcut());
+            }
+            EventType::KeyRelease => {
+                self.shortcut.remove(evt.trigger_shortcut());
+            }
+            _ => {}
+        }
     }
 }
