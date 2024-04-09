@@ -7,14 +7,7 @@ use crate::platform::PlatformWin32;
 #[cfg(x11_platform)]
 use crate::platform::PlatformX11;
 use crate::{
-    application_window::ApplicationWindow,
-    backend::BackendType,
-    event_hints::event_hints,
-    graphics::icon::Icon,
-    platform::{PlatformContext, PlatformIpc, PlatformType},
-    primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
-    runtime::{start_ui_runtime, windows_process::WindowsProcess},
-    window::win_config::{WindowConfig, WindowConfigBuilder},
+    application_window::ApplicationWindow, backend::BackendType, event_hints::event_hints, font::FontManager, graphics::icon::Icon, platform::{PlatformContext, PlatformIpc, PlatformType}, primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel}, runtime::{start_ui_runtime, windows_process::WindowsProcess}, window::win_config::{WindowConfig, WindowConfigBuilder}
 };
 use log::error;
 use std::{
@@ -109,6 +102,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         logic_window.on_activate = on_activate;
         logic_window.on_user_event_receive = on_user_event_receive;
         logic_window.on_request_receive = on_request_receive;
+
+        // Load the fonts.
+        let mut font_mgr = FontManager::default();
+        font_mgr.load_fonts();
 
         // Create the `UI` main thread.
         let join = start_ui_runtime(0, self.ui_stack_size, logic_window);

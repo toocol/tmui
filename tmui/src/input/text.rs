@@ -119,7 +119,7 @@ impl ObjectImpl for Text {
         self.register_shortcuts();
 
         if self.is_enable() {
-            self.cursor_index = self.input_wrapper.value_ref().len();
+            self.cursor_index = self.value_chars_count();
         }
 
         connect!(self.blink_timer, timeout(), self, blink_event());
@@ -253,6 +253,7 @@ impl Input for Text {
 }
 
 impl Text {
+    // Public
     #[inline]
     pub fn new() -> Box<Self> {
         Object::new(&[])
@@ -327,16 +328,144 @@ impl Text {
     #[inline]
     pub fn get_selection(&self) -> Option<String> {
         if self.has_selection() {
-            let (i, j) = self.selection_range();
+            let (start, end) = self.selection_range();
+            let (start, end) = (self.map(start), self.map(end));
+
             let str_ref = self.value_ref();
-            Some(str_ref.as_str()[i..j].to_string())
+            Some(str_ref.as_str()[start..end].to_string())
         } else {
             None
+        }
+    }
+
+    #[inline]
+    pub fn copy(&self) {
+        if let Some(selection) = self.get_selection() {
+            System::clipboard().set_text(selection, ClipboardLevel::Os)
+        }
+    }
+
+    #[inline]
+    pub fn cut(&mut self) {
+        if !self.has_selection() {
+            return;
+        }
+        self.save_revoke();
+
+        let (start, end) = self.selection_range();
+        {
+            let (start, end) = (self.map(start), self.map(end));
+            System::clipboard().set_text(&self.value_ref()[start..end], ClipboardLevel::Os);
+        }
+        self.value_remove_range(start, end);
+
+        self.cursor_index = start;
+        self.clear_selection();
+    }
+
+    #[inline]
+    pub fn paste(&mut self) {
+        if let Some(cp) = System::clipboard().text(ClipboardLevel::Os) {
+            self.save_revoke();
+
+            if self.has_selection() {
+                let (start, end) = self.selection_range();
+                self.value_remove_range(start, end);
+
+                self.cursor_index = start;
+                self.clear_selection();
+            }
+
+            let mut cut = false;
+            {
+                let idx = self.map(self.cursor_index);
+                self.input_wrapper.value_mut().insert_str(idx, &cp);
+
+                if let Some(max_length) = self.max_length {
+                    if self.value_chars_count() > max_length {
+                        let idx = self.map(max_length);
+                        self.input_wrapper.value_mut().replace_range(idx.., "");
+                        cut = true;
+                    }
+                }
+            }
+
+            if cut {
+                self.cursor_index = self.value_chars_count();
+            } else {
+                self.cursor_index += cp.chars().count();
+            }
+
+            self.update();
+        }
+    }
+
+    #[inline]
+    pub fn revoke(&mut self) {
+        if let Some(mem) = self.revoke_memories.pop_back() {
+            self.save_redo();
+
+            self.cursor_index = mem.cursor_index;
+            self.selection_start = mem.selection_start;
+            self.selection_end = mem.selection_end;
+            self.input_wrapper.set_value(mem.value.clone());
+            self.text_draw_position = Some(mem.text_draw_position);
+
+            self.update();
+        }
+    }
+
+    #[inline]
+    pub fn redo(&mut self) {
+        if let Some(mem) = self.redo_memories.pop_back() {
+            self.save_revoke();
+
+            self.cursor_index = mem.cursor_index;
+            self.selection_start = mem.selection_start;
+            self.selection_end = mem.selection_end;
+            self.input_wrapper.set_value(mem.value.clone());
+            self.text_draw_position = Some(mem.text_draw_position);
+
+            self.update();
+        }
+    }
+
+    #[inline]
+    pub fn shift_select(&mut self, code: KeyCode) {
+        let start = if self.selection_start == -1 {
+            Some(self.cursor_index as i32)
+        } else {
+            None
+        };
+
+        match code {
+            KeyCode::KeyLeft => {
+                if self.cursor_index > 0 {
+                    self.cursor_index -= 1;
+                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
+                }
+            }
+            KeyCode::KeyRight => {
+                if self.cursor_index < self.value_chars_count() {
+                    self.cursor_index += 1;
+                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
+                }
+            }
+            KeyCode::KeyHome => {
+                self.cursor_index = 0;
+                self.adjust_selection_range(start, Some(0));
+            }
+            KeyCode::KeyEnd => {
+                self.cursor_index = self.value_chars_count();
+                self.adjust_selection_range(start, Some(self.cursor_index as i32));
+            }
+            _ => {}
         }
     }
 }
 
 impl Text {
+    // Private
     fn draw_enable(&mut self, painter: &mut Painter) {
         // Calculates the position of cursor, and adjust the `text_draw_position`:
         let cursor_x = self.sync_cursor_text_draw();
@@ -411,6 +540,7 @@ impl Text {
         let (pre, mid, suf) = {
             let font = self.skia_font();
             let (start, end) = self.selection_range();
+            let (start, end) = (self.map(start), self.map(end));
 
             let pre_str = &str[0..start];
             let mid_str = &str[start..end];
@@ -517,10 +647,11 @@ impl Text {
             let str_ref = self.value_ref();
             let str = str_ref.as_str();
 
+            let s = &str[..self.map(self.cursor_index)];
             self.text_draw_position().x()
                 + self
                     .skia_font()
-                    .calc_text_dimension(&str[0..self.cursor_index], self.letter_spacing)
+                    .calc_text_dimension(s, self.letter_spacing)
                     .0
         };
 
@@ -545,7 +676,7 @@ impl Text {
         // When a character from the input string has been deleted,
         // and the cursor was at the end of both the input string and the text window,
         // the drawing position moves right.
-        else if self.cursor_index == self.value_ref().len()
+        else if self.cursor_index == self.value_chars_count()
             && self.text_draw_position().x() < self.text_window.x()
         {
             let offset = self.text_window.right() - 2. - pos;
@@ -619,7 +750,8 @@ impl Text {
             KeyCode::KeyBackspace => {
                 if self.has_selection() {
                     let (start, end) = self.selection_range();
-                    self.input_wrapper.value_mut().replace_range(start..end, "");
+                    self.value_remove_range(start, end);
+
                     self.cursor_index = start;
                     self.clear_selection();
                     return;
@@ -631,7 +763,8 @@ impl Text {
                 }
 
                 self.cursor_index -= 1;
-                self.input_wrapper.value_mut().remove(self.cursor_index);
+                let idx = self.map(self.cursor_index);
+                self.input_wrapper.value_mut().remove(idx);
 
                 emit!(self.value_changed());
             }
@@ -646,7 +779,7 @@ impl Text {
             }
             KeyCode::KeyRight => {
                 self.clear_selection();
-                if self.cursor_index < self.value_ref().len() {
+                if self.cursor_index < self.value_chars_count() {
                     self.cursor_index += 1;
                 } else {
                     self.start_blink_timer();
@@ -655,8 +788,7 @@ impl Text {
             }
             KeyCode::KeyEnd => {
                 self.clear_selection();
-                let idx = self.value_ref().len();
-                self.cursor_index = idx;
+                self.cursor_index = self.value_chars_count();
             }
             KeyCode::KeyHome => {
                 self.clear_selection();
@@ -677,22 +809,22 @@ impl Text {
 
                 // Clear the selection.
                 if self.has_selection() {
-                    let (i, j) = self.selection_range();
-                    self.input_wrapper.value_mut().replace_range(i..j, "");
+                    let (start, end) = self.selection_range();
+                    self.value_remove_range(start, end);
+
                     self.clear_selection();
-                    self.cursor_index = i;
+                    self.cursor_index = start;
                 }
 
                 if let Some(max_length) = self.max_length {
-                    if self.value_ref().len() >= max_length {
+                    if self.value_chars_count() >= max_length {
                         self.start_blink_timer();
                         return;
                     }
                 }
 
-                self.input_wrapper
-                    .value_mut()
-                    .insert_str(self.cursor_index, text);
+                let idx = self.map(self.cursor_index);
+                self.input_wrapper.value_mut().insert_str(idx, text);
                 self.cursor_index += 1;
 
                 emit!(self.value_changed());
@@ -770,9 +902,10 @@ impl Text {
     fn calc_cursor_index(&self, x_pos: f32) -> usize {
         let str_ref = self.value_ref();
         let str = str_ref.as_str();
+        let chars_cnt = str.chars().count();
 
         let offset = x_pos - self.text_draw_position().x();
-        let mut predict_idx = ((offset / self.font_dimension.0) as usize).min(str.len());
+        let mut predict_idx = ((offset / self.font_dimension.0) as usize).min(chars_cnt);
 
         let mut last_diff = f32::MAX;
         let mut last_idx = predict_idx;
@@ -780,7 +913,7 @@ impl Text {
         loop {
             let actual_len = self
                 .skia_font()
-                .calc_text_dimension(&str[0..predict_idx], self.letter_spacing)
+                .calc_text_dimension(&str[..self.map(predict_idx)], self.letter_spacing)
                 .0;
 
             let diff = (offset - actual_len).abs();
@@ -796,7 +929,7 @@ impl Text {
             last_idx = predict_idx;
 
             if offset > actual_len {
-                if predict_idx == str_ref.len() {
+                if predict_idx == chars_cnt {
                     break;
                 }
                 predict_idx += 1;
@@ -842,7 +975,7 @@ impl Text {
 
     #[inline]
     fn select_all(&mut self) {
-        let len = self.value_ref().len() as i32;
+        let len = self.value_chars_count() as i32;
 
         self.adjust_selection_range(Some(0), Some(len));
     }
@@ -918,66 +1051,6 @@ impl Text {
     }
 
     #[inline]
-    fn copy(&self) {
-        if let Some(selection) = self.get_selection() {
-            System::clipboard().set_text(selection, ClipboardLevel::Os)
-        }
-    }
-
-    #[inline]
-    fn cut(&mut self) {
-        if !self.has_selection() {
-            return;
-        }
-        self.save_revoke();
-
-        let (start, end) = self.selection_range();
-
-        System::clipboard().set_text(&self.value_ref()[start..end], ClipboardLevel::Os);
-
-        self.input_wrapper.value_mut().replace_range(start..end, "");
-
-        self.cursor_index = start;
-        self.clear_selection();
-    }
-
-    #[inline]
-    fn paste(&mut self) {
-        if let Some(cp) = System::clipboard().text(ClipboardLevel::Os) {
-            self.save_revoke();
-
-            if self.has_selection() {
-                let (i, j) = self.selection_range();
-                self.input_wrapper.value_mut().replace_range(i..j, "");
-                self.cursor_index = i;
-                self.clear_selection();
-            }
-
-            let mut cut = false;
-            {
-                let mut value_mut = self.input_wrapper.value_mut();
-
-                value_mut.insert_str(self.cursor_index, &cp);
-                if let Some(max_length) = self.max_length {
-                    if value_mut.len() > max_length {
-                        value_mut.replace_range(max_length.., "");
-                        cut = true;
-                    }
-                }
-            }
-
-            if cut {
-                let len = self.value_ref().len();
-                self.cursor_index = len;
-            } else {
-                self.cursor_index += cp.len();
-            }
-
-            self.update();
-        }
-    }
-
-    #[inline]
     fn save_revoke(&mut self) {
         self.revoke_memories.push_back(TextMemory::new(self));
         if self.revoke_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
@@ -993,68 +1066,38 @@ impl Text {
         }
     }
 
+    /// Map the logic index `'from'` which represent the sequence of characters
+    /// to the actual index in string.
     #[inline]
-    fn revoke(&mut self) {
-        if let Some(mem) = self.revoke_memories.pop_back() {
-            self.save_redo();
-
-            self.cursor_index = mem.cursor_index;
-            self.selection_start = mem.selection_start;
-            self.selection_end = mem.selection_end;
-            self.input_wrapper.set_value(mem.value.clone());
-            self.text_draw_position = Some(mem.text_draw_position);
-
-            self.update();
-        }
+    fn map(&self, from: usize) -> usize {
+        let value_ref = self.value_ref();
+        let (idx, _) = value_ref
+            .char_indices()
+            .nth(from)
+            .unwrap_or((value_ref.len(), '\0'));
+        idx
     }
 
     #[inline]
-    fn redo(&mut self) {
-        if let Some(mem) = self.redo_memories.pop_back() {
-            self.save_revoke();
-
-            self.cursor_index = mem.cursor_index;
-            self.selection_start = mem.selection_start;
-            self.selection_end = mem.selection_end;
-            self.input_wrapper.set_value(mem.value.clone());
-            self.text_draw_position = Some(mem.text_draw_position);
-
-            self.update();
-        }
+    fn value_chars_count(&self) -> usize {
+        self.value_ref().chars().count()
     }
 
     #[inline]
-    fn shift_select(&mut self, code: KeyCode) {
-        let start = if self.selection_start == -1 {
-            Some(self.cursor_index as i32)
-        } else {
-            None
-        };
+    fn value_remove_range(&mut self, start: usize, end: usize) {
+        let (start, end) = (self.map(start), self.map(end));
+        let (offset, _) = self
+            .skia_font()
+            .calc_text_dimension(&self.value_ref()[start..end], self.letter_spacing);
 
-        match code {
-            KeyCode::KeyLeft => {
-                if self.cursor_index > 0 {
-                    self.cursor_index -= 1;
-                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
-                }
-            }
-            KeyCode::KeyRight => {
-                if self.cursor_index < self.value_ref().len() {
-                    self.cursor_index += 1;
-                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
-                }
-            }
-            KeyCode::KeyHome => {
-                self.cursor_index = 0;
-                self.adjust_selection_range(start, Some(0));
-            }
-            KeyCode::KeyEnd => {
-                let len = self.value_ref().len();
-                self.cursor_index = len;
-                self.adjust_selection_range(start, Some(len as i32));
-            }
-            _ => {}
+        self.input_wrapper.value_mut().replace_range(start..end, "");
+
+        let text_window = self.text_window;
+        let draw_pos = self.text_draw_position_mut();
+        if draw_pos.x() < text_window.left() {
+            draw_pos.offset(offset, 0.);
         }
+        draw_pos.set_x(draw_pos.x().min(text_window.left()));
     }
 }
 

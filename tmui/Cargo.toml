@@ -28,6 +28,10 @@ once_cell = "1.17.0"
 widestring = "1.0.2"
 clipboard = "0.5.0"
 derivative = "2.2.0"
+rust-embed = { version = "6.4.2", features = [
+    "debug-embed",
+    "include-exclude",
+] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.43.0", features = [

@@ -113,7 +113,7 @@ impl ShortcutManager {
                 self.shortcut.insert(evt.trigger_shortcut());
             }
             EventType::KeyRelease => {
-                self.shortcut.remove(evt.trigger_shortcut());
+                self.shortcut = Shortcut::empty();
             }
             _ => {}
         }
