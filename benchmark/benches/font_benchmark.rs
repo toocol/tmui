@@ -1,18 +1,14 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use tlib::{
-    figure::{Font, FontCalculation},
-    typedef::SkiaFont,
-};
+use tmui::font::{Font, FontCalculation};
 
-fn font_calc_test(font: &SkiaFont) {
+fn font_calc_test(font: &Font) {
     let _ = font.calc_font_dimension();
 }
 
 pub fn font_calc(c: &mut Criterion) {
-    let font = Font::with_family("Courier New");
-    let skia_font: SkiaFont = font.into();
+    let font = Font::with_family(vec!["Courier New"]);
 
-    c.bench_function("font_calc_test", |b| b.iter(|| font_calc_test(&skia_font)));
+    c.bench_function("font_calc_test", |b| b.iter(|| font_calc_test(&font)));
 }
 
 criterion_group!(benches, font_calc);

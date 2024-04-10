@@ -59,7 +59,7 @@ impl ObjectImpl for Holder {
         // self.text3.height_request(25);
         self.text3.set_margin_left(20);
         self.text3.set_margin_top(10);
-        self.text3.set_placeholder("Placeholder of text-3.");
+        self.text3.set_placeholder("Placeholder of text-3/中文提示符");
         // self.text3.set_vexpand(true);
 
         self.set_vexpand(true);

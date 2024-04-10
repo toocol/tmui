@@ -2368,6 +2368,8 @@ dependencies = [
  "once_cell",
  "raw-window-handle",
  "rust-embed",
+ "strum",
+ "strum_macros",
  "tipc",
  "tlib",
  "widestring",

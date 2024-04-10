@@ -55,7 +55,6 @@ pub struct Widget {
     #[derivative(Default(value = "Color::WHITE"))]
     background: Color,
     font: Font,
-    font_family: String,
     margins: [i32; 4],
     paddings: [i32; 4],
     border: Border,
@@ -431,7 +430,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 
-        let mut painter = Painter::new(cr.canvas(), self);
+        let name = &self.name();
+        let mut painter = Painter::new(name, cr.canvas(), self);
 
         // Shared widget porcessing:
         if let Some(shared_widget) = cast_mut!(self as SharedWidgetImpl) {
@@ -486,7 +486,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         }
 
         painter.reset();
-        painter.set_font(self.font().to_skia_font());
+        painter.set_font(self.font().clone());
 
         if self.is_strict_clip_widget() {
             painter.clip_rect(

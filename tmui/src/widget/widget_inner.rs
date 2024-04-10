@@ -1,4 +1,4 @@
-use super::{WidgetImpl, EventBubble};
+use super::{EventBubble, WidgetImpl, Font};
 
 pub(crate) trait WidgetInnerExt {
     fn set_fixed_width_ration(&mut self, ration: f32);
@@ -22,6 +22,8 @@ pub(crate) trait WidgetInnerExt {
     fn is_manage_by_container(&self) -> bool;
 
     fn set_manage_by_container(&mut self, manage_by_container: bool);
+
+    fn font_mut(&mut self) -> &mut Font;
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -79,6 +81,11 @@ macro_rules! widget_inner_ext_impl {
         #[inline]
         fn set_manage_by_container(&mut self, manage_by_container: bool) {
             self.widget_props_mut().manage_by_container = manage_by_container
+        }
+
+        #[inline]
+        fn font_mut(&mut self) -> &mut Font {
+            &mut self.widget_props_mut().font
         }
     };
 }

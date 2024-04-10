@@ -1,8 +1,10 @@
 use super::{
-    EventBubble, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire,
+    EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl,
+    WindowAcquire,
 };
 use crate::{
     application_window::ApplicationWindow,
+    font::FontTypeface,
     graphics::{
         border::Border,
         element::{ElementExt, ElementImpl},
@@ -12,7 +14,7 @@ use crate::{
 };
 use std::ptr::NonNull;
 use tlib::{
-    figure::{Color, CoordRect, FPoint, FRect, Font, FontTypeface, Point, Rect, Size},
+    figure::{Color, CoordRect, FPoint, FRect, Point, Rect, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectId, ObjectOperation},
     prelude::*,
@@ -218,20 +220,10 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::font) (Defined in [`WidgetExt`])
     fn font(&self) -> &Font;
 
-    /// Get the mut font of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::font_mut) (Defined in [`WidgetExt`])
-    fn font_mut(&mut self) -> &mut Font;
-
     /// Set the font family of Widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_font_family) (Defined in [`WidgetExt`])
-    fn set_font_family(&mut self, family: String);
-
-    /// Get the font family of Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::font_family) (Defined in [`WidgetExt`])
-    fn font_family(&self) -> &str;
+    fn set_font_family(&mut self, family: Vec<String>);
 
     /// Get the rect of widget without borders.
     ///
@@ -1071,21 +1063,14 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn font_mut(&mut self) -> &mut Font {
-        &mut self.font
-    }
-
-    #[inline]
-    fn set_font_family(&mut self, family: String) {
-        let typeface = FontTypeface::builder().family(family.clone()).build();
-        self.font_family = family;
-        self.font.set_typeface(typeface);
+    fn set_font_family(&mut self, family: Vec<String>) {
+        let mut typefaces = vec![];
+        for f in family {
+            let typeface = FontTypeface::builder().family(f).build();
+            typefaces.push(typeface);
+        }
+        self.font.set_typefaces(typefaces);
         self.update()
-    }
-
-    #[inline]
-    fn font_family(&self) -> &str {
-        &self.font_family
     }
 
     #[inline]

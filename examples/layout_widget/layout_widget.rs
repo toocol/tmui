@@ -3,13 +3,11 @@ use std::time::{Duration, Instant};
 
 use derivative::Derivative;
 use log::debug;
-use tlib::{
-    connect, disconnect,
-    figure::{FontTypeface, FontWidth},
-    object::ObjectSubclass,
-    timer::Timer,
+use tlib::{connect, disconnect, object::ObjectSubclass, timer::Timer};
+use tmui::{
+    label::Label,
+    prelude::*,
 };
-use tmui::{label::Label, prelude::*};
 
 const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
 
@@ -39,14 +37,7 @@ impl ObjectImpl for LayoutWidget {
 
         self.label.set_background(Color::CYAN);
         self.label.set_text("Hello World");
-        let font = self.label.font_mut();
-        font.set_typeface(
-            FontTypeface::builder()
-                .family("Consolas")
-                .width(FontWidth::UltraCondensed)
-                .italic(true)
-                .build(),
-        );
+        let mut font = Font::with_family(vec!["Consolas"]);
         font.set_size(20.);
         self.label.set_content_halign(Align::Center);
         self.label.set_content_valign(Align::Center);

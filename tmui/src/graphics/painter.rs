@@ -1,35 +1,37 @@
 #![allow(dead_code)]
 use crate::{
+    font::Font,
     skia_safe::{self, Canvas, Matrix, Paint, Path, Point},
     tlib,
     widget::WidgetImpl,
 };
 use ::tlib::{
     namespace::BlendMode,
-    typedef::{SkiaBlendMode, SkiaFont, SkiaRect},
+    typedef::{SkiaBlendMode, SkiaRect},
 };
 use log::{error, warn};
 use std::{cell::RefMut, ffi::c_uint};
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
-    global::skia_font_clone,
     skia_safe::{
         canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
-            FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+            FontCollection, Paragraph, ParagraphBuilder, ParagraphStyle, TextStyle,
+            TypefaceFontProvider,
         },
         IPoint,
     },
 };
 
 pub struct Painter<'a> {
+    name: &'a str,
     canvas: RefMut<'a, Canvas>,
     paint: Paint,
-    font: Option<SkiaFont>,
+    font: Option<Font>,
     color: Option<Color>,
     line_width: Option<f32>,
 
-    saved_font: Option<SkiaFont>,
+    saved_font: Option<Font>,
     saved_color: Option<Color>,
     saved_line_width: Option<f32>,
 
@@ -40,6 +42,7 @@ pub struct Painter<'a> {
 
     transform: Matrix,
 
+    paragraph: Option<Paragraph>,
     text_style: TextStyle,
     paragraph_style: ParagraphStyle,
 }
@@ -47,12 +50,13 @@ pub struct Painter<'a> {
 impl<'a> Painter<'a> {
     /// The constructer to build the Painter.
     #[inline]
-    pub fn new(canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
+    pub fn new(name: &'a str, canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
         let rect = widget.rect();
         let mut paint = Paint::default();
         paint.set_blend_mode(SkiaBlendMode::Src);
 
         Painter {
+            name,
             canvas,
             paint,
             font: None,
@@ -66,6 +70,7 @@ impl<'a> Painter<'a> {
             x_offset: rect.x(),
             y_offset: rect.y(),
             transform: Matrix::new_identity(),
+            paragraph: None,
             text_style: TextStyle::new(),
             paragraph_style: ParagraphStyle::new(),
         }
@@ -129,7 +134,7 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn save_pen(&mut self) {
         if let Some(ref font) = self.font {
-            self.saved_font = Some(skia_font_clone(font))
+            self.saved_font = Some(font.clone())
         }
         self.saved_color = self.color.clone();
         self.saved_line_width = self.line_width.clone();
@@ -204,12 +209,13 @@ impl<'a> Painter<'a> {
 
     /// Set the font of painter.
     #[inline]
-    pub fn set_font(&mut self, font: SkiaFont) {
+    pub fn set_font(&mut self, font: Font) {
         self.text_style.set_font_size(font.size());
-        if let Some(typeface) = font.typeface() {
-            self.text_style
-                .set_font_families(&vec![typeface.family_name()]);
-        }
+        let mut families = vec![];
+        font.typefaces()
+            .iter()
+            .for_each(|tf| families.push(tf.family()));
+        self.text_style.set_font_families(&families);
         self.font = Some(font);
     }
 
@@ -264,7 +270,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke and fill the specified Rect without offset. <br>
     ///
-    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn fill_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, color: Color) {
         self.paint.set_color(color);
@@ -296,7 +302,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke and Fill the specified rect with border radius. <br>
     ///
-    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn fill_round_rect_global<T: Into<SkiaRect>>(
         &mut self,
@@ -329,7 +335,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke the specified rect without offset. <br>
     ///
-    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn draw_rect_global<T: Into<SkiaRect>>(&mut self, rect: T) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
@@ -352,7 +358,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke the specified rect with border radius. <br>
     ///
-    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn draw_round_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, border_radius: f32) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
@@ -365,7 +371,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke and Fill the specified region with the specified color. <br>
     ///
-    /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn fill_region(&mut self, region: &skia_safe::Region, color: Color) {
         self.paint.set_color(color);
@@ -380,7 +386,7 @@ impl<'a> Painter<'a> {
 
     /// Stroke the specified region. <br>
     ///
-    /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn draw_region(&mut self, region: &skia_safe::Region) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
@@ -405,10 +411,9 @@ impl<'a> Painter<'a> {
         max_lines: Option<usize>,
         ellipsis: bool,
     ) {
-        let mut origin: Point = origin.into();
-        origin.offset((self.x_offset, self.y_offset));
+        self.prepare_paragrah(text, letter_spacing, width_layout, max_lines, ellipsis);
 
-        self.draw_paragraph_global(text, origin, letter_spacing, width_layout, max_lines, ellipsis)
+        self.draw_paragrah_prepared(origin);
     }
 
     /// Draw text paragraph at specified position `origin` without offset. <br>
@@ -416,7 +421,7 @@ impl<'a> Painter<'a> {
     /// letter_spacing: The spacing betweeen characters.
     /// width_layout: The specified width of a text paragraph.
     ///
-    /// the origin point's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::Widget)
+    /// the origin point's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn draw_paragraph_global<T: Into<Point>>(
         &mut self,
@@ -427,16 +432,32 @@ impl<'a> Painter<'a> {
         max_lines: Option<usize>,
         ellipsis: bool,
     ) {
-        if let Some(font) = self.font.as_ref() {
+        self.prepare_paragrah(text, letter_spacing, width_layout, max_lines, ellipsis);
+
+        self.draw_paragrah_prepared_global(origin);
+    }
+
+    /// Prepare the paragraph with out renderering.
+    #[inline]
+    pub fn prepare_paragrah(
+        &mut self,
+        text: &str,
+        letter_spacing: f32,
+        width_layout: f32,
+        max_lines: Option<usize>,
+        ellipsis: bool,
+    ) {
+        if let Some(ref font) = self.font {
             // create font manager
             let mut typeface_provider = TypefaceFontProvider::new();
-            if let Some(typeface) = font.typeface() {
+
+            // Register the font typefaces.
+            font.typefaces().iter().for_each(|tf| {
+                let typeface = tf.to_skia_typeface();
                 let family = typeface.family_name();
                 typeface_provider.register_typeface(typeface, Some(family));
-            } else {
-                warn!("The typeface of font not specified.");
-                return;
-            }
+            });
+
             let mut font_collection = FontCollection::new();
             font_collection.set_asset_font_manager(Some(typeface_provider.into()));
 
@@ -457,10 +478,36 @@ impl<'a> Painter<'a> {
             let mut paragraph = paragraph_builder.build();
             paragraph.layout(width_layout);
 
-            paragraph.paint(&mut self.canvas, origin);
+            self.paragraph = Some(paragraph);
         } else {
-            error!("The `font` of `Painter` is None.")
+            warn!("The `font` of `Painter` was None in widget `{}`.", self.name)
         }
+    }
+
+    /// Render the prepared paragraph.
+    ///
+    /// the origin point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_paragrah_prepared<T: Into<Point>>(&mut self, origin: T) {
+        let mut origin: Point = origin.into();
+        origin.offset((self.x_offset, self.y_offset));
+
+        self.draw_paragrah_prepared_global(origin);
+    }
+
+    /// Render the prepared paragraph.
+    ///
+    /// the origin point's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
+    #[inline]
+    pub fn draw_paragrah_prepared_global<T: Into<Point>>(&mut self, origin: T) {
+        if let Some(paragraph) = self.paragraph.take() {
+            paragraph.paint(&mut self.canvas, origin);
+        }
+    }
+
+    #[inline]
+    pub fn get_paragraph(&self) -> Option<&Paragraph> {
+        self.paragraph.as_ref()
     }
 
     /// Draw simple text at specified position `origin` with offset. <br>
@@ -472,7 +519,8 @@ impl<'a> Painter<'a> {
             let mut origin: Point = origin.into();
             origin.offset((self.x_offset, self.y_offset));
 
-            self.canvas.draw_str(text, origin, &font, &self.paint);
+            self.canvas
+                .draw_str(text, origin, &font.to_skia_font(), &self.paint);
         } else {
             error!("The `font` of `Painter` is None.")
         }
@@ -497,7 +545,7 @@ impl<'a> Painter<'a> {
                 clusters,
                 utf8_text,
                 origin,
-                font,
+                &font.to_skia_font(),
                 &self.paint,
             )
         } else {

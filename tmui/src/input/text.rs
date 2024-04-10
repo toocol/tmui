@@ -2,6 +2,7 @@ use super::{Input, InputSignals, InputWrapper};
 use crate::{
     application, cast_do,
     clipboard::ClipboardLevel,
+    font::FontCalculation,
     prelude::*,
     shortcut::ShortcutRegister,
     system::System,
@@ -16,13 +17,11 @@ use std::{
 use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
-    figure::FontCalculation,
     global_watch,
     namespace::{KeyCode, KeyboardModifier},
     run_after, shortcut, signals,
     skia_safe::ClipOp,
     timer::Timer,
-    typedef::SkiaFont,
 };
 
 const TEXT_DEFAULT_MAX_MEMORIES_SIZE: usize = 50;
@@ -71,7 +70,6 @@ pub struct Text {
 
     //////////////////////////// Font
     font_dimension: (f32, f32),
-    skia_font: Option<SkiaFont>,
 
     //////////////////////////// Selection
     drag_status: DragStatus,
@@ -253,7 +251,6 @@ impl Input for Text {
 }
 
 impl Text {
-    // Public
     #[inline]
     pub fn new() -> Box<Self> {
         Object::new(&[])
@@ -465,7 +462,6 @@ impl Text {
 }
 
 impl Text {
-    // Private
     fn draw_enable(&mut self, painter: &mut Painter) {
         // Calculates the position of cursor, and adjust the `text_draw_position`:
         let cursor_x = self.sync_cursor_text_draw();
@@ -519,14 +515,7 @@ impl Text {
             painter.set_color(TEXT_DEFAULT_DISABLE_COLOR);
         }
 
-        painter.draw_paragraph_global(
-            val_ref.as_str(),
-            *self.text_draw_position(),
-            self.letter_spacing,
-            f32::MAX,
-            None,
-            false,
-        );
+        self.render_text(painter, val_ref.as_str(), *self.text_draw_position())
     }
 
     fn draw_text_selected(&self, painter: &mut Painter, val_ref: &Ref<String>) {
@@ -538,7 +527,7 @@ impl Text {
          * pre(unselected) - mid(selected) - suf(unselected)
          */
         let (pre, mid, suf) = {
-            let font = self.skia_font();
+            let font = self.font();
             let (start, end) = self.selection_range();
             let (start, end) = (self.map(start), self.map(end));
 
@@ -568,31 +557,24 @@ impl Text {
 
         if pre.0.len() > 0 {
             painter.set_color(self.text_color);
-            painter.draw_paragraph_global(pre.0, pre.1, self.letter_spacing, f32::MAX, None, false);
+            self.render_text(painter, pre.0, pre.1);
         }
         if suf.0.len() > 0 {
             painter.set_color(self.text_color);
-            painter.draw_paragraph_global(suf.0, suf.1, self.letter_spacing, f32::MAX, None, false);
+            self.render_text(painter, suf.0, suf.1);
         }
         if mid.0.len() > 0 {
             painter.fill_rect_global(mid.2, self.selection_background);
 
             painter.set_color(self.selection_color);
-            painter.draw_paragraph_global(mid.0, mid.1, self.letter_spacing, f32::MAX, None, false);
+            self.render_text(painter, mid.0, mid.1);
         }
     }
 
     fn draw_text_placeholder(&self, painter: &mut Painter) {
         painter.set_color(TEXT_DEFAULT_PLACEHOLDER_COLOR);
 
-        painter.draw_paragraph_global(
-            &self.placeholder,
-            *self.text_draw_position(),
-            self.letter_spacing,
-            f32::MAX,
-            None,
-            false,
-        );
+        self.render_text(painter, &self.placeholder, *self.text_draw_position());
     }
 
     fn draw_cursor(&self, painter: &mut Painter, cursor_x: f32) {
@@ -649,10 +631,7 @@ impl Text {
 
             let s = &str[..self.map(self.cursor_index)];
             self.text_draw_position().x()
-                + self
-                    .skia_font()
-                    .calc_text_dimension(s, self.letter_spacing)
-                    .0
+                + self.font().calc_text_dimension(s, self.letter_spacing).0
         };
 
         // When cursor position exceeds the right side of the text window,
@@ -715,8 +694,7 @@ impl Text {
     }
 
     fn handle_font_changed(&mut self) {
-        let font = self.font().to_skia_font();
-        self.font_dimension = font.calc_font_dimension();
+        self.font_dimension = self.font().calc_font_dimension();
 
         let size = self.size();
 
@@ -734,8 +712,6 @@ impl Text {
         if self.window_id() != 0 && self.window().initialized() {
             self.window().layout_change(self);
         }
-
-        self.skia_font = Some(font);
     }
 
     fn handle_key_pressed(&mut self, event: &KeyEvent) {
@@ -912,7 +888,7 @@ impl Text {
 
         loop {
             let actual_len = self
-                .skia_font()
+                .font()
                 .calc_text_dimension(&str[..self.map(predict_idx)], self.letter_spacing)
                 .0;
 
@@ -1044,13 +1020,6 @@ impl Text {
     }
 
     #[inline]
-    fn skia_font(&self) -> &SkiaFont {
-        self.skia_font
-            .as_ref()
-            .expect("Fatal error: `skia_font` of `Text` was None.")
-    }
-
-    #[inline]
     fn save_revoke(&mut self) {
         self.revoke_memories.push_back(TextMemory::new(self));
         if self.revoke_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
@@ -1087,7 +1056,7 @@ impl Text {
     fn value_remove_range(&mut self, start: usize, end: usize) {
         let (start, end) = (self.map(start), self.map(end));
         let (offset, _) = self
-            .skia_font()
+            .font()
             .calc_text_dimension(&self.value_ref()[start..end], self.letter_spacing);
 
         self.input_wrapper.value_mut().replace_range(start..end, "");
@@ -1098,6 +1067,18 @@ impl Text {
             draw_pos.offset(offset, 0.);
         }
         draw_pos.set_x(draw_pos.x().min(text_window.left()));
+    }
+
+    #[inline]
+    fn render_text(&self, painter: &mut Painter, text: &str, mut origin: FPoint) {
+        painter.prepare_paragrah(text, self.letter_spacing, f32::MAX, None, false);
+
+        let height = painter.get_paragraph().unwrap().height();
+        if height < self.text_window.height() {
+            origin.offset(0., self.text_window.height() - height);
+        }
+
+        painter.draw_paragrah_prepared_global(origin);
     }
 }
 

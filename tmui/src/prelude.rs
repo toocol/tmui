@@ -53,6 +53,7 @@ pub use crate::widget::{
     PointEffective, ReflectInnerCustomizeEventProcess, ReflectWidgetImpl, Transparency, Widget,
     WidgetAcquire, WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire,
 };
+pub use crate::font::Font;
 pub use tlib::tokio;
 pub use tlib::{
     figure::{Color, FPoint, FRect, FRegion, Point, Rect, Region, Size, SizeHint},

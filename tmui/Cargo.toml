@@ -32,6 +32,8 @@ rust-embed = { version = "6.4.2", features = [
     "debug-embed",
     "include-exclude",
 ] }
+strum = "0.24.1"
+strum_macros = "0.24"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.43.0", features = [
