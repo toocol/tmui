@@ -453,7 +453,7 @@ pub(crate) fn gen_widget_trait_impl_clause<'a>(
             }
 
             #[inline]
-            fn set_font_family(&mut self, family: Vec<String>) {
+            fn set_font_family(&mut self, family: Vec<&str>) {
                 self.#(#widget_path).*.set_font_family(family)
             }
 

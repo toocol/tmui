@@ -1,5 +1,8 @@
 use crate::{
-    graphics::painter::Painter, layout::ContentAlignment, prelude::*, skia_safe, widget::{WidgetImpl, widget_inner::WidgetInnerExt},
+    graphics::painter::Painter,
+    layout::ContentAlignment,
+    prelude::*,
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use log::debug;
 use tlib::{
@@ -116,16 +119,16 @@ impl WidgetImpl for Label {
     }
 
     fn font_changed(&mut self) {
-        let font: skia_safe::Font = self.font().to_skia_font();
-        let typeface = font.typeface();
-        if typeface.is_none() {
-            return;
-        }
-        let typeface = typeface.unwrap();
+        let font = self.font();
 
         let mut typeface_provider = TypefaceFontProvider::new();
-        let family = typeface.family_name();
-        typeface_provider.register_typeface(typeface, Some(family.clone()));
+        let mut families = vec![];
+        for tf in font.typefaces() {
+            families.push(tf.family());
+            let typeface = tf.to_skia_typeface();
+            let family = typeface.family_name();
+            typeface_provider.register_typeface(typeface, Some(family));
+        }
 
         let mut font_collection = FontCollection::new();
         font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
@@ -133,8 +136,8 @@ impl WidgetImpl for Label {
         // define text style
         let mut style = ParagraphStyle::new();
         let mut text_style = TextStyle::new();
-        text_style.set_font_size(font.size());
-        text_style.set_font_families(&vec![family]);
+        text_style.set_font_size(self.font().size());
+        text_style.set_font_families(&families);
         text_style.set_letter_spacing(self.letter_spacing);
         style.set_text_style(&text_style);
         if self.auto_wrap {

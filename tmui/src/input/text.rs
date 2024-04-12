@@ -2,7 +2,7 @@ use super::{Input, InputSignals, InputWrapper};
 use crate::{
     application, cast_do,
     clipboard::ClipboardLevel,
-    font::FontCalculation,
+    font::{FontCalculation, SingleLineBaselineAware},
     prelude::*,
     shortcut::ShortcutRegister,
     system::System,
@@ -1073,8 +1073,10 @@ impl Text {
     fn render_text(&self, painter: &mut Painter, text: &str, mut origin: FPoint) {
         painter.prepare_paragrah(text, self.letter_spacing, f32::MAX, None, false);
 
-        let height = painter.get_paragraph().unwrap().height();
-        if height < self.text_window.height() {
+        let paragraph = painter.get_paragraph().unwrap();
+        let baseline = paragraph.single_line_baseline();
+        let height = paragraph.height();
+        if height > baseline {
             origin.offset(0., self.text_window.height() - height);
         }
 

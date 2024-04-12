@@ -223,7 +223,7 @@ pub trait WidgetExt {
     /// Set the font family of Widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_font_family) (Defined in [`WidgetExt`])
-    fn set_font_family(&mut self, family: Vec<String>);
+    fn set_font_family(&mut self, family: Vec<&str>);
 
     /// Get the rect of widget without borders.
     ///
@@ -1063,7 +1063,7 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn set_font_family(&mut self, family: Vec<String>) {
+    fn set_font_family(&mut self, family: Vec<&str>) {
         let mut typefaces = vec![];
         for f in family {
             let typeface = FontTypeface::builder().family(f).build();

@@ -1,26 +1,13 @@
 use super::{tree_node::TreeNode, tree_store::TreeStore};
 use crate::{
-    prelude::*,
-    scroll_bar::ScrollBar,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    tree_view::tree_store::TreeStoreSignals,
-    widget::WidgetImpl,
+    font::FontCalculation, prelude::*, scroll_bar::ScrollBar, tlib::object::{ObjectImpl, ObjectSubclass}, tree_view::tree_store::TreeStoreSignals, widget::WidgetImpl
 };
 use std::ptr::NonNull;
 use tlib::{
     connect, disconnect,
     events::MouseEvent,
     nonnull_mut, nonnull_ref, run_after,
-    skia_safe::textlayout::{
-        FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-    },
 };
-
-const REPCHAR: &'static str = concat!(
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "abcdefgjijklmnopqrstuvwxyz",
-    "0123456789./+@"
-);
 
 #[extends(Widget)]
 #[run_after]
@@ -122,31 +109,9 @@ impl WidgetImpl for TreeViewImage {
     }
 
     fn font_changed(&mut self) {
-        let font = self.font().to_skia_font();
-        let typeface = font.typeface().unwrap();
+        let (_, h) = self.font().calc_font_dimension();
 
-        let mut typeface_provider = TypefaceFontProvider::new();
-        let family = typeface.family_name();
-        typeface_provider.register_typeface(typeface, Some(family.clone()));
-
-        let mut font_collection = FontCollection::new();
-        font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
-
-        // define text style
-        let mut style = ParagraphStyle::new();
-        let mut text_style = TextStyle::new();
-        text_style.set_font_size(font.size());
-        text_style.set_font_families(&vec![family]);
-        text_style.set_letter_spacing(0.);
-        style.set_text_style(&text_style);
-
-        // layout the paragraph
-        let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
-        paragraph_builder.add_text(REPCHAR);
-        let mut paragraph = paragraph_builder.build();
-        paragraph.layout(f32::MAX);
-
-        self.line_height = paragraph.height() as i32;
+        self.line_height = h as i32;
     }
 
     fn on_mouse_move(&mut self, event: &MouseEvent) {

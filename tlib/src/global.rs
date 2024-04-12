@@ -261,6 +261,13 @@ impl_precision_ops!(f64,f64,f64,f64 => 0,1,2,3);
 impl_precision_ops!(f64,f64,f64,f64,f64 => 0,1,2,3,4);
 impl_precision_ops!(f64,f64,f64,f64,f64,f64 => 0,1,2,3,4,5);
 
+
+#[macro_export]
+macro_rules! count_exprs {
+    () => { 0 };
+    ($first:expr $(, $rest:expr)*) => { 1 + count_exprs!($($rest),*) };
+}
+
 #[cfg(test)]
 mod tests {
     use super::{PrecisionOps, SemanticExt};

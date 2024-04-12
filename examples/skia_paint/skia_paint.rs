@@ -1,6 +1,11 @@
 use log::debug;
 use skia_safe::textlayout::{FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle};
-use tlib::{skia_safe::{canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider, ClipOp, IRect}, typedef::SkiaRegion};
+use tlib::{
+    skia_safe::{
+        canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider, ClipOp, IRect,
+    },
+    typedef::SkiaRegion,
+};
 use tmui::{
     graphics::painter::Painter,
     prelude::*,
@@ -65,7 +70,7 @@ impl SkiaPaint {
         painter.set_font(font.clone());
         painter.set_color(Color::BLACK);
 
-        let font = font.to_skia_font();
+        let font = &font.to_skia_fonts()[0];
 
         // create font manager
         let typeface = font.typeface().unwrap();

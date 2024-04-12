@@ -5,20 +5,31 @@ use tlib::skia_safe::{
     self,
     font_style::Slant,
     textlayout::{
-        FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+        Paragraph, FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
     },
     FontStyle,
 };
 use FontWeight::*;
 use FontWidth::*;
 
+use tlib::count_exprs;
 use tlib::typedef::{
     SkiaFont, SkiaFontEdging, SkiaFontHiting, SkiaFontWeight, SkiaFontWidth, SkiaTypeface,
 };
 
 use self::mgr::FontManager;
 
-const DEFAULT_FONT_FAMILY: [&'static str; 3] = ["Arial", "Noto Sans SC", "Microsoft YaHei"];
+macro_rules! default_font_families {
+    ($($font:expr),*) => {
+        const DEFAULT_FONT_FAMILY: [&'static str; count_exprs!($($font),*)] = [$($font),*];
+    };
+}
+
+default_font_families!(
+    "Arial",
+    "Noto Sans SC",
+    "Microsoft YaHei"
+);
 
 /////////////////////////////////////////////////////////////////////////////////////////
 /// [`Font`]
@@ -203,31 +214,48 @@ impl Font {
     }
 
     #[inline]
-    pub fn to_skia_font(&self) -> SkiaFont {
-        let mut font = SkiaFont::default();
-        font.set_force_auto_hinting(self.is_force_auto_hinting());
-        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
-        font.set_subpixel(self.is_subpixel());
-        font.set_linear_metrics(self.is_linear_metrics());
-        font.set_embolden(self.is_embolden());
-        font.set_baseline_snap(self.is_baseline_snap());
-        font.set_edging(self.edging().into());
-        font.set_hinting(self.hinting().into());
-        if let Some(typeface) = self.typefaces().first() {
-            let tf = typeface.to_skia_typeface();
-            font.set_typeface(&tf);
-        }
-        font.set_size(self.size());
-        font.set_scale_x(self.scale_x());
-        font.set_skew_x(self.skew_x());
-        font
-    }
-}
+    pub fn to_skia_fonts(&self) -> Vec<SkiaFont> {
+        let mut fonts = vec![];
+        for tf in self.typefaces() {
+            let mut font = SkiaFont::default();
+            font.set_force_auto_hinting(self.is_force_auto_hinting());
+            font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+            font.set_subpixel(self.is_subpixel());
+            font.set_linear_metrics(self.is_linear_metrics());
+            font.set_embolden(self.is_embolden());
+            font.set_baseline_snap(self.is_baseline_snap());
+            font.set_edging(self.edging().into());
+            font.set_hinting(self.hinting().into());
+            font.set_typeface(tf);
+            font.set_size(self.size());
+            font.set_scale_x(self.scale_x());
+            font.set_skew_x(self.skew_x());
 
-impl Into<SkiaFont> for Font {
+            fonts.push(font);
+        }
+        fonts
+    }
+
+    //////////////////////////////////// Typeface related.
     #[inline]
-    fn into(self) -> SkiaFont {
-        self.to_skia_font()
+    pub fn set_font_weight(&mut self, weight: FontWeight) {
+        self.typefaces
+            .iter_mut()
+            .for_each(|tf| tf.set_font_weight(weight))
+    }
+
+    #[inline]
+    pub fn set_font_width(&mut self, width: FontWidth) {
+        self.typefaces
+            .iter_mut()
+            .for_each(|tf| tf.set_font_width(width))
+    }
+
+    #[inline]
+    pub fn set_italic(&mut self, italic: bool) {
+        self.typefaces
+            .iter_mut()
+            .for_each(|tf| tf.set_italic(italic))
     }
 }
 
@@ -343,6 +371,12 @@ impl FontTypeface {
 
 impl Into<SkiaTypeface> for FontTypeface {
     #[inline]
+    fn into(self) -> SkiaTypeface {
+        self.to_skia_typeface()
+    }
+}
+
+impl Into<SkiaTypeface> for &FontTypeface {
     fn into(self) -> SkiaTypeface {
         self.to_skia_typeface()
     }
@@ -666,6 +700,25 @@ fn calc_text_dimension(font: &Font, text: &str, letter_spacing: f32) -> (f32, f3
     (paragraph.max_intrinsic_width(), paragraph.height())
 }
 
+pub trait SingleLineBaselineAware {
+    fn single_line_baseline(&self) -> f32;
+}
+impl SingleLineBaselineAware for Paragraph {
+    fn single_line_baseline(&self) -> f32 {
+        let mut baseline = 0.0f32;
+
+        let line_metrics = self.get_line_metrics();
+        if let Some(metrics) = line_metrics.first() {
+            for (_, mcs) in metrics.get_style_metrics(0..usize::MAX) {
+                let fm = mcs.text_style.font_metrics();
+                baseline = baseline.max(-fm.ascent);
+            }
+        } 
+        
+        baseline
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Font, FontCalculation, FontTypeface};
@@ -690,7 +743,7 @@ mod tests {
         let us = U16String::from_str(REPCHAR);
         let slice = us.as_slice();
         let mut widths = vec![0.; slice.len()];
-        font.to_skia_font().get_widths(slice, &mut widths);
+        font.to_skia_fonts()[0].get_widths(slice, &mut widths);
         let w = widths.iter().sum::<f32>() / widths.len() as f32;
         assert!(fuzzy_compare_32(td.0 / REPCHAR.len() as f32, w));
     }
@@ -712,7 +765,7 @@ mod tests {
     #[test]
     fn test_font() {
         let font = Font::with_family(vec!["Courier New"]);
-        let skia_font: SkiaFont = font.to_skia_font();
+        let skia_font: &SkiaFont = &font.to_skia_fonts()[0];
 
         let measure = skia_font.measure_str(REPCHAR, None);
 

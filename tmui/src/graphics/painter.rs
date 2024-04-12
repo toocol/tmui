@@ -7,7 +7,7 @@ use crate::{
 };
 use ::tlib::{
     namespace::BlendMode,
-    typedef::{SkiaBlendMode, SkiaRect},
+    typedef::{SkiaBlendMode, SkiaFont, SkiaRect},
 };
 use log::{error, warn};
 use std::{cell::RefMut, ffi::c_uint};
@@ -17,7 +17,7 @@ use tlib::{
         canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
             FontCollection, Paragraph, ParagraphBuilder, ParagraphStyle, TextStyle,
-            TypefaceFontProvider,
+            TypefaceFontProvider, TextBaseline
         },
         IPoint,
     },
@@ -30,6 +30,8 @@ pub struct Painter<'a> {
     font: Option<Font>,
     color: Option<Color>,
     line_width: Option<f32>,
+
+    skia_fonts: Vec<SkiaFont>,
 
     saved_font: Option<Font>,
     saved_color: Option<Color>,
@@ -62,6 +64,7 @@ impl<'a> Painter<'a> {
             font: None,
             color: None,
             line_width: None,
+            skia_fonts: vec![],
             saved_font: None,
             saved_color: None,
             saved_line_width: None,
@@ -210,12 +213,14 @@ impl<'a> Painter<'a> {
     /// Set the font of painter.
     #[inline]
     pub fn set_font(&mut self, font: Font) {
-        self.text_style.set_font_size(font.size());
         let mut families = vec![];
-        font.typefaces()
-            .iter()
-            .for_each(|tf| families.push(tf.family()));
+        font.typefaces().iter().for_each(|tf| {
+            families.push(tf.family());
+        });
+
         self.text_style.set_font_families(&families);
+        self.text_style.set_font_size(font.size());
+        self.skia_fonts = font.to_skia_fonts();
         self.font = Some(font);
     }
 
@@ -402,7 +407,7 @@ impl<'a> Painter<'a> {
     ///
     /// the origin point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_paragraph<T: Into<Point>>(
+    pub fn draw_paragraph<T: Into<Point> + Copy>(
         &mut self,
         text: &str,
         origin: T,
@@ -423,7 +428,7 @@ impl<'a> Painter<'a> {
     ///
     /// the origin point's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
-    pub fn draw_paragraph_global<T: Into<Point>>(
+    pub fn draw_paragraph_global<T: Into<Point> + Copy>(
         &mut self,
         text: &str,
         origin: T,
@@ -447,13 +452,13 @@ impl<'a> Painter<'a> {
         max_lines: Option<usize>,
         ellipsis: bool,
     ) {
-        if let Some(ref font) = self.font {
+        if let Some(_) = self.font {
             // create font manager
             let mut typeface_provider = TypefaceFontProvider::new();
 
-            // Register the font typefaces.
-            font.typefaces().iter().for_each(|tf| {
-                let typeface = tf.to_skia_typeface();
+            // Register the font typefaces, and calculate the baseline shift
+            self.skia_fonts.iter().for_each(|sf| {
+                let typeface = sf.typeface().unwrap();
                 let family = typeface.family_name();
                 typeface_provider.register_typeface(typeface, Some(family));
             });
@@ -463,6 +468,7 @@ impl<'a> Painter<'a> {
 
             // set text style
             self.text_style.set_letter_spacing(letter_spacing);
+            self.text_style.set_text_baseline(TextBaseline::Alphabetic);
             self.paragraph_style.set_text_style(&self.text_style);
             self.paragraph_style.set_max_lines(max_lines);
             if ellipsis {
@@ -480,7 +486,10 @@ impl<'a> Painter<'a> {
 
             self.paragraph = Some(paragraph);
         } else {
-            warn!("The `font` of `Painter` was None in widget `{}`.", self.name)
+            warn!(
+                "The `font` of `Painter` was None in widget `{}`.",
+                self.name
+            )
         }
     }
 
@@ -520,7 +529,7 @@ impl<'a> Painter<'a> {
             origin.offset((self.x_offset, self.y_offset));
 
             self.canvas
-                .draw_str(text, origin, &font.to_skia_font(), &self.paint);
+                .draw_str(text, origin, &font.to_skia_fonts()[0], &self.paint);
         } else {
             error!("The `font` of `Painter` is None.")
         }
@@ -545,7 +554,7 @@ impl<'a> Painter<'a> {
                 clusters,
                 utf8_text,
                 origin,
-                &font.to_skia_font(),
+                &font.to_skia_fonts()[0],
                 &self.paint,
             )
         } else {

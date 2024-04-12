@@ -5,13 +5,26 @@ use tipc::parking_lot::{
     lock_api::{RwLockReadGuard, RwLockWriteGuard},
     RawRwLock, RwLock,
 };
-use tlib::typedef::{SkiaData, SkiaTypeface};
+use tlib::{
+    count_exprs,
+    typedef::{SkiaData, SkiaTypeface},
+};
 
-const EXTERNAL_FONTS: [&'static str; 1] = ["NotoSansSC-VariableFont_wght.ttf"];
+macro_rules! external_fonts {
+    ($($font:expr),*) => {
+        const EXTERNAL_FONTS: [&'static str; count_exprs!($($font),*)] = [$($font),*];
+    };
+}
+
+external_fonts!(
+    "NotoSansSC-VariableFont_wght.ttf",
+    "Font Awesome 6 Free-Regular-400.otf"
+);
 
 #[derive(RustEmbed)]
 #[folder = "resources/fonts"]
 #[include = "*.ttf"]
+#[include = "*.otf"]
 struct FontAsset;
 
 #[derive(Default)]
@@ -41,6 +54,9 @@ impl FontManager {
 
             let tf = SkiaTypeface::from_data(unsafe { SkiaData::new_bytes(&data) }, None)
                 .expect(&format!("Make font typeface failed, ttf file: {}.", font));
+
+            println!("Load font sucess: {}", tf.family_name());
+
             Self::write().fonts.insert(tf.family_name(), tf);
         }
     }
