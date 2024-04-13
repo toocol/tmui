@@ -4,7 +4,7 @@ use crate::{
     shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
 };
 use std::{
-    cell::{RefCell, RefMut},
+    cell::RefCell,
     ptr::NonNull,
     sync::Arc,
 };
@@ -28,7 +28,7 @@ thread_local! {
 pub struct Board {
     bitmap: Arc<RwLock<Bitmap>>,
     backend: Box<dyn Backend>,
-    surface: RefCell<Surface>,
+    surface: Surface,
     element_list: RefCell<Vec<Option<NonNull<dyn ElementImpl>>>>,
 }
 
@@ -40,7 +40,7 @@ impl Board {
         Self {
             bitmap,
             backend,
-            surface: RefCell::new(surface),
+            surface: surface,
             element_list: RefCell::new(vec![]),
         }
     }
@@ -72,10 +72,10 @@ impl Board {
 
     #[inline]
     pub(crate) fn resize(&mut self) {
-        self.surface().flush_and_submit();
+        // self.surface().flush_and_submit();
         self.backend.resize(self.bitmap.clone());
 
-        self.surface = RefCell::new(self.backend.surface());
+        self.surface = self.backend.surface();
     }
 
     #[inline]
@@ -84,12 +84,7 @@ impl Board {
     }
 
     #[inline]
-    pub(crate) fn surface(&self) -> RefMut<Surface> {
-        self.surface.borrow_mut()
-    }
-
-    #[inline]
-    pub(crate) fn invalidate_visual(&self) -> bool {
+    pub(crate) fn invalidate_visual(&mut self) -> bool {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
 
@@ -119,20 +114,20 @@ impl Board {
                             && shared_widget.as_ref().unwrap().is_shared_invalidate());
 
                     if need_render {
-                        let cr = DrawingContext::new(self);
+                        let mut cr = DrawingContext::new(self.surface.canvas());
 
                         if let Some(shared_widget) = shared_widget {
                             shared_widget.shared_validate();
                         }
 
-                        element.on_renderer(&cr);
+                        element.on_renderer(&mut cr);
                         element.validate();
                         element.clear_regions();
                         update = true;
                     }
                 }
 
-                self.surface().flush_and_submit();
+                // self.surface().flush_and_submit();
 
                 bitmap_guard.prepared();
 

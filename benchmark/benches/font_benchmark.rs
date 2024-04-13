@@ -6,8 +6,8 @@ fn font_calc_test(font: &Font) {
     let _ = font.calc_font_dimension();
 }
 
-pub fn typeface_tmui(typeface: &FontTypeface) {
-    let _ = typeface.to_skia_typeface();
+pub fn typeface_tmui(font: &Font, typeface: &FontTypeface) {
+    let _ = typeface.to_skia_typeface(font);
 }
 
 pub fn typeface_skia(typeface: &SkiaTypeface) {
@@ -16,11 +16,11 @@ pub fn typeface_skia(typeface: &SkiaTypeface) {
 
 pub fn font_calc(c: &mut Criterion) {
     let font = Font::with_family(vec!["Courier New"]);
-    let typeface = FontTypeface::builder().family("Courier New").build();
-    let skia_typeface = typeface.to_skia_typeface();
+    let typeface = FontTypeface::new("Courier New");
+    let skia_typeface = typeface.to_skia_typeface(&font).unwrap();
 
     c.bench_function("font_calc_test", |b| b.iter(|| font_calc_test(&font)));
-    c.bench_function("font_typeface_convert", |b| b.iter(|| typeface_tmui(&typeface)));
+    c.bench_function("font_typeface_convert", |b| b.iter(|| typeface_tmui(&font, &typeface)));
     c.bench_function("font_typeface_clone", |b| b.iter(|| typeface_skia(&skia_typeface)));
 }
 

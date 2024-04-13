@@ -124,10 +124,13 @@ impl WidgetImpl for Label {
         let mut typeface_provider = TypefaceFontProvider::new();
         let mut families = vec![];
         for tf in font.typefaces() {
-            families.push(tf.family());
-            let typeface = tf.to_skia_typeface();
-            let family = typeface.family_name();
-            typeface_provider.register_typeface(typeface, Some(family));
+            let typeface = tf.to_skia_typeface(font);
+
+            if let Some(typeface) = typeface {
+                families.push(tf.family());
+                let family = typeface.family_name();
+                typeface_provider.register_typeface(typeface, Some(family.as_str()));
+            }
         }
 
         let mut font_collection = FontCollection::new();

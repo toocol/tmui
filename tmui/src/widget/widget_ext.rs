@@ -1066,7 +1066,7 @@ impl WidgetExt for Widget {
     fn set_font_family(&mut self, family: Vec<&str>) {
         let mut typefaces = vec![];
         for f in family {
-            let typeface = FontTypeface::builder().family(f).build();
+            let typeface = FontTypeface::new(f);
             typefaces.push(typeface);
         }
         self.font.set_typefaces(typefaces);

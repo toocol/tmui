@@ -1,21 +1,24 @@
 pub mod mgr;
 
 use lazy_static::__Deref;
-use tlib::skia_safe::{
-    self,
-    font_style::Slant,
-    textlayout::{
-        Paragraph, FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+use log::warn;
+use tlib::{
+    count_exprs,
+    skia_safe::{
+        self,
+        font_style::Slant,
+        textlayout::{
+            FontCollection, Paragraph, ParagraphBuilder, ParagraphStyle, TextStyle,
+            TypefaceFontProvider,
+        },
     },
-    FontStyle,
+    typedef::{
+        SkiaFont, SkiaFontEdging, SkiaFontHiting, SkiaFontStyle, SkiaFontWeight, SkiaFontWidth,
+        SkiaTypeface,
+    },
 };
 use FontWeight::*;
 use FontWidth::*;
-
-use tlib::count_exprs;
-use tlib::typedef::{
-    SkiaFont, SkiaFontEdging, SkiaFontHiting, SkiaFontWeight, SkiaFontWidth, SkiaTypeface,
-};
 
 use self::mgr::FontManager;
 
@@ -25,11 +28,14 @@ macro_rules! default_font_families {
     };
 }
 
-default_font_families!(
-    "Arial",
-    "Noto Sans SC",
-    "Microsoft YaHei"
-);
+#[cfg(windows_platform)]
+default_font_families!("Arial", "Microsoft YaHei");
+
+#[cfg(apple)]
+default_font_families!("Helvetica", "PingFang SC");
+
+#[cfg(free_unix)]
+default_font_families!("Liberation Sans", "Sim Sun");
 
 /////////////////////////////////////////////////////////////////////////////////////////
 /// [`Font`]
@@ -48,6 +54,11 @@ pub struct Font {
     size: f32,
     scale_x: f32,
     skew_x: f32,
+
+    // Font styles:
+    weight: FontWeight,
+    width: FontWidth,
+    italic: bool,
 }
 
 impl Default for Font {
@@ -57,7 +68,7 @@ impl Default for Font {
 
         let mut typefaces = vec![];
         for family in DEFAULT_FONT_FAMILY {
-            let typeface = FontTypeface::builder().family(family).build();
+            let typeface = FontTypeface::new(family);
             typefaces.push(typeface);
         }
         font.set_typefaces(typefaces);
@@ -68,12 +79,7 @@ impl Default for Font {
 
 impl Font {
     #[inline]
-    fn new() -> Self {
-        let mut typefaces = vec![];
-        for family in DEFAULT_FONT_FAMILY {
-            let typeface = FontTypeface::builder().family(family).build();
-            typefaces.push(typeface);
-        }
+    fn empty() -> Self {
         Self {
             force_auto_hinting: Default::default(),
             embedded_bitmaps: Default::default(),
@@ -83,10 +89,13 @@ impl Font {
             baseline_snap: Default::default(),
             edging: Default::default(),
             hinting: Default::default(),
-            typefaces,
+            typefaces: Default::default(),
             size: Default::default(),
             scale_x: Default::default(),
             skew_x: Default::default(),
+            weight: Default::default(),
+            width: Default::default(),
+            italic: Default::default(),
         }
     }
 
@@ -214,101 +223,6 @@ impl Font {
     }
 
     #[inline]
-    pub fn to_skia_fonts(&self) -> Vec<SkiaFont> {
-        let mut fonts = vec![];
-        for tf in self.typefaces() {
-            let mut font = SkiaFont::default();
-            font.set_force_auto_hinting(self.is_force_auto_hinting());
-            font.set_embedded_bitmaps(self.is_embedded_bitmaps());
-            font.set_subpixel(self.is_subpixel());
-            font.set_linear_metrics(self.is_linear_metrics());
-            font.set_embolden(self.is_embolden());
-            font.set_baseline_snap(self.is_baseline_snap());
-            font.set_edging(self.edging().into());
-            font.set_hinting(self.hinting().into());
-            font.set_typeface(tf);
-            font.set_size(self.size());
-            font.set_scale_x(self.scale_x());
-            font.set_skew_x(self.skew_x());
-
-            fonts.push(font);
-        }
-        fonts
-    }
-
-    //////////////////////////////////// Typeface related.
-    #[inline]
-    pub fn set_font_weight(&mut self, weight: FontWeight) {
-        self.typefaces
-            .iter_mut()
-            .for_each(|tf| tf.set_font_weight(weight))
-    }
-
-    #[inline]
-    pub fn set_font_width(&mut self, width: FontWidth) {
-        self.typefaces
-            .iter_mut()
-            .for_each(|tf| tf.set_font_width(width))
-    }
-
-    #[inline]
-    pub fn set_italic(&mut self, italic: bool) {
-        self.typefaces
-            .iter_mut()
-            .for_each(|tf| tf.set_italic(italic))
-    }
-}
-
-impl Into<Font> for SkiaFont {
-    #[inline]
-    fn into(self) -> Font {
-        let mut font = Font::new();
-        font.set_force_auto_hinting(self.is_force_auto_hinting());
-        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
-        font.set_subpixel(self.is_subpixel());
-        font.set_linear_metrics(self.is_linear_metrics());
-        font.set_embolden(self.is_embolden());
-        font.set_baseline_snap(self.is_baseline_snap());
-        font.set_edging(self.edging().into());
-        font.set_hinting(self.hinting().into());
-        if let Some(typeface) = self.typeface() {
-            font.set_typefaces(vec![typeface.into()]);
-        }
-        font.set_size(self.size());
-        font.set_scale_x(self.scale_x());
-        font.set_skew_x(self.skew_x());
-        font
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/// [`FontTypeface`]
-/////////////////////////////////////////////////////////////////////////////////////////
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
-pub struct FontTypeface {
-    family: &'static str,
-    weight: FontWeight,
-    width: FontWidth,
-    italic: bool,
-}
-
-impl FontTypeface {
-    /// Get the [`FontTypefaceBuilder`]
-    #[inline]
-    pub fn builder() -> FontTypefaceBuilder {
-        FontTypefaceBuilder::default()
-    }
-
-    #[inline]
-    pub fn family(&self) -> &str {
-        &self.family
-    }
-    #[inline]
-    pub fn set_family<T: ToString>(&mut self, family: T) {
-        self.family = Box::leak(family.to_string().into_boxed_str());
-    }
-
-    #[inline]
     pub fn bold(&self) -> bool {
         self.weight == FontWeight::Bold
     }
@@ -349,8 +263,62 @@ impl FontTypeface {
     }
 
     #[inline]
-    pub fn to_skia_typeface(&self) -> SkiaTypeface {
-        let font_style = FontStyle::new(
+    pub fn to_skia_fonts(&self) -> Vec<SkiaFont> {
+        let mut fonts = vec![];
+        for tf in self.typefaces() {
+            if let Some(typeface) = tf.to_skia_typeface(self) {
+                let mut font = SkiaFont::default();
+                font.set_force_auto_hinting(self.is_force_auto_hinting());
+                font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+                font.set_subpixel(self.is_subpixel());
+                font.set_linear_metrics(self.is_linear_metrics());
+                font.set_embolden(self.is_embolden());
+                font.set_baseline_snap(self.is_baseline_snap());
+                font.set_edging(self.edging().into());
+                font.set_hinting(self.hinting().into());
+                font.set_typeface(typeface);
+                font.set_size(self.size());
+                font.set_scale_x(self.scale_x());
+                font.set_skew_x(self.skew_x());
+
+                fonts.push(font);
+            }
+        }
+        fonts
+    }
+}
+
+impl Into<Font> for SkiaFont {
+    #[inline]
+    fn into(self) -> Font {
+        let mut font = Font::empty();
+        font.set_force_auto_hinting(self.is_force_auto_hinting());
+        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
+        font.set_subpixel(self.is_subpixel());
+        font.set_linear_metrics(self.is_linear_metrics());
+        font.set_embolden(self.is_embolden());
+        font.set_baseline_snap(self.is_baseline_snap());
+        font.set_edging(self.edging().into());
+        font.set_hinting(self.hinting().into());
+        {
+            let typeface = self.typeface();
+            let fs = typeface.font_style();
+            font.set_font_weight(fs.weight().into());
+            font.set_font_width(fs.width().into());
+            font.set_italic(fs.slant() == Slant::Italic);
+            font.typefaces = vec![FontTypeface::new(&typeface.family_name())];
+        }
+        font.set_size(self.size());
+        font.set_scale_x(self.scale_x());
+        font.set_skew_x(self.skew_x());
+        font
+    }
+}
+
+impl Font {
+    #[inline]
+    pub(crate) fn get_skia_font_style(&self) -> SkiaFontStyle {
+        SkiaFontStyle::new(
             self.weight.into(),
             self.width.into(),
             if self.italic() {
@@ -358,100 +326,49 @@ impl FontTypeface {
             } else {
                 Slant::Upright
             },
-        );
+        )
+    }
+}
 
-        if let Some(typeface) = FontManager::get(self.family) {
-            typeface
+/////////////////////////////////////////////////////////////////////////////////////////
+/// [`FontTypeface`]
+/////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub struct FontTypeface {
+    family: &'static str,
+}
+
+impl FontTypeface {
+    /// Get the [`FontTypefaceBuilder`]
+    #[inline]
+    pub fn new(family: &str) -> Self {
+        Self {
+            family: Box::leak(family.to_string().into_boxed_str()),
+        }
+    }
+
+    #[inline]
+    pub fn family(&self) -> &str {
+        &self.family
+    }
+    #[inline]
+    pub fn set_family<T: ToString>(&mut self, family: T) {
+        self.family = Box::leak(family.to_string().into_boxed_str());
+    }
+
+    #[inline]
+    pub fn to_skia_typeface(&self, font: &Font) -> Option<SkiaTypeface> {
+        let typeface = if let Some(typeface) = FontManager::get(self.family) {
+            Some(typeface)
         } else {
-            SkiaTypeface::new(self.family(), font_style)
-                .expect(format!("Create typeface from `{}` failed.", self.family()).as_str())
+            FontManager::make_typeface(self.family, font.get_skia_font_style())
+        };
+
+        if typeface.is_none() {
+            warn!("Make typeface from family `{}` failed.", self.family);
         }
-    }
-}
 
-impl Into<SkiaTypeface> for FontTypeface {
-    #[inline]
-    fn into(self) -> SkiaTypeface {
-        self.to_skia_typeface()
-    }
-}
-
-impl Into<SkiaTypeface> for &FontTypeface {
-    fn into(self) -> SkiaTypeface {
-        self.to_skia_typeface()
-    }
-}
-
-impl Into<FontTypeface> for SkiaTypeface {
-    #[inline]
-    fn into(self) -> FontTypeface {
-        let font_style = self.font_style();
-        FontTypeface::builder()
-            .family(self.family_name())
-            .weight(font_style.weight().into())
-            .width(font_style.width().into())
-            .italic(font_style.slant() == Slant::Italic)
-            .build()
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/// [`FontTypefaceBuilder`] Builder to create `FontTypeface`
-/////////////////////////////////////////////////////////////////////////////////////////
-/// The builder to construct the [`FontTypeface`]
-#[derive(Debug, Default)]
-pub struct FontTypefaceBuilder {
-    family: Option<String>,
-    weight: FontWeight,
-    width: FontWidth,
-    italic: bool,
-}
-
-impl FontTypefaceBuilder {
-    /// Build the [`FontTypeface`]
-    #[inline]
-    pub fn build(self) -> FontTypeface {
-        let mut typeface = FontTypeface::default();
-        if let Some(family) = self.family {
-            typeface.family = Box::leak(family.into_boxed_str());
-        }
-        typeface.weight = self.weight;
-        typeface.italic = self.italic;
         typeface
-    }
-
-    #[inline]
-    pub fn family<T: ToString>(mut self, family: T) -> Self {
-        self.family = Some(family.to_string());
-        self
-    }
-
-    #[inline]
-    pub fn bold(mut self, bold: bool) -> Self {
-        if bold {
-            self.weight = FontWeight::Bold
-        } else {
-            self.weight = FontWeight::Normal
-        }
-        self
-    }
-
-    #[inline]
-    pub fn weight(mut self, weight: FontWeight) -> Self {
-        self.weight = weight;
-        self
-    }
-
-    #[inline]
-    pub fn width(mut self, width: FontWidth) -> Self {
-        self.width = width;
-        self
-    }
-
-    #[inline]
-    pub fn italic(mut self, italic: bool) -> Self {
-        self.italic = italic;
-        self
     }
 }
 
@@ -674,10 +591,13 @@ fn calc_text_dimension(font: &Font, text: &str, letter_spacing: f32) -> (f32, f3
     let mut typeface_provider = TypefaceFontProvider::new();
     let mut families = vec![];
     for typeface in typefaces {
-        let typeface = typeface.to_skia_typeface();
-        let family = typeface.family_name();
-        typeface_provider.register_typeface(typeface, Some(family.clone()));
-        families.push(family);
+        let typeface = typeface.to_skia_typeface(font);
+
+        if let Some(typeface) = typeface {
+            let family = typeface.family_name();
+            typeface_provider.register_typeface(typeface, Some(family.as_str()));
+            families.push(family);
+        }
     }
 
     let mut font_collection = FontCollection::new();
@@ -700,10 +620,10 @@ fn calc_text_dimension(font: &Font, text: &str, letter_spacing: f32) -> (f32, f3
     (paragraph.max_intrinsic_width(), paragraph.height())
 }
 
-pub trait SingleLineBaselineAware {
+pub trait SkiaParagraphExt {
     fn single_line_baseline(&self) -> f32;
 }
-impl SingleLineBaselineAware for Paragraph {
+impl SkiaParagraphExt for Paragraph {
     fn single_line_baseline(&self) -> f32 {
         let mut baseline = 0.0f32;
 
@@ -713,17 +633,17 @@ impl SingleLineBaselineAware for Paragraph {
                 let fm = mcs.text_style.font_metrics();
                 baseline = baseline.max(-fm.ascent);
             }
-        } 
-        
+        }
+
         baseline
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Font, FontCalculation, FontTypeface};
+    use super::{Font, FontCalculation};
     use tlib::global::fuzzy_compare_32;
-    use tlib::typedef::{SkiaFont, SkiaTypeface};
+    use tlib::typedef::SkiaFont;
     use widestring::U16String;
 
     const REPCHAR: &'static str = concat!(
@@ -735,7 +655,6 @@ mod tests {
     #[test]
     fn test_font_calc() {
         let font = Font::with_family(vec!["Courier New"]);
-        // let font: SkiaFont = font.into();
         let fd = font.calc_font_dimension();
         let td = font.calc_text_dimension(REPCHAR, 0.);
         assert_eq!(fd.1, td.1);
@@ -746,20 +665,6 @@ mod tests {
         font.to_skia_fonts()[0].get_widths(slice, &mut widths);
         let w = widths.iter().sum::<f32>() / widths.len() as f32;
         assert!(fuzzy_compare_32(td.0 / REPCHAR.len() as f32, w));
-    }
-
-    #[test]
-    fn test_font_typeface() {
-        let typeface = FontTypeface::builder()
-            .family("Consolas")
-            .bold(true)
-            .italic(true)
-            .build();
-        assert!(typeface.bold());
-        assert!(typeface.italic());
-        let typeface: SkiaTypeface = typeface.into();
-        assert!(typeface.is_bold());
-        assert!(typeface.is_italic());
     }
 
     #[test]
@@ -787,7 +692,7 @@ mod tests {
             measure.1.width() / REPCHAR.len() as f32
         );
 
-        let _skia_typeface = skia_font.typeface().unwrap();
+        let _skia_typeface = skia_font.typeface();
 
         assert_eq!(
             font.is_force_auto_hinting(),

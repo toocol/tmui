@@ -2,7 +2,7 @@ use super::{Input, InputSignals, InputWrapper};
 use crate::{
     application, cast_do,
     clipboard::ClipboardLevel,
-    font::{FontCalculation, SingleLineBaselineAware},
+    font::{FontCalculation, SkiaParagraphExt},
     prelude::*,
     shortcut::ShortcutRegister,
     system::System,
@@ -111,6 +111,7 @@ impl ObjectSubclass for Text {
 impl ObjectImpl for Text {
     fn initialize(&mut self) {
         self.input_wrapper.init(self.id());
+
         self.font_changed();
         self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
         self.set_borders(1., 1., 1., 1.);

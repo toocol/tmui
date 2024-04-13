@@ -10,7 +10,7 @@ use ::tlib::{
     typedef::{SkiaBlendMode, SkiaFont, SkiaRect},
 };
 use log::{error, warn};
-use std::{cell::RefMut, ffi::c_uint};
+use std::ffi::c_uint;
 use tlib::{
     figure::{Color, FRect, ImageBuf, Rect},
     skia_safe::{
@@ -25,7 +25,7 @@ use tlib::{
 
 pub struct Painter<'a> {
     name: &'a str,
-    canvas: RefMut<'a, Canvas>,
+    canvas: &'a Canvas,
     paint: Paint,
     font: Option<Font>,
     color: Option<Color>,
@@ -52,7 +52,7 @@ pub struct Painter<'a> {
 impl<'a> Painter<'a> {
     /// The constructer to build the Painter.
     #[inline]
-    pub fn new(name: &'a str, canvas: RefMut<'a, Canvas>, widget: &dyn WidgetImpl) -> Painter<'a> {
+    pub fn new(name: &'a str, canvas: &'a Canvas, widget: &dyn WidgetImpl) -> Painter<'a> {
         let rect = widget.rect();
         let mut paint = Paint::default();
         paint.set_blend_mode(SkiaBlendMode::Src);
@@ -92,11 +92,6 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn canvas_ref(&self) -> &Canvas {
         &self.canvas
-    }
-
-    #[inline]
-    pub fn canvas_mut(&mut self) -> &mut Canvas {
-        &mut self.canvas
     }
 
     #[inline]
@@ -220,6 +215,8 @@ impl<'a> Painter<'a> {
 
         self.text_style.set_font_families(&families);
         self.text_style.set_font_size(font.size());
+        self.text_style.set_font_style(font.get_skia_font_style());
+
         self.skia_fonts = font.to_skia_fonts();
         self.font = Some(font);
     }
@@ -458,9 +455,9 @@ impl<'a> Painter<'a> {
 
             // Register the font typefaces, and calculate the baseline shift
             self.skia_fonts.iter().for_each(|sf| {
-                let typeface = sf.typeface().unwrap();
+                let typeface = sf.typeface();
                 let family = typeface.family_name();
-                typeface_provider.register_typeface(typeface, Some(family));
+                typeface_provider.register_typeface(typeface, Some(family.as_str()));
             });
 
             let mut font_collection = FontCollection::new();
@@ -511,6 +508,8 @@ impl<'a> Painter<'a> {
     pub fn draw_paragrah_prepared_global<T: Into<Point>>(&mut self, origin: T) {
         if let Some(paragraph) = self.paragraph.take() {
             paragraph.paint(&mut self.canvas, origin);
+        } else {
+            warn!("Widget `{}` has no paragraph prepared.", self.name)
         }
     }
 

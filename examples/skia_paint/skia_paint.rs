@@ -73,7 +73,7 @@ impl SkiaPaint {
         let font = &font.to_skia_fonts()[0];
 
         // create font manager
-        let typeface = font.typeface().unwrap();
+        let typeface = font.typeface();
         let mut typeface_provider = TypefaceFontProvider::new();
         typeface_provider.register_typeface(typeface.into(), Some(FAMILY));
         let mut font_collection = FontCollection::new();
@@ -121,7 +121,7 @@ impl SkiaPaint {
         ));
 
         // draw text
-        let canvas = painter.canvas_mut();
+        let canvas = painter.canvas_ref();
         let point = skia_safe::Point::new(0.0, 0.0);
         paragraph.paint(canvas, point);
 
