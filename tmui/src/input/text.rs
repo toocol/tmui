@@ -56,6 +56,8 @@ pub struct Text {
     blink_timer: Timer,
     /// The cursor color, if not set, defaults to the text color.
     caret_color: Option<Color>,
+    predict_start: usize,
+    predict_start_len: f32,
 
     //////////////////////////// Text
     #[derivative(Default(value = "TEXT_DEFAULT_PADDING"))]
@@ -67,6 +69,7 @@ pub struct Text {
     max_length: Option<usize>,
     letter_spacing: f32,
     placeholder: String,
+    unicode_text: bool,
 
     //////////////////////////// Font
     font_dimension: (f32, f32),
@@ -121,6 +124,7 @@ impl ObjectImpl for Text {
             self.cursor_index = self.value_chars_count();
         }
 
+        connect!(self, value_changed(), self, on_value_changed());
         connect!(self.blink_timer, timeout(), self, blink_event());
         connect!(
             self,
@@ -137,6 +141,8 @@ impl WidgetImpl for Text {
         self.parent_run_after();
 
         self.calc_text_geometry();
+
+        self.on_value_changed();
     }
 
     #[inline]
@@ -394,6 +400,9 @@ impl Text {
                 self.cursor_index += cp.chars().count();
             }
 
+            if cp.len() > 0 {
+                emit!(self.value_changed());
+            }
             self.update();
         }
     }
@@ -406,8 +415,13 @@ impl Text {
             self.cursor_index = mem.cursor_index;
             self.selection_start = mem.selection_start;
             self.selection_end = mem.selection_end;
-            self.input_wrapper.set_value(mem.value.clone());
             self.text_draw_position = Some(mem.text_draw_position);
+
+            let mem_val = mem.value;
+            if !mem_val.eq(self.value_ref().as_str()) {
+                self.input_wrapper.set_value(mem_val);
+                emit!(self.value_changed())
+            }
 
             self.update();
         }
@@ -421,8 +435,13 @@ impl Text {
             self.cursor_index = mem.cursor_index;
             self.selection_start = mem.selection_start;
             self.selection_end = mem.selection_end;
-            self.input_wrapper.set_value(mem.value.clone());
             self.text_draw_position = Some(mem.text_draw_position);
+
+            let mem_val = mem.value;
+            if !mem_val.eq(self.value_ref().as_str()) {
+                self.input_wrapper.set_value(mem_val);
+                emit!(self.value_changed())
+            }
 
             self.update();
         }
@@ -635,6 +654,8 @@ impl Text {
                 + self.font().calc_text_dimension(s, self.letter_spacing).0
         };
 
+        let mut shift = false;
+
         // When cursor position exceeds the right side of the text window,
         // set the cursor to the end of the text window,
         // meanwhile the drawing position moves left.
@@ -643,6 +664,9 @@ impl Text {
             self.text_draw_position_mut().offset(-offset, 0.);
 
             pos = self.text_window.right() - 2.;
+            if offset != 0. {
+                shift = true;
+            }
         }
         // When cursor position exceeds the left side of the text window,
         // set the cursor to the beginning of the text window,
@@ -652,6 +676,9 @@ impl Text {
             self.text_draw_position_mut().offset(offset, 0.);
 
             pos = self.text_window.left() + 2.;
+            if offset != 0. {
+                shift = true;
+            }
         }
         // When a character from the input string has been deleted,
         // and the cursor was at the end of both the input string and the text window,
@@ -663,6 +690,33 @@ impl Text {
             self.text_draw_position_mut().offset(offset, 0.);
 
             pos = self.text_window.right() - 2.;
+            if offset != 0. {
+                shift = true;
+            }
+        }
+
+        if shift {
+            let (a, b) = {
+                let value_ref = self.value_ref();
+                let str = value_ref.as_str();
+
+                if str.len() == 0 {
+                    (0, 0.)
+                } else {
+                    let predict_start = (((self.text_window.x() + 2.
+                        - self.text_draw_position().x())
+                        / self.font_dimension.0) as usize)
+                        .min(str.chars().count());
+                    let predict_pref_len = self
+                        .font()
+                        .calc_text_dimension(&str[..self.map(predict_start)], self.letter_spacing)
+                        .0;
+                    (predict_start, predict_pref_len)
+                }
+            };
+
+            self.predict_start = a;
+            self.predict_start_len = b;
         }
 
         pos
@@ -882,16 +936,38 @@ impl Text {
         let chars_cnt = str.chars().count();
 
         let offset = x_pos - self.text_draw_position().x();
-        let mut predict_idx = ((offset / self.font_dimension.0) as usize).min(chars_cnt);
+        let mut predict_idx = self.cursor_index;
 
         let mut last_diff = f32::MAX;
         let mut last_idx = predict_idx;
 
+        let mut predict_start = self.predict_start;
+        let len_start = if predict_start > predict_idx {
+            let tmp = predict_start;
+            predict_start = predict_idx;
+            predict_idx = tmp;
+
+            predict_start = self.map(predict_start);
+
+            self.font()
+                .calc_text_dimension(&str[..predict_start], self.letter_spacing)
+                .0
+        } else {
+            predict_start = self.map(predict_start);
+
+            self.predict_start_len
+        };
+
         loop {
+            let map_idx = self.map(predict_idx);
+            if predict_start > map_idx {
+                break;
+            }
             let actual_len = self
                 .font()
-                .calc_text_dimension(&str[..self.map(predict_idx)], self.letter_spacing)
-                .0;
+                .calc_text_dimension(&str[predict_start..map_idx], self.letter_spacing)
+                .0
+                + len_start;
 
             let diff = (offset - actual_len).abs();
             if diff >= last_diff {
@@ -909,15 +985,20 @@ impl Text {
                 if predict_idx == chars_cnt {
                     break;
                 }
-                predict_idx += 1;
+                predict_idx += (diff / self.font_dimension.0).max(1.) as usize;
             } else {
                 if predict_idx == 0 {
                     break;
                 }
-                predict_idx -= 1;
+                let sub = (diff / self.font_dimension.0).max(1.) as usize;
+                if sub >= predict_idx {
+                    predict_idx = 0
+                } else {
+                    predict_idx -= sub;
+                }
             }
         }
-        predict_idx
+        predict_idx.min(chars_cnt)
     }
 
     #[inline]
@@ -1056,17 +1137,14 @@ impl Text {
     #[inline]
     fn value_remove_range(&mut self, start: usize, end: usize) {
         let (start, end) = (self.map(start), self.map(end));
-        let (offset, _) = self
-            .font()
-            .calc_text_dimension(&self.value_ref()[start..end], self.letter_spacing);
 
         self.input_wrapper.value_mut().replace_range(start..end, "");
+        if start != end {
+            emit!(self.value_changed());
+        }
 
         let text_window = self.text_window;
         let draw_pos = self.text_draw_position_mut();
-        if draw_pos.x() < text_window.left() {
-            draw_pos.offset(offset, 0.);
-        }
         draw_pos.set_x(draw_pos.x().min(text_window.left()));
     }
 
@@ -1082,6 +1160,24 @@ impl Text {
         }
 
         painter.draw_paragrah_prepared_global(origin);
+    }
+
+    #[inline]
+    fn on_value_changed(&mut self) {
+        let (bytes_len, chars_len) = {
+            let val_ref = self.value_ref();
+            let val = val_ref.as_str();
+
+            (val.len(), val.chars().count())
+        };
+
+        if bytes_len != chars_len && !self.unicode_text {
+            self.font_dimension = self.font().calc_font_dimension_unicode();
+            self.unicode_text = true;
+        } else if bytes_len == chars_len && self.unicode_text {
+            self.font_dimension = self.font().calc_font_dimension();
+            self.unicode_text = false;
+        }
     }
 }
 

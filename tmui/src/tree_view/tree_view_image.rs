@@ -1,13 +1,14 @@
 use super::{tree_node::TreeNode, tree_store::TreeStore};
 use crate::{
-    font::FontCalculation, prelude::*, scroll_bar::ScrollBar, tlib::object::{ObjectImpl, ObjectSubclass}, tree_view::tree_store::TreeStoreSignals, widget::WidgetImpl
+    font::FontCalculation,
+    prelude::*,
+    scroll_bar::ScrollBar,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    tree_view::tree_store::TreeStoreSignals,
+    widget::WidgetImpl,
 };
 use std::ptr::NonNull;
-use tlib::{
-    connect, disconnect,
-    events::MouseEvent,
-    nonnull_mut, nonnull_ref, run_after,
-};
+use tlib::{connect, disconnect, events::MouseEvent, nonnull_mut, nonnull_ref, run_after};
 
 #[extends(Widget)]
 #[run_after]

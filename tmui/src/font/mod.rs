@@ -567,19 +567,32 @@ pub trait FontCalculation {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
         "abcdefgjijklmnopqrstuvwxyz",
         "0123456789./+@*()#$!",
-        "中文符号：，。？！、《》‘’“”"
+    );
+
+    const REPCHAR_UNICODE: &'static str = concat!(
+        "一二三四五六七八九十中文符号零百千万亿：，。？！、《》‘’“”",
     );
 
     fn calc_font_dimension(&self) -> (f32, f32);
 
+    fn calc_font_dimension_unicode(&self) -> (f32, f32);
+
     fn calc_text_dimension(&self, text: &str, letter_spacing: f32) -> (f32, f32);
 }
 impl FontCalculation for Font {
+    #[inline]
     fn calc_font_dimension(&self) -> (f32, f32) {
         let (w, h) = calc_text_dimension(self, Self::REPCHAR, 0.);
         (w / Self::REPCHAR.chars().count() as f32, h)
     }
 
+    #[inline]
+    fn calc_font_dimension_unicode(&self) -> (f32, f32) {
+        let (w, h) = calc_text_dimension(self, Self::REPCHAR_UNICODE, 0.);
+        (w / Self::REPCHAR_UNICODE.chars().count() as f32, h)
+    }
+
+    #[inline]
     fn calc_text_dimension(&self, text: &str, letter_spacing: f32) -> (f32, f32) {
         calc_text_dimension(self, text, letter_spacing)
     }
@@ -606,6 +619,7 @@ fn calc_text_dimension(font: &Font, text: &str, letter_spacing: f32) -> (f32, f3
     // define text style
     let mut style = ParagraphStyle::new();
     let mut text_style = TextStyle::new();
+    text_style.set_font_style(font.get_skia_font_style());
     text_style.set_font_size(font.size());
     text_style.set_font_families(&families);
     text_style.set_letter_spacing(letter_spacing);

@@ -35,7 +35,7 @@ impl ObjectImpl for Holder {
         self.text1.set_margin_left(20);
         self.text1.set_margin_top(10);
         self.text1.set_hexpand(true);
-        self.text1.set_value("Contents of text-1.".to_string());
+        self.text1.set_value("Contents of text-1.中文".to_string());
         // self.text1.set_vexpand(true);
         connect!(self.text1, value_changed(), self, text_value_changed());
         connect!(
@@ -87,11 +87,5 @@ impl Holder {
     pub fn text_value_changed(&self) {}
 
     #[inline]
-    pub fn text_selection_changed(&self) {
-        if let Some(s) = self.text1.get_selection() {
-            println!("Text selection => {}", s)
-        } else {
-            println!("Text selection => empty")
-        }
-    }
+    pub fn text_selection_changed(&self) {}
 }

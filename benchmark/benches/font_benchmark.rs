@@ -20,8 +20,12 @@ pub fn font_calc(c: &mut Criterion) {
     let skia_typeface = typeface.to_skia_typeface(&font).unwrap();
 
     c.bench_function("font_calc_test", |b| b.iter(|| font_calc_test(&font)));
-    c.bench_function("font_typeface_convert", |b| b.iter(|| typeface_tmui(&font, &typeface)));
-    c.bench_function("font_typeface_clone", |b| b.iter(|| typeface_skia(&skia_typeface)));
+    c.bench_function("font_typeface_convert", |b| {
+        b.iter(|| typeface_tmui(&font, &typeface))
+    });
+    c.bench_function("font_typeface_clone", |b| {
+        b.iter(|| typeface_skia(&skia_typeface))
+    });
 }
 
 criterion_group!(benches, font_calc);
