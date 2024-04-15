@@ -1,26 +1,32 @@
 use derivative::Derivative;
 use once_cell::sync::Lazy;
-use rust_embed::RustEmbed;
 use std::{collections::HashMap, io::Read};
 use tipc::parking_lot::{
     lock_api::{RwLockReadGuard, RwLockWriteGuard},
     RawRwLock, RwLock,
 };
 use tlib::{
-    count_exprs,
     skia_safe::FontMgr,
     typedef::{SkiaFontStyle, SkiaTypeface},
 };
 
+#[cfg(external_fonts)]
 macro_rules! external_fonts {
     ($($font:expr),*) => {
+        use tlib::count_exprs;
         const EXTERNAL_FONTS: [&'static str; count_exprs!($($font),*)] = [$($font),*];
     };
 }
 
-external_fonts!("Font Awesome 6 Free-Regular-400.otf");
+#[cfg(external_fonts)]
+external_fonts!(
+    "Font Awesome 6 Brands-Regular-400.otf",
+    "Font Awesome 6 Free-Regular-400.otf",
+    "Font Awesome 6 Free-Solid-900.otf"
+);
 
-#[derive(RustEmbed)]
+#[cfg(external_fonts)]
+#[derive(rust_embed::RustEmbed)]
 #[folder = "resources/fonts"]
 #[include = "*.ttf"]
 #[include = "*.otf"]
@@ -48,19 +54,22 @@ impl FontManager {
 
     #[inline]
     pub(crate) fn load_fonts() {
-        let mut manager = Self::write();
+        #[cfg(external_fonts)]
+        {
+            let mut manager = Self::write();
 
-        for font in EXTERNAL_FONTS {
-            let data = FontAsset::get(font)
-                .expect(&format!("Load ttf file `{}` failed.", font))
-                .data;
+            for font in EXTERNAL_FONTS {
+                let data = FontAsset::get(font)
+                    .expect(&format!("Load ttf file `{}` failed.", font))
+                    .data;
 
-            let tf = manager
-                .system_mgr
-                .new_from_data(&data, None)
-                .expect(&format!("Make font typeface failed, ttf file: {}.", font));
+                let tf = manager
+                    .system_mgr
+                    .new_from_data(&data, None)
+                    .expect(&format!("Make font typeface failed, ttf file: {}.", font));
 
-            manager.fonts.insert(tf.family_name(), tf);
+                manager.fonts.insert(tf.family_name(), tf);
+            }
         }
     }
 
@@ -79,7 +88,7 @@ impl FontManager {
     }
 
     #[inline]
-    pub fn load_path(path: &str) {
+    pub fn load_file(path: &str) {
         let mut file = std::fs::File::open(path).expect(&format!("Open file `{}` failed.", path));
 
         let mut data = vec![];

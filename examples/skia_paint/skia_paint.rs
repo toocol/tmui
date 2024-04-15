@@ -64,7 +64,7 @@ impl SkiaPaint {
         const FAMILY: &'static str = "Courier New";
         const FONT_SIZE: f32 = 12.;
 
-        let mut font = Font::with_family(vec![FAMILY]);
+        let mut font = Font::with_families(&vec![FAMILY]);
         font.set_size(FONT_SIZE);
 
         painter.set_font(font.clone());
@@ -136,7 +136,7 @@ impl SkiaPaint {
         painter.set_antialiasing(true);
         painter.draw_text(TEXT, (0., 100.));
 
-        painter.set_font(Font::with_family(vec![FAMILY]));
+        painter.set_font(Font::with_families(&vec![FAMILY]));
         painter.draw_text(TEXT, (0., 200.));
 
         painter.draw_paragraph(REP, (0., 300.), 0., 100., None, true);

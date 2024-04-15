@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 tipc = { path = "../tipc/" }
-tmui = { path = "../tmui/" }
+tmui = { path = "../tmui/", features = ["external_fonts"]}
 
 widestring = "1.0.2"
 log = "0.4"

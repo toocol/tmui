@@ -13,6 +13,7 @@ cfg_aliases = "0.1.1"
 default = ["x11"]
 wayland = []
 x11 = []
+external_fonts = []
 
 [dependencies]
 tipc = { path = "../tipc/" }

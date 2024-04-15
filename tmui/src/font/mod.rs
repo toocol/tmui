@@ -100,13 +100,13 @@ impl Font {
     }
 
     #[inline]
-    pub fn with_family<T: ToString>(families: Vec<T>) -> Self {
+    pub fn with_families<T: ToString>(families: &[T]) -> Self {
         let mut font = Self::default();
 
         let mut typefaces = vec![];
         for family in families {
             let mut typeface = FontTypeface::default();
-            typeface.set_family(family);
+            typeface.set_family(family.to_string());
             typefaces.push(typeface);
         }
         font.set_typefaces(typefaces);
@@ -352,8 +352,8 @@ impl FontTypeface {
         &self.family
     }
     #[inline]
-    pub fn set_family<T: ToString>(&mut self, family: T) {
-        self.family = Box::leak(family.to_string().into_boxed_str());
+    pub fn set_family(&mut self, family: String) {
+        self.family = Box::leak(family.into_boxed_str());
     }
 
     #[inline]
@@ -569,9 +569,8 @@ pub trait FontCalculation {
         "0123456789./+@*()#$!",
     );
 
-    const REPCHAR_UNICODE: &'static str = concat!(
-        "一二三四五六七八九十中文符号零百千万亿：，。？！、《》‘’“”",
-    );
+    const REPCHAR_UNICODE: &'static str =
+        concat!("一二三四五六七八九十中文符号零百千万亿：，。？！、《》‘’“”",);
 
     fn calc_font_dimension(&self) -> (f32, f32);
 
@@ -624,6 +623,8 @@ fn calc_text_dimension(font: &Font, text: &str, letter_spacing: f32) -> (f32, f3
     text_style.set_font_families(&families);
     text_style.set_letter_spacing(letter_spacing);
     style.set_text_style(&text_style);
+    style.set_max_lines(None);
+    style.set_ellipsis("");
 
     // layout the paragraph
     let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
@@ -668,7 +669,7 @@ mod tests {
 
     #[test]
     fn test_font_calc() {
-        let font = Font::with_family(vec!["Courier New"]);
+        let font = Font::with_families(&vec!["Courier New"]);
         let fd = font.calc_font_dimension();
         let td = font.calc_text_dimension(REPCHAR, 0.);
         assert_eq!(fd.1, td.1);
@@ -683,7 +684,7 @@ mod tests {
 
     #[test]
     fn test_font() {
-        let font = Font::with_family(vec!["Courier New"]);
+        let font = Font::with_families(&vec!["Courier New"]);
         let skia_font: &SkiaFont = &font.to_skia_fonts()[0];
 
         let measure = skia_font.measure_str(REPCHAR, None);

@@ -222,8 +222,8 @@ pub trait WidgetExt {
 
     /// Set the font family of Widget.
     ///
-    /// Go to[`Function defination`](WidgetExt::set_font_family) (Defined in [`WidgetExt`])
-    fn set_font_family(&mut self, family: Vec<&str>);
+    /// Go to[`Function defination`](WidgetExt::set_font_families) (Defined in [`WidgetExt`])
+    fn set_font_families(&mut self, families: &[&str]);
 
     /// Get the rect of widget without borders.
     ///
@@ -922,8 +922,8 @@ impl WidgetExt for Widget {
             if !self.window().initialized() {
                 return;
             }
+
             self.window().layout_change(self);
-            self.update();
         }
     }
 
@@ -1063,9 +1063,9 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn set_font_family(&mut self, family: Vec<&str>) {
+    fn set_font_families(&mut self, families: &[&str]) {
         let mut typefaces = vec![];
-        for f in family {
+        for f in families {
             let typeface = FontTypeface::new(f);
             typefaces.push(typeface);
         }

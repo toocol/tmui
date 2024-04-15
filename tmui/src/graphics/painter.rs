@@ -17,7 +17,7 @@ use tlib::{
         canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
             FontCollection, Paragraph, ParagraphBuilder, ParagraphStyle, TextStyle,
-            TypefaceFontProvider, TextBaseline
+            TypefaceFontProvider,
         },
         IPoint,
     },
@@ -413,9 +413,9 @@ impl<'a> Painter<'a> {
         max_lines: Option<usize>,
         ellipsis: bool,
     ) {
-        self.prepare_paragrah(text, letter_spacing, width_layout, max_lines, ellipsis);
+        self.prepare_paragraph(text, letter_spacing, width_layout, max_lines, ellipsis);
 
-        self.draw_paragrah_prepared(origin);
+        self.draw_paragraph_prepared(origin);
     }
 
     /// Draw text paragraph at specified position `origin` without offset. <br>
@@ -434,14 +434,14 @@ impl<'a> Painter<'a> {
         max_lines: Option<usize>,
         ellipsis: bool,
     ) {
-        self.prepare_paragrah(text, letter_spacing, width_layout, max_lines, ellipsis);
+        self.prepare_paragraph(text, letter_spacing, width_layout, max_lines, ellipsis);
 
         self.draw_paragrah_prepared_global(origin);
     }
 
     /// Prepare the paragraph with out renderering.
     #[inline]
-    pub fn prepare_paragrah(
+    pub fn prepare_paragraph(
         &mut self,
         text: &str,
         letter_spacing: f32,
@@ -465,7 +465,6 @@ impl<'a> Painter<'a> {
 
             // set text style
             self.text_style.set_letter_spacing(letter_spacing);
-            self.text_style.set_text_baseline(TextBaseline::Alphabetic);
             self.paragraph_style.set_text_style(&self.text_style);
             self.paragraph_style.set_max_lines(max_lines);
             if ellipsis {
@@ -494,7 +493,7 @@ impl<'a> Painter<'a> {
     ///
     /// the origin point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_paragrah_prepared<T: Into<Point>>(&mut self, origin: T) {
+    pub fn draw_paragraph_prepared<T: Into<Point>>(&mut self, origin: T) {
         let mut origin: Point = origin.into();
         origin.offset((self.x_offset, self.y_offset));
 

@@ -122,16 +122,19 @@ pub(crate) fn expand(
                     // add attribute `#[derivative(Default(value = "Object::new(&[])"))]` to it:
                     for field in fields.named.iter_mut() {
                         let mut childrenable = false;
+                        let mut has_default = false;
                         for attr in field.attrs.iter() {
                             if let Some(attr_ident) = attr.path.get_ident() {
                                 if attr_ident.to_string() == "children" {
                                     childrenable = true;
-                                    break;
+                                }
+                                if attr_ident.to_string() == "derivative" {
+                                    has_default = true;
                                 }
                             }
                         }
 
-                        if childrenable {
+                        if childrenable && !has_default {
                             let mut segments = Punctuated::<syn::PathSegment, Token![::]>::new();
                             segments.push(syn::PathSegment {
                                 ident: syn::Ident::new("derivative", field.span()),

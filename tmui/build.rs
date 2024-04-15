@@ -15,5 +15,8 @@ fn main() {
         x11_platform: { all(feature = "x11", free_unix, not(redox)) },
         wayland_platform: { all(feature = "wayland", free_unix, not(redox)) },
         orbital_platform: { redox },
+
+        // Others:
+        external_fonts: { feature = "external_fonts" },
     }
 }

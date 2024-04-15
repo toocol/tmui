@@ -15,7 +15,7 @@ pub fn typeface_skia(typeface: &SkiaTypeface) {
 }
 
 pub fn font_calc(c: &mut Criterion) {
-    let font = Font::with_family(vec!["Courier New"]);
+    let font = Font::with_families(&vec!["Courier New"]);
     let typeface = FontTypeface::new("Courier New");
     let skia_typeface = typeface.to_skia_typeface(&font).unwrap();
 

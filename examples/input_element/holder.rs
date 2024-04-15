@@ -1,18 +1,19 @@
 use tlib::{connect, run_after};
 use tmui::{
-    input::{
+    icons::font_icon::FontIcon, input::{
         text::{Text, TextSignals},
         Input, InputSignals,
-    },
-    prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    }, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl
 };
 
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
 #[run_after]
 pub struct Holder {
+    #[children]
+    #[derivative(Default(value = "FontIcon::new('\u{f007}')"))]
+    icon: Box<FontIcon>,
+
     #[children]
     text1: Box<Text>,
 
@@ -29,6 +30,8 @@ impl ObjectSubclass for Holder {
 
 impl ObjectImpl for Holder {
     fn initialize(&mut self) {
+        self.icon.set_margin_left(20);
+
         // self.text1.set_background(Color::RED);
         self.text1.width_request(400);
         self.text1.height_request(25);

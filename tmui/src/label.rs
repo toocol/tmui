@@ -163,20 +163,25 @@ impl WidgetImpl for Label {
         let size = self.size();
 
         if size.width() == 0 || size.height() == 0 {
+            let mut resized = false;
+
             if self.paragraph_width != 0. {
                 let width = self.paragraph_width as i32 + 1;
                 self.set_fixed_width(width);
                 self.set_detecting_width(width);
+                resized = true;
             }
 
             if self.paragraph_height != 0. {
                 let height = self.paragraph_height as i32;
                 self.set_fixed_height(height);
                 self.set_detecting_height(height);
+                resized = true;
             }
-        }
-        if self.window_id() != 0 && self.window().initialized() {
-            self.window().layout_change(self);
+
+            if resized && self.window_id() != 0 && self.window().initialized() {
+                self.window().layout_change(self);
+            }
         }
     }
 }

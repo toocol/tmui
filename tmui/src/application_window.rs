@@ -1,11 +1,18 @@
 use crate::{
-    animation::manager::AnimationManager, container::ContainerLayoutEnum, graphics::{
+    animation::manager::AnimationManager,
+    container::ContainerLayoutEnum,
+    graphics::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
-    }, layout::LayoutManager, loading::LoadingManager, platform::{ipc_bridge::IpcBridge, PlatformType}, prelude::*, primitive::{
-        global_watch::GlobalWatchEvent,
-        Message,
-    }, runtime::{wed, window_context::OutputSender}, widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep}, window::win_builder::WindowBuilder
+    },
+    layout::LayoutManager,
+    loading::LoadingManager,
+    platform::{ipc_bridge::IpcBridge, PlatformType},
+    prelude::*,
+    primitive::{global_watch::GlobalWatchEvent, Message},
+    runtime::{wed, window_context::OutputSender},
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep},
+    window::win_builder::WindowBuilder,
 };
 use log::{debug, error};
 use once_cell::sync::Lazy;
@@ -349,8 +356,25 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        Self::layout_of(self.id()).layout_change(widget, false)
+    pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
+        // If a component has a container-type parent widget, 
+        // layout changes should be based on its parent widget.
+        loop {
+            if let Some(parent) = widget.get_raw_parent_mut() {
+                let parent = unsafe { parent.as_mut().unwrap() };
+                if parent.super_type().is_a(Container::static_type()) {
+                    widget = parent;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        Self::layout_of(self.id()).layout_change(widget, false);
+
+        widget.update();
     }
 
     #[inline]

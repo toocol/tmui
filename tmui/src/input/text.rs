@@ -696,27 +696,7 @@ impl Text {
         }
 
         if shift {
-            let (a, b) = {
-                let value_ref = self.value_ref();
-                let str = value_ref.as_str();
-
-                if str.len() == 0 {
-                    (0, 0.)
-                } else {
-                    let predict_start = (((self.text_window.x() + 2.
-                        - self.text_draw_position().x())
-                        / self.font_dimension.0) as usize)
-                        .min(str.chars().count());
-                    let predict_pref_len = self
-                        .font()
-                        .calc_text_dimension(&str[..self.map(predict_start)], self.letter_spacing)
-                        .0;
-                    (predict_start, predict_pref_len)
-                }
-            };
-
-            self.predict_start = a;
-            self.predict_start_len = b;
+            self.calc_predict_index()
         }
 
         pos
@@ -749,7 +729,11 @@ impl Text {
     }
 
     fn handle_font_changed(&mut self) {
-        self.font_dimension = self.font().calc_font_dimension();
+        self.font_dimension = if self.unicode_text {
+            self.font().calc_font_dimension_unicode()
+        } else {
+            self.font().calc_font_dimension()
+        };
 
         let size = self.size();
 
@@ -1137,6 +1121,9 @@ impl Text {
     #[inline]
     fn value_remove_range(&mut self, start: usize, end: usize) {
         let (start, end) = (self.map(start), self.map(end));
+        let (offset, _) = self
+            .font()
+            .calc_text_dimension(&self.value_ref()[start..end], self.letter_spacing);
 
         self.input_wrapper.value_mut().replace_range(start..end, "");
         if start != end {
@@ -1145,12 +1132,18 @@ impl Text {
 
         let text_window = self.text_window;
         let draw_pos = self.text_draw_position_mut();
+        if draw_pos.x() < text_window.left() {
+            draw_pos.offset(offset, 0.);
+            self.calc_predict_index();
+        }
+
+        let draw_pos = self.text_draw_position_mut();
         draw_pos.set_x(draw_pos.x().min(text_window.left()));
     }
 
     #[inline]
     fn render_text(&self, painter: &mut Painter, text: &str, mut origin: FPoint) {
-        painter.prepare_paragrah(text, self.letter_spacing, f32::MAX, None, false);
+        painter.prepare_paragraph(text, self.letter_spacing, f32::MAX, None, false);
 
         let paragraph = painter.get_paragraph().unwrap();
         let baseline = paragraph.single_line_baseline();
@@ -1178,6 +1171,30 @@ impl Text {
             self.font_dimension = self.font().calc_font_dimension();
             self.unicode_text = false;
         }
+    }
+
+    #[inline]
+    fn calc_predict_index(&mut self) {
+        let (a, b) = {
+            let value_ref = self.value_ref();
+            let str = value_ref.as_str();
+
+            if str.len() == 0 {
+                (0, 0.)
+            } else {
+                let predict_start = (((self.text_window.x() + 2. - self.text_draw_position().x())
+                    / self.font_dimension.0) as usize)
+                    .min(str.chars().count());
+                let predict_pref_len = self
+                    .font()
+                    .calc_text_dimension(&str[..self.map(predict_start)], self.letter_spacing)
+                    .0;
+                (predict_start, predict_pref_len)
+            }
+        };
+
+        self.predict_start = a;
+        self.predict_start_len = b;
     }
 }
 
