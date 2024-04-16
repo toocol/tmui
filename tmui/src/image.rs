@@ -48,7 +48,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Fill)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.top_left());
             }
             ImageOption::Adapt => {
                 let rect = self.contents_rect(None);
@@ -67,7 +67,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, None).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.top_left());
             }
             ImageOption::Tile => {
                 let mut paint = Paint::default();
@@ -106,7 +106,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Center)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.top_left());
             }
         }
     }

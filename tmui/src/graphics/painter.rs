@@ -7,12 +7,12 @@ use crate::{
 };
 use ::tlib::{
     namespace::BlendMode,
-    typedef::{SkiaBlendMode, SkiaFont, SkiaRect},
+    typedef::{SkiaBlendMode, SkiaFont, SkiaImage, SkiaPoint, SkiaRect},
 };
 use log::{error, warn};
 use std::ffi::c_uint;
 use tlib::{
-    figure::{Color, FRect, ImageBuf, Rect},
+    figure::{Color, FRect, Rect},
     skia_safe::{
         canvas::{SaveLayerRec, SrcRectConstraint},
         textlayout::{
@@ -697,8 +697,8 @@ impl<'a> Painter<'a> {
     /// point (x, y) represent the left-top point to display. <br>
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_image(&mut self, image: &ImageBuf, x: i32, y: i32) {
-        let mut point: Point = (x, y).into();
+    pub fn draw_image<T: Into<SkiaPoint>>(&self, image: impl AsRef<SkiaImage>, point: T) {
+        let mut point: SkiaPoint = point.into();
         point.offset((self.x_offset, self.y_offset));
 
         self.canvas.draw_image(image, point, Some(&self.paint));
@@ -708,7 +708,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_image_rect(&mut self, image: &ImageBuf, from: Option<Rect>, dst: Rect) {
+    pub fn draw_image_rect(&mut self, image: &impl AsRef<SkiaImage>, from: Option<Rect>, dst: Rect) {
         let mut from_rect: skia_safe::Rect;
         let from = if let Some(from) = from {
             from_rect = from.into();
@@ -725,7 +725,7 @@ impl<'a> Painter<'a> {
 
     #[inline]
     pub fn draw_pixels<T: Into<tlib::figure::Point>>(
-        &mut self,
+        &self,
         info: &skia_safe::ImageInfo,
         pixels: &[u8],
         row_bytes: usize,
@@ -736,5 +736,11 @@ impl<'a> Painter<'a> {
         let offset: IPoint = offset.into();
 
         let _ = self.canvas.write_pixels(info, pixels, row_bytes, offset);
+    }
+
+    #[cfg(svg)]
+    #[inline]
+    pub fn draw_dom(&self, dom: &tlib::typedef::SkiaSvgDom) {
+        dom.render(&self.canvas)
     }
 }

@@ -17,6 +17,7 @@ fn main() {
         orbital_platform: { redox },
 
         // Others:
-        external_fonts: { feature = "external_fonts" },
+        font_awesome: { feature = "font_awesome" },
+        svg: { feature = "svg" },
     }
 }

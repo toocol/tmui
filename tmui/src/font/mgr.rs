@@ -10,7 +10,7 @@ use tlib::{
     typedef::{SkiaFontStyle, SkiaTypeface},
 };
 
-#[cfg(external_fonts)]
+#[cfg(font_awesome)]
 macro_rules! external_fonts {
     ($($font:expr),*) => {
         use tlib::count_exprs;
@@ -18,14 +18,14 @@ macro_rules! external_fonts {
     };
 }
 
-#[cfg(external_fonts)]
+#[cfg(font_awesome)]
 external_fonts!(
     "Font Awesome 6 Brands-Regular-400.otf",
     "Font Awesome 6 Free-Regular-400.otf",
     "Font Awesome 6 Free-Solid-900.otf"
 );
 
-#[cfg(external_fonts)]
+#[cfg(font_awesome)]
 #[derive(rust_embed::RustEmbed)]
 #[folder = "resources/fonts"]
 #[include = "*.ttf"]
@@ -54,7 +54,7 @@ impl FontManager {
 
     #[inline]
     pub(crate) fn load_fonts() {
-        #[cfg(external_fonts)]
+        #[cfg(font_awesome)]
         {
             let mut manager = Self::write();
 

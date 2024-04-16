@@ -6,7 +6,7 @@ use crate::{
 };
 use tlib::{figure::FSize, global::PrecisionOps};
 
-#[cfg(external_fonts)]
+#[cfg(font_awesome)]
 const DEFAULT_ICON_FAMILIES: [&'static str; 3] = [
     "Font Awesome 6 Brands",
     "Font Awesome 6 Free",
@@ -16,7 +16,7 @@ const DEFAULT_ICON_COLOR: Color = Color::BLACK;
 const DEFAULT_ICON_SIZE: f32 = 20.;
 
 /// The default font-family was <a href="https://fontawesome.com/search?o=r&m=free&s=regular">Font-Awesome</a>, <br>
-/// If need the default font-family, add feature `external_fonts`.
+/// If need the default font-family, add feature `font_awesome`.
 #[extends(Widget)]
 pub struct FontIcon {
     font_dimension: (f32, f32),
@@ -60,6 +60,7 @@ impl WidgetImpl for FontIcon {
             .font()
             .calc_text_dimension(&self.code.to_string(), 0.)
             .ceil();
+        self.font_dimension.1 += 1.;
 
         let size: FSize = self.size().into();
 
@@ -86,7 +87,7 @@ impl WidgetImpl for FontIcon {
 }
 
 impl FontIcon {
-    #[cfg(external_fonts)]
+    #[cfg(font_awesome)]
     #[inline]
     pub fn new(code: char) -> Box<Self> {
         let mut icon: Box<Self> = Object::new(&[]);
@@ -99,7 +100,7 @@ impl FontIcon {
         icon
     }
 
-    #[cfg(not(external_fonts))]
+    #[cfg(not(font_awesome))]
     #[inline]
     pub fn new<T: ToString>(code: char, families: &[T]) -> Box<Self> {
         Self::with_families(code, families)

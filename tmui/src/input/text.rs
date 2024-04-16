@@ -41,6 +41,7 @@ const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 #[global_watch(MouseMove)]
 pub struct Text {
     input_wrapper: InputWrapper<String>,
+    entered: bool,
 
     //////////////////////////// Revoke/Redo
     revoke_memories: VecDeque<TextMemory>,
@@ -227,8 +228,29 @@ impl WidgetImpl for Text {
         if !self.is_enable() {
             return;
         }
+        if !self.entered {
+            self.window()
+                .set_cursor_shape(SystemCursorShape::ArrowCursor);
+        }
 
         self.handle_mouse_release()
+    }
+
+    #[inline]
+    fn on_mouse_enter(&mut self, _: &MouseEvent) {
+        self.entered = true;
+        self.window()
+            .set_cursor_shape(SystemCursorShape::TextCursor);
+    }
+
+    #[inline]
+    fn on_mouse_leave(&mut self, _: &MouseEvent) {
+        self.entered = false;
+        let window = self.window();
+        if self.id() == window.pressed_widget() {
+            return;
+        }
+        window.set_cursor_shape(SystemCursorShape::ArrowCursor);
     }
 }
 
@@ -1039,7 +1061,14 @@ impl Text {
     fn handle_mouse_release(&mut self) {
         self.drag_status = DragStatus::None;
 
+        if self.selection_start == self.selection_end {
+            self.selection_start = -1;
+            self.selection_end = -1;
+        }
+
+        self.cursor_visible = true;
         self.start_blink_timer();
+        self.update();
     }
 
     #[inline]

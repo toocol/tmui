@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 tipc = { path = "../tipc/" }
-tmui = { path = "../tmui/", features = ["external_fonts"]}
+tmui = { path = "../tmui/", features = ["font_awesome", "svg"]}
 
 widestring = "1.0.2"
 log = "0.4"
@@ -40,6 +40,10 @@ path = "custom_popup/main.rs"
 [[bin]]
 name = "event_bubble"
 path = "event_bubble/main.rs"
+
+[[bin]]
+name = "icon_list"
+path = "icon_list/main.rs"
 
 [[bin]]
 name = "image_draw"

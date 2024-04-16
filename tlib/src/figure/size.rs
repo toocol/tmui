@@ -1,4 +1,5 @@
 use crate::{
+    typedef::{SkiaISize, SkiaSize},
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Type, Value,
@@ -94,6 +95,20 @@ impl Into<FSize> for Size {
             width: self.width as f32,
             height: self.height as f32,
         }
+    }
+}
+
+impl Into<SkiaSize> for Size {
+    #[inline]
+    fn into(self) -> SkiaSize {
+        SkiaSize::new(self.width as f32, self.height as f32)
+    }
+}
+
+impl Into<SkiaISize> for Size {
+    #[inline]
+    fn into(self) -> SkiaISize {
+        SkiaISize::new(self.width, self.height)
     }
 }
 
@@ -263,6 +278,20 @@ impl Into<Size> for FSize {
     }
 }
 
+impl Into<SkiaSize> for FSize {
+    #[inline]
+    fn into(self) -> SkiaSize {
+        SkiaSize::new(self.width, self.height)
+    }
+}
+
+impl Into<SkiaISize> for FSize {
+    #[inline]
+    fn into(self) -> SkiaISize {
+        SkiaISize::new(self.width.round() as i32, self.height.round() as i32)
+    }
+}
+
 impl Add for FSize {
     type Output = FSize;
 
@@ -338,7 +367,7 @@ impl FromValue for FSize {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-/// SizeHint 
+/// SizeHint
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub struct SizeHint {
@@ -410,7 +439,12 @@ impl SizeHint {
 
     #[inline]
     pub fn all(&self) -> (Option<i32>, Option<i32>, Option<i32>, Option<i32>) {
-        (self.min_width, self.min_height, self.max_width, self.max_height)
+        (
+            self.min_width,
+            self.min_height,
+            self.max_width,
+            self.max_height,
+        )
     }
 
     #[inline]
