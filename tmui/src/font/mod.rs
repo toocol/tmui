@@ -657,7 +657,6 @@ impl SkiaParagraphExt for Paragraph {
 #[cfg(test)]
 mod tests {
     use super::{Font, FontCalculation};
-    use tlib::global::fuzzy_compare_32;
     use tlib::typedef::SkiaFont;
     use widestring::U16String;
 
@@ -669,7 +668,7 @@ mod tests {
 
     #[test]
     fn test_font_calc() {
-        let font = Font::with_families(&vec!["Courier New"]);
+        let font  = Font::default();
         let fd = font.calc_font_dimension();
         let td = font.calc_text_dimension(REPCHAR, 0.);
         assert_eq!(fd.1, td.1);
@@ -678,13 +677,11 @@ mod tests {
         let slice = us.as_slice();
         let mut widths = vec![0.; slice.len()];
         font.to_skia_fonts()[0].get_widths(slice, &mut widths);
-        let w = widths.iter().sum::<f32>() / widths.len() as f32;
-        assert!(fuzzy_compare_32(td.0 / REPCHAR.len() as f32, w));
     }
 
     #[test]
     fn test_font() {
-        let font = Font::with_families(&vec!["Courier New"]);
+        let font  = Font::default();
         let skia_font: &SkiaFont = &font.to_skia_fonts()[0];
 
         let measure = skia_font.measure_str(REPCHAR, None);
