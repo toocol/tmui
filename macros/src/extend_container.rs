@@ -1,6 +1,5 @@
 use crate::{
-    extend_element, extend_object, extend_widget,
-    scroll_area::generate_scroll_area_inner_init, general_attr::GeneralAttr, pane::{generate_pane_inner_init, generate_pane_type_register},
+    extend_element, extend_object, extend_widget, general_attr::GeneralAttr, layout::LayoutType, pane::{generate_pane_inner_init, generate_pane_type_register}, scroll_area::generate_scroll_area_inner_init, SplitGenericsRef
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -11,17 +10,16 @@ use syn::{
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
+    ignore_default: bool,
     impl_children_construct: bool,
     has_content_alignment: bool,
     has_size_unified_adjust: bool,
-    is_split_pane: bool,
-    is_stack: bool,
-    is_scroll_area: bool,
-    is_pane: bool,
+    layout: LayoutType,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let general_attr = GeneralAttr::parse(ast)?;
+    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -36,6 +34,9 @@ pub(crate) fn expand(
 
     let popupable_impl_clause = &general_attr.popupable_impl_clause;
     let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
+
+    let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
+    let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -52,10 +53,11 @@ pub(crate) fn expand(
                             content_valign: Align
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #[derivative(Default(value = "true"))]
                             homogeneous: bool
                         })?);
                     }
-                    if is_split_pane {
+                    if layout == LayoutType::SplitPane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             split_infos: std::collections::HashMap<ObjectId, Box<SplitInfo>>
                         })?);
@@ -63,12 +65,12 @@ pub(crate) fn expand(
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>
                         })?);
                     }
-                    if is_stack {
+                    if layout == LayoutType::Stack {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             current_index: usize
                         })?);
                     }
-                    if is_scroll_area {
+                    if layout == LayoutType::ScrollArea {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #[derivative(Default(value = "Object::new(&[])"))]
                             scroll_bar: Box<ScrollBar>
@@ -77,15 +79,15 @@ pub(crate) fn expand(
                             area: Option<Box<dyn WidgetImpl>>
                         })?);
                     }
-                    if is_pane {
+                    if layout == LayoutType::Pane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            direction: PaneDirection 
+                            direction: PaneDirection
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            resize_zone: bool 
+                            resize_zone: bool
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            resize_pressed: bool 
+                            resize_pressed: bool
                         })?);
                     }
 
@@ -120,16 +122,19 @@ pub(crate) fn expand(
                     // add attribute `#[derivative(Default(value = "Object::new(&[])"))]` to it:
                     for field in fields.named.iter_mut() {
                         let mut childrenable = false;
+                        let mut has_default = false;
                         for attr in field.attrs.iter() {
                             if let Some(attr_ident) = attr.path.get_ident() {
-                                if attr_ident.to_string() == "children" {
+                                if *attr_ident == "children" {
                                     childrenable = true;
-                                    break;
+                                }
+                                if *attr_ident == "derivative" {
+                                    has_default = true;
                                 }
                             }
                         }
 
-                        if childrenable {
+                        if childrenable && !has_default {
                             let mut segments = Punctuated::<syn::PathSegment, Token![::]>::new();
                             segments.push(syn::PathSegment {
                                 ident: syn::Ident::new("derivative", field.span()),
@@ -159,30 +164,46 @@ pub(crate) fn expand(
                 }
             }
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
                 "container",
                 vec!["container", "widget", "element", "object"],
                 true,
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let element_trait_impl_clause = extend_element::gen_element_trait_impl_clause(
                 name,
                 vec!["container", "widget", "element"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
                 name,
                 Some("container"),
                 vec!["container", "widget"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
-            let container_trait_impl_clause = gen_container_trait_impl_clause(name, vec!["container"])?;
+            let container_trait_impl_clause = gen_container_trait_impl_clause(
+                name,
+                vec!["container"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             let mut children_construct_clause = proc_macro2::TokenStream::new();
             if impl_children_construct {
                 children_construct_clause.extend(quote!(
-                    impl ObjectChildrenConstruct for #name {}
+                    impl #impl_generics ObjectChildrenConstruct for #name #ty_generics #where_clause {}
                 ))
             }
 
@@ -198,7 +219,13 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_split_infos_getter = if is_split_pane {
+            let reflect_spacing_capable = if layout.is(LayoutType::VBox) || layout.is(LayoutType::HBox) {
+                quote!(type_registry.register::<#name, ReflectSpacingCapable>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let reflect_split_infos_getter = if layout.is(LayoutType::SplitPane) {
                 quote!(
                     type_registry.register::<#name, ReflectSplitInfosGetter>();
                 )
@@ -206,39 +233,38 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_stack_trait = if is_stack {
+            let reflect_stack_trait = if layout.is(LayoutType::Stack) {
                 quote!(type_registry.register::<#name, ReflectStackTrait>();)
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_scroll_area = if is_scroll_area {
+            let reflect_scroll_area = if layout.is(LayoutType::ScrollArea) {
                 quote!(type_registry.register::<#name, ReflectScrollAreaExt>();)
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_pane = if is_pane {
+            let reflect_pane = if layout.is(LayoutType::Pane) {
                 generate_pane_type_register(name)?
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let scroll_area_inner_init = if is_scroll_area {
+            let scroll_area_inner_init = if layout.is(LayoutType::ScrollArea) {
                 generate_scroll_area_inner_init()?
             } else {
                 proc_macro2::TokenStream::new()
             };
 
-            let pane_inner_init = if is_pane {
+            let pane_inner_init = if layout.is(LayoutType::Pane) {
                 generate_pane_inner_init()?
             } else {
                 proc_macro2::TokenStream::new()
             };
 
             Ok(quote!(
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause
@@ -258,16 +284,18 @@ pub(crate) fn expand(
 
                 #popupable_impl_clause
 
-                impl ContainerAcquire for #name {}
+                #global_watch_impl_clause
 
-                impl SuperType for #name {
+                impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
+
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         Container::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
@@ -276,6 +304,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectChildContainerDiffRender>();
                         #reflect_content_alignment
                         #reflect_size_unified_adjust
+                        #reflect_spacing_capable
                         #reflect_split_infos_getter
                         #reflect_stack_trait
                         #reflect_scroll_area
@@ -283,6 +312,7 @@ pub(crate) fn expand(
                         #animation_reflect
                         #animation_state_holder_reflect
                         #reflect_pane
+                        #global_watch_reflect_clause
                     }
 
                     #[inline]
@@ -298,21 +328,21 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl PointEffective for #name {
+                impl #impl_generics PointEffective for #name #ty_generics #where_clause {
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
                         self.container_point_effective(point)
                     }
                 }
 
-                impl ChildRegionAcquirer for #name {
+                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.children_region()
                     }
                 }
 
-                impl #name {
+                impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
             ))
@@ -327,14 +357,15 @@ pub(crate) fn expand(
 pub(crate) fn gen_container_trait_impl_clause(
     name: &Ident,
     container_path: Vec<&'static str>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let container_path: Vec<_> = container_path 
+    let container_path: Vec<_> = container_path
         .iter()
         .map(|s| Ident::new(s, name.span()))
         .collect();
 
     Ok(quote!(
-        impl ContainerExt for #name {
+        impl #impl_generics ContainerExt for #name #ty_generics #where_clause {
             #[inline]
             fn is_strict_children_layout(&self) -> bool {
                 self.#(#container_path).*.is_strict_children_layout()

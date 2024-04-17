@@ -156,14 +156,14 @@ impl MemRwLockBuilder {
         match self.build_type {
             BuildType::Create => {
                 if let Some(ref os_id) = self.os_id {
-                    return MemRwLock::create_with_os_id(os_id);
+                    MemRwLock::create_with_os_id(os_id)
                 } else {
                     panic!("`Create` MemRwLock must assign the os_id")
                 }
             }
             BuildType::Open => {
                 if let Some(ref os_id) = self.os_id {
-                    return MemRwLock::open(os_id);
+                    MemRwLock::open(os_id)
                 } else {
                     panic!("`Open` MemRwLock must assign the os_id")
                 }

@@ -55,7 +55,6 @@ pub struct Widget {
     #[derivative(Default(value = "Color::WHITE"))]
     background: Color,
     font: Font,
-    font_family: String,
     margins: [i32; 4],
     paddings: [i32; 4],
     border: Border,
@@ -431,7 +430,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 
-        let mut painter = Painter::new(cr.canvas(), self);
+        let name = &self.name();
+        let mut painter = Painter::new(name, cr.canvas(), self);
 
         // Shared widget porcessing:
         if let Some(shared_widget) = cast_mut!(self as SharedWidgetImpl) {
@@ -451,7 +451,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             painter.clip_region_global(self.child_region(), ClipOp::Difference);
         }
         if let Some(parent) = self.get_parent_ref() {
-            if let Some(_) = cast!(parent as ContainerImpl) {
+            if cast!(parent as ContainerImpl).is_some() {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
             }
         }
@@ -486,7 +486,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         }
 
         painter.reset();
-        painter.set_font(self.font().to_skia_font());
+        painter.set_font(self.font().clone());
 
         if self.is_strict_clip_widget() {
             painter.clip_rect(
@@ -558,15 +558,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_parent = self.get_raw_parent();
         match raw_parent {
             Some(parent) => unsafe {
-                if parent.as_ref().is_none() {
-                    return None;
-                }
-                if parent
-                    .as_ref()
-                    .unwrap()
-                    .object_type()
-                    .is_a(R::static_type())
-                {
+                if parent.as_ref()?.object_type().is_a(R::static_type()) {
                     (parent as *const R).as_ref()
                 } else {
                     None
@@ -580,10 +572,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_child = self.get_raw_child();
         match raw_child {
             Some(child) => unsafe {
-                if child.as_ref().is_none() {
-                    return None;
-                }
-                if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                if child.as_ref()?.object_type().is_a(R::static_type()) {
                     (child as *const R).as_ref()
                 } else {
                     None
@@ -597,15 +586,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_parent = self.get_raw_parent_mut();
         match raw_parent {
             Some(parent) => unsafe {
-                if parent.as_ref().is_none() {
-                    return None;
-                }
-                if parent
-                    .as_mut()
-                    .unwrap()
-                    .object_type()
-                    .is_a(R::static_type())
-                {
+                if parent.as_mut()?.object_type().is_a(R::static_type()) {
                     (parent as *mut R).as_mut()
                 } else {
                     None
@@ -619,10 +600,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_child = self.get_raw_child_mut();
         match raw_child {
             Some(child) => unsafe {
-                if child.as_ref().is_none() {
-                    return None;
-                }
-                if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                if child.as_ref()?.object_type().is_a(R::static_type()) {
                     (child as *mut R).as_mut()
                 } else {
                     None
@@ -726,7 +704,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_pressed(&evt);
@@ -755,7 +733,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_released(&evt);
@@ -780,7 +758,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_move(&evt);
@@ -805,7 +783,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_wheel(&evt);
@@ -881,30 +859,39 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 #[allow(unused_variables)]
 pub trait InnerCustomizeEventProcess {
     /// Invoke when widget's receive mouse pressed event.
+    #[inline]
     fn inner_customize_mouse_pressed(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse released event.
+    #[inline]
     fn inner_customize_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
+    #[inline]
     fn inner_customize_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.
+    #[inline]
     fn inner_customize_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    #[inline]
     fn inner_customize_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    #[inline]
     fn inner_customize_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
+    #[inline]
     fn inner_customize_key_pressed(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive key released event.
+    #[inline]
     fn inner_customize_key_released(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive character event.
+    #[inline]
     fn inner_customize_receive_character(&mut self, event: &ReceiveCharacterEvent) {}
 }
 
@@ -927,16 +914,20 @@ pub trait WidgetImpl:
     + PointEffective
     + ChildRegionAcquirer
     + ActionExt
+    + WindowAcquire
 {
     /// The widget can be focused or not, default value was false.
+    #[inline]
     fn enable_focus(&self) -> bool {
         false
     }
 
     /// Invoke this function when renderering.
+    #[inline]
     fn paint(&mut self, painter: &mut Painter) {}
 
     /// Invoke when widget's font was changed.
+    #[inline]
     fn font_changed(&mut self) {}
 
     /// `run_after()` will be invoked when application was started. <br>
@@ -944,41 +935,60 @@ pub trait WidgetImpl:
     /// ### Should annotated macro `[run_after]` to enable this function.
     ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
+    #[inline]
     fn run_after(&mut self) {
         self.parent_run_after();
     }
 
     /// Invoke when widget's receive mouse pressed event.
+    #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse released event.
+    #[inline]
     fn on_mouse_released(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse move event.
     ///
     /// The widget does not track mouse movement by default. If need, call function [`set_mouse_tracking`](WidgetExt::set_mouse_tracking)
+    #[inline]
     fn on_mouse_move(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse wheel event.
+    #[inline]
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    #[inline]
     fn on_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    #[inline]
     fn on_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
+    #[inline]
     fn on_key_pressed(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive key released event.
+    #[inline]
     fn on_key_released(&mut self, event: &KeyEvent) {}
 
     /// Invoke when widget's receive character event.
+    #[inline]
     fn on_receive_character(&mut self, event: &ReceiveCharacterEvent) {}
 
     /// Invoke when widget's receive input method event.
+    #[inline]
     fn on_input_method(&mut self, input_method: &InputMethodEvent) {}
+
+    /// Invoke when widget getting focus.
+    #[inline]
+    fn on_get_focus(&mut self) {}
+
+    /// Invoke when widget losing focus.
+    #[inline]
+    fn on_lose_focus(&mut self) {}
 }
 
 impl dyn WidgetImpl {
@@ -1047,9 +1057,12 @@ pub trait WidgetImplExt: WidgetImpl {
     /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
     fn child<T: WidgetImpl>(&mut self, child: Box<T>);
 
+    /// # Safety
+    /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
+    /// 
     /// @see [`Widget::child_ref_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child_ref) (Defined in [`WidgetImplExt`])
-    fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
+    unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
@@ -1120,12 +1133,6 @@ pub trait WindowAcquire {
     fn window(&self) -> &'static mut ApplicationWindow;
 }
 impl<T: WidgetImpl> WindowAcquire for T {
-    #[inline]
-    fn window(&self) -> &'static mut ApplicationWindow {
-        ApplicationWindow::window_of(self.window_id())
-    }
-}
-impl WindowAcquire for dyn WidgetImpl {
     #[inline]
     fn window(&self) -> &'static mut ApplicationWindow {
         ApplicationWindow::window_of(self.window_id())

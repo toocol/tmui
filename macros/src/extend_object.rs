@@ -2,8 +2,15 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
+use crate::SplitGenericsRef;
+
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    ignore_default: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -20,8 +27,13 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                 }
             }
 
-            let object_trait_impl_clause =
-                gen_object_trait_impl_clause(name, "object", vec!["object"], false)?;
+            let object_trait_impl_clause = gen_object_trait_impl_clause(
+                name,
+                "object",
+                vec!["object"],
+                false,
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             let default_clause = if ignore_default {
                 quote!()
@@ -32,30 +44,30 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                 )
             };
 
-            return Ok(quote! {
+            Ok(quote! {
                 #default_clause
                 #ast
 
                 #object_trait_impl_clause
 
-                impl ObjectAcquire for #name {}
+                impl #impl_generics ObjectAcquire for #name #ty_generics #where_clause {}
 
-                impl SuperType for #name {
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         Object::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
-                        type_registry.register::<#name, ReflectObjectImpl>();
-                        type_registry.register::<#name, ReflectObjectImplExt>();
-                        type_registry.register::<#name, ReflectObjectOperation>();
+                        type_registry.register::<#name #ty_generics, ReflectObjectImpl>();
+                        type_registry.register::<#name #ty_generics, ReflectObjectImplExt>();
+                        type_registry.register::<#name #ty_generics, ReflectObjectOperation>();
                     }
                 }
-            });
+            })
         }
         _ => Err(syn::Error::new_spanned(
             ast,
@@ -69,6 +81,7 @@ pub(crate) fn gen_object_trait_impl_clause(
     super_field: &'static str,
     object_path: Vec<&'static str>,
     children_construct: bool,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let super_field = Ident::new(super_field, name.span());
     let object_path: Vec<_> = object_path
@@ -84,7 +97,7 @@ pub(crate) fn gen_object_trait_impl_clause(
     }
 
     Ok(quote!(
-        impl ObjectImplExt for #name {
+        impl #impl_generics ObjectImplExt for #name #ty_generics #where_clause {
             #[inline]
             fn parent_construct(&mut self) {
                 #children_construct_clause
@@ -97,7 +110,7 @@ pub(crate) fn gen_object_trait_impl_clause(
             }
         }
 
-        impl ObjectOperation for #name {
+        impl #impl_generics ObjectOperation for #name #ty_generics #where_clause {
             #[inline]
             fn id(&self) -> ObjectId {
                 self.#(#object_path).*.id()
@@ -120,14 +133,14 @@ pub(crate) fn gen_object_trait_impl_clause(
             }
         }
 
-        impl ObjectType for #name {
+        impl #impl_generics ObjectType for #name #ty_generics #where_clause {
             #[inline]
             fn object_type(&self) -> Type {
                 Self::static_type()
             }
         }
 
-        impl AsAny for #name {
+        impl #impl_generics AsAny for #name #ty_generics #where_clause {
             #[inline]
             fn as_any(&self) -> &dyn Any {
                 self
@@ -145,7 +158,7 @@ pub(crate) fn gen_object_trait_impl_clause(
 
         }
 
-        impl Reflect for #name {
+        impl #impl_generics Reflect for #name #ty_generics #where_clause {
             #[inline]
             fn as_reflect(&self) -> &dyn Reflect {
                 self
@@ -162,10 +175,10 @@ pub(crate) fn gen_object_trait_impl_clause(
             }
         }
 
-        impl ActionExt for #name {}
+        impl #impl_generics ActionExt for #name #ty_generics #where_clause {}
 
-        impl IsA<Object> for #name {}
+        impl #impl_generics IsA<Object> for #name #ty_generics #where_clause {}
 
-        impl IsA<#name> for #name {}
+        impl #impl_generics IsA<#name #ty_generics> for #name #ty_generics #where_clause {}
     ))
 }

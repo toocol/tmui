@@ -13,23 +13,33 @@ mod extend_popup;
 mod extend_shared_widget;
 mod extend_widget;
 mod general_attr;
+mod global_watch;
 mod layout;
 mod loadable;
 mod pane;
 mod popupable;
 mod reflect_trait;
 mod scroll_area;
+mod shortcut;
 mod split_pane;
 mod stack;
 mod trait_info;
 
+use async_do::AsyncDoParser;
 use cast::CastInfo;
 use extend_attr::ExtendAttr;
+use layout::LayoutType;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use async_do::AsyncDoParser;
-use syn::{self, parse_macro_input, DeriveInput};
+use shortcut::Shortcut;
+use syn::{self, parse_macro_input, DeriveInput, ImplGenerics, TypeGenerics, WhereClause};
 use trait_info::TraitInfo;
+
+pub(crate) type SplitGenericsRef<'a> = (
+    &'a ImplGenerics<'a>,
+    &'a TypeGenerics<'a>,
+    &'a Option<&'a WhereClause>,
+);
 
 /// Let struct to extend specific type.<br>
 /// This macro will implement a large number of traits automatically,
@@ -54,9 +64,8 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
     let mut ast = parse_macro_input!(input as DeriveInput);
 
-    match extend_attr.check() {
-        Err(e) => return e.to_compile_error().into(),
-        _ => {}
+    if let Err(e) = extend_attr.check() {
+        return e.to_compile_error().into()
     }
 
     let extend_str = extend_attr.extend.to_string();
@@ -65,7 +74,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Element" => match extend_element::expand(&mut ast) {
+        "Element" => match extend_element::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -75,27 +84,37 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 extend_attr.layout_meta.as_ref().unwrap(),
                 layout,
                 extend_attr.internal,
+                extend_attr.ignore_default,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             },
-            None => match extend_widget::expand(&mut ast) {
+            None => match extend_widget::expand(&mut ast, extend_attr.ignore_default) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "SharedWidget" => match extend_shared_widget::expand(&mut ast, extend_attr.id.as_ref()) {
+        "SharedWidget" => match extend_shared_widget::expand(&mut ast, extend_attr.id.as_ref(), extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
-        "Container" => match extend_container::expand(&mut ast, true, false, false, false, false, false, false) {
-            Ok(tkn) => tkn.into(),
-            Err(e) => e.to_compile_error().into(),
-        },
-        "Popup" => match extend_popup::expand(&mut ast) {
-            Ok(tkn) => tkn.into(),
-            Err(e) => e.to_compile_error().into(),
+        "Container" => {
+            match extend_container::expand(
+                &mut ast,
+                extend_attr.ignore_default,
+                true,
+                false,
+                false,
+                LayoutType::Non
+            ) {
+                Ok(tkn) => tkn.into(),
+                Err(e) => e.to_compile_error().into(),
+            }
         }
+        "Popup" => match extend_popup::expand(&mut ast, extend_attr.ignore_default) {
+            Ok(tkn) => tkn.into(),
+            Err(e) => e.to_compile_error().into(),
+        },
         _ => syn::Error::new_spanned(
             ast,
             format!("`{}` was not supported to extends.", extend_str),
@@ -118,6 +137,7 @@ pub fn childable_derive(_: TokenStream) -> TokenStream {
 /// Enable the trait has the ability of reflect, create the trait reflect struct.<br>
 /// The struct implemented the reflected trait should defined [`extends`](crate::extends),
 /// and register the reflect info to [`TypeRegistry`] in function [`ObjectImpl::type_register()`], like: <br>
+/// 
 /// ```ignore
 /// ...
 /// #[reflect_trait]
@@ -146,6 +166,16 @@ pub fn reflect_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// ### Only taing effect when struct annotated `#[extends(Widget)]`
 #[proc_macro_attribute]
 pub fn run_after(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+/// arguments:
+///
+/// `name`: Upper camel case needed, the name of async task struct, same as the async function.
+///
+/// `value``: General param of async block's return value
+#[proc_macro_attribute]
+pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 
@@ -180,14 +210,43 @@ pub fn async_do(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as AsyncDoParser).expand().into()
 }
 
-/// arguments:
-/// 
-/// `name`: Upper camel case needed, the name of async task struct, same as the async function.
-/// 
-/// `value``: General param of async block's return value
-#[proc_macro_attribute]
-pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
-    input
+/// The `shortcut!` procedural macro simplifies the construction of `Shortcut`
+/// for defining shortcuts involving key combinations.
+///
+/// This macro allows users to define a shortcut by specifying a series of keys
+/// separated by `+` symbols. Each shortcut is composed of one or more modifier
+/// keys (such as `Control`, `Alt`, `Shift`, `Meta`), followed by a specific key
+/// (e.g., the letter keys `A`, `B`, `C`, etc.).
+///
+/// # Basic Usage
+///
+/// The following examples demonstrate how to use the `shortcut!` macro to define shortcuts:
+///
+/// ``` ignore
+/// let ctrl_a = shortcut!(Control + A);
+/// let ctrl_alt_b = shortcut!(Control + Alt + B);
+/// let alt_1 = shortcut!(Alt + 1);
+/// ```
+///
+/// These shortcuts can be used to define specific actions or behaviors within an application.
+///
+/// ### Parameters
+///
+/// - `Control`, `Alt`, `Shift`, `Meta`: Modifier key identifiers.
+/// - `A`..`Z`, `0`-`9`, `F1`-`F12`: Specific key identifiers.
+///
+/// These parameters are connected by `+` symbols to form a complete shortcut definition.
+///
+/// ### Return Value
+///
+/// The macro returns an instance of `Shortcut`, representing the defined shortcut.
+#[proc_macro]
+pub fn shortcut(input: TokenStream) -> TokenStream {
+    let shortcut = parse_macro_input!(input as Shortcut);
+    match shortcut.expand() {
+        Ok(tkn) => tkn.into(),
+        Err(e) => e.to_compile_error().into(),
+    }
 }
 
 #[proc_macro]
@@ -220,7 +279,7 @@ pub fn cast_boxed(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn split_pane_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix  = Ident::new("crate", ident.span());
+    let use_prefix = Ident::new("crate", ident.span());
     match split_pane::generate_split_pane_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
@@ -230,7 +289,7 @@ pub fn split_pane_impl(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn stack_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix  = Ident::new("crate", ident.span());
+    let use_prefix = Ident::new("crate", ident.span());
     match stack::generate_stack_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
@@ -264,17 +323,16 @@ pub fn pane_type_register(input: TokenStream) -> TokenStream {
 }
 
 /// arguments:
-/// 
+///
 /// `ty`: the type([`tmui::animation::Animation`]) of animation.
-/// 
+///
 /// `direction`: the direction([`tmui::animation::Direction`]) of animation.
-/// 
+///
 /// `duration`: the time duration of animation(millis).
 #[proc_macro_attribute]
 pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
-
 
 #[proc_macro_attribute]
 pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -283,5 +341,10 @@ pub fn popupable(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn loadable(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn global_watch(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

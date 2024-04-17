@@ -2,14 +2,21 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::DeriveInput;
 
-pub(crate) struct Popupable {
+use crate::SplitGenericsRef;
+
+pub(crate) struct Popupable<'a> {
     name: Ident,
+    generics: SplitGenericsRef<'a>,
 }
 
-impl Popupable {
-    pub(crate) fn parse(ast: &DeriveInput) -> syn::Result<Popupable> {
+impl<'a> Popupable<'a> {
+    pub(crate) fn parse(
+        ast: &DeriveInput,
+        generics: SplitGenericsRef<'a>,
+    ) -> syn::Result<Self> {
         Ok(Self {
             name: ast.ident.clone(),
+            generics,
         })
     }
 
@@ -19,16 +26,18 @@ impl Popupable {
 
     pub(crate) fn popupable_reflect(&self) -> TokenStream {
         let name = &self.name;
+        let (_, ty_generics, _) = self.generics;
         quote!(
-            type_registry.register::<#name, ReflectPopupable>();
+            type_registry.register::<#name #ty_generics, ReflectPopupable>();
         )
     }
 
     pub(crate) fn popupable_impl(&self) -> TokenStream {
         let name = &self.name;
+        let (impl_generics, ty_generics, where_clause) = self.generics;
 
         quote!(
-            impl Popupable for #name {
+            impl #impl_generics Popupable for #name #ty_generics #where_clause {
                 #[inline]
                 fn set_popup(&mut self, popup: Box<dyn PopupImpl>) {
                     self.popup_field = Some(popup)

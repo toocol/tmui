@@ -1,6 +1,11 @@
 use log::debug;
 use skia_safe::textlayout::{FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle};
-use tlib::{skia_safe::{canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider, ClipOp, IRect}, typedef::SkiaRegion};
+use tlib::{
+    skia_safe::{
+        canvas::SaveLayerRec, region::RegionOp, textlayout::TypefaceFontProvider, ClipOp, IRect,
+    },
+    typedef::SkiaRegion,
+};
 use tmui::{
     graphics::painter::Painter,
     prelude::*,
@@ -52,25 +57,23 @@ impl WidgetImpl for SkiaPaint {
 
 impl SkiaPaint {
     fn draw_text(&self, painter: &mut Painter) {
-        const TEXT: &'static str =
-            "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
-        const REP: &'static str =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
-        const FAMILY: &'static str = "Courier New";
+        const TEXT: &str = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
+        const REP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
+        const FAMILY: &str = "Courier New";
         const FONT_SIZE: f32 = 12.;
 
-        let mut font = Font::with_family(FAMILY);
+        let mut font = Font::with_families(&[FAMILY]);
         font.set_size(FONT_SIZE);
 
-        painter.set_font(font.to_skia_font());
+        painter.set_font(font.clone());
         painter.set_color(Color::BLACK);
 
-        let font = font.to_skia_font();
+        let font = &font.to_skia_fonts()[0];
 
         // create font manager
-        let typeface = font.typeface().unwrap();
+        let typeface = font.typeface();
         let mut typeface_provider = TypefaceFontProvider::new();
-        typeface_provider.register_typeface(typeface.into(), Some(FAMILY));
+        typeface_provider.register_typeface(typeface, Some(FAMILY));
         let mut font_collection = FontCollection::new();
         font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
 
@@ -79,7 +82,7 @@ impl SkiaPaint {
         let mut text_style = TextStyle::new();
         text_style.set_color(Color::BLACK);
         text_style.set_font_size(FONT_SIZE);
-        text_style.set_font_families(&vec![FAMILY]);
+        text_style.set_font_families(&[FAMILY]);
         text_style.set_letter_spacing(0.);
         style.set_text_style(&text_style);
 
@@ -116,7 +119,7 @@ impl SkiaPaint {
         ));
 
         // draw text
-        let canvas = painter.canvas_mut();
+        let canvas = painter.canvas_ref();
         let point = skia_safe::Point::new(0.0, 0.0);
         paragraph.paint(canvas, point);
 
@@ -129,10 +132,9 @@ impl SkiaPaint {
         paragraph.paint(canvas, point);
 
         painter.set_antialiasing(true);
-        painter.set_font(font);
         painter.draw_text(TEXT, (0., 100.));
 
-        painter.set_font(Font::with_family(FAMILY).to_skia_font());
+        painter.set_font(Font::with_families(&[FAMILY]));
         painter.draw_text(TEXT, (0., 200.));
 
         painter.draw_paragraph(REP, (0., 300.), 0., 100., None, true);

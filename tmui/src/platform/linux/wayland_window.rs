@@ -17,6 +17,7 @@ pub(crate) struct WaylandWindow<T: 'static + Copy + Send + Sync, M: 'static + Co
 }
 
 impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> WaylandWindow<T, M> {
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn new(
         window_id: WindowId,

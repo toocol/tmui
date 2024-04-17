@@ -5,8 +5,7 @@ edition = "2021"
 
 [dependencies]
 tipc = { path = "../tipc/" }
-tlib = { path = "../tlib/" }
-tmui = { path = "../tmui/" }
+tmui = { path = "../tmui/", features = ["font_awesome", "svg"]}
 
 widestring = "1.0.2"
 log = "0.4"
@@ -31,10 +30,6 @@ name = "child_attr_widget"
 path = "child_attr_widget/main.rs"
 
 [[bin]]
-name = "color_convert"
-path = "color_convert/main.rs"
-
-[[bin]]
 name = "custom_diff_handle"
 path = "custom_diff_handle/main.rs"
 
@@ -47,8 +42,16 @@ name = "event_bubble"
 path = "event_bubble/main.rs"
 
 [[bin]]
+name = "icon_list"
+path = "icon_list/main.rs"
+
+[[bin]]
 name = "image_draw"
 path = "image_draw/main.rs"
+
+[[bin]]
+name = "input_element"
+path = "input_element/main.rs"
 
 [[bin]]
 name = "key_event"

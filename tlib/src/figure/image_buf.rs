@@ -1,6 +1,8 @@
 use skia_safe;
 use std::path::Path;
 
+use crate::typedef::SkiaImage;
+
 /// Convinent wrapper to create [`skia_safe::Image`], create image by system file.
 #[derive(Debug, Clone)]
 pub struct ImageBuf {
@@ -30,11 +32,12 @@ impl ImageBuf {
         })
     }
 
+    /// # Safety 
+    /// User should guarantee the bytes wiil not outlive the lifetime of the `ImageBuf`
+    /// 
     /// Create image by bytes.
-    ///
-    /// UNSAFE: User should guarantee the bytes wiil not outlive the lifetime of the `ImageBuf`
     #[inline]
-    pub unsafe fn from_bytes<'a>(bytes: &'a [u8]) -> Self {
+    pub unsafe fn from_bytes(bytes: &[u8]) -> Self {
         let data = skia_safe::Data::new_bytes(bytes);
         let image = skia_safe::Image::from_encoded(data).unwrap();
 
@@ -70,9 +73,11 @@ impl ImageBuf {
 
     #[inline]
     pub fn raw_file(&self) -> Option<&[u8]> {
-        self.file.as_ref().map(|v| v.as_slice())
+        self.file.as_deref()
     }
 
+    /// # Safety 
+    /// User should guarantee the bytes wiil not outlive the lifetime of the `ImageBuf`
     #[inline]
     pub unsafe fn raw_bytes(&self) -> Option<&[u8]> {
         self.raw_bytes.map(|v| v.as_ref().unwrap())
@@ -89,16 +94,16 @@ impl ImageBuf {
     }
 }
 
-impl AsRef<skia_safe::Image> for ImageBuf {
+impl AsRef<SkiaImage> for ImageBuf {
     #[inline]
-    fn as_ref(&self) -> &skia_safe::Image {
+    fn as_ref(&self) -> &SkiaImage {
         &self.image
     }
 }
 
-impl AsMut<skia_safe::Image> for ImageBuf {
+impl AsMut<SkiaImage> for ImageBuf {
     #[inline]
-    fn as_mut(&mut self) -> &mut skia_safe::Image {
+    fn as_mut(&mut self) -> &mut SkiaImage {
         &mut self.image
     }
 }

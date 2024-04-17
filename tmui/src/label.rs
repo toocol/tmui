@@ -1,5 +1,8 @@
 use crate::{
-    graphics::painter::Painter, layout::ContentAlignment, prelude::*, skia_safe, widget::{WidgetImpl, widget_inner::WidgetInnerExt},
+    graphics::painter::Painter,
+    layout::ContentAlignment,
+    prelude::*,
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use log::debug;
 use tlib::{
@@ -116,16 +119,19 @@ impl WidgetImpl for Label {
     }
 
     fn font_changed(&mut self) {
-        let font: skia_safe::Font = self.font().to_skia_font();
-        let typeface = font.typeface();
-        if typeface.is_none() {
-            return;
-        }
-        let typeface = typeface.unwrap();
+        let font = self.font();
 
         let mut typeface_provider = TypefaceFontProvider::new();
-        let family = typeface.family_name();
-        typeface_provider.register_typeface(typeface, Some(family.clone()));
+        let mut families = vec![];
+        for tf in font.typefaces() {
+            let typeface = tf.to_skia_typeface(font);
+
+            if let Some(typeface) = typeface {
+                families.push(tf.family());
+                let family = typeface.family_name();
+                typeface_provider.register_typeface(typeface, Some(family.as_str()));
+            }
+        }
 
         let mut font_collection = FontCollection::new();
         font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
@@ -133,8 +139,8 @@ impl WidgetImpl for Label {
         // define text style
         let mut style = ParagraphStyle::new();
         let mut text_style = TextStyle::new();
-        text_style.set_font_size(font.size());
-        text_style.set_font_families(&vec![family]);
+        text_style.set_font_size(self.font().size());
+        text_style.set_font_families(&families);
         text_style.set_letter_spacing(self.letter_spacing);
         style.set_text_style(&text_style);
         if self.auto_wrap {
@@ -157,20 +163,25 @@ impl WidgetImpl for Label {
         let size = self.size();
 
         if size.width() == 0 || size.height() == 0 {
+            let mut resized = false;
+
             if self.paragraph_width != 0. {
                 let width = self.paragraph_width as i32 + 1;
                 self.set_fixed_width(width);
                 self.set_detecting_width(width);
+                resized = true;
             }
 
             if self.paragraph_height != 0. {
                 let height = self.paragraph_height as i32;
                 self.set_fixed_height(height);
                 self.set_detecting_height(height);
+                resized = true;
             }
-        }
-        if self.window_id() != 0 && self.window().initialized() {
-            self.window().layout_change(self);
+
+            if resized && self.window_id() != 0 && self.window().initialized() {
+                self.window().layout_change(self);
+            }
         }
     }
 }

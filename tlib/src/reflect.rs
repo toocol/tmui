@@ -63,8 +63,8 @@ impl TypeRegistry {
     }
 
     /// Get the single instance of Registry.
-    pub fn instance<'a>() -> &'static mut TypeRegistry {
-        static mut TYPE_REGISTRY: Lazy<Box<TypeRegistry>> = Lazy::new(|| TypeRegistry::new());
+    pub fn instance() -> &'static mut TypeRegistry {
+        static mut TYPE_REGISTRY: Lazy<Box<TypeRegistry>> = Lazy::new(TypeRegistry::new);
         unsafe { &mut TYPE_REGISTRY }
     }
 

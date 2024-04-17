@@ -27,7 +27,7 @@ pub fn downcast_event_ref<T: EventTrait>(evt: &Event) -> Option<&T> {
 }
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default, Hash)]
 pub enum EventType {
     #[default]
     None = 0,
@@ -357,6 +357,7 @@ impl EventTrait for MouseEvent {
 
 impl PayloadWeight for MouseEvent {
     #[inline]
+    #[allow(clippy::match_single_binding)]
     fn payload_wieght(&self) -> f32 {
         match self.type_ {
             // EventType::MouseMove => 0.2,
@@ -824,17 +825,11 @@ impl StaticType for FileEvent {
     fn dyn_bytes_len(&self) -> usize {
         let path_len = if self.path.is_none() {
             0
+        } else if let Some(str) = self.path().unwrap().as_os_str().to_str() {
+            // Path string will end with '\0':
+            str.len() + 1
         } else {
-            if self.path.is_none() {
-                0
-            } else {
-                if let Some(str) = self.path().unwrap().as_os_str().to_str() {
-                    // Path string will end with '\0':
-                    str.len() + 1
-                } else {
-                    0
-                }
-            }
+            0
         };
         EventType::bytes_len() + path_len
     }

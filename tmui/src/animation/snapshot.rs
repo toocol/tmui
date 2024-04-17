@@ -198,7 +198,7 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
 pub(crate) trait EffectedWidget: WidgetImpl {
     fn handle_dirty_rect(&mut self, reset: bool) {
-        if let Some(_) = cast!(self as PopupImpl) {
+        if cast!(self as PopupImpl).is_some() {
             let win_id = self.window_id();
             let id = self.id();
 

@@ -9,7 +9,7 @@ use crate::{
     loading::LoadingManager,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
-    primitive::Message,
+    primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep},
     window::win_builder::WindowBuilder,
@@ -18,7 +18,7 @@ use log::{debug, error};
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     ptr::NonNull,
     thread::{self, ThreadId},
 };
@@ -35,6 +35,8 @@ thread_local! {
     pub(crate) static WINDOW_ID: RefCell<ObjectId> = RefCell::new(0);
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
 }
+
+pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
@@ -54,7 +56,8 @@ pub struct ApplicationWindow {
     mouse_over_widget: Option<NonNull<dyn WidgetImpl>>,
     high_load_request: bool,
 
-    run_after: Option<Box<dyn FnOnce(&mut Self)>>,
+    run_after: Option<FnRunAfter>,
+    watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -115,9 +118,9 @@ impl ApplicationWindow {
 
     /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
-    pub(crate) fn windows() -> &'static mut Box<HashMap<ObjectId, ApplicationWindowContext>> {
-        static mut WINDOWS: Lazy<Box<HashMap<ObjectId, ApplicationWindowContext>>> =
-            Lazy::new(|| Box::new(HashMap::new()));
+    pub(crate) fn windows() -> &'static mut HashMap<ObjectId, ApplicationWindowContext> {
+        static mut WINDOWS: Lazy<HashMap<ObjectId, ApplicationWindowContext>> =
+            Lazy::new(HashMap::new);
         unsafe { &mut WINDOWS }
     }
 
@@ -146,7 +149,7 @@ impl ApplicationWindow {
         let current_thread_id = thread::current().id();
         let (thread_id, window) = Self::windows()
             .get_mut(&id)
-            .expect(&format!("Unkonwn application window with id: {}", id));
+            .unwrap_or_else(|| panic!("Unkonwn application window with id: {}", id));
         if current_thread_id != *thread_id {
             panic!("Get `ApplicationWindow` in the wrong thread.");
         }
@@ -159,12 +162,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds<'a, T>(id: ObjectId) -> Vec<&'a T>
+    pub fn finds<'a, T>(&self) -> Vec<&'a T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
         let mut finds = vec![];
-        for (_, widget) in Self::widgets_of(id).iter() {
+        for (_, widget) in self.widgets.iter() {
             let widget = nonnull_ref!(widget);
             if widget.object_type().is_a(T::static_type()) {
                 finds.push(widget.downcast_ref::<T>().unwrap())
@@ -174,18 +177,42 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_mut<'a, T>(id: ObjectId) -> Vec<&'a mut T>
+    pub fn finds_mut<'a, T>(&mut self) -> Vec<&'a mut T>
     where
         T: StaticType + WidgetImpl + 'static,
     {
         let mut finds = vec![];
-        for (_, widget) in Self::widgets_of(id).iter_mut() {
+        for (_, widget) in self.widgets.iter_mut() {
             let widget = nonnull_mut!(widget);
             if widget.object_type().is_a(T::static_type()) {
                 finds.push(widget.downcast_mut::<T>().unwrap())
             }
         }
         finds
+    }
+
+    #[inline]
+    pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
+        let mut find = None;
+        for (_, widget) in self.widgets.iter() {
+            let widget = nonnull_ref!(widget);
+            if widget.id() == id {
+                find = Some(widget);
+            }
+        }
+        find
+    }
+
+    #[inline]
+    pub fn finds_by_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
+        let mut find = None;
+        for (_, widget) in self.widgets.iter_mut() {
+            let widget = nonnull_mut!(widget);
+            if widget.id() == id {
+                find = Some(widget);
+            }
+        }
+        find
     }
 
     #[inline]
@@ -214,8 +241,8 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn ipc_bridge(&self) -> Option<&Box<dyn IpcBridge>> {
-        self.ipc_bridge.as_ref()
+    pub(crate) fn ipc_bridge(&self) -> Option<&dyn IpcBridge> {
+        self.ipc_bridge.as_deref()
     }
 
     #[inline]
@@ -230,6 +257,18 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn set_focused_widget(&mut self, id: ObjectId) {
+        if self.focused_widget != 0 && self.focused_widget != id {
+            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+                widget.on_lose_focus();
+            }
+        }
+        if id != 0 {
+            if let Some(widget) = self.finds_by_id_mut(id) {
+                widget.on_get_focus();
+            } else {
+                return;
+            }
+        }
         self.focused_widget = id
     }
 
@@ -268,6 +307,31 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    #[allow(dead_code)]
+    pub(crate) fn register_global_watch(&mut self, id: ObjectId, ty: GlobalWatchEvent) {
+        self.watch_map.entry(ty).or_default().insert(id);
+    }
+
+    #[inline]
+    pub(crate) fn handle_global_watch<F: Fn(&mut dyn GlobalWatch)>(
+        &mut self,
+        ty: GlobalWatchEvent,
+        f: F,
+    ) {
+        if let Some(ids) = self.watch_map.get(&ty) {
+            for &id in ids.clone().iter() {
+                if let Some(widget) = self.finds_by_id_mut(id) {
+                    let type_name = widget.type_name();
+
+                    f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {
+                        panic!("Widget `{}` has not impl `GlobalWatchImpl`.", type_name)
+                    }));
+                }
+            }
+        }
+    }
+
+    #[inline]
     pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
         self.run_after = Some(Box::new(run_after));
     }
@@ -293,8 +357,21 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn layout_change(&self, widget: &mut dyn WidgetImpl) {
-        Self::layout_of(self.id()).layout_change(widget, false)
+    pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
+        // If a component has a container-type parent widget,
+        // layout changes should be based on its parent widget.
+        while let Some(parent) = widget.get_raw_parent_mut() {
+            let parent = unsafe { parent.as_mut().unwrap() };
+            if parent.super_type().is_a(Container::static_type()) {
+                widget = parent;
+            } else {
+                break;
+            }
+        }
+
+        Self::layout_of(self.id()).layout_change(widget, false);
+
+        widget.update();
     }
 
     #[inline]
@@ -330,7 +407,7 @@ impl ApplicationWindow {
 
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
-        for (_, w) in Self::widgets_of(self.id()) {
+        for w in Self::widgets_of(self.id()).values_mut() {
             let widget = nonnull_mut!(w);
             if widget.id() == id || widget.descendant_of(id) {
                 continue;
@@ -449,6 +526,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         if let Some(loading) = cast_mut!(child_ref as Loadable) {
             LoadingManager::with(|m| m.borrow_mut().add_loading(loading))
         }
+        if let Some(watch) = cast_mut!(child_ref as GlobalWatch) {
+            watch.register_global_watch();
+        }
 
         // Determine whether the widget is a container.
         let is_container = child_ref.super_type().is_a(Container::static_type());
@@ -457,11 +537,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         } else {
             None
         };
-        let container_children = if container_ref.is_some() {
-            Some(container_ref.unwrap().children_mut())
-        } else {
-            None
-        };
+        let container_children = container_ref.map(|cf| cf.children_mut());
 
         if is_container {
             container_children
@@ -482,7 +558,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             }
         }
 
-        child = children.pop_front().take().map_or(None, |widget| unsafe {
+        child = children.pop_front().take().and_then(|widget| unsafe {
             match widget {
                 None => None,
                 Some(w) => w.as_mut(),

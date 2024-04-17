@@ -1,6 +1,7 @@
 use crate::{
     application::{self, Application, APP_STOPPED},
     cursor::Cursor,
+    opti::tracker::Tracker,
     platform::{
         ipc_window::IpcWindow,
         physical_window::{PhysWindow, PhysicalWindow},
@@ -11,7 +12,7 @@ use crate::{
     winit::{
         self,
         event::{Event, WindowEvent},
-    }, opti::tracker::Tracker,
+    },
 };
 use log::{debug, error};
 use std::{
@@ -22,7 +23,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use tipc::{ipc_event::IpcEvent, IpcNode, raw_sync::Timeout};
+use tipc::{ipc_event::IpcEvent, raw_sync::Timeout, IpcNode};
 use tlib::{
     events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
     figure::Point,
@@ -33,7 +34,7 @@ use tlib::{
     winit::{
         event::{ElementState, MouseScrollDelta},
         event_loop::{ControlFlow, EventLoopProxy},
-        keyboard::{Key, ModifiersState, PhysicalKey},
+        keyboard::{Key, ModifiersState, NamedKey, PhysicalKey},
         window::WindowId,
     },
 };
@@ -47,7 +48,7 @@ pub(crate) struct WindowsProcess<
     _holdm: PhantomData<M>,
 
     ui_stack_size: usize,
-    platform_context: &'a Box<dyn PlatformContext<T, M>>,
+    platform_context: &'a dyn PlatformContext<T, M>,
 
     windows: HashMap<WindowId, PhysWindow<T, M>>,
     main_window_id: Option<WindowId>,
@@ -58,10 +59,10 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
     WindowsProcess<'a, T, M>
 {
     #[inline]
-    pub fn new(ui_stack_size: usize, platform_context: &'a Box<dyn PlatformContext<T, M>>) -> Self {
+    pub fn new(ui_stack_size: usize, platform_context: &'a dyn PlatformContext<T, M>) -> Self {
         Self {
-            _holdt: PhantomData::default(),
-            _holdm: PhantomData::default(),
+            _holdt: PhantomData,
+            _holdm: PhantomData,
             ui_stack_size,
             platform_context,
             windows: HashMap::new(),
@@ -108,49 +109,45 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
         let user_ipc_event_sender = window.user_ipc_event_sender.take();
 
         let proxy = event_loop.create_proxy();
-        let join = if let Some(master) = window.master.clone() {
-            Some(
-                thread::Builder::new()
-                    .name("ipc-thread".to_string())
-                    .spawn(move || {
-                        let mut cpu_balance = CpuBalance::new();
+        let join = window.master.clone().map(|master| {
+            thread::Builder::new()
+                .name("ipc-thread".to_string())
+                .spawn(move || {
+                    let mut cpu_balance = CpuBalance::new();
 
-                        loop {
-                            if APP_STOPPED.load(Ordering::Acquire) {
-                                break;
-                            }
-                            cpu_balance.loop_start();
-
-                            let mut user_events = vec![];
-                            for evt in master.read().try_recv_vec() {
-                                cpu_balance.add_payload(evt.payload_wieght());
-
-                                match evt {
-                                    IpcEvent::SetCursorShape(cursor) => {
-                                        proxy.send_event(Message::SetCursorShape(cursor)).unwrap();
-                                    }
-                                    IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
-                                    _ => {}
-                                }
-                            }
-                            if user_events.len() > 0 {
-                                if let Some(ref sender) = user_ipc_event_sender {
-                                    sender.send(user_events).unwrap();
-                                }
-                            }
-
-                            cpu_balance.payload_check();
-                            if application::is_high_load() {
-                                cpu_balance.request_high_load();
-                            }
-                            cpu_balance.sleep(false);
+                    loop {
+                        if APP_STOPPED.load(Ordering::Acquire) {
+                            break;
                         }
-                    })
-                    .unwrap(),
-            )
-        } else {
-            None
-        };
+                        cpu_balance.loop_start();
+
+                        let mut user_events = vec![];
+                        for evt in master.read().try_recv_vec() {
+                            cpu_balance.add_payload(evt.payload_wieght());
+
+                            match evt {
+                                IpcEvent::SetCursorShape(cursor) => {
+                                    proxy.send_event(Message::SetCursorShape(cursor)).unwrap();
+                                }
+                                IpcEvent::UserEvent(evt, _timestamp) => user_events.push(evt),
+                                _ => {}
+                            }
+                        }
+                        if !user_events.is_empty() {
+                            if let Some(ref sender) = user_ipc_event_sender {
+                                sender.send(user_events).unwrap();
+                            }
+                        }
+
+                        cpu_balance.payload_check();
+                        if application::is_high_load() {
+                            cpu_balance.request_high_load();
+                        }
+                        cpu_balance.sleep(false);
+                    }
+                })
+                .unwrap()
+        });
 
         self.main_window_id = Some(window.window_id());
         self.proxy = Some(event_loop.create_proxy());
@@ -170,10 +167,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                 match event {
                     Event::WindowEvent { window_id, event } => {
                         let main_window_id = self.main_window_id();
-                        let window = self
-                            .windows
-                            .get_mut(&window_id)
-                            .expect(&format!("Can not find window with id {:?}", window_id));
+                        let window = self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                            panic!("Can not find window with id {:?}", window_id)
+                        });
 
                         target.set_control_flow(ControlFlow::Poll);
 
@@ -337,14 +333,12 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 ..
                             } => {
                                 let mut key_code = KeyCode::default();
-                                match physical_key {
-                                    PhysicalKey::Code(physical_key) => {
-                                        key_code = physical_key.into()
-                                    }
-                                    _ => {}
+                                if let PhysicalKey::Code(physical_key) = physical_key {
+                                    key_code = physical_key.into()
                                 }
                                 let text = match logical_key {
                                     Key::Character(str) => to_static(str.to_string()),
+                                    Key::Named(NamedKey::Space) => " ",
                                     _ => "",
                                 };
                                 let evt = KeyEvent::new(
@@ -369,11 +363,8 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 ..
                             } => {
                                 let mut key_code = KeyCode::default();
-                                match physical_key {
-                                    PhysicalKey::Code(physical_key) => {
-                                        key_code = physical_key.into()
-                                    }
-                                    _ => {}
+                                if let PhysicalKey::Code(physical_key) = physical_key {
+                                    key_code = physical_key.into()
                                 }
                                 let text = match logical_key {
                                     Key::Character(str) => to_static(str.to_string()),
@@ -395,10 +386,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                     // VSync event.
                     Event::UserEvent(Message::VSync(window_id, ins)) => {
-                        let window = self
-                            .windows
-                            .get_mut(&window_id)
-                            .expect(&format!("Can not find window with id {:?}", window_id));
+                        let window = self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                            panic!("Can not find window with id {:?}", window_id)
+                        });
 
                         debug!(
                             "vscyn track: {}ms",
@@ -411,10 +401,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                     // SetCursorShape event.
                     Event::UserEvent(Message::SetCursorShape(cursor)) => {
                         let window_id = self.main_window_id();
-                        let window = self
-                            .windows
-                            .get_mut(&window_id)
-                            .expect(&format!("Can not find window with id {:?}", window_id));
+                        let window = self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                            panic!("Can not find window with id {:?}", window_id)
+                        });
 
                         match cursor {
                             SystemCursorShape::BlankCursor => {
@@ -429,12 +418,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                     // VSync event.
                     Event::UserEvent(Message::CreateWindow(mut win)) => {
-                        let (mut logic_window, physical_window) =
-                            self.platform_context.create_window(
-                                win.take_config(),
-                                Some(target),
-                                Some(self.proxy()),
-                            );
+                        let (mut logic_window, physical_window) = self
+                            .platform_context
+                            .create_window(win.take_config(), Some(target), Some(self.proxy()));
 
                         logic_window.on_activate = win.take_on_activate();
 
@@ -512,7 +498,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                 }
             }
 
-            if user_events.len() > 0 {
+            if !user_events.is_empty() {
                 // Send events receiveed from master to the ui main thread.
                 window.user_ipc_event_sender.send(user_events).unwrap();
             }

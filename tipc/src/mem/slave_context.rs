@@ -136,10 +136,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
 
     #[inline]
     fn try_recv(&self) -> Option<IpcEvent<T>> {
-        match self.master_queue.try_read() {
-            Some(ipc_evt) => Some(ipc_evt.into()),
-            None => None,
-        }
+        self.master_queue.try_read().map(|ipc_evt| ipc_evt.into())
     }
 
     #[inline]
@@ -246,7 +243,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for SlaveContext<T, 
 
         let buffer_name = format!(
             "{}{}_{}",
-            self.name.to_string(),
+            self.name,
             IPC_MEM_BUFFER_NAME,
             name_helper
         );

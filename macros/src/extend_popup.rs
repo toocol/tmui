@@ -1,14 +1,16 @@
 use crate::{
     childable::Childable, extend_element, extend_object, extend_widget, general_attr::GeneralAttr,
+    SplitGenericsRef,
 };
 use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let general_attr = GeneralAttr::parse(ast)?;
+    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -23,6 +25,9 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
     let popupable_impl_clause = &general_attr.popupable_impl_clause;
     let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
+
+    let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
+    let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -71,31 +76,46 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                 }
             }
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
                 "popup",
                 vec!["popup", "widget", "element", "object"],
                 false,
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let element_trait_impl_clause = extend_element::gen_element_trait_impl_clause(
                 name,
                 vec!["popup", "widget", "element"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
                 name,
                 Some("popup"),
                 vec!["popup", "widget"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
-            let popup_trait_impl_clause = gen_popup_trait_impl_clause(name, vec!["popup"])?;
+            let popup_trait_impl_clause = gen_popup_trait_impl_clause(
+                name,
+                vec!["popup"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             let child_ref_clause = childable.get_child_ref();
 
             Ok(quote! {
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause
@@ -113,16 +133,18 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 
                 #popup_trait_impl_clause
 
-                impl WidgetAcquire for #name {}
+                #global_watch_impl_clause
 
-                impl SuperType for #name {
+                impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
+
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         Popup::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
@@ -131,6 +153,7 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                         #popupable_reflect_clause
                         #animation_reflect
                         #animation_state_holder_reflect
+                        #global_watch_reflect_clause
                     }
 
                     #[inline]
@@ -145,23 +168,23 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
                     }
                 }
 
-                impl PointEffective for #name {
+                impl #impl_generics PointEffective for #name #ty_generics #where_clause {
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
                         self.popup.widget.point_effective(point)
                     }
                 }
 
-                impl ChildRegionAcquirer for #name {
+                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.popup.widget.child_region()
                     }
                 }
 
-                impl Overlaid for #name {}
+                impl #impl_generics Overlaid for #name #ty_generics #where_clause {}
 
-                impl #name {
+                impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
             })
@@ -176,9 +199,10 @@ pub(crate) fn expand(ast: &mut DeriveInput) -> syn::Result<proc_macro2::TokenStr
 pub(crate) fn gen_popup_trait_impl_clause(
     name: &Ident,
     _popup_path: Vec<&'static str>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
-        impl PopupExt for #name {
+        impl #impl_generics PopupExt for #name #ty_generics #where_clause {
             #[inline]
             fn as_widget_impl(&self) -> &dyn WidgetImpl {
                 self

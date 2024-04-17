@@ -1,4 +1,8 @@
-use crate::{application_window::ApplicationWindow, prelude::SharedWidget, widget::widget_ext::WidgetExt};
+use crate::{
+    application_window::ApplicationWindow, prelude::SharedWidget,
+    primitive::global_watch::GlobalWatchEvent, shortcut::manager::ShortcutManager,
+    widget::widget_ext::WidgetExt,
+};
 use std::ptr::NonNull;
 use tlib::{
     events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
@@ -21,6 +25,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
+
+            window.handle_global_watch(GlobalWatchEvent::MousePress, |handle| {
+                handle.on_global_mouse_pressed(&evt);
+            });
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
@@ -46,6 +54,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
+            window.handle_global_watch(GlobalWatchEvent::MouseRelease, |handle| {
+                handle.on_global_mouse_released(&evt);
+            });
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
@@ -62,19 +74,17 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                         }
                         break;
                     }
-                } else {
-                    if widget.point_effective(&pos) {
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
+                } else if widget.point_effective(&pos) {
+                    let widget_point = widget.map_to_widget(&pos);
+                    evt.set_position((widget_point.x(), widget_point.y()));
 
-                        widget.on_mouse_released(evt.as_ref());
-                        widget.inner_mouse_released(evt.as_ref(), false);
+                    widget.on_mouse_released(evt.as_ref());
+                    widget.inner_mouse_released(evt.as_ref(), false);
 
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
+                    if widget.super_type().is_a(SharedWidget::static_type()) {
+                        event = Some(evt);
                     }
+                    break;
                 }
             }
         }
@@ -84,6 +94,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
+
+            window.handle_global_watch(GlobalWatchEvent::MouseMove, |handle| {
+                handle.on_global_mouse_move(&evt);
+            });
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
@@ -160,6 +174,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
+            window.handle_global_watch(GlobalWatchEvent::MouseWhell, |handle| {
+                handle.on_global_mouse_whell(&evt);
+            });
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
@@ -186,12 +204,28 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let evt = downcast_event::<KeyEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
 
+            window.handle_global_watch(GlobalWatchEvent::KeyPress, |handle| {
+                handle.on_global_key_pressed(&evt);
+            });
+            let global_shorcut_triggered = ShortcutManager::with(|shortcut_manager| {
+                let mut shortcut_manager = shortcut_manager.borrow_mut();
+                shortcut_manager.receive_key_event(&evt);
+                shortcut_manager.trigger_global()
+            });
+            if global_shorcut_triggered {
+                return None;
+            }
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
                 if widget.id() == window.focused_widget() {
-                    widget.on_key_pressed(&evt);
-                    widget.inner_key_pressed(&evt);
+                    if !ShortcutManager::with(|shortcut_manager| {
+                        shortcut_manager.borrow_mut().trigger(widget.id())
+                    }) {
+                        widget.on_key_pressed(&evt);
+                        widget.inner_key_pressed(&evt);
+                    }
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);
@@ -205,6 +239,13 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
         EventType::KeyRelease => {
             let evt = downcast_event::<KeyEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
+
+            window.handle_global_watch(GlobalWatchEvent::KeyRelease, |handle| {
+                handle.on_global_key_released(&evt)
+            });
+            ShortcutManager::with(|shortcut_manager| {
+                shortcut_manager.borrow_mut().receive_key_event(&evt)
+            });
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);

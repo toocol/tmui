@@ -1,5 +1,6 @@
 use super::{tree_node::TreeNode, tree_store::TreeStore};
 use crate::{
+    font::FontCalculation,
     prelude::*,
     scroll_bar::ScrollBar,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -7,20 +8,12 @@ use crate::{
     widget::WidgetImpl,
 };
 use std::ptr::NonNull;
-use tlib::{
-    connect, disconnect,
-    events::MouseEvent,
-    nonnull_mut, nonnull_ref, run_after,
-    skia_safe::textlayout::{
-        FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-    },
-};
+use tlib::{connect, disconnect, events::MouseEvent, nonnull_mut, nonnull_ref, run_after};
 
-const REPCHAR: &'static str = concat!(
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "abcdefgjijklmnopqrstuvwxyz",
-    "0123456789./+@"
-);
+type FnNodePressed = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnNodeReleased = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnNodeEnter = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnNodeLeave = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
 
 #[extends(Widget)]
 #[run_after]
@@ -35,10 +28,10 @@ pub(crate) struct TreeViewImage {
     line_height: i32,
     line_spacing: i32,
 
-    on_node_pressed: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
-    on_node_released: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
-    on_node_enter: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
-    on_node_leave: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
+    on_node_pressed: Option<FnNodePressed>,
+    on_node_released: Option<FnNodeReleased>,
+    on_node_enter: Option<FnNodeEnter>,
+    on_node_leave: Option<FnNodeLeave>,
 }
 
 impl ObjectSubclass for TreeViewImage {
@@ -94,7 +87,7 @@ impl WidgetImpl for TreeViewImage {
         connect!(self, size_changed(), self, when_size_changed(Size));
     }
 
-    fn paint(&mut self, mut painter: &mut Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
             painter.fill_rect(redraw_rect.rect(), self.background());
         }
@@ -113,7 +106,7 @@ impl WidgetImpl for TreeViewImage {
             );
 
             nonnull_ref!(node).render_node(
-                &mut painter,
+                painter,
                 geometry,
                 self.background(),
                 self.indent_length,
@@ -122,31 +115,9 @@ impl WidgetImpl for TreeViewImage {
     }
 
     fn font_changed(&mut self) {
-        let font = self.font().to_skia_font();
-        let typeface = font.typeface().unwrap();
+        let (_, h) = self.font().calc_font_dimension();
 
-        let mut typeface_provider = TypefaceFontProvider::new();
-        let family = typeface.family_name();
-        typeface_provider.register_typeface(typeface, Some(family.clone()));
-
-        let mut font_collection = FontCollection::new();
-        font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
-
-        // define text style
-        let mut style = ParagraphStyle::new();
-        let mut text_style = TextStyle::new();
-        text_style.set_font_size(font.size());
-        text_style.set_font_families(&vec![family]);
-        text_style.set_letter_spacing(0.);
-        style.set_text_style(&text_style);
-
-        // layout the paragraph
-        let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
-        paragraph_builder.add_text(REPCHAR);
-        let mut paragraph = paragraph_builder.build();
-        paragraph.layout(f32::MAX);
-
-        self.line_height = paragraph.height() as i32;
+        self.line_height = h as i32;
     }
 
     fn on_mouse_move(&mut self, event: &MouseEvent) {
@@ -281,7 +252,7 @@ impl TreeViewImage {
         }
 
         let width = size.width();
-        let height = size.height() - y as i32;
+        let height = size.height() - y;
 
         let rect: Rect = (x, y, width, height).into();
 

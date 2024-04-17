@@ -78,17 +78,16 @@ where
     drop(read_guard);
 
     // Create the [`Backend`] based on the backend type specified by the user.
-    let backend: Box<dyn Backend>;
-    match logic_window.backend_type {
-        BackendType::Raster => backend = RasterBackend::new(bitmap),
+    let backend: Box<dyn Backend> = match logic_window.backend_type {
+        BackendType::Raster => RasterBackend::new(bitmap),
         BackendType::OpenGL => {
             // Make gl context current and load if the backend was `OpenGl`.
             logic_window.gl_make_current();
             logic_window.gl_load();
 
-            backend = OpenGLBackend::new(bitmap, logic_window.gl_config_unwrap())
+            OpenGLBackend::new(bitmap, logic_window.gl_config_unwrap())
         }
-    }
+    };
 
     // Prepare ApplicationWindow env: Create the `Board`.
     let mut board = Box::new(Board::new(logic_window.bitmap(), backend));
@@ -161,7 +160,7 @@ where
                     let evt = window.dispatch_event(evt);
                     if let Some(ref evt) = evt {
                         if logic_window.ipc_type == IpcType::Master {
-                            Application::<T, M>::send_event_ipc(&evt);
+                            Application::<T, M>::send_event_ipc(evt);
                         }
                     }
                 }

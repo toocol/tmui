@@ -1,6 +1,10 @@
-use super::{EventBubble, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire};
+use super::{
+    EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl,
+    WindowAcquire,
+};
 use crate::{
     application_window::ApplicationWindow,
+    font::FontTypeface,
     graphics::{
         border::Border,
         element::{ElementExt, ElementImpl},
@@ -10,7 +14,7 @@ use crate::{
 };
 use std::ptr::NonNull;
 use tlib::{
-    figure::{Color, CoordRect, FPoint, FRect, Font, FontTypeface, Point, Rect, Size},
+    figure::{Color, CoordRect, FPoint, FRect, Point, Rect, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::{ObjectId, ObjectOperation},
     prelude::*,
@@ -21,12 +25,12 @@ use tlib::{
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
     /// Get the ref of widget model.
-    /// 
+    ///
     /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
     fn widget_props(&self) -> &Widget;
 
     /// Get the mutable ref of widget model.
-    /// 
+    ///
     /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
     fn widget_props_mut(&mut self) -> &mut Widget;
 
@@ -120,7 +124,8 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::visible) (Defined in [`WidgetExt`])
     fn visible(&self) -> bool;
 
-    /// Setter of property `focus`.
+    /// Setter of property `focus`. <br>
+    /// Only effected after phase `run_after`.
     ///
     /// Go to[`Function defination`](WidgetExt::set_focus) (Defined in [`WidgetExt`])
     fn set_focus(&mut self, focus: bool);
@@ -215,20 +220,15 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::font) (Defined in [`WidgetExt`])
     fn font(&self) -> &Font;
 
-    /// Get the mut font of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::font_mut) (Defined in [`WidgetExt`])
-    fn font_mut(&mut self) -> &mut Font;
-
     /// Set the font family of Widget.
     ///
-    /// Go to[`Function defination`](WidgetExt::set_font_family) (Defined in [`WidgetExt`])
-    fn set_font_family(&mut self, family: String);
+    /// Go to[`Function defination`](WidgetExt::set_font_families) (Defined in [`WidgetExt`])
+    fn set_font_families(&mut self, families: &[&str]);
 
-    /// Get the font family of Widget.
+    /// Get the rect of widget without borders.
     ///
-    /// Go to[`Function defination`](WidgetExt::font_family) (Defined in [`WidgetExt`])
-    fn font_family(&self) -> &str;
+    /// Go to[`Function defination`](WidgetExt::borderless_rect) (Defined in [`WidgetExt`])
+    fn borderless_rect(&self) -> FRect;
 
     /// Get the size of widget. The size does not include the margins.
     ///
@@ -421,7 +421,8 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_border_left_color) (Defined in [`WidgetExt`])
     fn set_border_left_color(&mut self, color: Color);
 
-    /// Get the borders of the widget.
+    /// Get the borders of the widget. <br>
+    /// @return (top, right, bottom, left)
     ///
     /// Go to[`Function defination`](WidgetExt::borders) (Defined in [`WidgetExt`])
     fn borders(&self) -> (f32, f32, f32, f32);
@@ -761,10 +762,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref c) => Some(c.as_ref().as_ptr()),
-            None => None,
-        };
+        let mut child = self.child.as_ref().map(|c| c.as_ref().as_ptr());
 
         if child.is_none() {
             unsafe {
@@ -780,10 +778,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref mut c) => Some(c.as_mut().as_ptr_mut()),
-            None => None,
-        };
+        let mut child = self.child.as_mut().map(|c| c.as_mut().as_ptr_mut());
 
         if child.is_none() {
             unsafe {
@@ -799,10 +794,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref c) => Some(c.as_ref()),
-            None => None,
-        };
+        let mut child = self.child.as_ref().map(|c| c.as_ref());
 
         if child.is_none() {
             unsafe {
@@ -818,10 +810,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref mut c) => Some(c.as_mut()),
-            None => None,
-        };
+        let mut child = self.child.as_mut().map(|c| c.as_mut());
 
         if child.is_none() {
             unsafe {
@@ -891,7 +880,16 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_focus(&mut self, focus: bool) {
-        let id = if focus { self.id() } else { 0 };
+        let id = if focus {
+            if self.is_focus() {
+                return;
+            }
+
+            self.id()
+        } else {
+            0
+        };
+
         ApplicationWindow::window_of(self.window_id()).set_focused_widget(id)
     }
 
@@ -912,8 +910,8 @@ impl WidgetExt for Widget {
             if !self.window().initialized() {
                 return;
             }
+
             self.window().layout_change(self);
-            self.update();
         }
     }
 
@@ -922,19 +920,28 @@ impl WidgetExt for Widget {
         let size_hint = self.size_hint();
         if let Some(min_width) = size_hint.min_width() {
             if width < min_width {
-                return
+                return;
             }
         }
-        if let Some(max_width)= size_hint.max_width() {
+        if let Some(max_width) = size_hint.max_width() {
             if width > max_width {
-                return
+                return;
             }
         }
         self.set_property("width", width.to_value());
         self.fixed_width = true;
         self.width_request = width;
         if let Some(parent) = self.get_parent_ref() {
-            self.fixed_width_ration = width as f32 / parent.size().width() as f32;
+            let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
+                s.size_exclude_spacing()
+            } else {
+                parent.size()
+            };
+            if parent_size.width() == 0 {
+                return;
+            }
+
+            self.fixed_width_ration = width as f32 / parent_size.width() as f32;
         }
     }
 
@@ -943,19 +950,28 @@ impl WidgetExt for Widget {
         let size_hint = self.size_hint();
         if let Some(min_height) = size_hint.min_height() {
             if height < min_height {
-                return
+                return;
             }
         }
-        if let Some(max_height)= size_hint.max_height() {
+        if let Some(max_height) = size_hint.max_height() {
             if height > max_height {
-                return
+                return;
             }
         }
         self.set_property("height", height.to_value());
         self.fixed_height = true;
         self.height_request = height;
         if let Some(parent) = self.get_parent_ref() {
-            self.fixed_height_ration = height as f32 / parent.size().height() as f32;
+            let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
+                s.size_exclude_spacing()
+            } else {
+                parent.size()
+            };
+            if parent_size.height() == 0 {
+                return;
+            }
+
+            self.fixed_height_ration = height as f32 / parent_size.height() as f32;
         }
     }
 
@@ -1035,21 +1051,27 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn font_mut(&mut self) -> &mut Font {
-        &mut self.font
-    }
-
-    #[inline]
-    fn set_font_family(&mut self, family: String) {
-        let typeface = FontTypeface::builder().family(family.clone()).build();
-        self.font_family = family;
-        self.font.set_typeface(typeface);
+    fn set_font_families(&mut self, families: &[&str]) {
+        let mut typefaces = vec![];
+        for f in families {
+            let typeface = FontTypeface::new(f);
+            typefaces.push(typeface);
+        }
+        self.font.set_typefaces(typefaces);
         self.update()
     }
 
     #[inline]
-    fn font_family(&self) -> &str {
-        &self.font_family
+    fn borderless_rect(&self) -> FRect {
+        let mut rect: FRect = self.rect().into();
+        let (top, right, bottom, left) = self.borders();
+
+        rect.set_x(rect.x() + left);
+        rect.set_y(rect.y() + top);
+        rect.set_width(rect.width() - (left + right));
+        rect.set_height(rect.height() - (top + bottom));
+
+        rect
     }
 
     #[inline]
@@ -1177,55 +1199,35 @@ impl WidgetExt for Widget {
         self.margins[2] = bottom;
         self.margins[3] = left;
 
-        if top != 0 || right != 0 || bottom != 0 || left != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = top != 0 || right != 0 || bottom != 0 || left != 0;
     }
 
     #[inline]
     fn set_margin_top(&mut self, val: i32) {
         self.margins[0] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_right(&mut self, val: i32) {
         self.margins[1] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_bottom(&mut self, val: i32) {
         self.margins[2] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_left(&mut self, val: i32) {
         self.margins[3] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
@@ -1613,21 +1615,15 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_size_hint(&mut self, size_hint: SizeHint) {
-        match size_hint.all_width() {
-            (Some(min), Some(max)) => {
-                if min > max {
-                    panic!("`Minimum size hint can not be larger than maximum size hint.")
-                }
+        if let (Some(min), Some(max)) = size_hint.all_width() {
+            if min > max {
+                panic!("`Minimum size hint can not be larger than maximum size hint.")
             }
-            _ => {}
         }
-        match size_hint.all_height() {
-            (Some(min), Some(max)) => {
-                if min > max {
-                    panic!("`Minimum size hint can not be larger than maximum size hint.")
-                }
+        if let (Some(min), Some(max)) = size_hint.all_height() {
+            if min > max {
+                panic!("`Minimum size hint can not be larger than maximum size hint.")
             }
-            _ => {}
         }
         self.size_hint = size_hint
     }

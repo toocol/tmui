@@ -3,11 +3,12 @@ use std::{cell::RefCell, ptr::NonNull};
 use tlib::{
     figure::{Color, FRect, Rect},
     nonnull_mut,
-    prelude::*, skia_safe::{ClipOp, PaintStyle},
+    prelude::*,
+    skia_safe::{ClipOp, PaintStyle},
 };
 
 pub const LOADING_SIZE: f32 = 14.;
-pub const LOADING_COLOR: Color = Color::GREY.with_a(160);
+pub const LOADING_COLOR: Color = Color::GREY_MEDIUM.with_a(160);
 thread_local! {
     static INSTANCE: RefCell<LoadingManager> = RefCell::new(LoadingManager::new());
 }
@@ -80,7 +81,9 @@ pub trait Loadable: WidgetImpl {
         let mut rect = self.rect();
         rect.set_point(&self.map_to_widget(&rect.top_left()));
 
-        self.loading_model().loading.render_loading(painter, rect, self.background())
+        self.loading_model()
+            .loading
+            .render_loading(painter, rect, self.background())
     }
 }
 

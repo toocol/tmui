@@ -36,6 +36,13 @@ pub struct IpcBuilder<T: 'static + Copy, M: 'static + Copy> {
     _request_response: PhantomData<M>,
 }
 
+impl Default for IpcBuilder<(), ()> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IpcBuilder<(), ()> {
     #[inline]
     pub fn new() -> Self {
@@ -157,17 +164,17 @@ lazy_static! {
         let mut mapping = HashMap::new();
         let mut cur = 0;
 
-        for c in b'0'..b'9' {
+        for c in b'0'..=b'9' {
             mapping.insert(c, cur);
             cur += 1;
         }
 
-        for c in b'a'..b'z' {
+        for c in b'a'..=b'z' {
             mapping.insert(c, cur);
             cur += 1;
         }
 
-        for c in b'A'..b'z' {
+        for c in b'A'..=b'Z' {
             mapping.insert(c, cur);
             cur += 1;
         }

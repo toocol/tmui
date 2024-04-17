@@ -48,7 +48,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Fill)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.top_left());
             }
             ImageOption::Adapt => {
                 let rect = self.contents_rect(None);
@@ -67,7 +67,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, None).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.top_left());
             }
             ImageOption::Tile => {
                 let mut paint = Paint::default();
@@ -106,7 +106,7 @@ impl WidgetImpl for Image {
                 let matrix = Matrix::rect_to_rect(src, dst, Some(ScaleToFit::Center)).unwrap();
 
                 painter.set_transform(matrix, false);
-                painter.draw_image(image_buf, contents_rect.x(), contents_rect.y());
+                painter.draw_image(image_buf, contents_rect.top_left());
             }
         }
     }
@@ -115,10 +115,12 @@ impl WidgetImpl for Image {
 impl Image {
     #[inline]
     pub fn new<T: AsRef<Path>>(path: T) -> Box<Self> {
-        let image_buf = ImageBuf::from_file(&path).expect(&format!(
-            "load image file `{:?}` failed, maybe it's not exist",
-            path.as_ref().as_os_str()
-        ));
+        let image_buf = ImageBuf::from_file(&path).unwrap_or_else(|| {
+            panic!(
+                "load image file `{:?}` failed, maybe it's not exist",
+                path.as_ref().as_os_str()
+            )
+        });
 
         let mut image: Box<Self> = Object::new(&[]);
         image.image_buf = Some(image_buf);

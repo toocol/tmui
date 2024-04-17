@@ -2,15 +2,15 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, popupable::Popupable, loadable::Loadable};
+use crate::{animation::Animation, async_task::AsyncTask, global_watch::GlobalWatch, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
 
-pub(crate) struct GeneralAttr {
+pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
     pub(crate) run_after_clause: TokenStream,
 
     // fields about `animation`
     pub(crate) is_animation: bool,
-    pub(crate) animation: Option<Animation>,
+    pub(crate) animation: Option<Animation<'a>>,
     pub(crate) animation_clause: TokenStream,
     pub(crate) animation_field: TokenStream,
     pub(crate) animation_reflect: TokenStream,
@@ -35,11 +35,16 @@ pub(crate) struct GeneralAttr {
     pub(crate) loadable_field_clause: TokenStream,
     pub(crate) loadable_impl_clause: TokenStream,
     pub(crate) loadable_reflect_clause: TokenStream,
+
+    // fields about `glboal_watch`
+    pub(crate) global_watch_impl_clause: TokenStream,
+    pub(crate) global_watch_reflect_clause: TokenStream,
 }
 
-impl GeneralAttr {
-    pub(crate) fn parse(ast: &DeriveInput) -> syn::Result<Self> {
+impl<'a> GeneralAttr<'a> {
+    pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
         let name = &ast.ident;
+        let (_, ty_generics, _) = generics;
 
         let mut is_run_after = false;
 
@@ -53,6 +58,8 @@ impl GeneralAttr {
 
         let mut loadable = None;
 
+        let mut global_watch = None;
+
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
                 let attr_str = attr_ident.to_string();
@@ -62,15 +69,20 @@ impl GeneralAttr {
                     "animatable" => {
                         animation = {
                             is_animation = true;
-                            Some(Animation::parse(attr)?)
+                            Some(Animation::parse(attr, generics)?)
                         }
                     }
                     "async_task" => {
                         is_async_task = true;
-                        async_tasks.push(AsyncTask::parse_attr(attr));
+                        async_tasks.push(AsyncTask::parse_attr(attr, generics));
                     }
-                    "popupable" => popupable = Some(Popupable::parse(ast)?),
-                    "loadable" => loadable = Some(Loadable::parse(ast)?),
+                    "popupable" => popupable = Some(Popupable::parse(ast, generics)?),
+                    "loadable" => loadable = Some(Loadable::parse(ast, generics)?),
+                    "global_watch" => {
+                        let mut gw = attr.parse_args::<GlobalWatch>()?;
+                        gw.set_generics(generics);
+                        global_watch = Some(gw);
+                    },
                     _ => {}
                 }
             }
@@ -130,7 +142,7 @@ impl GeneralAttr {
                 let field = task.field.as_ref().unwrap();
 
                 async_task_fields.push(quote! {
-                    #field: Option<Box<#task_name>>
+                    #field: Option<Box<#task_name #ty_generics>>
                 });
             }
         }
@@ -193,6 +205,19 @@ impl GeneralAttr {
             proc_macro2::TokenStream::new()
         };
 
+        // Global watch
+        let global_watch_impl_clause = if let Some(global_watch) = global_watch.as_ref() {
+            global_watch.expand_impl(name)?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let global_watch_reflect_clause = if let Some(global_watch) = global_watch.as_ref() {
+            global_watch.expand_reflect(name)?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -215,6 +240,8 @@ impl GeneralAttr {
             loadable_field_clause,
             loadable_impl_clause,
             loadable_reflect_clause,
+            global_watch_impl_clause,
+            global_watch_reflect_clause,
         })
     }
 }

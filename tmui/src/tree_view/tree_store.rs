@@ -12,9 +12,10 @@ use std::{
 };
 use tlib::{
     global::SemanticExt,
+    namespace::MouseButton,
     nonnull_mut, nonnull_ref,
     object::{ObjectId, ObjectOperation, ObjectSubclass},
-    signals, namespace::MouseButton,
+    signals,
 };
 
 #[extends(Object, ignore_default = true)]
@@ -58,7 +59,7 @@ impl TreeStore {
     #[inline]
     pub(crate) fn store_map() -> &'static mut HashMap<ObjectId, AtomicPtr<TreeStore>> {
         static mut STORE_MAP: Lazy<HashMap<ObjectId, AtomicPtr<TreeStore>>> =
-            Lazy::new(|| HashMap::new());
+            Lazy::new(HashMap::new);
         unsafe { &mut STORE_MAP }
     }
 
@@ -126,14 +127,14 @@ impl TreeStore {
     pub fn get_node(&self, id: ObjectId) -> Option<&TreeNode> {
         self.nodes_cache
             .get(&id)
-            .and_then(|n| Some(nonnull_ref!(n)))
+            .map(|n| nonnull_ref!(n))
     }
 
     #[inline]
     pub fn get_node_mut(&mut self, id: ObjectId) -> Option<&mut TreeNode> {
         self.nodes_cache
             .get_mut(&id)
-            .and_then(|n| Some(nonnull_mut!(n)))
+            .map(|n| nonnull_mut!(n))
     }
 }
 
@@ -176,22 +177,16 @@ impl TreeStore {
     pub(crate) fn remove_node_cache(&mut self, id: ObjectId) {
         self.nodes_cache.remove(&id);
 
-        if self.enterd_node.is_some() {
-            if nonnull_ref!(self.enterd_node).id() == id {
-                self.enterd_node = None;
-            }
+        if self.enterd_node.is_some() && nonnull_ref!(self.enterd_node).id() == id {
+            self.enterd_node = None;
         }
 
-        if self.selected_node.is_some() {
-            if nonnull_ref!(self.selected_node).id() == id {
-                self.selected_node = None;
-            }
+        if self.selected_node.is_some() && nonnull_ref!(self.selected_node).id() == id {
+            self.selected_node = None;
         }
 
-        if self.hovered_node.is_some() {
-            if nonnull_ref!(self.hovered_node).id() == id {
-                self.hovered_node = None;
-            }
+        if self.hovered_node.is_some() && nonnull_ref!(self.hovered_node).id() == id {
+            self.hovered_node = None;
         }
     }
 
@@ -244,11 +239,11 @@ impl TreeStore {
     }
 
     /// Add node and it's children to the nodes buffer.
-    /// 
+    ///
     /// @param node: the parent node of the added node. <br>
     /// @param child_id: the id of the added node. <br>
-    /// @param added: all the ids of added node and it's children's id. 
-    /// 
+    /// @param added: all the ids of added node and it's children's id.
+    ///
     /// @return
     /// - `normal`: the index of added node in nodes buffer.
     /// - `usize::MAX`: add failed.         
@@ -256,7 +251,7 @@ impl TreeStore {
         &mut self,
         node: &TreeNode,
         child_id: ObjectId,
-        added: &Vec<ObjectId>,
+        added: &[ObjectId],
     ) -> usize {
         if !self.root().get_children_ids().contains(&child_id) {
             return usize::MAX;
@@ -303,15 +298,15 @@ impl TreeStore {
                 break;
             }
         }
-        return added_idx;
+        added_idx
     }
 
     /// Remove node and it's children from the nodes buffer.
-    /// 
+    ///
     /// @param node: the parent node of the deleted node. <br>
     /// @param child_id: the id of the deleted node. <br>
     /// @param deleted: all the ids of nodes that should be deleted, container it's children nodes.
-    /// 
+    ///
     /// @return
     /// - `normal`: the index of added node in nodes buffer.
     /// - `usize::MAX`: add failed.         
@@ -320,10 +315,10 @@ impl TreeStore {
         node: &TreeNode,
         child: ObjectId,
         child_expanded: bool,
-        deleted: Vec<ObjectId>
+        deleted: Vec<ObjectId>,
     ) {
         if !node.is_expanded() {
-            return
+            return;
         }
 
         let mut idx = 0;
@@ -371,7 +366,7 @@ impl TreeStore {
 
             start_idx = idx;
         } else {
-            if children.len() == 0 {
+            if children.is_empty() {
                 return;
             }
 
@@ -468,7 +463,7 @@ impl TreeStore {
     }
 
     /// @param `internal`
-    /// - true: The view scrolling triggered internally in TreeView 
+    /// - true: The view scrolling triggered internally in TreeView
     ///         requires notifying the scroll bar to change the value.
     #[inline]
     pub(crate) fn scroll_to(&mut self, value: i32, internal: bool) -> bool {

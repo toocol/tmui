@@ -1,8 +1,6 @@
 use super::{point::Point, FPoint, FSize, Size, CoordPoint};
 use crate::{
-    types::StaticType,
-    values::{FromBytes, FromValue, ToBytes, ToValue},
-    Value, namespace::Coordinate, Type,
+    namespace::Coordinate, typedef::{SkiaIRect, SkiaRect}, types::StaticType, values::{FromBytes, FromValue, ToBytes, ToValue}, Type, Value
 };
 use std::{
     ops::{Add, Div, Mul, Sub},
@@ -429,59 +427,59 @@ impl From<(i32, i32, i32, i32)> for Rect {
     }
 }
 
-impl Into<(i32, i32, i32, i32)> for Rect {
+impl From<Rect> for (i32, i32, i32, i32) {
     #[inline]
-    fn into(self) -> (i32, i32, i32, i32) {
-        (self.x, self.y, self.width, self.height)
+    fn from(value: Rect) -> Self {
+        (value.x, value.y, value.width, value.height)
     }
 }
 
-impl Into<skia_safe::Rect> for Rect {
+impl From<Rect> for SkiaRect {
     #[inline]
-    fn into(self) -> skia_safe::Rect {
-        skia_safe::Rect::from_xywh(
-            self.x as f32,
-            self.y as f32,
-            self.width as f32,
-            self.height as f32,
+    fn from(value: Rect) -> Self {
+        SkiaRect::from_xywh(
+            value.x as f32,
+            value.y as f32,
+            value.width as f32,
+            value.height as f32,
         )
     }
 }
 
-impl Into<Rect> for skia_safe::Rect {
+impl From<SkiaRect> for Rect {
     #[inline]
-    fn into(self) -> Rect {
+    fn from(value: SkiaRect) -> Self {
         Rect::new(
-            self.x() as i32,
-            self.y() as i32,
-            self.width() as i32,
-            self.height() as i32,
+            value.x() as i32,
+            value.y() as i32,
+            value.width() as i32,
+            value.height() as i32,
         )
     }
 }
 
-impl Into<skia_safe::IRect> for Rect {
+impl From<Rect> for SkiaIRect {
     #[inline]
-    fn into(self) -> skia_safe::IRect {
-        skia_safe::IRect::from_xywh(self.x, self.y, self.width, self.height)
+    fn from(value: Rect) -> Self {
+        SkiaIRect::from_xywh(value.x, value.y, value.width, value.height)
     }
 }
 
-impl Into<Rect> for skia_safe::IRect {
+impl From<SkiaIRect> for Rect {
     #[inline]
-    fn into(self) -> Rect {
-        Rect::new(self.x(), self.y(), self.width(), self.height())
+    fn from(value: SkiaIRect) -> Self {
+        Rect::new(value.x(), value.y(), value.width(), value.height())
     }
 }
 
-impl Into<FRect> for Rect {
+impl From<Rect> for FRect {
     #[inline]
-    fn into(self) -> FRect {
+    fn from(value: Rect) -> Self {
         FRect {
-            x: self.x as f32,
-            y: self.y as f32,
-            width: self.width as f32,
-            height: self.height as f32,
+            x: value.x as f32,
+            y: value.y as f32,
+            width: value.width as f32,
+            height: value.height as f32,
         }
     }
 }
@@ -994,6 +992,7 @@ impl FRect {
 }
 
 impl From<(i32, i32, i32, i32)> for FRect {
+    #[inline]
     fn from((x, y, width, height): (i32, i32, i32, i32)) -> Self {
         Self {
             x: x as f32,
@@ -1005,6 +1004,7 @@ impl From<(i32, i32, i32, i32)> for FRect {
 }
 
 impl From<(f32, f32, f32, f32)> for FRect {
+    #[inline]
     fn from((x, y, width, height): (f32, f32, f32, f32)) -> Self {
         Self {
             x,
@@ -1015,41 +1015,45 @@ impl From<(f32, f32, f32, f32)> for FRect {
     }
 }
 
-impl Into<(f32, f32, f32, f32)> for FRect {
-    fn into(self) -> (f32, f32, f32, f32) {
-        (self.x, self.y, self.width, self.height)
+impl From<FRect> for (f32, f32, f32, f32) {
+    #[inline]
+    fn from(value: FRect) -> Self {
+        (value.x, value.y, value.width, value.height)
     }
 }
 
-impl Into<skia_safe::Rect> for FRect {
-    fn into(self) -> skia_safe::Rect {
-        skia_safe::Rect::from_xywh(
-            self.x as f32,
-            self.y as f32,
-            self.width as f32,
-            self.height as f32,
+impl From<FRect> for SkiaRect {
+    #[inline]
+    fn from(value: FRect) -> Self {
+        SkiaRect::from_xywh(
+            value.x,
+            value.y,
+            value.width,
+            value.height,
         )
     }
 }
 
-impl Into<skia_safe::IRect> for FRect {
-    fn into(self) -> skia_safe::IRect {
-        skia_safe::IRect::from_xywh(
-            self.x as i32,
-            self.y as i32,
-            self.width as i32,
-            self.height as i32,
+impl From<FRect> for SkiaIRect {
+    #[inline]
+    fn from(value: FRect) -> Self {
+        SkiaIRect::from_xywh(
+            value.x as i32,
+            value.y as i32,
+            value.width as i32,
+            value.height as i32,
         )
     }
 }
 
-impl Into<Rect> for FRect {
-    fn into(self) -> Rect {
+impl From<FRect> for Rect {
+    #[inline]
+    fn from(value: FRect) -> Self {
         Rect {
-            x: self.x as i32,
-            y: self.y as i32,
-            width: self.width as i32,
-            height: self.height as i32,
+            x: value.x as i32,
+            y: value.y as i32,
+            width: value.width as i32,
+            height: value.height as i32,
         }
     }
 }
@@ -1645,19 +1649,22 @@ impl FromValue for AtomicRect {
         Self::from_bytes(value.data(), Self::bytes_len())
     }
 }
-impl Into<AtomicRect> for (i32, i32, i32, i32) {
-    fn into(self) -> AtomicRect {
-        AtomicRect::new(self.0, self.1, self.2, self.3)
+impl From<(i32, i32, i32, i32)> for AtomicRect {
+    #[inline]
+    fn from(value: (i32, i32, i32, i32)) -> Self {
+        AtomicRect::new(value.0, value.1, value.2, value.3)
     }
 }
-impl Into<AtomicRect> for Rect {
-    fn into(self) -> AtomicRect {
-        AtomicRect::new(self.x, self.y, self.width, self.height)
+impl From<Rect> for AtomicRect {
+    #[inline]
+    fn from(value: Rect) -> Self {
+        AtomicRect::new(value.x, value.y, value.width, value.height)
     }
 }
-impl Into<Rect> for AtomicRect {
-    fn into(self) -> Rect {
-        Rect::new(self.x(), self.y(), self.width(), self.height())
+impl From<AtomicRect> for Rect {
+    #[inline]
+    fn from(value: AtomicRect) -> Self {
+        Rect::new(value.x(), value.y(), value.width(), value.height())
     }
 }
 

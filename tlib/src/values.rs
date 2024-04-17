@@ -131,7 +131,7 @@ impl ToBytes for usize {
 impl FromBytes for usize {
     fn from_bytes(data: &[u8], _: usize) -> Self {
         let mut bytes = [0u8; 8];
-        bytes.copy_from_slice(&data);
+        bytes.copy_from_slice(data);
         Self::from_be_bytes(bytes)
     }
 }
@@ -157,11 +157,7 @@ impl ToBytes for bool {
 }
 impl FromBytes for bool {
     fn from_bytes(data: &[u8], _: usize) -> Self {
-        if data[0] == 1 {
-            true
-        } else {
-            false
-        }
+        data[0] == 1
     }
 }
 impl FromValue for bool {
@@ -457,7 +453,7 @@ impl ToBytes for f32 {
 impl FromBytes for f32 {
     fn from_bytes(data: &[u8], _: usize) -> Self {
         let mut bytes = [0u8; 4];
-        bytes.copy_from_slice(&data);
+        bytes.copy_from_slice(data);
         f32::from_be_bytes(bytes)
     }
 }
@@ -512,7 +508,7 @@ impl ToBytes for String {
 }
 impl FromBytes for String {
     fn from_bytes(data: &[u8], _: usize) -> Self {
-        if data.len() == 0 {
+        if data.is_empty() {
             return "".to_string();
         }
         let data = if data[data.len() - 1] == 0 {
@@ -586,7 +582,7 @@ impl FromValue for char {
 impl<T: StaticType + ToBytes> ToBytes for Vec<T> {
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        for b in self.into_iter() {
+        for b in self.iter() {
             bytes.append(&mut b.to_bytes());
         }
         bytes
@@ -687,7 +683,7 @@ impl FromValue for PathBuf {
 
 fn from_value_generic<T: StaticType + FromBytes + Default>(
     data: &[u8],
-    vec: &Vec<usize>,
+    vec: &[usize],
     mut idx: usize,
     flag: usize,
 ) -> (T, usize) {
@@ -715,7 +711,7 @@ fn from_value_generic<T: StaticType + FromBytes + Default>(
         seg_arr.copy_from_slice(&data[idx..idx + len]);
         t = T::from_bytes(&seg_arr, T::bytes_len());
         idx += len;
-        return (t, idx);
+        (t, idx)
     }
 }
 

@@ -1,20 +1,27 @@
-use crate::{extend_element, extend_object, extend_widget, general_attr::GeneralAttr};
+use crate::{
+    extend_element, extend_object, extend_widget, general_attr::GeneralAttr, SplitGenericsRef,
+};
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Ident};
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     id: Option<&String>,
+    ignore_default: bool
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let general_attr = GeneralAttr::parse(ast)?;
+    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
 
     let async_task_clause = &general_attr.async_task_impl_clause;
     let async_method_clause = &general_attr.async_task_method_clause;
 
     let popupable_impl_clause = &general_attr.popupable_impl_clause;
     let popupable_reflect_clause = &general_attr.popupable_reflect_clause;
+
+    let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
+    let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
 
     let set_shared_id_clause = match id {
         Some(id) => quote!(
@@ -54,30 +61,44 @@ pub(crate) fn expand(
                 }
             }
 
+            let default_clause = if ignore_default {
+                quote!()
+            } else {
+                quote!(
+                    #[derive(Derivative)]
+                    #[derivative(Default)]
+                )
+            };
+
             let object_trait_impl_clause = extend_object::gen_object_trait_impl_clause(
                 name,
                 "shared_widget",
                 vec!["shared_widget", "widget", "element", "object"],
                 false,
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let element_trait_impl_clause = extend_element::gen_element_trait_impl_clause(
                 name,
                 vec!["shared_widget", "widget", "element"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
             let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
                 name,
                 Some("shared_widget"),
                 vec!["shared_widget", "widget"],
+                (&impl_generics, &ty_generics, &where_clause),
             )?;
 
-            let shared_widget_trait_impl_clause =
-                gen_shared_widget_trait_impl_clause(name, vec!["shared_widget"])?;
+            let shared_widget_trait_impl_clause = gen_shared_widget_trait_impl_clause(
+                name,
+                vec!["shared_widget"],
+                (&impl_generics, &ty_generics, &where_clause),
+            )?;
 
             Ok(quote! {
-                #[derive(Derivative)]
-                #[derivative(Default)]
+                #default_clause
                 #ast
 
                 #object_trait_impl_clause
@@ -92,21 +113,24 @@ pub(crate) fn expand(
 
                 #popupable_impl_clause
 
-                impl WidgetAcquire for #name {}
+                #global_watch_impl_clause
 
-                impl SuperType for #name {
+                impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
+
+                impl #impl_generics SuperType for #name #ty_generics #where_clause {
                     #[inline]
                     fn super_type(&self) -> Type {
                         SharedWidget::static_type()
                     }
                 }
 
-                impl InnerInitializer for #name {
+                impl #impl_generics InnerInitializer for #name #ty_generics #where_clause {
                     #[inline]
                     fn inner_type_register(&self, type_registry: &mut TypeRegistry) {
                         type_registry.register::<#name, ReflectWidgetImpl>();
                         type_registry.register::<#name, ReflectSharedWidgetImpl>();
                         #popupable_reflect_clause
+                        #global_watch_reflect_clause
                     }
 
                     #[inline]
@@ -118,21 +142,21 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl PointEffective for #name {
+                impl #impl_generics PointEffective for #name #ty_generics #where_clause {
                     #[inline]
                     fn point_effective(&self, point: &Point) -> bool {
                         self.shared_widget.widget.point_effective(point)
                     }
                 }
 
-                impl ChildRegionAcquirer for #name {
+                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.shared_widget.widget.child_region()
                     }
                 }
 
-                impl #name {
+                impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
             })
@@ -147,6 +171,7 @@ pub(crate) fn expand(
 pub(crate) fn gen_shared_widget_trait_impl_clause(
     name: &Ident,
     shared_widget_path: Vec<&'static str>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let shared_widget_path: Vec<_> = shared_widget_path
         .iter()
@@ -154,7 +179,7 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
         .collect();
 
     Ok(quote!(
-        impl SharedWidgetExt for #name {
+        impl #impl_generics SharedWidgetExt for #name #ty_generics #where_clause {
             #[inline]
             fn shared_id(&self) -> &'static str {
                 self.#(#shared_widget_path).*.shared_id()
@@ -186,6 +211,6 @@ pub(crate) fn gen_shared_widget_trait_impl_clause(
             }
         }
 
-        impl IsA<SharedWidget> for #name {}
+        impl #impl_generics IsA<SharedWidget> for #name #ty_generics #where_clause {}
     ))
 }

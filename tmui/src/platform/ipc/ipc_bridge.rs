@@ -41,16 +41,17 @@ pub struct IpcBridgeModel<T: 'static + Copy + Sync + Send, M: 'static + Copy + S
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridgeModel<T, M> {
+    #[allow(clippy::new_ret_no_self)]
     #[inline]
     pub fn new(
         shared_widget_id: Option<&'static str>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
     ) -> Box<dyn IpcBridge> {
-        let lock = if master.is_some() {
-            master.as_ref().unwrap().read().buffer_lock()
-        } else if slave.is_some() {
-            slave.as_ref().unwrap().read().buffer_lock()
+        let lock = if let Some(ref master) = master {
+            master.read().buffer_lock()
+        } else if let Some(ref slave) = slave {
+            slave.read().buffer_lock()
         } else {
             unreachable!()
         };
@@ -91,7 +92,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
 
         if let Some(ref slave) = self.slave {
             slave.read().wait(timeout);
-            return;
         }
     }
 
@@ -103,7 +103,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> IpcBridge
 
         if let Some(ref slave) = self.slave {
             slave.read().signal();
-            return;
         }
     }
 

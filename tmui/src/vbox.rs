@@ -1,14 +1,14 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{
-        ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
-        SCALE_ADAPTION, ContainerLayoutEnum,
+        ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate,
+        StaticSizeUnifiedAdjust, SCALE_ADAPTION,
     },
     layout::LayoutManager,
     prelude::*,
 };
 use derivative::Derivative;
-use tlib::object::ObjectSubclass;
+use tlib::{namespace::Orientation, object::ObjectSubclass};
 
 #[extends(Container)]
 pub struct VBox {
@@ -26,6 +26,7 @@ impl ObjectImpl for VBox {
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<VBox, ReflectContentAlignment>();
         type_registry.register::<VBox, ReflectSizeUnifiedAdjust>();
+        type_registry.register::<VBox, ReflectSpacingCapable>();
     }
 }
 
@@ -146,7 +147,6 @@ pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
     content_valign: Align,
 ) {
     let parent_rect = widget.contents_rect(None);
-    let is_strict_children_layout = widget.is_strict_children_layout();
     let children_total_height: i32 =
         if content_valign == Align::Center || content_valign == Align::End {
             widget
@@ -157,10 +157,7 @@ pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         } else {
             0
         };
-
-    if !is_strict_children_layout {
-        debug_assert!(parent_rect.height() >= children_total_height);
-    }
+    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
 
     let mut offset = match content_valign {
         Align::Start => parent_rect.y(),
@@ -168,7 +165,7 @@ pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         Align::End => parent_rect.height() - children_total_height + parent_rect.y(),
     };
 
-    for child in widget.children_mut().iter_mut() {
+    for (idx, child) in widget.children_mut().iter_mut().enumerate() {
         match content_halign {
             Align::Start => child.set_fixed_x(parent_rect.x() + child.margin_left()),
             Align::Center => {
@@ -181,25 +178,26 @@ pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
             }
         }
 
-        child.set_fixed_y(offset + child.margin_top());
-        offset += child.image_rect().height();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_y(offset + child.margin_top() + spacing);
+        offset += child.image_rect().height() + spacing;
     }
 }
 
 fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let parent_rect = widget.contents_rect(None);
-    let is_strict_children_layout = widget.is_strict_children_layout();
     let mut start_childs = vec![];
     let mut center_childs = vec![];
     let mut end_childs = vec![];
-    let mut totoal_children_height = 0;
+    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
     let mut children = widget.children_mut();
 
     let mut center_childs_height = 0;
     let mut end_childs_height = 0;
+    let mut idx = 0;
 
     for child in children.iter_mut() {
-        totoal_children_height += child.image_rect().height();
         match child.halign() {
             Align::Start => child.set_fixed_x(parent_rect.x() + child.margin_left()),
             Align::Center => {
@@ -225,27 +223,35 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
         }
     }
 
-    if !is_strict_children_layout {
-        debug_assert!(parent_rect.height() >= totoal_children_height);
-    }
-
     let mut offset = parent_rect.y();
     for child in start_childs {
-        child.set_fixed_y(offset);
-        offset += child.image_rect().height();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_y(offset + child.margin_top() + spacing);
+        offset += child.image_rect().height() + spacing;
+
+        idx += 1;
     }
 
     let middle_point = parent_rect.height() / 2 + parent_rect.y();
     offset = middle_point - (center_childs_height / 2);
     for child in center_childs {
-        child.set_fixed_y(offset);
-        offset += child.image_rect().height();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_y(offset + child.margin_top() + spacing);
+        offset += child.image_rect().height() + spacing;
+
+        idx += 1;
     }
 
     offset = parent_rect.y() + parent_rect.height() - end_childs_height;
     for child in end_childs {
-        child.set_fixed_y(offset);
-        offset += child.image_rect().height();
+        let spacing = if idx == 0 { 0 } else { spacing };
+
+        child.set_fixed_y(offset + child.margin_top() + spacing);
+        offset += child.image_rect().height() + spacing;
+
+        idx += 1;
     }
 }
 
@@ -329,5 +335,12 @@ impl StaticSizeUnifiedAdjust for VBox {
 
                 c.set_fixed_height(ch);
             });
+    }
+}
+
+impl SpacingCapable for VBox {
+    #[inline]
+    fn orientation(&self) -> Orientation {
+        Orientation::Vertical
     }
 }

@@ -3,7 +3,7 @@ use tipc::{
     parking_lot::RwLock,
     parking_lot::{lock_api::RwLockWriteGuard, RawRwLock},
 };
-use tlib::ptr_ref;
+use tlib::{ptr_ref, skia_safe::surfaces::wrap_pixels};
 
 use super::{create_image_info, Backend, BackendType};
 use crate::{
@@ -27,14 +27,13 @@ impl RasterBackend {
         let image_info = create_image_info((guard.width() as i32, guard.height() as i32));
 
         let row_bytes = guard.row_bytes();
-        let surface =
-            Surface::new_raster_direct(&image_info, guard.get_pixels_mut(), row_bytes, None)
-                .unwrap()
-                .to_owned();
+        let surface = wrap_pixels(&image_info, guard.get_pixels_mut(), row_bytes, None)
+            .unwrap()
+            .to_owned();
 
         Box::new(Self {
-            image_info: image_info,
-            surface: surface,
+            image_info,
+            surface,
         })
     }
 }
@@ -55,7 +54,7 @@ impl Backend for RasterBackend {
         self.image_info = create_image_info(dimensitions);
 
         let mut new_surface =
-            Surface::new_raster_direct(&self.image_info, guard.get_pixels_mut(), row_bytes, None)
+            wrap_pixels(&self.image_info, guard.get_pixels_mut(), row_bytes, None)
                 .unwrap()
                 .to_owned();
 

@@ -15,7 +15,7 @@ impl ObjectImpl for MyDiffWidget {
     fn initialize(&mut self) {
         self.set_vexpand(true);
         self.set_hexpand(true);
-        self.set_background(Color::GREY);
+        self.set_background(Color::GREY_MEDIUM);
         self.set_rerender_difference(true);
     }
 }

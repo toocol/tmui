@@ -1,5 +1,5 @@
 use quote::{quote, ToTokens};
-use syn::{parse::Parse, Ident, Token, token};
+use syn::{parse::Parse, token, Ident, Token};
 
 pub(crate) struct CastInfo {
     obj: Obj,
@@ -34,12 +34,9 @@ impl Parse for CastInfo {
 
         input.parse::<Token!(as)>()?;
 
-        let ty_ident: Ident = input.parse()?;
+        let ty: Ident = input.parse()?;
 
-        Ok(Self {
-            obj: obj,
-            ty: ty_ident,
-        })
+        Ok(Self { obj, ty })
     }
 }
 

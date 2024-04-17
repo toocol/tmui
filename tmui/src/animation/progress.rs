@@ -118,10 +118,10 @@ impl Add<FRect> for Progress {
     #[inline]
     fn add(self, rhs: FRect) -> Self::Output {
         FRect::new(
-            self.0 + rhs.x() as f32,
-            self.0 + rhs.y() as f32,
-            self.0 + rhs.width() as f32,
-            self.0 + rhs.height() as f32,
+            self.0 + rhs.x(),
+            self.0 + rhs.y(),
+            self.0 + rhs.width(),
+            self.0 + rhs.height(),
         )
     }
 }
@@ -132,10 +132,10 @@ impl Sub<FRect> for Progress {
     #[inline]
     fn sub(self, rhs: FRect) -> Self::Output {
         FRect::new(
-            self.0 - rhs.x() as f32,
-            self.0 - rhs.y() as f32,
-            self.0 - rhs.width() as f32,
-            self.0 - rhs.height() as f32,
+            self.0 - rhs.x(),
+            self.0 - rhs.y(),
+            self.0 - rhs.width(),
+            self.0 - rhs.height(),
         )
     }
 }
@@ -146,10 +146,10 @@ impl Mul<FRect> for Progress {
     #[inline]
     fn mul(self, rhs: FRect) -> Self::Output {
         FRect::new(
-            self.0 * rhs.x() as f32,
-            self.0 * rhs.y() as f32,
-            self.0 * rhs.width() as f32,
-            self.0 * rhs.height() as f32,
+            self.0 * rhs.x(),
+            self.0 * rhs.y(),
+            self.0 * rhs.width(),
+            self.0 * rhs.height(),
         )
     }
 }
@@ -160,10 +160,10 @@ impl Div<FRect> for Progress {
     #[inline]
     fn div(self, rhs: FRect) -> Self::Output {
         FRect::new(
-            self.0 / rhs.x() as f32,
-            self.0 / rhs.y() as f32,
-            self.0 / rhs.width() as f32,
-            self.0 / rhs.height() as f32,
+            self.0 / rhs.x(),
+            self.0 / rhs.y(),
+            self.0 / rhs.width(),
+            self.0 / rhs.height(),
         )
     }
 }
@@ -227,7 +227,7 @@ impl Add<FPoint> for Progress {
 
     #[inline]
     fn add(self, rhs: FPoint) -> Self::Output {
-        FPoint::new(self.0 + rhs.x() as f32, self.0 + rhs.y() as f32)
+        FPoint::new(self.0 + rhs.x(), self.0 + rhs.y())
     }
 }
 
@@ -236,7 +236,7 @@ impl Sub<FPoint> for Progress {
 
     #[inline]
     fn sub(self, rhs: FPoint) -> Self::Output {
-        FPoint::new(self.0 - rhs.x() as f32, self.0 - rhs.y() as f32)
+        FPoint::new(self.0 - rhs.x(), self.0 - rhs.y())
     }
 }
 
@@ -245,7 +245,7 @@ impl Mul<FPoint> for Progress {
 
     #[inline]
     fn mul(self, rhs: FPoint) -> Self::Output {
-        FPoint::new(self.0 * rhs.x() as f32, self.0 * rhs.y() as f32)
+        FPoint::new(self.0 * rhs.x(), self.0 * rhs.y())
     }
 }
 
@@ -254,7 +254,7 @@ impl Div<FPoint> for Progress {
 
     #[inline]
     fn div(self, rhs: FPoint) -> Self::Output {
-        FPoint::new(self.0 / rhs.x() as f32, self.0 / rhs.y() as f32)
+        FPoint::new(self.0 / rhs.x(), self.0 / rhs.y())
     }
 }
 

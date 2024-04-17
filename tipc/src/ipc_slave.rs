@@ -25,7 +25,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcSlave<T, M> {
         let slave_context = SlaveContext::open(name);
 
         Self {
-            slave_context: slave_context,
+            slave_context,
             retentions: VecDeque::new(),
         }
     }
@@ -54,7 +54,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
 
     #[inline]
     fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError> {
-        self.slave_context.try_send(evt.into())
+        self.slave_context.try_send(evt)
     }
 
     #[inline]
@@ -72,7 +72,6 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
         self.slave_context
             .try_recv_vec()
             .into_iter()
-            .map(|e| e.into())
             .collect()
     }
 
@@ -106,7 +105,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcSlave<T, M> {
 
     #[inline]
     fn region(&self, id: &'static str) -> Option<Rect> {
-        let id = generate_u128(id).expect(&format!("Invalid id: {}", id));
+        let id = generate_u128(id).unwrap_or_else(|| panic!("Invalid id: {}", id));
 
         let shared_info = self.slave_context.shared_info();
         let idx = shared_info.region_idx.load(Ordering::Acquire);

@@ -4,6 +4,7 @@ pub mod application;
 pub mod opti;
 pub mod primitive;
 pub mod runtime;
+pub mod shortcut;
 pub mod button;
 pub mod clipboard;
 pub mod backend;
@@ -31,6 +32,9 @@ pub mod tree_view;
 pub mod vbox;
 pub mod hbox;
 pub mod image;
+pub mod input;
+pub mod font;
+pub mod icons;
 
 pub mod skia_safe {
     pub use tlib::skia_safe::*;

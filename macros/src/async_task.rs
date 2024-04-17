@@ -5,69 +5,69 @@ use syn::{
     Attribute, DeriveInput, Meta, MetaList, MetaNameValue, NestedMeta,
 };
 
-pub(crate) struct AsyncTask {
+use crate::SplitGenericsRef;
+
+pub(crate) struct AsyncTask<'a> {
     pub(crate) name: Option<Ident>,
     pub(crate) name_snake: Option<Ident>,
 
     pub(crate) value: Option<syn::Type>,
 
     pub(crate) field: Option<Ident>,
+
+    generics: SplitGenericsRef<'a>,
 }
 
-impl AsyncTask {
-    pub(crate) fn parse_attr(attr: &Attribute) -> Option<Self> {
+impl<'a> AsyncTask<'a> {
+    pub(crate) fn parse_attr(attr: &Attribute, generics: SplitGenericsRef<'a>) -> Option<Self> {
         let mut res = Self {
             name: None,
             name_snake: None,
             value: None,
             field: None,
+            generics,
         };
 
-        if let Ok(meta) = attr.parse_meta() {
-            match meta {
-                Meta::List(MetaList { nested, .. }) => {
-                    for meta in nested {
-                        match meta {
-                            NestedMeta::Meta(Meta::NameValue(MetaNameValue {
-                                ref path,
-                                ref lit,
-                                ..
-                            })) => {
-                                let ident = path.get_ident().unwrap();
+        if let Ok(Meta::List(MetaList { nested, .. })) = attr.parse_meta() {
+            for meta in nested {
+                match meta {
+                    NestedMeta::Meta(Meta::NameValue(MetaNameValue {
+                        ref path,
+                        ref lit,
+                        ..
+                    })) => {
+                        let ident = path.get_ident().unwrap();
 
-                                match ident.to_string().as_str() {
-                                    "name" => match lit {
-                                        syn::Lit::Str(lit) => {
-                                            let name = lit.value();
-                                            let ident = Ident::new(&name, lit.span());
-                                            res.name = Some(ident);
+                        match ident.to_string().as_str() {
+                            "name" => match lit {
+                                syn::Lit::Str(lit) => {
+                                    let name = lit.value();
+                                    let ident = Ident::new(&name, lit.span());
+                                    res.name = Some(ident);
 
-                                            let snake_name = to_snake_case(&name);
+                                    let snake_name = to_snake_case(&name);
 
-                                            res.name_snake = Some(Ident::new(&snake_name, lit.span()));
-                                            res.field = Some(Ident::new(
-                                                &format!("task_{}", snake_name),
-                                                lit.span(),
-                                            ));
-                                        }
-                                        _ => return None,
-                                    },
-                                    "value" => match lit {
-                                        syn::Lit::Str(lit) => {
-                                            let token = TokenStream::from_str(&lit.value()).expect("`async_task` value parse error.");
-                                            let ty = syn::parse2::<syn::Type>(token).expect("`async_task` value parse error.");
-                                            res.value = Some(ty)
-                                        }
-                                        _ => return None,
-                                    },
-                                    _ => return None,
+                                    res.name_snake = Some(Ident::new(&snake_name, lit.span()));
+                                    res.field = Some(Ident::new(
+                                        &format!("task_{}", snake_name),
+                                        lit.span(),
+                                    ));
                                 }
-                            }
+                                _ => return None,
+                            },
+                            "value" => match lit {
+                                syn::Lit::Str(lit) => {
+                                    let token = TokenStream::from_str(&lit.value()).expect("`async_task` value parse error.");
+                                    let ty = syn::parse2::<syn::Type>(token).expect("`async_task` value parse error.");
+                                    res.value = Some(ty)
+                                }
+                                _ => return None,
+                            },
                             _ => return None,
                         }
                     }
+                    _ => return None,
                 }
-                _ => {}
             }
         }
 
@@ -83,6 +83,7 @@ impl AsyncTask {
         }
 
         let widget = &ast.ident;
+        let (impl_generics, ty_generics, where_clause) = self.generics;
 
         match &ast.data {
             syn::Data::Struct(..) => {
@@ -91,21 +92,21 @@ impl AsyncTask {
 
                 Ok(quote!(
                     #[extends(Object)]
-                    struct #task {
+                    struct #task #impl_generics #where_clause {
                         join_handler: Option<tlib::tokio::task::JoinHandle<#value>>,
                         timer: Box<tlib::timer::Timer>,
-                        then: Option<Box<dyn FnOnce(&'static mut #widget, #value)>>,
-                        widget: Option<std::ptr::NonNull<#widget>>,
+                        then: Option<Box<dyn FnOnce(&'static mut #widget #ty_generics, #value)>>,
+                        widget: Option<std::ptr::NonNull<#widget #ty_generics>>,
                     }
 
-                    impl ObjectSubclass for #task {
+                    impl #impl_generics ObjectSubclass for #task #ty_generics #where_clause {
                         const NAME: &'static str = "AsyncTask";
                     }
-                    impl ObjectImpl for #task {}
+                    impl #impl_generics ObjectImpl for #task #ty_generics #where_clause {}
 
-                    impl #task {
+                    impl #impl_generics #task #ty_generics #where_clause {
                         #[inline]
-                        pub fn new(widget: &mut #widget, join: tlib::tokio::task::JoinHandle<#value>) -> Box<Self> {
+                        pub fn new(widget: &mut #widget #ty_generics, join: tlib::tokio::task::JoinHandle<#value>) -> Box<Self> {
                             let mut task = Box::new(Self {
                                 object: Default::default(),
                                 join_handler: Some(join),
@@ -121,7 +122,7 @@ impl AsyncTask {
                         }
 
                         #[inline]
-                        pub fn then<F: FnOnce(&'static mut #widget, #value) + 'static>(mut self: Box<Self>, then: F) -> Box<Self> {
+                        pub fn then<F: FnOnce(&'static mut #widget #ty_generics, #value) + 'static>(mut self: Box<Self>, then: F) -> Box<Self> {
                             self.then = Some(Box::new(then));
                             self
                         }
@@ -142,7 +143,7 @@ impl AsyncTask {
                 ))
             }
             _ => {
-                return Err(syn::Error::new_spanned(
+                Err(syn::Error::new_spanned(
                     ast,
                     "`async_task` should defined on struct.",
                 ))
@@ -162,12 +163,13 @@ impl AsyncTask {
         let name_snake = self.name_snake.as_ref().unwrap();
         let value = self.value.as_ref().unwrap();
         let field = self.field.as_ref().unwrap();
+        let (_, ty_generics, _) = self.generics;
 
         Ok(quote!(
-            fn #name_snake<F, T>(&mut self, future: F, then: Option<T>)
+            fn #name_snake<_F, _T>(&mut self, future: _F, then: Option<_T>)
             where
-                F: std::future::Future<Output = #value> + Send + 'static,
-                T: FnOnce(&'static mut #widget, #value) + 'static,
+                _F: std::future::Future<Output = #value> + Send + 'static,
+                _T: FnOnce(&'static mut #widget #ty_generics, #value) + 'static,
             {
                 let join = tlib::tokio::spawn(future);
                 let mut task = #name::new(self, join);

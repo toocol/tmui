@@ -9,8 +9,7 @@ use tlib::{
     global::SemanticExt,
     skia_safe::{
         gpu::{
-            gl::{Format, FramebufferInfo},
-            BackendRenderTarget, DirectContext, SurfaceOrigin,
+            backend_render_targets::make_gl, gl::{Format, FramebufferInfo}, surfaces::wrap_backend_render_target, DirectContext, Protected, SurfaceOrigin
         },
         ColorType, ImageInfo,
     },
@@ -44,7 +43,7 @@ impl OpenGLBackend {
         })
         .expect("Could not create interface");
         let mut context =
-            DirectContext::new_gl(Some(interface), None).expect("Create `GrDirectContext` failed");
+            DirectContext::new_gl(interface, None).expect("Create `GrDirectContext` failed");
 
         // Create frame buffer info:
         let mut fboid: GLint = 0;
@@ -52,6 +51,7 @@ impl OpenGLBackend {
         let fb_info = FramebufferInfo {
             fboid: fboid.try_into().unwrap(),
             format: Format::RGBA8.into(),
+            protected: Protected::No,
         };
 
         let num_samples = config.num_samples() as usize;
@@ -148,9 +148,9 @@ fn create_gl_surface(
     height: i32,
 ) -> Surface {
     let backend_render_target =
-        BackendRenderTarget::new_gl((width, height), Some(num_samples), stencil_size, fb_info);
+        make_gl((width, height), Some(num_samples), stencil_size, fb_info);
 
-    Surface::from_backend_render_target(
+    wrap_backend_render_target(
         context,
         &backend_render_target,
         SurfaceOrigin::BottomLeft,

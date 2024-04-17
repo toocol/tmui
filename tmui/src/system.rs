@@ -11,7 +11,7 @@ use crate::clipboard::Clipboard;
 use once_cell::sync::Lazy;
 
 pub(crate) fn system() -> &'static mut System {
-    static mut SYSTEM: Lazy<Box<System>> = Lazy::new(|| System::new());
+    static mut SYSTEM: Lazy<Box<System>> = Lazy::new(System::new);
     unsafe { &mut SYSTEM }
 }
 

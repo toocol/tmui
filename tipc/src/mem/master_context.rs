@@ -145,10 +145,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
 
     #[inline]
     fn try_recv(&self) -> Option<IpcEvent<T>> {
-        match self.slave_queue.try_read() {
-            Some(ipc_evt) => Some(ipc_evt.into()),
-            None => None,
-        }
+        self.slave_queue.try_read().map(|ipc_evt| ipc_evt.into())
     }
 
     #[inline]
@@ -248,7 +245,7 @@ impl<T: 'static + Copy, M: 'static + Copy> MemContext<T, M> for MasterContext<T,
     }
 
     fn create_buffer(&mut self, width: u32, height: u32) {
-        let buffer_name = format!("{}{}_{}", self.name.to_string(), IPC_MEM_BUFFER_NAME, 0);
+        let buffer_name = format!("{}{}_{}", self.name, IPC_MEM_BUFFER_NAME, 0);
 
         self.buffer = Some(
             ShmemConf::new()

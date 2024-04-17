@@ -178,7 +178,7 @@ impl CellRender for TextCellRender {
 
         let text = val.get::<String>();
         let origin = geometry.top_left();
-        painter.draw_paragraph(&text, origin, self.letter_spacing, geometry.width() as f32, Some(1), true);
+        painter.draw_paragraph(&text, origin, self.letter_spacing, geometry.width(), Some(1), true);
 
         painter.restore_pen();
         painter.restore();
