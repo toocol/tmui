@@ -1,9 +1,9 @@
+use crate::SplitGenericsRef;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, Meta, MetaList, MetaNameValue, NestedMeta};
-use crate::SplitGenericsRef;
 
-static POSITION_BASED_ANIMATIONS: [&'static str; 3] = ["Linear", "EaseIn", "EaseOut"];
+static POSITION_BASED_ANIMATIONS: [&str; 3] = ["Linear", "EaseIn", "EaseOut"];
 
 pub(crate) struct Animation<'a> {
     pub(crate) mode: Option<Ident>,
@@ -27,97 +27,92 @@ impl<'a> Animation<'a> {
             generics,
         };
 
-        if let Ok(meta) = attr.parse_meta() {
-            match meta {
-                Meta::List(MetaList { nested, .. }) => {
-                    for meta in nested {
-                        match meta {
-                            NestedMeta::Meta(Meta::NameValue(MetaNameValue {
-                                ref path,
-                                ref lit,
-                                ..
-                            })) => {
-                                let ident = path.get_ident().unwrap();
+        if let Ok(Meta::List(MetaList { nested, .. })) = attr.parse_meta() {
+            for meta in nested {
+                match meta {
+                    NestedMeta::Meta(Meta::NameValue(MetaNameValue {
+                        ref path,
+                        ref lit,
+                        ..
+                    })) => {
+                        let ident = path.get_ident().unwrap();
 
-                                match ident.to_string().as_str() {
-                                    "mode" => {
-                                        match lit {
-                                            syn::Lit::Str(lit) => {
-                                                let lit_str = lit.value();
-                                                animation.mode = Some(Ident::new(&lit_str, lit.span()));
-                                            }
-                                            _ => return Err(syn::Error::new_spanned(
-                                                attr,
-                                                "Proc-macro `animatable`: value of config `mode` should be literal.",
-                                            )),
-                                        }
+                        match ident.to_string().as_str() {
+                            "mode" => {
+                                match lit {
+                                    syn::Lit::Str(lit) => {
+                                        let lit_str = lit.value();
+                                        animation.mode = Some(Ident::new(&lit_str, lit.span()));
                                     }
-                                    "ty" => {
-                                        match lit {
-                                            syn::Lit::Str(lit) => {
-                                                let lit_str = lit.value();
-                                                animation.ty = Some(Ident::new(&lit_str, lit.span()));
-                                            }
-                                            _ => return Err(syn::Error::new_spanned(
-                                                attr,
-                                                "Proc-macro `animatable`: value of config `ty` should be literal.",
-                                            )),
-                                        }
+                                    _ => return Err(syn::Error::new_spanned(
+                                        attr,
+                                        "Proc-macro `animatable`: value of config `mode` should be literal.",
+                                    )),
+                                }
+                            }
+                            "ty" => {
+                                match lit {
+                                    syn::Lit::Str(lit) => {
+                                        let lit_str = lit.value();
+                                        animation.ty = Some(Ident::new(&lit_str, lit.span()));
                                     }
-                                    "direction" => {
-                                        match lit {
-                                            syn::Lit::Str(lit) => {
-                                                let lit_str = lit.value();
-                                                animation.direction = Some(Ident::new(&lit_str, lit.span()));
-                                            }
-                                            _ => return Err(syn::Error::new_spanned(
-                                                attr,
-                                                "Proc-macro `animatable`: value of config `direction` should be literal.",
-                                            )),
-                                        }
+                                    _ => return Err(syn::Error::new_spanned(
+                                        attr,
+                                        "Proc-macro `animatable`: value of config `ty` should be literal.",
+                                    )),
+                                }
+                            }
+                            "direction" => {
+                                match lit {
+                                    syn::Lit::Str(lit) => {
+                                        let lit_str = lit.value();
+                                        animation.direction = Some(Ident::new(&lit_str, lit.span()));
                                     }
-                                    "effect" => {
-                                        match lit {
-                                            syn::Lit::Str(lit) => {
-                                                let lit_str = lit.value();
-                                                animation.effect = Some(Ident::new(&lit_str, lit.span()));
-                                            }
-                                            _ => return Err(syn::Error::new_spanned(
-                                                attr,
-                                                "Proc-macro `animatable`: value of config `effect` should be literal.",
-                                            )),
-                                        }
+                                    _ => return Err(syn::Error::new_spanned(
+                                        attr,
+                                        "Proc-macro `animatable`: value of config `direction` should be literal.",
+                                    )),
+                                }
+                            }
+                            "effect" => {
+                                match lit {
+                                    syn::Lit::Str(lit) => {
+                                        let lit_str = lit.value();
+                                        animation.effect = Some(Ident::new(&lit_str, lit.span()));
                                     }
-                                    "duration" => {
-                                        match lit {
-                                            syn::Lit::Int(lit) => {
-                                                let duration = lit.base10_parse()?;
-                                                animation.duration = Some(duration);
-                                            }
-                                            _ => return Err(syn::Error::new_spanned(
-                                                attr,
-                                                "Proc-macro `animatable`: value of config `duration` should be int.",
-                                            )),
-                                        }
+                                    _ => return Err(syn::Error::new_spanned(
+                                        attr,
+                                        "Proc-macro `animatable`: value of config `effect` should be literal.",
+                                    )),
+                                }
+                            }
+                            "duration" => {
+                                match lit {
+                                    syn::Lit::Int(lit) => {
+                                        let duration = lit.base10_parse()?;
+                                        animation.duration = Some(duration);
                                     }
-                                    _ => {
-                                        return Err(syn::Error::new_spanned(
-                                            attr,
-                                            "Proc-macro `animatable`: only support config `ty = xxx`",
-                                        ))
-                                    }
+                                    _ => return Err(syn::Error::new_spanned(
+                                        attr,
+                                        "Proc-macro `animatable`: value of config `duration` should be int.",
+                                    )),
                                 }
                             }
                             _ => {
                                 return Err(syn::Error::new_spanned(
                                     attr,
-                                    "Proc-macro `animatable`: only support config `ty = xxx, direction = xxx, duration = xxx`",
+                                    "Proc-macro `animatable`: only support config `ty = xxx`",
                                 ))
                             }
                         }
                     }
+                    _ => {
+                        return Err(syn::Error::new_spanned(
+                            attr,
+                            "Proc-macro `animatable`: only support config `ty = xxx, direction = xxx, duration = xxx`",
+                        ))
+                    }
                 }
-                _ => {}
             }
         }
 
@@ -136,16 +131,14 @@ impl<'a> Animation<'a> {
                     "Position-based animations must assign direction.(Linear, EaseIn, EaseOut)",
                 ));
             }
-        } else {
-            if animation.direction.is_some()
-                || animation.effect.is_some()
-                || animation.mode.is_some()
-            {
-                return Err(syn::Error::new_spanned(
+        } else if animation.direction.is_some()
+            || animation.effect.is_some()
+            || animation.mode.is_some()
+        {
+            return Err(syn::Error::new_spanned(
                     attr,
                     "Unable to assign `direction`,`effect` and `mode` on transparency-based animations.(FadeLinear, FadeEaseIn, FadeEaseOut)",
                 ));
-            }
         }
 
         Ok(animation)
@@ -205,24 +198,24 @@ impl<'a> Animation<'a> {
 
     pub(crate) fn parse_default(&self) -> syn::Result<proc_macro2::TokenStream> {
         let mode = if let Some(mode) = self.mode.as_ref() {
-            format!("animation::AnimationMode::{}", mode.to_string())
+            format!("animation::AnimationMode::{}", mode)
         } else {
             "Default::default()".to_string()
         };
         let effect = if let Some(effect) = self.effect.as_ref() {
-            format!("animation::AnimationEffect::{}", effect.to_string())
+            format!("animation::AnimationEffect::{}", effect)
         } else {
             "Default::default()".to_string()
         };
         let direction = if let Some(direction) = self.direction.as_ref() {
-            format!("Some(animation::Direction::{})", direction.to_string())
+            format!("Some(animation::Direction::{})", direction)
         } else {
             "None".to_string()
         };
         let ty = self.ty.as_ref().unwrap();
         let duration = *self.duration.as_ref().unwrap();
 
-        let default = format!("animation::AnimationModel::new({}, animation::Animation::{}, std::time::Duration::from_millis({}), {}, Some({}))", mode, ty.to_string(), duration, direction, effect);
+        let default = format!("animation::AnimationModel::new({}, animation::Animation::{}, std::time::Duration::from_millis({}), {}, Some({}))", mode, ty, duration, direction, effect);
 
         Ok(quote!(
             #[derivative(Default(value = #default))]
@@ -261,9 +254,9 @@ impl<'a> Animation<'a> {
     }
 }
 
-fn rect_holder<'a>(
+fn rect_holder(
     name: &Ident,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     Ok((
         quote!(
@@ -288,9 +281,9 @@ fn rect_holder<'a>(
     ))
 }
 
-fn transparency_holder<'a>(
+fn transparency_holder(
     name: &Ident,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     Ok((
         quote!(

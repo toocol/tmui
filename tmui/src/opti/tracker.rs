@@ -8,7 +8,7 @@ use std::{
     time::Instant,
 };
 
-const TRACK_FILE_NAME: &'static str = "track_file";
+const TRACK_FILE_NAME: &str = "track_file";
 
 static TRACKED: AtomicBool = AtomicBool::new(false);
 #[inline]
@@ -49,10 +49,10 @@ impl Tracker {
 
         let tracker = Self::instance();
         let total_runtime = tracker.instant.elapsed().as_millis() as f64 / 1000.;
-        file.write(format!("Application total runtime: {}s.\r\n\r\n", total_runtime).as_bytes())?;
+        file.write_all(format!("Application total runtime: {}s.\r\n\r\n", total_runtime).as_bytes())?;
 
         for (id, map) in tracker.tracks.iter_mut() {
-            file.write(format!("[{:?}]\r\n", id).as_bytes())?;
+            file.write_all(format!("[{:?}]\r\n", id).as_bytes())?;
 
             for (name, rec) in map.iter_mut() {
                 rec.sort();
@@ -81,18 +81,18 @@ impl Tracker {
                 let percentile_99 =
                     rec[(0.99 * (rec.len() - 1) as f64).round() as usize] as f64 / 1000.;
 
-                file.write(format!("{}:\r\n", name).as_bytes())?;
-                file.write(format!("median time spend         = {}ms\r\n", median).as_bytes())?;
-                file.write(format!("average time spend        = {:.3}ms\r\n", average).as_bytes())?;
-                file.write(format!("maximum time spend        = {}ms\r\n", max).as_bytes())?;
-                file.write(format!("minimum time spend        = {}ms\r\n", min).as_bytes())?;
-                file.write(
+                file.write_all(format!("{}:\r\n", name).as_bytes())?;
+                file.write_all(format!("median time spend         = {}ms\r\n", median).as_bytes())?;
+                file.write_all(format!("average time spend        = {:.3}ms\r\n", average).as_bytes())?;
+                file.write_all(format!("maximum time spend        = {}ms\r\n", max).as_bytes())?;
+                file.write_all(format!("minimum time spend        = {}ms\r\n", min).as_bytes())?;
+                file.write_all(
                     format!("percentile 95% time spend = {}ms\r\n", percentile_95).as_bytes(),
                 )?;
-                file.write(
+                file.write_all(
                     format!("percentile 99% time spend = {}ms\r\n", percentile_99).as_bytes(),
                 )?;
-                file.write(
+                file.write_all(
                     format!(
                         "total track count: {}, total time spend {:.3}s, execution proportion: {:.3}%.\r\n\r\n",
                         rec.len(),

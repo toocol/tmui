@@ -1,8 +1,5 @@
 use crate::{
-    namespace::Coordinate,
-    types::StaticType,
-    values::{FromBytes, FromValue, ToBytes, ToValue},
-    Type, Value,
+    namespace::Coordinate, typedef::{SkiaIPoint, SkiaPoint}, types::StaticType, values::{FromBytes, FromValue, ToBytes, ToValue}, Type, Value
 };
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -113,66 +110,66 @@ impl From<(i32, i32)> for Point {
     }
 }
 
-impl Into<(i32, i32)> for Point {
+impl From<Point> for (i32, i32) {
     #[inline]
-    fn into(self) -> (i32, i32) {
-        (self.x, self.y)
+    fn from(value: Point) -> Self {
+        (value.x, value.y)
     }
 }
 
-impl Into<skia_safe::Point> for Point {
+impl From<Point> for SkiaPoint {
     #[inline]
-    fn into(self) -> skia_safe::Point {
-        skia_safe::Point {
-            x: self.x as f32,
-            y: self.y as f32,
+    fn from(value: Point) -> Self {
+        SkiaPoint {
+            x: value.x as f32,
+            y: value.y as f32,
         }
     }
 }
 
-impl Into<Option<skia_safe::Point>> for Point {
+impl From<Point> for Option<SkiaPoint> {
     #[inline]
-    fn into(self) -> Option<skia_safe::Point> {
-        Some(self.into())
+    fn from(value: Point) -> Self {
+        Some(SkiaPoint::from(value))
     }
 }
 
-impl Into<skia_safe::IPoint> for Point {
+impl From<Point> for SkiaIPoint {
     #[inline]
-    fn into(self) -> skia_safe::IPoint {
-        skia_safe::IPoint {
-            x: self.x,
-            y: self.y,
+    fn from(value: Point) -> Self {
+        SkiaIPoint {
+            x: value.x,
+            y: value.y,
         }
     }
 }
 
-impl Into<Point> for skia_safe::Point {
+impl From<SkiaPoint> for Point {
     #[inline]
-    fn into(self) -> Point {
+    fn from(value: SkiaPoint) -> Self {
         Point {
-            x: self.x as i32,
-            y: self.y as i32,
+            x: value.x as i32,
+            y: value.y as i32,
         }
     }
 }
 
-impl Into<Point> for skia_safe::IPoint {
+impl From<SkiaIPoint> for Point {
     #[inline]
-    fn into(self) -> Point {
+    fn from(value: SkiaIPoint) -> Self {
         Point {
-            x: self.x,
-            y: self.y,
+            x: value.x,
+            y: value.y,
         }
     }
 }
 
-impl Into<FPoint> for Point {
+impl From<Point> for FPoint {
     #[inline]
-    fn into(self) -> FPoint {
+    fn from(value: Point) -> Self {
         FPoint {
-            x: self.x as f32,
-            y: self.y as f32,
+            x: value.x as f32,
+            y: value.y as f32,
         }
     }
 }
@@ -326,6 +323,7 @@ impl Div for FPoint {
 }
 
 impl From<(i32, i32)> for FPoint {
+    #[inline]
     fn from((x, y): (i32, i32)) -> Self {
         Self {
             x: x as f32,
@@ -335,60 +333,65 @@ impl From<(i32, i32)> for FPoint {
 }
 
 impl From<(f32, f32)> for FPoint {
+    #[inline]
     fn from((x, y): (f32, f32)) -> Self {
         Self { x, y }
     }
 }
 
-impl Into<(f32, f32)> for FPoint {
-    fn into(self) -> (f32, f32) {
-        (self.x, self.y)
+impl From<FPoint> for (f32, f32) {
+    #[inline]
+    fn from(value: FPoint) -> Self {
+        (value.x, value.y)
     }
 }
 
-impl Into<Point> for FPoint {
-    fn into(self) -> Point {
+impl From<FPoint> for Point {
+    #[inline]
+    fn from(value: FPoint) -> Self {
         Point {
-            x: self.x as i32,
-            y: self.y as i32,
+            x: value.x as i32,
+            y: value.y as i32,
         }
     }
 }
 
-impl Into<skia_safe::Point> for FPoint {
-    fn into(self) -> skia_safe::Point {
-        skia_safe::Point {
-            x: self.x,
-            y: self.y,
-        }
-    }
-}
-
-impl Into<skia_safe::IPoint> for FPoint {
-    fn into(self) -> skia_safe::IPoint {
-        skia_safe::IPoint {
-            x: self.x as i32,
-            y: self.y as i32,
-        }
-    }
-}
-
-impl Into<FPoint> for skia_safe::Point {
+impl From<FPoint> for SkiaPoint {
     #[inline]
-    fn into(self) -> FPoint {
-        FPoint {
-            x: self.x,
-            y: self.y,
+    fn from(value: FPoint) -> Self {
+        SkiaPoint {
+            x: value.x,
+            y: value.y,
         }
     }
 }
 
-impl Into<FPoint> for skia_safe::IPoint {
+impl From<FPoint> for SkiaIPoint {
     #[inline]
-    fn into(self) -> FPoint {
+    fn from(value: FPoint) -> Self {
+        SkiaIPoint {
+            x: value.x as i32,
+            y: value.y as i32,
+        }
+    }
+}
+
+impl From<SkiaPoint> for FPoint {
+    #[inline]
+    fn from(value: SkiaPoint) -> Self {
         FPoint {
-            x: self.x as f32,
-            y: self.y as f32,
+            x: value.x,
+            y: value.y,
+        }
+    }
+}
+
+impl From<SkiaIPoint> for FPoint {
+    #[inline]
+    fn from(value: SkiaIPoint) -> Self {
+        FPoint {
+            x: value.x as f32,
+            y: value.y as f32,
         }
     }
 }

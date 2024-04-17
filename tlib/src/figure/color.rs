@@ -1,6 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
+    typedef::{SkiaColor3f, SkiaColor4f},
     types::StaticType,
     values::{FromBytes, FromValue, ToBytes, ToValue},
     Value,
@@ -83,7 +84,7 @@ impl Color {
     #[inline]
     pub fn from_hex(hex_code: &str) -> Self {
         let color = HexColor::parse(hex_code)
-            .expect(format!("Parse hex color failed, {}", hex_code).as_str());
+            .unwrap_or_else(|_| panic!("Parse hex color failed, {}", hex_code));
         Self {
             r: color.r as i16,
             g: color.g as i16,
@@ -254,73 +255,84 @@ impl Color {
 }
 
 impl From<(u8, u8, u8)> for Color {
+    #[inline]
     fn from((r, g, b): (u8, u8, u8)) -> Self {
         Self::from_rgb(r, g, b)
     }
 }
 
 impl From<(i32, i32, i32)> for Color {
+    #[inline]
     fn from((r, g, b): (i32, i32, i32)) -> Self {
         Self::from_rgb(r as u8, g as u8, b as u8)
     }
 }
 
 impl From<(u8, u8, u8, u8)> for Color {
+    #[inline]
     fn from((r, g, b, a): (u8, u8, u8, u8)) -> Self {
         Self::from_rgba(r, g, b, a)
     }
 }
 
 impl From<(i32, i32, i32, i32)> for Color {
+    #[inline]
     fn from((r, g, b, a): (i32, i32, i32, i32)) -> Self {
         Self::from_rgba(r as u8, g as u8, b as u8, a as u8)
     }
 }
 
 impl From<String> for Color {
+    #[inline]
     fn from(hex: String) -> Self {
         Self::from_hex(hex.as_str())
     }
 }
 
 impl From<&str> for Color {
+    #[inline]
     fn from(hex: &str) -> Self {
         Self::from_hex(hex)
     }
 }
 
-impl Into<(i32, i32, i32)> for Color {
-    fn into(self) -> (i32, i32, i32) {
-        (self.r as i32, self.g as i32, self.b as i32)
+impl From<Color> for (i32, i32, i32) {
+    #[inline]
+    fn from(value: Color) -> Self {
+        (value.r as i32, value.g as i32, value.b as i32)
     }
 }
 
-impl Into<(i32, i32, i32)> for &Color {
-    fn into(self) -> (i32, i32, i32) {
-        (self.r as i32, self.g as i32, self.b as i32)
+impl From<&Color> for (i32, i32, i32) {
+    #[inline]
+    fn from(value: &Color) -> Self {
+        (value.r as i32, value.g as i32, value.b as i32)
     }
 }
 
-impl Into<skia_safe::Color> for Color {
-    fn into(self) -> skia_safe::Color {
-        skia_safe::Color::from_argb(self.a(), self.r(), self.g(), self.b())
+impl From<Color> for skia_safe::Color {
+    #[inline]
+    fn from(value: Color) -> Self {
+        skia_safe::Color::from_argb(value.a(), value.r(), value.g(), value.b())
     }
 }
 
-impl Into<skia_safe::Color4f> for Color {
-    fn into(self) -> skia_safe::Color4f {
-        skia_safe::Color4f {
-            r: self.r as f32,
-            g: self.g as f32,
-            b: self.b as f32,
-            a: self.a as f32,
+impl From<Color> for SkiaColor4f {
+    #[inline]
+    fn from(value: Color) -> Self {
+        SkiaColor4f {
+            r: value.r as f32,
+            g: value.g as f32,
+            b: value.b as f32,
+            a: value.a as f32,
         }
     }
 }
 
-impl Into<skia_safe::Color3f> for Color {
-    fn into(self) -> skia_safe::Color3f {
-        skia_safe::Color3f::new(self.r as f32, self.g as f32, self.b as f32)
+impl From<Color> for SkiaColor3f {
+    #[inline]
+    fn from(value: Color) -> Self {
+        skia_safe::Color3f::new(value.r as f32, value.g as f32, value.b as f32)
     }
 }
 

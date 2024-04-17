@@ -762,10 +762,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref c) => Some(c.as_ref().as_ptr()),
-            None => None,
-        };
+        let mut child = self.child.as_ref().map(|c| c.as_ref().as_ptr());
 
         if child.is_none() {
             unsafe {
@@ -781,10 +778,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref mut c) => Some(c.as_mut().as_ptr_mut()),
-            None => None,
-        };
+        let mut child = self.child.as_mut().map(|c| c.as_mut().as_ptr_mut());
 
         if child.is_none() {
             unsafe {
@@ -800,10 +794,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref c) => Some(c.as_ref()),
-            None => None,
-        };
+        let mut child = self.child.as_ref().map(|c| c.as_ref());
 
         if child.is_none() {
             unsafe {
@@ -819,10 +810,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
-        let mut child = match self.child {
-            Some(ref mut c) => Some(c.as_mut()),
-            None => None,
-        };
+        let mut child = self.child.as_mut().map(|c| c.as_mut());
 
         if child.is_none() {
             unsafe {
@@ -1211,55 +1199,35 @@ impl WidgetExt for Widget {
         self.margins[2] = bottom;
         self.margins[3] = left;
 
-        if top != 0 || right != 0 || bottom != 0 || left != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = top != 0 || right != 0 || bottom != 0 || left != 0;
     }
 
     #[inline]
     fn set_margin_top(&mut self, val: i32) {
         self.margins[0] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_right(&mut self, val: i32) {
         self.margins[1] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_bottom(&mut self, val: i32) {
         self.margins[2] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_left(&mut self, val: i32) {
         self.margins[3] = val;
 
-        if val != 0 {
-            self.need_update_geometry = true;
-        } else {
-            self.need_update_geometry = false;
-        }
+        self.need_update_geometry = val != 0;
     }
 
     #[inline]
@@ -1647,21 +1615,15 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_size_hint(&mut self, size_hint: SizeHint) {
-        match size_hint.all_width() {
-            (Some(min), Some(max)) => {
-                if min > max {
-                    panic!("`Minimum size hint can not be larger than maximum size hint.")
-                }
+        if let (Some(min), Some(max)) = size_hint.all_width() {
+            if min > max {
+                panic!("`Minimum size hint can not be larger than maximum size hint.")
             }
-            _ => {}
         }
-        match size_hint.all_height() {
-            (Some(min), Some(max)) => {
-                if min > max {
-                    panic!("`Minimum size hint can not be larger than maximum size hint.")
-                }
+        if let (Some(min), Some(max)) = size_hint.all_height() {
+            if min > max {
+                panic!("`Minimum size hint can not be larger than maximum size hint.")
             }
-            _ => {}
         }
         self.size_hint = size_hint
     }

@@ -1,8 +1,8 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{
-        ContainerScaleCalculate, ReflectSizeUnifiedAdjust, StaticContainerScaleCalculate,
-        SCALE_DISMISS, ContainerLayoutEnum,
+        ContainerLayoutEnum, ContainerScaleCalculate, ReflectSizeUnifiedAdjust,
+        StaticContainerScaleCalculate, SCALE_DISMISS,
     },
     layout::LayoutManager,
     prelude::*,
@@ -60,7 +60,7 @@ impl ContainerImplExt for SplitPane {
     where
         T: WidgetImpl,
     {
-        if self.container.children.len() != 0 {
+        if !self.container.children.is_empty() {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
         child.set_parent(self);
@@ -68,7 +68,7 @@ impl ContainerImplExt for SplitPane {
         let widget_ptr: Option<NonNull<dyn WidgetImpl>> = NonNull::new(child.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),
-            widget_ptr.clone(),
+            widget_ptr,
             None,
             SplitType::SplitNone,
         ));

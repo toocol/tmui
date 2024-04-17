@@ -46,10 +46,10 @@ pub fn rgba_to_argb_convert(pixels: &mut [u8]) {
                 }
             });
     } else {
-        for i in 0..len / 4 {
-            let pixel = pixels_u32[i];
+        for p in pixels_u32.iter_mut().take(len / 4) {
+            let pixel = *p;
 
-            pixels_u32[i] = (pixel << 8) | (pixel >> 24);
+            *p = (pixel << 8) | (pixel >> 24);
         }
     }
 }

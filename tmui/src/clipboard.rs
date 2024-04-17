@@ -15,7 +15,7 @@ pub struct Clipboard {
 }
 
 impl Clipboard {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             text: Mutex::new(None),
             os_clipboard_ctx: ClipboardContext::new().expect("Get `ClipboardContext` failed."),
@@ -25,10 +25,7 @@ impl Clipboard {
     pub fn text(&mut self, level: ClipboardLevel) -> Option<String> {
         match level {
             ClipboardLevel::Application => (*self.text.lock().unwrap()).clone(),
-            ClipboardLevel::Os => self
-                .os_clipboard_ctx
-                .get_contents()
-                .map_or(None, |text| Some(text)),
+            ClipboardLevel::Os => self.os_clipboard_ctx.get_contents().ok(),
         }
     }
 

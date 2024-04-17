@@ -28,51 +28,46 @@ impl<'a> AsyncTask<'a> {
             generics,
         };
 
-        if let Ok(meta) = attr.parse_meta() {
-            match meta {
-                Meta::List(MetaList { nested, .. }) => {
-                    for meta in nested {
-                        match meta {
-                            NestedMeta::Meta(Meta::NameValue(MetaNameValue {
-                                ref path,
-                                ref lit,
-                                ..
-                            })) => {
-                                let ident = path.get_ident().unwrap();
+        if let Ok(Meta::List(MetaList { nested, .. })) = attr.parse_meta() {
+            for meta in nested {
+                match meta {
+                    NestedMeta::Meta(Meta::NameValue(MetaNameValue {
+                        ref path,
+                        ref lit,
+                        ..
+                    })) => {
+                        let ident = path.get_ident().unwrap();
 
-                                match ident.to_string().as_str() {
-                                    "name" => match lit {
-                                        syn::Lit::Str(lit) => {
-                                            let name = lit.value();
-                                            let ident = Ident::new(&name, lit.span());
-                                            res.name = Some(ident);
+                        match ident.to_string().as_str() {
+                            "name" => match lit {
+                                syn::Lit::Str(lit) => {
+                                    let name = lit.value();
+                                    let ident = Ident::new(&name, lit.span());
+                                    res.name = Some(ident);
 
-                                            let snake_name = to_snake_case(&name);
+                                    let snake_name = to_snake_case(&name);
 
-                                            res.name_snake = Some(Ident::new(&snake_name, lit.span()));
-                                            res.field = Some(Ident::new(
-                                                &format!("task_{}", snake_name),
-                                                lit.span(),
-                                            ));
-                                        }
-                                        _ => return None,
-                                    },
-                                    "value" => match lit {
-                                        syn::Lit::Str(lit) => {
-                                            let token = TokenStream::from_str(&lit.value()).expect("`async_task` value parse error.");
-                                            let ty = syn::parse2::<syn::Type>(token).expect("`async_task` value parse error.");
-                                            res.value = Some(ty)
-                                        }
-                                        _ => return None,
-                                    },
-                                    _ => return None,
+                                    res.name_snake = Some(Ident::new(&snake_name, lit.span()));
+                                    res.field = Some(Ident::new(
+                                        &format!("task_{}", snake_name),
+                                        lit.span(),
+                                    ));
                                 }
-                            }
+                                _ => return None,
+                            },
+                            "value" => match lit {
+                                syn::Lit::Str(lit) => {
+                                    let token = TokenStream::from_str(&lit.value()).expect("`async_task` value parse error.");
+                                    let ty = syn::parse2::<syn::Type>(token).expect("`async_task` value parse error.");
+                                    res.value = Some(ty)
+                                }
+                                _ => return None,
+                            },
                             _ => return None,
                         }
                     }
+                    _ => return None,
                 }
-                _ => {}
             }
         }
 
@@ -148,7 +143,7 @@ impl<'a> AsyncTask<'a> {
                 ))
             }
             _ => {
-                return Err(syn::Error::new_spanned(
+                Err(syn::Error::new_spanned(
                     ast,
                     "`async_task` should defined on struct.",
                 ))

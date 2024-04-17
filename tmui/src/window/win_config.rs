@@ -17,7 +17,7 @@ pub(crate) fn build_window(
     win_config: WindowConfig,
     target: &EventLoopWindowTarget<Message>,
 ) -> Result<Window, OsError> {
-    win_config.to_window_builder().build(target)
+    win_config.create_window_builder().build(target)
 }
 
 #[derive(Debug, Clone)]
@@ -142,7 +142,7 @@ impl WindowConfig {
         self.active
     }
 
-    pub(crate) fn to_window_builder(self) -> WindowBuilder {
+    pub(crate) fn create_window_builder(self) -> WindowBuilder {
         let (width, height) = self.size();
 
         let mut window_bld = WindowBuilder::new()
@@ -172,7 +172,7 @@ impl WindowConfig {
         }
 
         if let Some(icon) = self.win_icon {
-            window_bld = window_bld.with_window_icon(Some(icon.into()))
+            window_bld = window_bld.with_window_icon(Some(icon))
         }
 
         window_bld

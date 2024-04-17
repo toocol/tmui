@@ -451,7 +451,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             painter.clip_region_global(self.child_region(), ClipOp::Difference);
         }
         if let Some(parent) = self.get_parent_ref() {
-            if let Some(_) = cast!(parent as ContainerImpl) {
+            if cast!(parent as ContainerImpl).is_some() {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
             }
         }
@@ -558,15 +558,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_parent = self.get_raw_parent();
         match raw_parent {
             Some(parent) => unsafe {
-                if parent.as_ref().is_none() {
-                    return None;
-                }
-                if parent
-                    .as_ref()
-                    .unwrap()
-                    .object_type()
-                    .is_a(R::static_type())
-                {
+                if parent.as_ref()?.object_type().is_a(R::static_type()) {
                     (parent as *const R).as_ref()
                 } else {
                     None
@@ -580,10 +572,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_child = self.get_raw_child();
         match raw_child {
             Some(child) => unsafe {
-                if child.as_ref().is_none() {
-                    return None;
-                }
-                if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                if child.as_ref()?.object_type().is_a(R::static_type()) {
                     (child as *const R).as_ref()
                 } else {
                     None
@@ -597,15 +586,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_parent = self.get_raw_parent_mut();
         match raw_parent {
             Some(parent) => unsafe {
-                if parent.as_ref().is_none() {
-                    return None;
-                }
-                if parent
-                    .as_mut()
-                    .unwrap()
-                    .object_type()
-                    .is_a(R::static_type())
-                {
+                if parent.as_mut()?.object_type().is_a(R::static_type()) {
                     (parent as *mut R).as_mut()
                 } else {
                     None
@@ -619,10 +600,7 @@ impl<T: WidgetImpl> WidgetGenericExt for T {
         let raw_child = self.get_raw_child_mut();
         match raw_child {
             Some(child) => unsafe {
-                if child.as_ref().is_none() {
-                    return None;
-                }
-                if child.as_ref().unwrap().object_type().is_a(R::static_type()) {
+                if child.as_ref()?.object_type().is_a(R::static_type()) {
                     (child as *mut R).as_mut()
                 } else {
                     None
@@ -726,7 +704,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_pressed(&evt);
@@ -755,7 +733,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_released(&evt);
@@ -780,7 +758,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_move(&evt);
@@ -805,7 +783,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             }
 
             pos = parent.map_to_widget(&pos);
-            let mut evt = event.clone();
+            let mut evt = *event;
             evt.set_position((pos.x(), pos.y()));
 
             parent.on_mouse_wheel(&evt);
@@ -1079,9 +1057,12 @@ pub trait WidgetImplExt: WidgetImpl {
     /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
     fn child<T: WidgetImpl>(&mut self, child: Box<T>);
 
+    /// # Safety
+    /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
+    /// 
     /// @see [`Widget::child_ref_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child_ref) (Defined in [`WidgetImplExt`])
-    fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
+    unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////

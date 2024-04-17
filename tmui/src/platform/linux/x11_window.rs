@@ -17,6 +17,7 @@ pub(crate) struct X11Window<T: 'static + Copy + Send + Sync, M: 'static + Copy +
 }
 
 impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> X11Window<T, M> {
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn new(
         window_id: WindowId,

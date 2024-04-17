@@ -9,7 +9,6 @@ use std::{
     },
 };
 use tipc::mem::mem_rw_lock::{MemRwLock, MemRwLockGuard};
-use tlib::global::SemanticExt;
 
 use crate::platform::ipc_inner_agent::IpcInnerAgent;
 
@@ -24,9 +23,9 @@ struct _ShmemInfo {
 pub(crate) enum Bitmap {
     Direct {
         /// Pixels data.
-        pixels: Option<Box<Vec<u8>>>,
+        pixels: Option<Vec<u8>>,
         /// Temporarily retain the ownership of the previous pixels data.
-        retention: Option<Box<Vec<u8>>>,
+        retention: Option<Vec<u8>>,
         /// The length of the pixels.
         total_bytes: usize,
         /// Bytes number of a row.
@@ -39,7 +38,7 @@ pub(crate) enum Bitmap {
         prepared: bool,
         /// Only used on platform `macos`
         resized: bool,
-        /// Used when application has shared memory widget, 
+        /// Used when application has shared memory widget,
         /// Inner ipc agent to access shared memory related methods
         inner_agent: Option<Box<dyn IpcInnerAgent>>,
     },
@@ -74,12 +73,13 @@ pub(crate) enum Bitmap {
 }
 
 unsafe impl Send for Bitmap {}
+unsafe impl Sync for Bitmap {}
 
 impl Bitmap {
     #[inline]
     pub fn new(width: u32, height: u32, inner_agent: Option<Box<dyn IpcInnerAgent>>) -> Self {
         Self::Direct {
-            pixels: Some(vec![0u8; (width * height * 4) as usize].boxed()),
+            pixels: Some(vec![0u8; (width * height * 4) as usize]),
             retention: None,
             total_bytes: (width * height * 4) as usize,
             row_bytes: (width * 4) as usize,
@@ -93,7 +93,11 @@ impl Bitmap {
 
     #[inline]
     pub fn empty(width: u32, height: u32) -> Self {
-        Self::Empty { width, height, prepared: false }
+        Self::Empty {
+            width,
+            height,
+            prepared: false,
+        }
     }
 
     #[inline]
@@ -106,7 +110,7 @@ impl Bitmap {
     ) -> Self {
         Self::Shared {
             raw_pointer: NonNull::new(pointer),
-            lock: lock,
+            lock,
             width,
             height,
             total_bytes: (width * height * 4) as usize,
@@ -131,7 +135,7 @@ impl Bitmap {
                 ..
             } => {
                 *retention = pixels.take();
-                *pixels = Some(vec![0u8; (w * h * 4) as usize].boxed());
+                *pixels = Some(vec![0u8; (w * h * 4) as usize]);
                 *total_bytes = (w * h * 4) as usize;
                 *row_bytes = (w * 4) as usize;
                 *width = w;
@@ -139,7 +143,11 @@ impl Bitmap {
                 *prepared = false;
                 *resized = true;
             }
-            Self::Empty { width, height, prepared } => {
+            Self::Empty {
+                width,
+                height,
+                prepared,
+            } => {
                 *width = w;
                 *height = h;
                 *prepared = false;
@@ -150,24 +158,22 @@ impl Bitmap {
 
     #[inline]
     pub fn update_raw_pointer(&mut self, n_raw_pointer: *mut c_void, w: u32, h: u32) {
-        match self {
-            Self::Shared {
-                raw_pointer,
-                total_bytes,
-                row_bytes,
-                resized,
-                width,
-                height,
-                ..
-            } => {
-                *raw_pointer = NonNull::new(n_raw_pointer);
-                *total_bytes = (w * h * 4) as usize;
-                *row_bytes = (w * 4) as usize;
-                *resized = true;
-                *width = w;
-                *height = h;
-            }
-            _ => {}
+        if let Self::Shared {
+            raw_pointer,
+            total_bytes,
+            row_bytes,
+            resized,
+            width,
+            height,
+            ..
+        } = self
+        {
+            *raw_pointer = NonNull::new(n_raw_pointer);
+            *total_bytes = (w * h * 4) as usize;
+            *row_bytes = (w * 4) as usize;
+            *resized = true;
+            *width = w;
+            *height = h;
         }
     }
 
@@ -285,7 +291,7 @@ impl Bitmap {
             Self::Shared { inner_agent, .. } => {
                 inner_agent.release_retention();
             }
-            Self::Empty { .. } => {},
+            Self::Empty { .. } => {}
         }
     }
 
@@ -334,9 +340,9 @@ impl Bitmap {
         match self {
             Self::Direct { inner_agent, .. } => {
                 if let Some(agent) = inner_agent {
-                    return agent.is_invalidate();
+                    agent.is_invalidate()
                 } else {
-                    return false;
+                    false
                 }
             }
             Self::Shared { .. } => false,
@@ -346,9 +352,8 @@ impl Bitmap {
 
     #[inline]
     pub fn set_shared_invalidate(&self, invalidate: bool) {
-        match self {
-            Self::Shared { inner_agent, .. } => inner_agent.set_invalidate(invalidate),
-            _ => {}
+        if let Self::Shared { inner_agent, .. } = self {
+            inner_agent.set_invalidate(invalidate)
         }
     }
 }

@@ -16,13 +16,13 @@ use crate::{
 lazy_static! {
     static ref SUPPORTED_CHARACTER: Vec<u8> = {
         let mut chs = vec![];
-        for c in b'0'..b'9' {
+        for c in b'0'..=b'9' {
             chs.push(c)
         }
-        for c in b'a'..b'z' {
+        for c in b'a'..=b'z' {
             chs.push(c)
         }
-        for c in b'A'..b'z' {
+        for c in b'A'..=b'Z' {
             chs.push(c)
         }
         for c in b"!@#$%^&*()-_+=/\\" {

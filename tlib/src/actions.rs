@@ -29,7 +29,7 @@
 //!     }
 //! }
 //!
-//! fn main() {
+//! fn test() {
 //!     // Not necessary in actual use. //
 //!     ActionHub::initialize();
 //!
@@ -70,7 +70,7 @@ impl ActionHub {
     #[inline]
     pub fn new() -> Box<Self> {
         Box::new(Self {
-            map: Box::new(HashMap::new()),
+            map: ActionsMap::default(),
         })
     }
 
@@ -194,8 +194,11 @@ impl ActionHub {
         }
     }
 }
+
+pub type FnHandleValue = Box<dyn Fn(&Option<Value>)>;
+
 pub trait ActionExt: ObjectOperation {
-    fn connect(&self, signal: Signal, target: ObjectId, f: Box<dyn Fn(&Option<Value>)>) {
+    fn connect(&self, signal: Signal, target: ObjectId, f: FnHandleValue) {
         ActionHub::with(|hub| {
             hub.connect_action(signal, target, f)
         });
@@ -421,14 +424,14 @@ pub struct Action {
 impl Action {
     pub fn with_no_param(signal: Signal) -> Self {
         Self {
-            signal: signal,
+            signal,
             param: None,
         }
     }
 
     pub fn with_param<T: ToValue + 'static>(signal: Signal, param: T) -> Self {
         Self {
-            signal: signal,
+            signal,
             param: Some(Box::new(param)),
         }
     }

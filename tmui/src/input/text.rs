@@ -422,7 +422,7 @@ impl Text {
                 self.cursor_index += cp.chars().count();
             }
 
-            if cp.len() > 0 {
+            if !cp.is_empty() {
                 emit!(self.value_changed());
             }
             self.update();
@@ -529,8 +529,8 @@ impl Text {
         let val_ref = self.value_ref();
 
         // Draw placeholder:
-        if val_ref.len() == 0 {
-            if self.placeholder.len() > 0 {
+        if val_ref.is_empty() {
+            if !self.placeholder.is_empty() {
                 self.draw_text_placeholder(painter);
             }
 
@@ -597,15 +597,15 @@ impl Text {
             )
         };
 
-        if pre.0.len() > 0 {
+        if !pre.0.is_empty() {
             painter.set_color(self.text_color);
             self.render_text(painter, pre.0, pre.1);
         }
-        if suf.0.len() > 0 {
+        if !suf.0.is_empty() {
             painter.set_color(self.text_color);
             self.render_text(painter, suf.0, suf.1);
         }
-        if mid.0.len() > 0 {
+        if !mid.0.is_empty() {
             painter.fill_rect_global(mid.2, self.selection_background);
 
             painter.set_color(self.selection_color);
@@ -949,9 +949,7 @@ impl Text {
 
         let mut predict_start = self.predict_start;
         let len_start = if predict_start > predict_idx {
-            let tmp = predict_start;
-            predict_start = predict_idx;
-            predict_idx = tmp;
+            std::mem::swap(&mut predict_start, &mut predict_idx);
 
             predict_start = self.map(predict_start);
 
@@ -1208,7 +1206,7 @@ impl Text {
             let value_ref = self.value_ref();
             let str = value_ref.as_str();
 
-            if str.len() == 0 {
+            if str.is_empty() {
                 (0, 0.)
             } else {
                 let predict_start = (((self.text_window.x() + 2. - self.text_draw_position().x())

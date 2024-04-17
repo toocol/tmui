@@ -37,7 +37,7 @@ impl ExtendAttr {
         if extend_str != "SharedWidget" && self.id_meta.is_some() {
             return Err(syn::Error::new_spanned(
                 self.id_meta.as_ref().unwrap(),
-                format!("`Id` attribute was supported for `SharedWidget` only."),
+                "`Id` attribute was supported for `SharedWidget` only.",
             ));
         }
         Ok(())
@@ -58,7 +58,7 @@ impl Parse for ExtendAttr {
             id: None,
         };
 
-        while let Some(_) = input.parse::<Option<Token!(,)>>()? {
+        while input.parse::<Option<Token!(,)>>()?.is_some() {
             let meta = input.parse::<Meta>()?;
             match meta {
                 Meta::List(syn::MetaList {
@@ -67,7 +67,7 @@ impl Parse for ExtendAttr {
                     ..
                 }) => {
                     if let Some(ident) = path.get_ident() {
-                        if ident.to_string() != "Layout" {
+                        if *ident != "Layout" {
                             return Self::error(
                                 meta,
                                 "Only support attribute formmat `Layout(xxx)` for `Widget`.",

@@ -2,7 +2,7 @@ pub mod win_builder;
 pub mod win_config;
 
 use self::{win_builder::WindowBuilder, win_config::WindowConfig};
-use crate::application_window::ApplicationWindow;
+use crate::application::FnActivate;
 use std::{
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
@@ -13,7 +13,7 @@ static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 pub struct Window {
     index: usize,
     win_cfg: Option<WindowConfig>,
-    on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+    on_activate: Option<FnActivate>,
 }
 
 unsafe impl Send for Window {}
@@ -53,7 +53,7 @@ impl Window {
     #[inline]
     pub(crate) fn take_on_activate(
         &mut self,
-    ) -> Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>> {
+    ) -> Option<FnActivate> {
         self.on_activate.take()
     }
 

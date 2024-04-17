@@ -1,5 +1,5 @@
 use crate::{
-    container::{SCALE_ADAPTION, ContainerLayoutEnum},
+    container::{ContainerLayoutEnum, SCALE_ADAPTION},
     hbox::hbox_layout_homogeneous,
     layout::LayoutManager,
     prelude::*,
@@ -65,7 +65,7 @@ impl WidgetImpl for Pane {}
 impl<T: PaneExt> InnerCustomizeEventProcess for T {
     fn inner_customize_mouse_move(&mut self, event: &tlib::events::MouseEvent) {
         let children = self.children();
-        if children.len() == 0 {
+        if children.is_empty() {
             return;
         }
 
@@ -80,11 +80,9 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                         self.set_cursor_shape(SystemCursorShape::SizeHorCursor);
                         self.set_resize_zone(true);
                     }
-                } else {
-                    if self.is_resize_zone() && !self.is_resize_pressed() {
-                        self.set_cursor_shape(SystemCursorShape::ArrowCursor);
-                        self.set_resize_zone(false);
-                    }
+                } else if self.is_resize_zone() && !self.is_resize_pressed() {
+                    self.set_cursor_shape(SystemCursorShape::ArrowCursor);
+                    self.set_resize_zone(false);
                 }
 
                 if self.is_resize_pressed() {
@@ -116,11 +114,9 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                         self.set_cursor_shape(SystemCursorShape::SizeVerCursor);
                         self.set_resize_zone(true);
                     }
-                } else {
-                    if self.is_resize_zone() && !self.is_resize_pressed() {
-                        self.set_cursor_shape(SystemCursorShape::ArrowCursor);
-                        self.set_resize_zone(false);
-                    }
+                } else if self.is_resize_zone() && !self.is_resize_pressed() {
+                    self.set_cursor_shape(SystemCursorShape::ArrowCursor);
+                    self.set_resize_zone(false);
                 }
 
                 if self.is_resize_pressed() {
@@ -158,7 +154,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
 
     fn inner_customize_mouse_released(&mut self, event: &tlib::events::MouseEvent) {
         let children = self.children();
-        if children.len() == 0 {
+        if children.is_empty() {
             return;
         }
 
@@ -175,11 +171,9 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                             self.set_cursor_shape(SystemCursorShape::SizeHorCursor);
                             self.set_resize_zone(true);
                         }
-                    } else {
-                        if self.is_resize_zone() && !self.is_resize_pressed() {
-                            self.set_cursor_shape(SystemCursorShape::ArrowCursor);
-                            self.set_resize_zone(false);
-                        }
+                    } else if self.is_resize_zone() && !self.is_resize_pressed() {
+                        self.set_cursor_shape(SystemCursorShape::ArrowCursor);
+                        self.set_resize_zone(false);
                     }
                 }
                 Direction::Vertical => {
@@ -188,11 +182,9 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                             self.set_cursor_shape(SystemCursorShape::SizeVerCursor);
                             self.set_resize_zone(true);
                         }
-                    } else {
-                        if self.is_resize_zone() && !self.is_resize_pressed() {
-                            self.set_cursor_shape(SystemCursorShape::ArrowCursor);
-                            self.set_resize_zone(false);
-                        }
+                    } else if self.is_resize_zone() && !self.is_resize_pressed() {
+                        self.set_cursor_shape(SystemCursorShape::ArrowCursor);
+                        self.set_resize_zone(false);
                     }
                 }
             }

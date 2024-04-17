@@ -288,29 +288,29 @@ impl Font {
     }
 }
 
-impl Into<Font> for SkiaFont {
+impl From<SkiaFont> for Font {
     #[inline]
-    fn into(self) -> Font {
+    fn from(val: SkiaFont) -> Self {
         let mut font = Font::empty();
-        font.set_force_auto_hinting(self.is_force_auto_hinting());
-        font.set_embedded_bitmaps(self.is_embedded_bitmaps());
-        font.set_subpixel(self.is_subpixel());
-        font.set_linear_metrics(self.is_linear_metrics());
-        font.set_embolden(self.is_embolden());
-        font.set_baseline_snap(self.is_baseline_snap());
-        font.set_edging(self.edging().into());
-        font.set_hinting(self.hinting().into());
+        font.set_force_auto_hinting(val.is_force_auto_hinting());
+        font.set_embedded_bitmaps(val.is_embedded_bitmaps());
+        font.set_subpixel(val.is_subpixel());
+        font.set_linear_metrics(val.is_linear_metrics());
+        font.set_embolden(val.is_embolden());
+        font.set_baseline_snap(val.is_baseline_snap());
+        font.set_edging(val.edging().into());
+        font.set_hinting(val.hinting().into());
         {
-            let typeface = self.typeface();
+            let typeface = val.typeface();
             let fs = typeface.font_style();
             font.set_font_weight(fs.weight().into());
             font.set_font_width(fs.width().into());
             font.set_italic(fs.slant() == Slant::Italic);
             font.typefaces = vec![FontTypeface::new(&typeface.family_name())];
         }
-        font.set_size(self.size());
-        font.set_scale_x(self.scale_x());
-        font.set_skew_x(self.skew_x());
+        font.set_size(val.size());
+        font.set_scale_x(val.scale_x());
+        font.set_skew_x(val.skew_x());
         font
     }
 }
@@ -349,7 +349,7 @@ impl FontTypeface {
 
     #[inline]
     pub fn family(&self) -> &str {
-        &self.family
+        self.family
     }
     #[inline]
     pub fn set_family(&mut self, family: String) {
@@ -393,30 +393,30 @@ pub enum FontWeight {
     Custom(i32),
 }
 
-impl Into<SkiaFontWeight> for FontWeight {
+impl From<FontWeight> for SkiaFontWeight {
     #[inline]
-    fn into(self) -> SkiaFontWeight {
-        match self {
+    fn from(val: FontWeight) -> Self {
+        match val {
             Invisible => SkiaFontWeight::INVISIBLE,
             Thin => SkiaFontWeight::THIN,
             ExtraLight => SkiaFontWeight::EXTRA_LIGHT,
             Light => SkiaFontWeight::LIGHT,
-            Self::Normal => SkiaFontWeight::NORMAL,
+            FontWeight::Normal => SkiaFontWeight::NORMAL,
             Medium => SkiaFontWeight::MEDIUM,
             SemiBold => SkiaFontWeight::SEMI_BOLD,
             Bold => SkiaFontWeight::BOLD,
             ExtraBold => SkiaFontWeight::EXTRA_BOLD,
             Black => SkiaFontWeight::BLACK,
             ExtraBlack => SkiaFontWeight::EXTRA_BLACK,
-            Self::Custom(x) => SkiaFontWeight::from(x),
+            FontWeight::Custom(x) => SkiaFontWeight::from(x),
         }
     }
 }
 
-impl Into<FontWeight> for SkiaFontWeight {
+impl From<SkiaFontWeight> for FontWeight {
     #[inline]
-    fn into(self) -> FontWeight {
-        match self {
+    fn from(val: SkiaFontWeight) -> Self {
+        match val {
             SkiaFontWeight::INVISIBLE => Invisible,
             SkiaFontWeight::THIN => Thin,
             SkiaFontWeight::EXTRA_LIGHT => ExtraLight,
@@ -428,7 +428,7 @@ impl Into<FontWeight> for SkiaFontWeight {
             SkiaFontWeight::EXTRA_BOLD => ExtraBold,
             SkiaFontWeight::BLACK => Black,
             SkiaFontWeight::EXTRA_BLACK => ExtraBlack,
-            _ => FontWeight::Custom(*self.deref()),
+            _ => FontWeight::Custom(*val.deref()),
         }
     }
 }
@@ -452,28 +452,28 @@ pub enum FontWidth {
     Custom(i32),
 }
 
-impl Into<SkiaFontWidth> for FontWidth {
+impl From<FontWidth> for SkiaFontWidth {
     #[inline]
-    fn into(self) -> SkiaFontWidth {
-        match self {
+    fn from(val: FontWidth) -> Self {
+        match val {
             UltraCondensed => SkiaFontWidth::ULTRA_CONDENSED,
             ExtraCondensed => SkiaFontWidth::EXTRA_CONDENSED,
             Condensed => SkiaFontWidth::CONDENSED,
             SemiCondensed => SkiaFontWidth::SEMI_CONDENSED,
-            Self::Normal => SkiaFontWidth::NORMAL,
+            FontWidth::Normal => SkiaFontWidth::NORMAL,
             SemiExpanded => SkiaFontWidth::SEMI_EXPANDED,
             Expanded => SkiaFontWidth::EXPANDED,
             ExtraExpanded => SkiaFontWidth::EXTRA_EXPANDED,
             UltraExpanded => SkiaFontWidth::ULTRA_EXPANDED,
-            Self::Custom(x) => SkiaFontWidth::from(x),
+            FontWidth::Custom(x) => SkiaFontWidth::from(x),
         }
     }
 }
 
-impl Into<FontWidth> for SkiaFontWidth {
+impl From<SkiaFontWidth> for FontWidth {
     #[inline]
-    fn into(self) -> FontWidth {
-        match self {
+    fn from(val: SkiaFontWidth) -> Self {
+        match val {
             SkiaFontWidth::ULTRA_CONDENSED => UltraCondensed,
             SkiaFontWidth::EXTRA_CONDENSED => ExtraCondensed,
             SkiaFontWidth::CONDENSED => Condensed,
@@ -483,7 +483,7 @@ impl Into<FontWidth> for SkiaFontWidth {
             SkiaFontWidth::EXPANDED => Expanded,
             SkiaFontWidth::EXTRA_EXPANDED => ExtraExpanded,
             SkiaFontWidth::ULTRA_EXPANDED => UltraExpanded,
-            _ => FontWidth::Custom(*self.deref()),
+            _ => FontWidth::Custom(*val.deref()),
         }
     }
 }
@@ -500,21 +500,21 @@ pub enum FontEdging {
     SubpixelAntiAlias,
 }
 
-impl Into<SkiaFontEdging> for FontEdging {
+impl From<FontEdging> for SkiaFontEdging {
     #[inline]
-    fn into(self) -> SkiaFontEdging {
-        match self {
-            Self::Alias => SkiaFontEdging::Alias,
-            Self::AntiAlias => SkiaFontEdging::AntiAlias,
-            Self::SubpixelAntiAlias => SkiaFontEdging::SubpixelAntiAlias,
+    fn from(val: FontEdging) -> Self {
+        match val {
+            FontEdging::Alias => SkiaFontEdging::Alias,
+            FontEdging::AntiAlias => SkiaFontEdging::AntiAlias,
+            FontEdging::SubpixelAntiAlias => SkiaFontEdging::SubpixelAntiAlias,
         }
     }
 }
 
-impl Into<FontEdging> for SkiaFontEdging {
+impl From<SkiaFontEdging> for FontEdging {
     #[inline]
-    fn into(self) -> FontEdging {
-        match self {
+    fn from(val: SkiaFontEdging) -> Self {
+        match val {
             SkiaFontEdging::Alias => FontEdging::Alias,
             SkiaFontEdging::AntiAlias => FontEdging::AntiAlias,
             SkiaFontEdging::SubpixelAntiAlias => FontEdging::SubpixelAntiAlias,
@@ -535,22 +535,22 @@ pub enum FontHinting {
     Full,
 }
 
-impl Into<SkiaFontHiting> for FontHinting {
+impl From<FontHinting> for SkiaFontHiting {
     #[inline]
-    fn into(self) -> SkiaFontHiting {
-        match self {
-            Self::None => SkiaFontHiting::None,
-            Self::Slight => SkiaFontHiting::Slight,
-            Self::Normal => SkiaFontHiting::Normal,
-            Self::Full => SkiaFontHiting::Full,
+    fn from(val: FontHinting) -> Self {
+        match val {
+            FontHinting::None => SkiaFontHiting::None,
+            FontHinting::Slight => SkiaFontHiting::Slight,
+            FontHinting::Normal => SkiaFontHiting::Normal,
+            FontHinting::Full => SkiaFontHiting::Full,
         }
     }
 }
 
-impl Into<FontHinting> for SkiaFontHiting {
+impl From<SkiaFontHiting> for FontHinting {
     #[inline]
-    fn into(self) -> FontHinting {
-        match self {
+    fn from(val: SkiaFontHiting) -> Self {
+        match val {
             SkiaFontHiting::None => FontHinting::None,
             SkiaFontHiting::Slight => FontHinting::Slight,
             SkiaFontHiting::Normal => FontHinting::Normal,

@@ -196,10 +196,10 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
     }
 }
 
-pub(crate) fn gen_popup_trait_impl_clause<'a>(
+pub(crate) fn gen_popup_trait_impl_clause(
     name: &Ident,
     _popup_path: Vec<&'static str>,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         impl #impl_generics PopupExt for #name #ty_generics #where_clause {

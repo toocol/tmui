@@ -168,10 +168,10 @@ pub(crate) fn expand(
     }
 }
 
-pub(crate) fn gen_shared_widget_trait_impl_clause<'a>(
+pub(crate) fn gen_shared_widget_trait_impl_clause(
     name: &Ident,
     shared_widget_path: Vec<&'static str>,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let shared_widget_path: Vec<_> = shared_widget_path
         .iter()

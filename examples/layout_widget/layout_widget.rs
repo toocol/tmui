@@ -6,7 +6,7 @@ use log::debug;
 use tlib::{connect, disconnect, object::ObjectSubclass, timer::Timer};
 use tmui::{label::Label, prelude::*};
 
-const TEXT: [&'static str; 4] = ["Hello", "World", "Hello", "You"];
+const TEXT: [&str; 4] = ["Hello", "World", "Hello", "You"];
 
 #[extends(Widget, Layout(Stack))]
 #[derive(Childrenable)]
@@ -34,7 +34,7 @@ impl ObjectImpl for LayoutWidget {
 
         self.label.set_background(Color::CYAN);
         self.label.set_text("Hello World");
-        let mut font = Font::with_families(&vec!["Consolas"]);
+        let mut font = Font::with_families(&["Consolas"]);
         font.set_size(20.);
         self.label.set_content_halign(Align::Center);
         self.label.set_content_valign(Align::Center);

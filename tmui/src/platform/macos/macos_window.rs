@@ -40,6 +40,7 @@ pub(crate) struct MacosWindow<T: 'static + Copy + Send + Sync, M: 'static + Copy
 }
 
 impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> MacosWindow<T, M> {
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn new(
         window_id: WindowId,

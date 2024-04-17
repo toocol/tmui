@@ -23,7 +23,7 @@ impl Childable {
             let mut childable = false;
             for attr in field.attrs.iter() {
                 if let Some(attr_ident) = attr.path.get_ident() {
-                    if attr_ident.to_string() == "child" {
+                    if *attr_ident == "child" {
                         if child_field.is_some() {
                             return Err(syn::Error::new_spanned(
                                 field,
@@ -70,7 +70,7 @@ impl Childable {
             Some(field) => {
                 quote! {
                     let child = self.#field.as_mut() as *mut dyn WidgetImpl;
-                    self._child_ref(child);
+                    unsafe { self._child_ref(child) };
                 }
             }
             None => proc_macro2::TokenStream::new(),

@@ -11,12 +11,12 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Meta};
 
-const STR_STACK: &'static str = "Stack";
-const STR_VBOX: &'static str = "VBox";
-const STR_HBOX: &'static str = "HBox";
-const STR_SPLIT_PANE: &'static str = "SplitPane";
-const STR_SCROLL_AREA: &'static str = "ScrollArea";
-const STR_PANE: &'static str = "Pane";
+const STR_STACK: &str = "Stack";
+const STR_VBOX: &str = "VBox";
+const STR_HBOX: &str = "HBox";
+const STR_SPLIT_PANE: &str = "SplitPane";
+const STR_SCROLL_AREA: &str = "ScrollArea";
+const STR_PANE: &str = "Pane";
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) enum LayoutType {
@@ -70,7 +70,7 @@ pub(crate) fn expand(
 }
 
 /// Get the fileds' Ident which defined the attribute `#[children]` provided by the derive macro [`Childrenable`](crate::Childrenable)
-fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
+fn get_childrened_fields(ast: &DeriveInput) -> Vec<&Ident> {
     let mut children_idents = vec![];
     match &ast.data {
         syn::Data::Struct(ref struct_data) => match &struct_data.fields {
@@ -78,7 +78,7 @@ fn get_childrened_fields<'a>(ast: &'a DeriveInput) -> Vec<&'a Ident> {
                 for field in named.iter() {
                     for attr in field.attrs.iter() {
                         if let Some(attr_ident) = attr.path.get_ident() {
-                            if attr_ident.to_string() == "children" {
+                            if *attr_ident == "children" {
                                 children_idents.push(field.ident.as_ref().unwrap());
                                 break;
                             }
@@ -128,7 +128,7 @@ fn gen_layout_clause(
 
     let children_fields = get_childrened_fields(ast);
 
-    if is_split_pane && children_fields.len() > 0 {
+    if is_split_pane && !children_fields.is_empty() {
         return Err(syn::Error::new_spanned(
             children_fields[0],
             "`SplitPane` can not use `#[children]` attribute, please use `add_child`, `split` functions instead.",

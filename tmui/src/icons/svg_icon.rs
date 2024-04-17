@@ -58,7 +58,7 @@ impl SvgIcon {
 impl SvgIcon {
     #[inline]
     fn build_from_data(&mut self, data: &[u8]) {
-        let svg_tree = Tree::from_data(&data, &Options::default(), &Database::default())
+        let svg_tree = Tree::from_data(data, &Options::default(), &Database::default())
             .expect("Create svg tree failed");
         let size = svg_tree.size();
         let (w, h) = (size.width().ceil() as i32, size.height().ceil() as i32);
@@ -68,8 +68,8 @@ impl SvgIcon {
         self.set_fixed_height(h);
         self.set_detecting_height(h);
 
-        let dom = SkiaSvgDom::from_bytes(&data, FontMgr::default())
-            .expect(&format!("Create svg dom failed"));
+        let dom = SkiaSvgDom::from_bytes(data, FontMgr::default())
+            .expect("Create svg dom failed");
 
         self.dom = Some(dom);
     }

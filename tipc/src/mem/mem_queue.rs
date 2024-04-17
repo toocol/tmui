@@ -70,8 +70,8 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
             .create()?;
 
         Ok(Self {
-            shmem: shmem,
-            _type_holder: PhantomData::default(),
+            shmem,
+            _type_holder: PhantomData,
             mutex: Mutex::new(()),
         })
     }
@@ -83,8 +83,8 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
             .create()?;
 
         Ok(Self {
-            shmem: shmem,
-            _type_holder: PhantomData::default(),
+            shmem,
+            _type_holder: PhantomData,
             mutex: Mutex::new(()),
         })
     }
@@ -93,8 +93,8 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
         let shmem = ShmemConf::new().os_id(os_id).open()?;
 
         Ok(Self {
-            shmem: shmem,
-            _type_holder: PhantomData::default(),
+            shmem,
+            _type_holder: PhantomData,
             mutex: Mutex::new(()),
         })
     }
@@ -163,14 +163,14 @@ impl MemQueueBuilder {
         match self.build_type {
             BuildType::Create => {
                 if let Some(ref os_id) = self.os_id {
-                    return MemQueue::create_with_os_id(os_id);
+                    MemQueue::create_with_os_id(os_id)
                 } else {
-                    return MemQueue::create();
+                    MemQueue::create()
                 }
             }
             BuildType::Open => {
                 if let Some(ref os_id) = self.os_id {
-                    return MemQueue::open(os_id);
+                    MemQueue::open(os_id)
                 } else {
                     panic!("`Open` MemQueue must assign the os_id")
                 }

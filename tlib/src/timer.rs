@@ -19,15 +19,15 @@ thread_local! {
 
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
-    timers: RefCell<Box<HashMap<ObjectId, Option<NonNull<Timer>>>>>,
-    once_timers: RefCell<Box<HashMap<ObjectId, Box<Timer>>>>,
+    timers: RefCell<HashMap<ObjectId, Option<NonNull<Timer>>>>,
+    once_timers: RefCell<HashMap<ObjectId, Box<Timer>>>,
 }
 
 impl TimerHub {
     pub(crate) fn new() -> Box<Self> {
         Box::new(Self {
-            timers: RefCell::new(Box::new(HashMap::new())),
-            once_timers: RefCell::new(Box::new(HashMap::new())),
+            timers: RefCell::new(HashMap::new()),
+            once_timers: RefCell::new(HashMap::new()),
         })
     }
 

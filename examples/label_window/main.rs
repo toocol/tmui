@@ -18,6 +18,6 @@ fn main() {
 
 fn build_ui(window: &mut ApplicationWindow) {
     let mut label = Label::new(Some("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\"));
-    label.set_font(Font::with_families(&vec!["Courier New"]));
+    label.set_font(Font::with_families(&["Courier New"]));
     window.child(label)
 }

@@ -81,10 +81,10 @@ pub(crate) fn expand(
     }
 }
 
-pub(crate) fn gen_element_trait_impl_clause<'a>(
+pub(crate) fn gen_element_trait_impl_clause(
     name: &Ident,
     element_path: Vec<&'static str>,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let element_path: Vec<_> = element_path
         .iter()

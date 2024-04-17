@@ -75,6 +75,7 @@ impl ObjectImpl for TreeView {
         self.set_area(image);
     }
 
+    #[allow(clippy::single_match)]
     fn on_property_set(&mut self, name: &str, value: &Value) {
         self.parent_on_property_set(name, value);
 

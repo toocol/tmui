@@ -412,7 +412,7 @@ impl ScrollBar {
             self.offset_accumulated = 0.;
             return false;
         }
-        return true;
+        true
     }
 
     #[inline]

@@ -256,7 +256,7 @@ pub trait StaticSizeUnifiedAdjust {
     fn static_size_unified_adjust(container: &mut dyn ContainerImpl);
 }
 
-const SPACING_PROPERTY_NAME: &'static str = "_container_spacing";
+const SPACING_PROPERTY_NAME: &str = "_container_spacing";
 #[reflect_trait]
 pub trait SpacingCapable: ContainerImpl {
     fn orientation(&self) -> Orientation;
@@ -264,9 +264,8 @@ pub trait SpacingCapable: ContainerImpl {
     #[inline]
     fn get_spacing(&self) -> u16 {
         self.get_property(SPACING_PROPERTY_NAME)
-            .and_then(|v| Some(v.get::<u16>()))
-            .or(Some(0))
-            .unwrap()
+            .map(|v| v.get::<u16>())
+            .unwrap_or(0)
     }
 
     #[inline]

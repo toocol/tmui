@@ -73,17 +73,18 @@ pub trait ObjectOperation {
 }
 
 impl Object {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new<T: ObjectSubclass + Default + ObjectImpl + ObjectOperation>(
         properties: &[(&str, &dyn ToValue)],
     ) -> Box<T> {
-        let mut obj = Box::new(T::default());
+        let mut obj = Box::<T>::default();
 
         let default_name = format!("{}#{}", T::NAME, obj.id());
         obj.set_property("name", default_name.to_value());
 
         // Set the customize properties, if user specified the name, replace the default one.
         for (name, value) in properties {
-            obj.set_property(*name, value.to_value())
+            obj.set_property(name, value.to_value())
         }
 
         obj.pretreat_construct();
@@ -97,7 +98,7 @@ impl Object {
     }
 
     pub fn primitive_get_property(&self, name: &str) -> Option<&Value> {
-        self.properties.get(name).and_then(|p| Some(&**p))
+        self.properties.get(name).map(|p| &**p)
     }
 }
 

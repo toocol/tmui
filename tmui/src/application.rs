@@ -7,7 +7,15 @@ use crate::platform::PlatformWin32;
 #[cfg(x11_platform)]
 use crate::platform::PlatformX11;
 use crate::{
-    application_window::ApplicationWindow, backend::BackendType, event_hints::event_hints, font::mgr::FontManager, graphics::icon::Icon, platform::{PlatformContext, PlatformIpc, PlatformType}, primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel}, runtime::{start_ui_runtime, windows_process::WindowsProcess}, window::win_config::{WindowConfig, WindowConfigBuilder}
+    application_window::ApplicationWindow,
+    backend::BackendType,
+    event_hints::event_hints,
+    font::mgr::FontManager,
+    graphics::icon::Icon,
+    platform::{PlatformContext, PlatformIpc, PlatformType},
+    primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
+    runtime::{start_ui_runtime, windows_process::WindowsProcess},
+    window::win_config::{WindowConfig, WindowConfigBuilder},
 };
 use log::error;
 use std::{
@@ -27,13 +35,17 @@ thread_local! {
     pub(crate) static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
 }
 
-const INVALID_GENERIC_PARAM_ERROR: &'static str =
+const INVALID_GENERIC_PARAM_ERROR: &str =
     "Invalid generic parameters, please use generic parameter defined on Application.";
 pub(crate) static APP_STARTED: AtomicBool = AtomicBool::new(false);
 pub(crate) static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 pub(crate) static IS_SHARED: AtomicBool = AtomicBool::new(false);
 pub(crate) static HIGH_LOAD: AtomicBool = AtomicBool::new(false);
 static ONCE: Once = Once::new();
+
+pub type FnActivate = Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>;
+pub type FnUserEventReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>;
+pub type FnRequestReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) -> Option<T> + Send + Sync>;
 
 /// ### The main application of tmui. <br>
 ///
@@ -53,10 +65,9 @@ pub struct Application<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync
 
     platform_context: RefCell<Option<Box<dyn PlatformContext<T, M>>>>,
 
-    on_activate: RefCell<Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>>,
-    on_user_event_receive: RefCell<Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>>,
-    on_request_receive:
-        RefCell<Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>>,
+    on_activate: RefCell<Option<FnActivate>>,
+    on_user_event_receive: RefCell<Option<FnUserEventReceive<T>>>,
+    on_request_receive: RefCell<Option<FnRequestReceive<M>>>,
 
     shared_mem_name: Option<&'static str>,
     shared_widget_id: Option<&'static str>,
@@ -109,7 +120,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         // Create the `UI` main thread.
         let join = start_ui_runtime(0, self.ui_stack_size, logic_window);
 
-        WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context).process(physical_window);
+        WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context.as_ref()).process(physical_window);
 
         crate::opti::tracker::Tracker::output_file()
             .unwrap_or_else(|err| error!("Output tracker file failed, error = {:?}", err));
@@ -257,7 +268,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     pub(crate) fn process_user_events(
         window: &mut ApplicationWindow,
         cpu_balance: &mut CpuBalance,
-        on_user_event_receive: &Box<dyn Fn(&mut ApplicationWindow, T) + Sync + Send>,
+        on_user_event_receive: &FnUserEventReceive<T>,
     ) {
         SHARED_CHANNEL.with(|s| {
             if let Some(channel) = s.borrow().as_ref() {
@@ -277,7 +288,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     pub(crate) fn process_request(
         window: &mut ApplicationWindow,
         cpu_balance: &mut CpuBalance,
-        on_request_receive: &Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Sync + Send>,
+        on_request_receive: &FnRequestReceive<M>,
     ) {
         SHARED_CHANNEL.with(|s| {
             if let Some(channel) = s.borrow().as_ref() {
@@ -299,7 +310,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
                 let (sender, receiver) = &channel
                     .downcast_ref::<SharedChannel<T, M>>()
                     .expect(INVALID_GENERIC_PARAM_ERROR);
-                if let Some(_) = receiver.receive_request() {
+                if receiver.receive_request().is_some() {
                     sender.resp_request(None);
                 }
             }
@@ -358,8 +369,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
             shared_mem_name,
             shared_widget_id: None,
             opti_track: false,
-            _user_event: PhantomData::default(),
-            _request: PhantomData::default(),
+            _user_event: PhantomData,
+            _request: PhantomData,
         }
     }
 
@@ -384,21 +395,18 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
 
         if let Some(width) = self.width {
             self.win_cfg_bld = self.win_cfg_bld.width(width)
+        } else if app.platform_type == PlatformType::Ipc {
+            self.win_cfg_bld = self.win_cfg_bld.width(0)
         } else {
-            if app.platform_type == PlatformType::Ipc {
-                self.win_cfg_bld = self.win_cfg_bld.width(0)
-            } else {
-                panic!("Application window should specify the `width`.")
-            }
+            panic!("Application window should specify the `width`.")
         }
+
         if let Some(height) = self.height {
             self.win_cfg_bld = self.win_cfg_bld.height(height)
+        } else if app.platform_type == PlatformType::Ipc {
+            self.win_cfg_bld = self.win_cfg_bld.height(0)
         } else {
-            if app.platform_type == PlatformType::Ipc {
-                self.win_cfg_bld = self.win_cfg_bld.height(0)
-            } else {
-                panic!("Application window should specify the `height`.")
-            }
+            panic!("Application window should specify the `height`.")
         }
 
         if let Some(shared_mem_name) = self.shared_mem_name {

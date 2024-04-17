@@ -165,7 +165,7 @@ impl Type {
     pub fn from_name(name: &'static str) -> Self {
         Type {
             ttype: TTYPE_OBJECT,
-            name: name,
+            name,
         }
     }
 

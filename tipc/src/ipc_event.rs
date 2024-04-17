@@ -45,6 +45,7 @@ pub enum IpcEvent<T: 'static + Copy> {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     None,
     Exit,
@@ -78,14 +79,14 @@ pub(crate) enum InnerIpcEvent<T: 'static + Copy> {
     UserEvent(T, Instant),
 }
 
-impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
-    fn into(self) -> InnerIpcEvent<T> {
-        match self {
-            Self::None => InnerIpcEvent::None,
-            Self::Exit => InnerIpcEvent::Exit,
-            Self::ResizeEvent(a, b, c) => InnerIpcEvent::ResizeEvent(a, b, c),
-            Self::VSync(a) => InnerIpcEvent::VSync(a),
-            Self::KeyPressedEvent(a, b, c, d) => {
+impl<T: 'static + Copy> From<IpcEvent<T>> for InnerIpcEvent<T> {
+    fn from(val: IpcEvent<T>) -> Self {
+        match val {
+            IpcEvent::None => InnerIpcEvent::None,
+            IpcEvent::Exit => InnerIpcEvent::Exit,
+            IpcEvent::ResizeEvent(a, b, c) => InnerIpcEvent::ResizeEvent(a, b, c),
+            IpcEvent::VSync(a) => InnerIpcEvent::VSync(a),
+            IpcEvent::KeyPressedEvent(a, b, c, d) => {
                 let bytes = a.as_bytes();
                 if bytes.len() > IPC_KEY_EVT_SIZE {
                     panic!(
@@ -98,7 +99,7 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
                 data[0..bytes.len()].copy_from_slice(bytes);
                 InnerIpcEvent::KeyPressedEvent(data, b, c, d)
             }
-            Self::KeyReleasedEvent(a, b, c, d) => {
+            IpcEvent::KeyReleasedEvent(a, b, c, d) => {
                 let bytes = a.as_bytes();
                 if bytes.len() > IPC_KEY_EVT_SIZE {
                     panic!(
@@ -111,21 +112,21 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
                 data[0..bytes.len()].copy_from_slice(bytes);
                 InnerIpcEvent::KeyReleasedEvent(data, b, c, d)
             }
-            Self::MousePressedEvent(a, b, c, d, e, f) => {
+            IpcEvent::MousePressedEvent(a, b, c, d, e, f) => {
                 InnerIpcEvent::MousePressedEvent(a, b, c, d, e, f)
             }
-            Self::MouseReleaseEvent(a, b, c, d, e) => {
+            IpcEvent::MouseReleaseEvent(a, b, c, d, e) => {
                 InnerIpcEvent::MouseReleaseEvent(a, b, c, d, e)
             }
-            Self::MouseEnterEvent(a, b, c, d) => InnerIpcEvent::MouseEnterEvent(a, b, c, d),
-            Self::MouseLeaveEvent(a, b) => InnerIpcEvent::MouseLeaveEvent(a, b),
-            Self::MouseMoveEvent(a, b, c, d, e) => InnerIpcEvent::MouseMoveEvent(a, b, c, d, e),
-            Self::MouseWheelEvent(a, b, c, d, e, f) => {
+            IpcEvent::MouseEnterEvent(a, b, c, d) => InnerIpcEvent::MouseEnterEvent(a, b, c, d),
+            IpcEvent::MouseLeaveEvent(a, b) => InnerIpcEvent::MouseLeaveEvent(a, b),
+            IpcEvent::MouseMoveEvent(a, b, c, d, e) => InnerIpcEvent::MouseMoveEvent(a, b, c, d, e),
+            IpcEvent::MouseWheelEvent(a, b, c, d, e, f) => {
                 InnerIpcEvent::MouseWheelEvent(a, b, c, d, e, f)
             }
-            Self::RequestFocusEvent(a, b) => InnerIpcEvent::RequestFocusEvent(a, b),
-            Self::SetCursorShape(a) => InnerIpcEvent::SetCursorShape(a),
-            Self::TextEvent(a, b) => {
+            IpcEvent::RequestFocusEvent(a, b) => InnerIpcEvent::RequestFocusEvent(a, b),
+            IpcEvent::SetCursorShape(a) => InnerIpcEvent::SetCursorShape(a),
+            IpcEvent::TextEvent(a, b) => {
                 let bytes = a.as_bytes();
                 if bytes.len() > IPC_TEXT_EVT_SIZE {
                     panic!(
@@ -138,68 +139,68 @@ impl<T: 'static + Copy> Into<InnerIpcEvent<T>> for IpcEvent<T> {
                 data[0..bytes.len()].copy_from_slice(bytes);
                 InnerIpcEvent::TextEvent(data, b)
             }
-            Self::UserEvent(a, b) => InnerIpcEvent::UserEvent(a, b),
+            IpcEvent::UserEvent(a, b) => InnerIpcEvent::UserEvent(a, b),
         }
     }
 }
 
-impl<T: 'static + Copy> Into<IpcEvent<T>> for InnerIpcEvent<T> {
-    fn into(self) -> IpcEvent<T> {
-        match self {
-            Self::None => IpcEvent::None,
-            Self::Exit => IpcEvent::Exit,
-            Self::ResizeEvent(a, b, c) => IpcEvent::ResizeEvent(a, b, c),
-            Self::VSync(a) => IpcEvent::VSync(a),
-            Self::KeyPressedEvent(a, b, c, d) => {
+impl<T: 'static + Copy> From<InnerIpcEvent<T>> for IpcEvent<T> {
+    fn from(val: InnerIpcEvent<T>) -> Self {
+        match val {
+            InnerIpcEvent::None => IpcEvent::None,
+            InnerIpcEvent::Exit => IpcEvent::Exit,
+            InnerIpcEvent::ResizeEvent(a, b, c) => IpcEvent::ResizeEvent(a, b, c),
+            InnerIpcEvent::VSync(a) => IpcEvent::VSync(a),
+            InnerIpcEvent::KeyPressedEvent(a, b, c, d) => {
                 let str = String::from_utf8(a.to_vec())
                     .unwrap()
                     .trim_end_matches('\0')
                     .to_string();
                 IpcEvent::KeyPressedEvent(str, b, c, d)
             }
-            Self::KeyReleasedEvent(a, b, c, d) => {
+            InnerIpcEvent::KeyReleasedEvent(a, b, c, d) => {
                 let str = String::from_utf8(a.to_vec())
                     .unwrap()
                     .trim_end_matches('\0')
                     .to_string();
                 IpcEvent::KeyReleasedEvent(str, b, c, d)
             }
-            Self::MousePressedEvent(a, b, c, d, e, f) => {
+            InnerIpcEvent::MousePressedEvent(a, b, c, d, e, f) => {
                 IpcEvent::MousePressedEvent(a, b, c, d, e, f)
             }
-            Self::MouseReleaseEvent(a, b, c, d, e) => IpcEvent::MouseReleaseEvent(a, b, c, d, e),
-            Self::MouseEnterEvent(a, b, c, d) => IpcEvent::MouseEnterEvent(a, b, c, d),
-            Self::MouseLeaveEvent(a, b) => IpcEvent::MouseLeaveEvent(a, b),
-            Self::MouseMoveEvent(a, b, c, d, e) => IpcEvent::MouseMoveEvent(a, b, c, d, e),
-            Self::MouseWheelEvent(a, b, c, d, e, f) => IpcEvent::MouseWheelEvent(a, b, c, d, e, f),
-            Self::RequestFocusEvent(a, b) => IpcEvent::RequestFocusEvent(a, b),
-            Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
-            Self::TextEvent(a, b) => {
+            InnerIpcEvent::MouseReleaseEvent(a, b, c, d, e) => IpcEvent::MouseReleaseEvent(a, b, c, d, e),
+            InnerIpcEvent::MouseEnterEvent(a, b, c, d) => IpcEvent::MouseEnterEvent(a, b, c, d),
+            InnerIpcEvent::MouseLeaveEvent(a, b) => IpcEvent::MouseLeaveEvent(a, b),
+            InnerIpcEvent::MouseMoveEvent(a, b, c, d, e) => IpcEvent::MouseMoveEvent(a, b, c, d, e),
+            InnerIpcEvent::MouseWheelEvent(a, b, c, d, e, f) => IpcEvent::MouseWheelEvent(a, b, c, d, e, f),
+            InnerIpcEvent::RequestFocusEvent(a, b) => IpcEvent::RequestFocusEvent(a, b),
+            InnerIpcEvent::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
+            InnerIpcEvent::TextEvent(a, b) => {
                 let str = String::from_utf8_lossy(&a)
                     .trim_end_matches('\0')
                     .to_string();
                 IpcEvent::TextEvent(str, b)
             }
-            Self::UserEvent(a, b) => IpcEvent::UserEvent(a, b),
+            InnerIpcEvent::UserEvent(a, b) => IpcEvent::UserEvent(a, b),
         }
     }
 }
 
-impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
-    fn into(self) -> Event {
-        match self {
-            Self::ResizeEvent(w, h, _time) => ResizeEvent::new(w, h).boxed(),
-            Self::KeyPressedEvent(ch, key_code, modifier, _time) => {
+impl<T: 'static + Copy> From<IpcEvent<T>> for Event {
+    fn from(val: IpcEvent<T>) -> Event {
+        match val {
+            IpcEvent::ResizeEvent(w, h, _time) => ResizeEvent::new(w, h).boxed(),
+            IpcEvent::KeyPressedEvent(ch, key_code, modifier, _time) => {
                 let key_code = KeyCode::from(key_code);
                 let modifier = KeyboardModifier::from(modifier);
                 KeyEvent::new(EventType::KeyPress, key_code, modifier, to_static(ch)).boxed()
             }
-            Self::KeyReleasedEvent(ch, key_code, modifier, _time) => {
+            IpcEvent::KeyReleasedEvent(ch, key_code, modifier, _time) => {
                 let key_code = KeyCode::from(key_code);
                 let modifier = KeyboardModifier::from(modifier);
                 KeyEvent::new(EventType::KeyRelease, key_code, modifier, to_static(ch)).boxed()
             }
-            Self::MousePressedEvent(n_press, x, y, button, modifier, _time) => {
+            IpcEvent::MousePressedEvent(n_press, x, y, button, modifier, _time) => {
                 let button = MouseButton::from(button);
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
@@ -213,7 +214,7 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::MouseReleaseEvent(x, y, button, modifier, _time) => {
+            IpcEvent::MouseReleaseEvent(x, y, button, modifier, _time) => {
                 let button = MouseButton::from(button);
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
@@ -227,7 +228,7 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::MouseEnterEvent(x, y, modifier, _time) => {
+            IpcEvent::MouseEnterEvent(x, y, modifier, _time) => {
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
                     EventType::MouseEnter,
@@ -240,7 +241,7 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::MouseLeaveEvent(modifier, _time) => {
+            IpcEvent::MouseLeaveEvent(modifier, _time) => {
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
                     EventType::MouseLeave,
@@ -253,7 +254,7 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::MouseMoveEvent(x, y, button, modifier, _time) => {
+            IpcEvent::MouseMoveEvent(x, y, button, modifier, _time) => {
                 let button = MouseButton::from(button);
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
@@ -267,7 +268,7 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::MouseWheelEvent(x, y, delta, delta_type, modifier, _time) => {
+            IpcEvent::MouseWheelEvent(x, y, delta, delta_type, modifier, _time) => {
                 let modifier = KeyboardModifier::from(modifier);
                 MouseEvent::new(
                     EventType::MouseWhell,
@@ -280,13 +281,14 @@ impl<T: 'static + Copy> Into<Event> for IpcEvent<T> {
                 )
                 .boxed()
             }
-            Self::RequestFocusEvent(is_focus, _time) => FocusEvent::new(is_focus).boxed(),
+            IpcEvent::RequestFocusEvent(is_focus, _time) => FocusEvent::new(is_focus).boxed(),
             _ => unreachable!(),
         }
     }
 }
 
 impl<T: 'static + Copy> PayloadWeight for IpcEvent<T> {
+    #[inline]
     fn payload_wieght(&self) -> f32 {
         match self {
             Self::ResizeEvent(..) => 40.,

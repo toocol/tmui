@@ -26,7 +26,7 @@ pub struct EventHints {
 
 #[inline]
 pub(crate) fn event_hints() -> &'static mut EventHints {
-    static mut EVENT_HINTS: Lazy<EventHints> = Lazy::new(|| EventHints::default());
+    static mut EVENT_HINTS: Lazy<EventHints> = Lazy::new(EventHints::default);
     unsafe { &mut EVENT_HINTS }
 }
 

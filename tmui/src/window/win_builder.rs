@@ -1,10 +1,10 @@
 use super::{Window, win_config::WindowConfig};
-use crate::application_window::ApplicationWindow;
+use crate::{application::FnActivate, application_window::ApplicationWindow};
 
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
-    on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
+    on_activate: Option<FnActivate>,
 }
 
 impl WindowBuilder {

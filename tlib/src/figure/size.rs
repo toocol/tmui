@@ -81,34 +81,34 @@ impl From<(i32, i32)> for Size {
     }
 }
 
-impl Into<(i32, i32)> for Size {
+impl From<Size> for (i32, i32) {
     #[inline]
-    fn into(self) -> (i32, i32) {
-        (self.width, self.height)
+    fn from(value: Size) -> Self {
+        (value.width, value.height)
     }
 }
 
-impl Into<FSize> for Size {
+impl From<Size> for FSize {
     #[inline]
-    fn into(self) -> FSize {
+    fn from(value: Size) -> Self {
         FSize {
-            width: self.width as f32,
-            height: self.height as f32,
+            width: value.width as f32,
+            height: value.height as f32,
         }
     }
 }
 
-impl Into<SkiaSize> for Size {
+impl From<Size> for SkiaSize {
     #[inline]
-    fn into(self) -> SkiaSize {
-        SkiaSize::new(self.width as f32, self.height as f32)
+    fn from(value: Size) -> Self {
+        SkiaSize::new(value.width as f32, value.height as f32)
     }
 }
 
-impl Into<SkiaISize> for Size {
+impl From<Size> for SkiaISize {
     #[inline]
-    fn into(self) -> SkiaISize {
-        SkiaISize::new(self.width, self.height)
+    fn from(value: Size) -> Self {
+        SkiaISize::new(value.width, value.height)
     }
 }
 
@@ -261,34 +261,34 @@ impl From<(f32, f32)> for FSize {
     }
 }
 
-impl Into<(f32, f32)> for FSize {
+impl From<FSize> for (f32, f32) {
     #[inline]
-    fn into(self) -> (f32, f32) {
-        (self.width, self.height)
+    fn from(value: FSize) -> Self {
+        (value.width, value.height)
     }
 }
 
-impl Into<Size> for FSize {
+impl From<FSize> for Size {
     #[inline]
-    fn into(self) -> Size {
+    fn from(value: FSize) -> Self {
         Size {
-            width: self.width as i32,
-            height: self.height as i32,
+            width: value.width as i32,
+            height: value.height as i32,
         }
     }
 }
 
-impl Into<SkiaSize> for FSize {
+impl From<FSize> for SkiaSize {
     #[inline]
-    fn into(self) -> SkiaSize {
-        SkiaSize::new(self.width, self.height)
+    fn from(value: FSize) -> Self {
+        SkiaSize::new(value.width, value.height)
     }
 }
 
-impl Into<SkiaISize> for FSize {
+impl From<FSize> for SkiaISize {
     #[inline]
-    fn into(self) -> SkiaISize {
-        SkiaISize::new(self.width.round() as i32, self.height.round() as i32)
+    fn from(value: FSize) -> Self {
+        SkiaISize::new(value.width.round() as i32, value.height.round() as i32)
     }
 }
 

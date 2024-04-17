@@ -19,6 +19,7 @@ use tlib::{
 
 static TREE_NODE_ID_INCREMENT: IdGenerator = IdGenerator::new(1);
 
+#[allow(clippy::vec_box)]
 pub struct TreeNode {
     id: ObjectId,
     pub(crate) store: ObjectId,
@@ -119,7 +120,7 @@ impl TreeNode {
                 warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
                 None
             })
-            .and_then(|cell| Some(cell.get_render()))
+            .map(|cell| cell.get_render())
     }
 
     pub fn get_cell_render_mut(&mut self, cell_idx: usize) -> Option<&mut dyn CellRender> {
@@ -129,7 +130,7 @@ impl TreeNode {
                 warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
                 None
             })
-            .and_then(|cell| Some(cell.get_render_mut()))
+            .map(|cell| cell.get_render_mut())
     }
 
     #[inline]
@@ -182,7 +183,7 @@ impl TreeNode {
         let child_expanded = self.is_expanded();
         let mut parent = self.get_parent();
         let mut deleted = vec![child_id];
-        deleted.extend_from_slice(&self.get_children_ids());
+        deleted.extend_from_slice(self.get_children_ids());
         TreeStore::store_mut(self.store).unwrap().node_deleted(
             nonnull_mut!(parent),
             child_id,
@@ -253,7 +254,7 @@ impl TreeNode {
         let gapping = geometry.width() / self.cells.len() as f32;
 
         for (i, cell) in self.cells.iter().enumerate() {
-            let mut cell_rect = geometry.clone();
+            let mut cell_rect = geometry;
 
             cell_rect.set_x(gapping * i as f32);
             cell_rect.set_width(gapping);
@@ -401,7 +402,7 @@ impl TreeNode {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
 
-            if parent.children_id_holder.len() == 0 {
+            if parent.children_id_holder.is_empty() {
                 return;
             }
 

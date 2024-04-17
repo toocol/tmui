@@ -12,7 +12,7 @@ use tmui::{
     widget::{widget_ext::WidgetExt, WidgetImplExt},
 };
 
-pub const IPC_NAME: &'static str = "shmem_ipc140";
+pub const IPC_NAME: &str = "shmem_ipc140";
 pub static CNT: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Debug, Clone, Copy)]

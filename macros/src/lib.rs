@@ -64,9 +64,8 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let extend_attr = parse_macro_input!(args as ExtendAttr);
     let mut ast = parse_macro_input!(input as DeriveInput);
 
-    match extend_attr.check() {
-        Err(e) => return e.to_compile_error().into(),
-        _ => {}
+    if let Err(e) = extend_attr.check() {
+        return e.to_compile_error().into()
     }
 
     let extend_str = extend_attr.extend.to_string();

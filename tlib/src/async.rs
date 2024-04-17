@@ -21,8 +21,8 @@ pub fn tokio_runtime() -> &'static Runtime {
 
 #[inline]
 pub fn async_tasks<'a>() -> &'static mut HashMap<ThreadId, Vec<AsyncTask<'a>>> {
-    static mut ASYNC_TASK: Lazy<Box<HashMap<ThreadId, Vec<AsyncTask>>>> =
-        Lazy::new(|| Box::new(HashMap::new()));
+    static mut ASYNC_TASK: Lazy<HashMap<ThreadId, Vec<AsyncTask>>> =
+        Lazy::new(HashMap::new);
     unsafe { &mut ASYNC_TASK }
 }
 
@@ -31,7 +31,7 @@ pub fn async_callbacks() {
     let thread_id = thread::current().id();
 
     let tasks_ref = async_tasks().get(&thread_id);
-    if tasks_ref.is_some() && tasks_ref.unwrap().len() > 0 {
+    if tasks_ref.is_some() && !tasks_ref.unwrap().is_empty() {
         let mut task_queue = async_tasks().remove(&thread_id).unwrap();
 
         let iter = task_queue.into_iter();

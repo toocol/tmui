@@ -44,7 +44,7 @@ pub(crate) fn expand(
                 )
             };
 
-            return Ok(quote! {
+            Ok(quote! {
                 #default_clause
                 #ast
 
@@ -67,7 +67,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name #ty_generics, ReflectObjectOperation>();
                     }
                 }
-            });
+            })
         }
         _ => Err(syn::Error::new_spanned(
             ast,
@@ -76,12 +76,12 @@ pub(crate) fn expand(
     }
 }
 
-pub(crate) fn gen_object_trait_impl_clause<'a>(
+pub(crate) fn gen_object_trait_impl_clause(
     name: &Ident,
     super_field: &'static str,
     object_path: Vec<&'static str>,
     children_construct: bool,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let super_field = Ident::new(super_field, name.span());
     let object_path: Vec<_> = object_path

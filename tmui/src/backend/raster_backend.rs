@@ -32,8 +32,8 @@ impl RasterBackend {
             .to_owned();
 
         Box::new(Self {
-            image_info: image_info,
-            surface: surface,
+            image_info,
+            surface,
         })
     }
 }

@@ -22,12 +22,12 @@ pub mod slave_context;
 pub(crate) const IPC_QUEUE_SIZE: usize = 10000;
 pub(crate) const MAX_REGION_SIZE: usize = 10;
 
-pub(crate) const IPC_MEM_BUFFER_NAME: &'static str = "_mem_bf";
-pub(crate) const IPC_MEM_SHARED_INFO_NAME: &'static str = "_mem_sh_info";
-pub(crate) const IPC_MEM_LOCK_NAME: &'static str = "_mem_rwl";
-pub(crate) const IPC_MEM_MASTER_QUEUE: &'static str = "_mem_m_q";
-pub(crate) const IPC_MEM_SLAVE_QUEUE: &'static str = "_mem_s_q";
-pub(crate) const IPC_MEM_SIGNAL_EVT: &'static str = "_mem_e_s";
+pub(crate) const IPC_MEM_BUFFER_NAME: &str = "_mem_bf";
+pub(crate) const IPC_MEM_SHARED_INFO_NAME: &str = "_mem_sh_info";
+pub(crate) const IPC_MEM_LOCK_NAME: &str = "_mem_rwl";
+pub(crate) const IPC_MEM_MASTER_QUEUE: &str = "_mem_m_q";
+pub(crate) const IPC_MEM_SLAVE_QUEUE: &str = "_mem_s_q";
+pub(crate) const IPC_MEM_SIGNAL_EVT: &str = "_mem_e_s";
 
 pub(crate) trait MemContext<T: 'static + Copy, M: 'static + Copy> {
     fn name(&self) -> &str;

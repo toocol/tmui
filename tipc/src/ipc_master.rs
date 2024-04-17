@@ -24,15 +24,13 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
         let master_context = MasterContext::create(name);
 
         Self {
-            // width: width as usize,
-            // height: height as usize,
-            master_context: master_context,
+            master_context,
             retentions: VecDeque::new(),
         }
     }
 
     pub fn add_rect(&self, id: &'static str, rect: Rect) {
-        let id = generate_u128(id).expect(&format!("Invalid id: {}", id));
+        let id = generate_u128(id).unwrap_or_else(|| panic!("Invalid id: {}", id));
 
         let shared_ifo = self.master_context.shared_info();
         let idx = shared_ifo.region_idx.load(Ordering::Acquire);
@@ -80,7 +78,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
 
     #[inline]
     fn try_send(&self, evt: IpcEvent<T>) -> Result<(), MemQueueError> {
-        self.master_context.try_send(evt.into())
+        self.master_context.try_send(evt)
     }
 
     #[inline]
@@ -98,7 +96,6 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
         self.master_context
             .try_recv_vec()
             .into_iter()
-            .map(|e| e.into())
             .collect()
     }
 
@@ -132,7 +129,7 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcNode<T, M> for IpcMaster<T, M> {
 
     #[inline]
     fn region(&self, id: &'static str) -> Option<Rect> {
-        let id = generate_u128(id).expect(&format!("Invalid id: {}", id));
+        let id = generate_u128(id).unwrap_or_else(|| panic!("Invalid id: {}", id));
 
         let shared_info = self.master_context.shared_info();
         let idx = shared_info.region_idx.load(Ordering::Acquire);
@@ -214,6 +211,8 @@ impl<T: 'static + Copy, M: 'static + Copy> IpcMaster<T, M> {
             .shared_info()
             .prepared
             .load(Ordering::Acquire)
-        {}
+        {
+            std::hint::spin_loop()
+        }
     }
 }

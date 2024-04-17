@@ -7,7 +7,7 @@ use crate::{
 use tlib::{figure::FSize, global::PrecisionOps};
 
 #[cfg(font_awesome)]
-const DEFAULT_ICON_FAMILIES: [&'static str; 3] = [
+const DEFAULT_ICON_FAMILIES: [&str; 3] = [
     "Font Awesome 6 Brands",
     "Font Awesome 6 Free",
     "Font Awesome 6 Free Solid",

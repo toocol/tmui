@@ -70,7 +70,7 @@ pub(crate) fn make_window(
 ) -> (WinitWindow, Option<Arc<GlEnv>>) {
     if backend_type == BackendType::OpenGL {
         let (win, gl_env) =
-            gl_bootstrap::bootstrap_gl_window(target, win_config.to_window_builder())
+            gl_bootstrap::bootstrap_gl_window(target, win_config.create_window_builder())
                 .expect("bootstrap gl window failed.");
 
         (win, Some(gl_env))

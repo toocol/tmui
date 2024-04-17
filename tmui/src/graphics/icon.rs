@@ -7,23 +7,21 @@ pub struct Icon(ImageBuf);
 impl Icon {
     #[inline]
     pub fn from_file<T: AsRef<Path>>(path: T) -> Option<Self> {
-        match ImageBuf::from_file(path) {
-            Some(buf) => Some(Self(buf)),
-            None => None,
-        }
+        ImageBuf::from_file(path).map(Self)
     }
 }
 
-impl Into<WinitIcon> for Icon {
+impl From<Icon> for WinitIcon {
     #[inline]
-    fn into(self) -> tlib::winit::window::Icon {
-        tlib::winit::window::Icon::from_rgba(
-            self.0
+    fn from(val: Icon) -> WinitIcon {
+        WinitIcon::from_rgba(
+            val.0
                 .raw_file()
                 .expect("Pixels bytes of icon was none.")
                 .to_vec(),
-            self.0.width() as u32,
-            self.0.height() as u32,
-        ).unwrap()
+            val.0.width() as u32,
+            val.0.height() as u32,
+        )
+        .unwrap()
     }
 }

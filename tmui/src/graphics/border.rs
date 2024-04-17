@@ -1,3 +1,4 @@
+#![allow(clippy::single_match)]
 use derivative::Derivative;
 use tlib::{
     figure::{Color, FRect},

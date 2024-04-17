@@ -40,7 +40,7 @@ impl Board {
         Self {
             bitmap,
             backend,
-            surface: surface,
+            surface,
             element_list: RefCell::new(vec![]),
         }
     }
@@ -114,13 +114,13 @@ impl Board {
                             && shared_widget.as_ref().unwrap().is_shared_invalidate());
 
                     if need_render {
-                        let mut cr = DrawingContext::new(self.surface.canvas());
+                        let cr = DrawingContext::new(self.surface.canvas());
 
                         if let Some(shared_widget) = shared_widget {
                             shared_widget.shared_validate();
                         }
 
-                        element.on_renderer(&mut cr);
+                        element.on_renderer(&cr);
                         element.validate();
                         element.clear_regions();
                         update = true;

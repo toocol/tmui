@@ -23,8 +23,7 @@ impl<T: InputBounds> RadioControl<T> {
         self.selected
             .borrow()
             .as_ref()
-            .and_then(|s| Some(s.value()))
-            .or(None)
+            .map(|s| s.value())
     }
 
     #[inline]

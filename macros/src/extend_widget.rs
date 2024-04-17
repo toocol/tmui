@@ -206,11 +206,11 @@ pub(crate) fn expand_with_layout(
     layout::expand(ast, layout_meta, layout, internal, ignore_default)
 }
 
-pub(crate) fn gen_widget_trait_impl_clause<'a>(
+pub(crate) fn gen_widget_trait_impl_clause(
     name: &Ident,
     super_field: Option<&'static str>,
     widget_path: Vec<&'static str>,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let widget_path: Vec<_> = widget_path
         .iter()
@@ -920,7 +920,7 @@ pub(crate) fn gen_widget_trait_impl_clause<'a>(
             }
 
             #[inline]
-            fn _child_ref(&mut self, child: *mut dyn WidgetImpl) {
+            unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl) {
                 if self.super_type().is_a(Container::static_type()) {
                     panic!("function `child()` was invalid in `Container`")
                 }

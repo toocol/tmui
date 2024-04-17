@@ -74,7 +74,7 @@ pub fn is_null_32(f: f32) -> bool {
 
 #[inline]
 pub fn cpu_nums() -> &'static usize {
-    static CPU_NUMS: Lazy<usize> = Lazy::new(|| num_cpus::get());
+    static CPU_NUMS: Lazy<usize> = Lazy::new(num_cpus::get);
     &CPU_NUMS
 }
 

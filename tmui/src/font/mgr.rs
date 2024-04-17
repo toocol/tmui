@@ -60,13 +60,13 @@ impl FontManager {
 
             for font in EXTERNAL_FONTS {
                 let data = FontAsset::get(font)
-                    .expect(&format!("Load ttf file `{}` failed.", font))
+                    .unwrap_or_else(|| panic!("Load ttf file `{}` failed.", font))
                     .data;
 
                 let tf = manager
                     .system_mgr
                     .new_from_data(&data, None)
-                    .expect(&format!("Make font typeface failed, ttf file: {}.", font));
+                    .unwrap_or_else(|| panic!("Make font typeface failed, ttf file: {}.", font));
 
                 manager.fonts.insert(tf.family_name(), tf);
             }
@@ -75,11 +75,7 @@ impl FontManager {
 
     #[inline]
     pub(crate) fn get(family: &str) -> Option<SkiaTypeface> {
-        if let Some(tf) = Self::read().fonts.get(family) {
-            Some(tf.clone())
-        } else {
-            None
-        }
+        Self::read().fonts.get(family).cloned()
     }
 
     #[inline]
@@ -89,18 +85,18 @@ impl FontManager {
 
     #[inline]
     pub fn load_file(path: &str) {
-        let mut file = std::fs::File::open(path).expect(&format!("Open file `{}` failed.", path));
+        let mut file = std::fs::File::open(path).unwrap_or_else(|_| panic!("Open file `{}` failed.", path));
 
         let mut data = vec![];
         file.read_to_end(&mut data)
-            .expect(&format!("Read file `{}` failed", path));
+            .unwrap_or_else(|_| panic!("Read file `{}` failed", path));
 
         let mut manager = Self::write();
 
         let tf = manager
             .system_mgr
             .new_from_data(&data, None)
-            .expect(&format!(
+            .unwrap_or_else(|| panic!(
                 "Make customize font typeface failed, ttf file: {}.",
                 path
             ));
@@ -115,7 +111,7 @@ impl FontManager {
         let tf = manager
             .system_mgr
             .new_from_data(data, None)
-            .expect(&format!("Make customize font typeface failed."));
+            .unwrap_or_else(|| panic!("Make customize font typeface failed."));
 
         manager.fonts.insert(tf.family_name(), tf);
     }

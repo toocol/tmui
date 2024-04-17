@@ -125,10 +125,10 @@ pub(crate) fn expand(
                         let mut has_default = false;
                         for attr in field.attrs.iter() {
                             if let Some(attr_ident) = attr.path.get_ident() {
-                                if attr_ident.to_string() == "children" {
+                                if *attr_ident == "children" {
                                     childrenable = true;
                                 }
-                                if attr_ident.to_string() == "derivative" {
+                                if *attr_ident == "derivative" {
                                     has_default = true;
                                 }
                             }
@@ -354,10 +354,10 @@ pub(crate) fn expand(
     }
 }
 
-pub(crate) fn gen_container_trait_impl_clause<'a>(
+pub(crate) fn gen_container_trait_impl_clause(
     name: &Ident,
     container_path: Vec<&'static str>,
-    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'a>,
+    (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let container_path: Vec<_> = container_path
         .iter()

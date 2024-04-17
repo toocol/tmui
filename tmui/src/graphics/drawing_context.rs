@@ -15,6 +15,6 @@ impl<'a> DrawingContext<'a> {
 
     #[inline]
     pub fn canvas(&self) -> &Canvas {
-        &self.canvas
+        self.canvas
     }
 }

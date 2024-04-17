@@ -54,12 +54,12 @@ pub trait ScrollAreaGenericExt {
 impl ScrollAreaExt for ScrollArea {
     #[inline]
     fn get_area(&self) -> Option<&dyn WidgetImpl> {
-        self.area.as_ref().and_then(|w| Some(w.as_ref()))
+        self.area.as_ref().map(|w| w.as_ref())
     }
 
     #[inline]
     fn get_area_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
-        self.area.as_mut().and_then(|w| Some(w.as_mut()))
+        self.area.as_mut().map(|w| w.as_mut())
     }
 
     #[inline]

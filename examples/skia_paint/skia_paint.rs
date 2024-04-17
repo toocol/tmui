@@ -57,14 +57,12 @@ impl WidgetImpl for SkiaPaint {
 
 impl SkiaPaint {
     fn draw_text(&self, painter: &mut Painter) {
-        const TEXT: &'static str =
-            "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
-        const REP: &'static str =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
-        const FAMILY: &'static str = "Courier New";
+        const TEXT: &str = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
+        const REP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()/\\";
+        const FAMILY: &str = "Courier New";
         const FONT_SIZE: f32 = 12.;
 
-        let mut font = Font::with_families(&vec![FAMILY]);
+        let mut font = Font::with_families(&[FAMILY]);
         font.set_size(FONT_SIZE);
 
         painter.set_font(font.clone());
@@ -75,7 +73,7 @@ impl SkiaPaint {
         // create font manager
         let typeface = font.typeface();
         let mut typeface_provider = TypefaceFontProvider::new();
-        typeface_provider.register_typeface(typeface.into(), Some(FAMILY));
+        typeface_provider.register_typeface(typeface, Some(FAMILY));
         let mut font_collection = FontCollection::new();
         font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
 
@@ -84,7 +82,7 @@ impl SkiaPaint {
         let mut text_style = TextStyle::new();
         text_style.set_color(Color::BLACK);
         text_style.set_font_size(FONT_SIZE);
-        text_style.set_font_families(&vec![FAMILY]);
+        text_style.set_font_families(&[FAMILY]);
         text_style.set_letter_spacing(0.);
         style.set_text_style(&text_style);
 
@@ -136,7 +134,7 @@ impl SkiaPaint {
         painter.set_antialiasing(true);
         painter.draw_text(TEXT, (0., 100.));
 
-        painter.set_font(Font::with_families(&vec![FAMILY]));
+        painter.set_font(Font::with_families(&[FAMILY]));
         painter.draw_text(TEXT, (0., 200.));
 
         painter.draw_paragraph(REP, (0., 300.), 0., 100., None, true);

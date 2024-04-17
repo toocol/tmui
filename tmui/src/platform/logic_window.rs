@@ -4,7 +4,7 @@ use super::{
     PlatformType,
 };
 use crate::{
-    application_window::ApplicationWindow,
+    application::{FnActivate, FnRequestReceive, FnUserEventReceive},
     backend::BackendType,
     primitive::{bitmap::Bitmap, shared_channel::SharedChannel},
     runtime::window_context::LogicWindowContext,
@@ -35,10 +35,9 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     pub shared_channel: Option<SharedChannel<T, M>>,
     pub context: Option<LogicWindowContext>,
 
-    pub on_activate: Option<Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>>,
-    pub on_user_event_receive: Option<Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>>,
-    pub on_request_receive:
-        Option<Box<dyn Fn(&mut ApplicationWindow, M) -> Option<M> + Send + Sync>>,
+    pub on_activate: Option<FnActivate>,
+    pub on_user_event_receive: Option<FnUserEventReceive<T>>,
+    pub on_request_receive: Option<FnRequestReceive<M>>,
 }
 
 unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Send
@@ -55,7 +54,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         shared_channel: Option<SharedChannel<T, M>>,
         context: LogicWindowContext,
     ) -> Self {
-        let lock = master.as_ref().and_then(|m| Some(m.read().buffer_lock()));
+        let lock = master.as_ref().map(|m| m.read().buffer_lock());
         Self {
             window_id: Some(window_id),
             gl_env,
@@ -114,7 +113,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
 
     pub fn resize(&self, width: u32, height: u32, ipc_only: bool) {
         let mut bitmap_guard = self.bitmap.write();
-        let _guard = self.lock.as_ref().and_then(|l| Some(l.write()));
+        let _guard = self.lock.as_ref().map(|l| l.write());
 
         if let Some(ref slave) = self.slave {
             let mut slave = slave.write();
@@ -147,7 +146,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         }
 
         Some(IpcBridgeModel::<T, M>::new(
-            self.shared_widget_id.clone(),
+            self.shared_widget_id,
             self.master.clone(),
             self.slave.clone(),
         ))

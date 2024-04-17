@@ -91,7 +91,7 @@ impl<'a> Painter<'a> {
 
     #[inline]
     pub fn canvas_ref(&self) -> &Canvas {
-        &self.canvas
+        self.canvas
     }
 
     #[inline]
@@ -113,7 +113,7 @@ impl<'a> Painter<'a> {
     ///
     /// Return the save count.
     #[inline]
-    pub fn save(&mut self) -> usize {
+    pub fn save(&self) -> usize {
         self.canvas.save()
     }
 
@@ -134,8 +134,8 @@ impl<'a> Painter<'a> {
         if let Some(ref font) = self.font {
             self.saved_font = Some(font.clone())
         }
-        self.saved_color = self.color.clone();
-        self.saved_line_width = self.line_width.clone();
+        self.saved_color = self.color;
+        self.saved_line_width = self.line_width;
     }
 
     /// Restore the pen status
@@ -154,23 +154,23 @@ impl<'a> Painter<'a> {
 
     /// Restore the canvas status.
     #[inline]
-    pub fn restore(&mut self) {
+    pub fn restore(&self) {
         self.canvas.restore();
     }
 
     #[inline]
-    pub fn restore_to_count(&mut self, count: usize) {
+    pub fn restore_to_count(&self, count: usize) {
         self.canvas.restore_to_count(count);
     }
 
     #[inline]
-    pub fn save_layer(&mut self, layer: &SaveLayerRec) -> usize {
+    pub fn save_layer(&self, layer: &SaveLayerRec) -> usize {
         self.canvas.save_layer(layer)
     }
 
     #[inline]
     pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(
-        &mut self,
+        &self,
         layer: T,
         alpha: u8,
     ) -> usize {
@@ -184,7 +184,7 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn reset_matrix(&mut self) {
+    pub fn reset_matrix(&self) {
         self.canvas.reset_matrix();
     }
 
@@ -196,12 +196,12 @@ impl<'a> Painter<'a> {
 
     /// Set the global transform of this painter.
     #[inline]
-    pub fn scale(&mut self, sx: i32, sy: i32) {
+    pub fn scale(&self, sx: i32, sy: i32) {
         self.canvas.scale((sx as f32, sy as f32));
     }
 
     #[inline]
-    pub fn translate(&mut self, dx: f32, dy: f32) {
+    pub fn translate(&self, dx: f32, dy: f32) {
         self.canvas.translate((dx, dy));
     }
 
@@ -255,7 +255,7 @@ impl<'a> Painter<'a> {
 
     /// Clear the canvas with the specified color.
     #[inline]
-    pub fn clear(&mut self, color: Color) {
+    pub fn clear(&self, color: Color) {
         self.canvas.clear(color);
     }
 
@@ -449,7 +449,7 @@ impl<'a> Painter<'a> {
         max_lines: Option<usize>,
         ellipsis: bool,
     ) {
-        if let Some(_) = self.font {
+        if self.font.is_some() {
             // create font manager
             let mut typeface_provider = TypefaceFontProvider::new();
 
@@ -506,7 +506,7 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn draw_paragrah_prepared_global<T: Into<Point>>(&mut self, origin: T) {
         if let Some(paragraph) = self.paragraph.take() {
-            paragraph.paint(&mut self.canvas, origin);
+            paragraph.paint(self.canvas, origin);
         } else {
             warn!("Widget `{}` has no paragraph prepared.", self.name)
         }
@@ -521,7 +521,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_text<T: Into<Point>>(&mut self, text: &str, origin: T) {
+    pub fn draw_text<T: Into<Point>>(&self, text: &str, origin: T) {
         if let Some(font) = self.font.as_ref() {
             let mut origin: Point = origin.into();
             origin.offset((self.x_offset, self.y_offset));
@@ -535,7 +535,7 @@ impl<'a> Painter<'a> {
 
     #[inline]
     pub fn draw_glyphs<T: Into<Point>>(
-        &mut self,
+        &self,
         glyphs: &[u16],
         positions: &[Point],
         clusters: &[u32],
@@ -564,7 +564,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
+    pub fn draw_line(&self, x1: i32, y1: i32, x2: i32, y2: i32) {
         self.draw_line_f(x1 as f32, y1 as f32, x2 as f32, y2 as f32)
     }
 
@@ -572,7 +572,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_line_f(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
+    pub fn draw_line_f(&self, x1: f32, y1: f32, x2: f32, y2: f32) {
         let mut p1: Point = (x1, y1).into();
         let mut p2: Point = (x2, y2).into();
         p1.offset((self.x_offset, self.y_offset));
@@ -583,13 +583,13 @@ impl<'a> Painter<'a> {
 
     /// Draw a line from (x1, y1) to (x2, y2). <br>
     #[inline]
-    pub fn draw_line_global(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
+    pub fn draw_line_global(&self, x1: i32, y1: i32, x2: i32, y2: i32) {
         self.draw_line_f_global(x1 as f32, y1 as f32, x2 as f32, y2 as f32)
     }
 
     /// Draw a line from (x1, y1) to (x2, y2) with the float numbers. <br>
     #[inline]
-    pub fn draw_line_f_global(&mut self, x1: f32, y1: f32, x2: f32, y2: f32) {
+    pub fn draw_line_f_global(&self, x1: f32, y1: f32, x2: f32, y2: f32) {
         let p1: Point = (x1, y1).into();
         let p2: Point = (x2, y2).into();
 
@@ -599,9 +599,10 @@ impl<'a> Painter<'a> {
     /// Draw the arc. <br>
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn draw_arc(
-        &mut self,
+        &self,
         x: i32,
         y: i32,
         w: i32,
@@ -624,9 +625,10 @@ impl<'a> Painter<'a> {
     /// Draw the arc with float numbers. <br>
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn draw_arc_f(
-        &mut self,
+        &self,
         x: f32,
         y: f32,
         w: f32,
@@ -647,7 +649,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_point(&mut self, x: i32, y: i32) {
+    pub fn draw_point(self, x: i32, y: i32) {
         self.draw_point_f(x as f32, y as f32)
     }
 
@@ -655,7 +657,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_point_f(&mut self, x: f32, y: f32) {
+    pub fn draw_point_f(&self, x: f32, y: f32) {
         let mut point: Point = (x, y).into();
         point.offset((self.x_offset, self.y_offset));
 
@@ -663,27 +665,27 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn clip_rect<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
+    pub fn clip_rect<T: Into<skia_safe::Rect>>(&self, rect: T, op: skia_safe::ClipOp) {
         let mut rect: skia_safe::Rect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
         self.canvas.clip_rect(rect, op, false);
     }
 
     #[inline]
-    pub fn clip_rect_global<T: Into<skia_safe::Rect>>(&mut self, rect: T, op: skia_safe::ClipOp) {
+    pub fn clip_rect_global<T: Into<skia_safe::Rect>>(&self, rect: T, op: skia_safe::ClipOp) {
         let rect: skia_safe::Rect = rect.into();
         self.canvas.clip_rect(rect, op, false);
     }
 
     /// Clip the region to draw.
     #[inline]
-    pub fn clip_region_global(&mut self, region: skia_safe::Region, op: skia_safe::ClipOp) {
+    pub fn clip_region_global(&self, region: skia_safe::Region, op: skia_safe::ClipOp) {
         self.canvas.clip_region(&region, Some(op));
     }
 
     /// Draw the path tho canvas.
     #[inline]
-    pub fn draw_path(&mut self, path: &mut Path) {
+    pub fn draw_path(&self, path: &Path) {
         self.canvas.draw_path(path, &self.paint);
     }
 
@@ -708,7 +710,7 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_image_rect(&mut self, image: &impl AsRef<SkiaImage>, from: Option<Rect>, dst: Rect) {
+    pub fn draw_image_rect(&self, image: &impl AsRef<SkiaImage>, from: Option<Rect>, dst: Rect) {
         let mut from_rect: skia_safe::Rect;
         let from = if let Some(from) = from {
             from_rect = from.into();
@@ -741,6 +743,6 @@ impl<'a> Painter<'a> {
     #[cfg(svg)]
     #[inline]
     pub fn draw_dom(&self, dom: &tlib::typedef::SkiaSvgDom) {
-        dom.render(&self.canvas)
+        dom.render(self.canvas)
     }
 }

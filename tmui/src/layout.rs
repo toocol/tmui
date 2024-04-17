@@ -118,6 +118,7 @@ pub(crate) trait SizeCalculation: WidgetImpl {
         }
     }
 }
+#[allow(clippy::collapsible_else_if)]
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, window_size: Size, parent_size: Size) -> (Size, Size) {
         if self.id() == self.window_id() || cast!(self as Overlaid).is_some() {
@@ -129,7 +130,7 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_width() {
             if self.hexpand() {
-                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                 if self.fixed_width_ration() == 0. {
                     let ration = self.get_width_request() as f32 / parent_size.width() as f32;
@@ -157,7 +158,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_hscale.is_adaption() {
                     self.set_fixed_width(parent_size.width());
                 } else if !parent_hscale.is_dismiss() {
-                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                    let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
@@ -171,7 +172,7 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_height() {
             if self.vexpand() {
-                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                 if self.fixed_height_ration() == 0. {
                     let ration = self.get_height_request() as f32 / parent_size.height() as f32;
@@ -199,7 +200,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_vscale.is_adaption() {
                     self.set_fixed_height(parent_size.height());
                 } else if !parent_vscale.is_dismiss() {
-                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                    let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
@@ -282,7 +283,7 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_width() {
             if self.hexpand() {
-                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                 if self.fixed_width_ration() == 0. {
                     let ration = self.get_width_request() as f32 / parent_size.width() as f32;
@@ -308,7 +309,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_hscale.is_adaption() {
                     self.set_fixed_width(parent_size.width());
                 } else if !parent_hscale.is_dismiss() {
-                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                    let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                     let ration = self.hscale() / parent_hscale;
                     self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
@@ -322,7 +323,7 @@ impl SizeCalculation for dyn WidgetImpl {
 
         if self.fixed_height() {
             if self.vexpand() {
-                let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                 if self.fixed_height_ration() == 0. {
                     let ration = self.get_height_request() as f32 / parent_size.height() as f32;
@@ -348,7 +349,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 if parent_vscale.is_adaption() {
                     self.set_fixed_height(parent_size.height());
                 } else if !parent_vscale.is_dismiss() {
-                    let parent_size = parent_size_exclude_spacing.or(Some(parent_size)).unwrap();
+                    let parent_size = parent_size_exclude_spacing.unwrap_or(parent_size);
 
                     let ration = self.vscale() / parent_vscale;
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
@@ -473,13 +474,9 @@ impl LayoutManager {
         } else {
             None
         };
-        let children = if container_ref.is_some() {
-            Some(container_ref.unwrap().children_mut())
-        } else {
-            None
-        };
+        let children = container_ref.map(|c| c.children_mut());
 
-        let container_no_children = children.is_none() || children.as_ref().unwrap().len() == 0;
+        let container_no_children = children.is_none() || children.as_ref().unwrap().is_empty();
         if raw_child.is_none() && container_no_children {
             widget.calc_leaf_size(window_size, parent_size);
 
@@ -606,11 +603,7 @@ impl LayoutManager {
             } else {
                 None
             };
-            let container_children = if container_ref.is_some() {
-                Some(container_ref.unwrap().children_mut())
-            } else {
-                None
-            };
+            let container_children = container_ref.map(|c| c.children_mut());
 
             if is_container {
                 container_children
@@ -623,7 +616,7 @@ impl LayoutManager {
                     children.push_back(crm);
                 }
             }
-            widget = children.pop_front().map_or(None, |widget| widget);
+            widget = children.pop_front().and_then(|widget| widget);
             previous = Some(widget_ptr);
             parent = if let Some(c) = widget.as_ref() {
                 unsafe { c.as_mut().unwrap().get_raw_parent_mut() }

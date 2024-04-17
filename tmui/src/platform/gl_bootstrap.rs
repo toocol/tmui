@@ -106,6 +106,8 @@ pub(crate) fn bootstrap_gl_window(
 }
 
 pub(crate) struct GlEnv(Config, RwLock<GlCtx>, Surface<WindowSurface>);
+unsafe impl Send for GlEnv {}
+unsafe impl Sync for GlEnv {}
 static ONCE: Once = Once::new();
 
 impl GlEnv {

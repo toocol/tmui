@@ -11,24 +11,20 @@ thread_local! {
     static INSTANCE: RefCell<ShortcutManager> = RefCell::new(ShortcutManager::new());
 }
 
+type ShortcutMap = HashMap<
+    Shortcut,
+    Vec<(
+        Option<NonNull<dyn WidgetImpl>>,
+        Box<dyn Fn(&mut dyn WidgetImpl)>,
+    )>,
+>;
+
 pub(crate) struct ShortcutManager {
     shortcut: Shortcut,
 
-    shortcuts: HashMap<
-        Shortcut,
-        Vec<(
-            Option<NonNull<dyn WidgetImpl>>,
-            Box<dyn Fn(&mut dyn WidgetImpl)>,
-        )>,
-    >,
+    shortcuts: ShortcutMap,
 
-    global_shortcuts: HashMap<
-        Shortcut,
-        Vec<(
-            Option<NonNull<dyn WidgetImpl>>,
-            Box<dyn Fn(&mut dyn WidgetImpl)>,
-        )>,
-    >,
+    global_shortcuts: ShortcutMap,
 }
 
 impl ShortcutManager {

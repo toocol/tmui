@@ -73,6 +73,13 @@ pub struct TimeRecorder {
     start: u64,
 }
 
+impl Default for TimeRecorder {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TimeRecorder {
     #[inline]
     pub fn new() -> TimeRecorder {
@@ -150,8 +157,8 @@ impl Timestamp {
     /// 
     /// See the [`chrono::format::strftime`] module for the whole supported escape sequences.
     #[inline]
-    pub fn format_string<'a>(&self, format: Option<&'a str>) -> String {
-        let format = format.or(Some("%Y-%m-%d %H:%M:%S")).unwrap();
+    pub fn format_string(&self, format: Option<&str>) -> String {
+        let format = format.unwrap_or("%Y-%m-%d %H:%M:%S");
 
         let date_time: DateTime<Local> = self.0.into();
         date_time.format(format).to_string()

@@ -40,15 +40,15 @@ impl PayloadWeight for Message {
     }
 }
 
-impl<T: 'static + Copy + Sync + Send> Into<IpcEvent<T>> for Message {
+impl<T: 'static + Copy + Sync + Send> From<Message> for IpcEvent<T> {
     #[inline]
-    fn into(self) -> IpcEvent<T> {
-        match self {
-            Self::VSync(_, a) => IpcEvent::VSync(a),
-            Self::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
-            Self::Event(evt) => convert_event(&evt),
-            Self::CreateWindow(_) => unreachable!(),
-            Self::WindowClosed => unreachable!(),
+    fn from(val: Message) -> Self {
+        match val {
+            Message::VSync(_, a) => IpcEvent::VSync(a),
+            Message::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
+            Message::Event(evt) => convert_event(&evt),
+            Message::CreateWindow(_) => unreachable!(),
+            Message::WindowClosed => unreachable!(),
         }
     }
 }

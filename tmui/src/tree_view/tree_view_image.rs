@@ -10,6 +10,11 @@ use crate::{
 use std::ptr::NonNull;
 use tlib::{connect, disconnect, events::MouseEvent, nonnull_mut, nonnull_ref, run_after};
 
+type FnNodePressed = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnNodeReleased = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnNodeEnter = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnNodeLeave = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+
 #[extends(Widget)]
 #[run_after]
 #[loadable]
@@ -23,10 +28,10 @@ pub(crate) struct TreeViewImage {
     line_height: i32,
     line_spacing: i32,
 
-    on_node_pressed: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
-    on_node_released: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
-    on_node_enter: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
-    on_node_leave: Option<Box<dyn Fn(&mut TreeNode, &MouseEvent)>>,
+    on_node_pressed: Option<FnNodePressed>,
+    on_node_released: Option<FnNodeReleased>,
+    on_node_enter: Option<FnNodeEnter>,
+    on_node_leave: Option<FnNodeLeave>,
 }
 
 impl ObjectSubclass for TreeViewImage {
@@ -82,7 +87,7 @@ impl WidgetImpl for TreeViewImage {
         connect!(self, size_changed(), self, when_size_changed(Size));
     }
 
-    fn paint(&mut self, mut painter: &mut Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
             painter.fill_rect(redraw_rect.rect(), self.background());
         }
@@ -101,7 +106,7 @@ impl WidgetImpl for TreeViewImage {
             );
 
             nonnull_ref!(node).render_node(
-                &mut painter,
+                painter,
                 geometry,
                 self.background(),
                 self.indent_length,
@@ -247,7 +252,7 @@ impl TreeViewImage {
         }
 
         let width = size.width();
-        let height = size.height() - y as i32;
+        let height = size.height() - y;
 
         let rect: Rect = (x, y, width, height).into();
 
