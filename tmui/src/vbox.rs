@@ -157,7 +157,7 @@ pub(crate) fn vbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         } else {
             0
         };
-    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
+    let spacing = cast!(widget as SpacingCapable).map(|spacing| spacing.get_spacing() as i32).unwrap_or(0);
 
     let mut offset = match content_valign {
         Align::Start => parent_rect.y(),
@@ -190,7 +190,7 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let mut start_childs = vec![];
     let mut center_childs = vec![];
     let mut end_childs = vec![];
-    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
+    let spacing = cast!(widget as SpacingCapable).map(|spacing| spacing.get_spacing() as i32).unwrap_or(0);
     let mut children = widget.children_mut();
 
     let mut center_childs_height = 0;
@@ -334,6 +334,7 @@ impl StaticSizeUnifiedAdjust for VBox {
                 }
 
                 c.set_fixed_height(ch);
+                emit!(c.size_changed(), c.size());
             });
     }
 }
