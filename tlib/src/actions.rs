@@ -39,7 +39,6 @@
 //! }
 //! ```
 use crate::prelude::*;
-use log::debug;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -180,17 +179,7 @@ impl ActionHub {
                 actions
                     .iter()
                     .for_each(|(target_id, fns)| fns.iter().for_each(|f| f(&param)));
-            } else {
-                debug!(
-                    "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
-                    name, from_type, emit_type
-                );
             }
-        } else {
-            debug!(
-                "Unconnected action: {}, from_type: {:?}, emit_type: {:?}",
-                name, from_type, emit_type
-            );
         }
     }
 }

@@ -1084,15 +1084,18 @@ impl WidgetExt for Widget {
     fn image_rect(&self) -> Rect {
         let mut rect = self.rect();
 
+        let h_factor = if rect.width() == 0 { 0 } else { 1 };
+        let v_factor = if rect.height() == 0 { 0 } else { 1 };
+
         // Rect add the margins.
         let (top, right, bottom, left) = self.margins();
         rect.set_x(rect.x() - left);
         rect.set_y(rect.y() - top);
         if rect.width() != 0 {
-            rect.set_width(rect.width() + left + right);
+            rect.set_width((rect.width() + left + right) * h_factor);
         }
         if rect.height() != 0 {
-            rect.set_height(rect.height() + top + bottom);
+            rect.set_height((rect.height() + top + bottom) * v_factor);
         }
 
         rect.or(self.child_image_rect_union());
@@ -1390,8 +1393,8 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn map_to_global(&self, point: &Point) -> Point {
-        let contents_rect = self.rect();
-        Point::new(point.x() + contents_rect.x(), point.y() + contents_rect.y())
+        let rect = self.rect();
+        Point::new(point.x() + rect.x(), point.y() + rect.y())
     }
 
     #[inline]

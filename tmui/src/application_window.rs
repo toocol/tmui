@@ -358,15 +358,13 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
-        // If a component has a container-type parent widget,
-        // layout changes should be based on its parent widget.
+        // Layout changes should be based on its parent widget.
         while let Some(parent) = widget.get_raw_parent_mut() {
             let parent = unsafe { parent.as_mut().unwrap() };
-            if parent.super_type().is_a(Container::static_type()) {
-                widget = parent;
-            } else {
-                break;
-            }
+            widget = parent;
+            if !widget.super_type().is_a(Container::static_type()) {
+                break
+            } 
         }
 
         Self::layout_of(self.id()).layout_change(widget, false);

@@ -26,7 +26,7 @@ impl ObjectImpl for MyWidget {
     fn construct(&mut self) {
         self.parent_construct();
         self.set_strict_children_layout(true);
-        // self.set_homogeneous(true);
+        self.set_homogeneous(false);
 
         self.label_1
             .set_text("Rect based animated popup. (click me)");

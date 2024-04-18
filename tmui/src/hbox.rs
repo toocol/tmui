@@ -159,7 +159,7 @@ pub(crate) fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
         } else {
             0
         };
-    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
+    let spacing = cast!(widget as SpacingCapable).map(|spacing| spacing.get_spacing() as i32).unwrap_or(0);
 
     let mut offset = match content_halign {
         Align::Start => parent_rect.x(),
@@ -193,7 +193,7 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let mut start_childs = vec![];
     let mut center_childs = vec![];
     let mut end_childs = vec![];
-    let spacing = cast!(widget as SpacingCapable).unwrap().get_spacing() as i32;
+    let spacing = cast!(widget as SpacingCapable).map(|spacing| spacing.get_spacing() as i32).unwrap_or(0);
     let mut children = widget.children_mut();
 
     let mut center_childs_width = 0;

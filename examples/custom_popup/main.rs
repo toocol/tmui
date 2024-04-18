@@ -11,7 +11,6 @@ fn main() {
         .width(1280)
         .height(800)
         .title("Custom popup")
-        .backend(tmui::backend::BackendType::OpenGL)
         .build();
 
     app.connect_activate(build_ui);

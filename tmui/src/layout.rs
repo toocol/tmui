@@ -244,10 +244,14 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let mut resized = false;
 
-        if size.width() == 0 && child_size.width() != 0 {
+        if (size.width() == 0 && child_size.width() != 0)
+            || (!self.hexpand() && !self.fixed_width())
+        {
             self.set_fixed_width(child_size.width());
         }
-        if size.height() == 0 && child_size.height() != 0 {
+        if (size.height() == 0 && child_size.height() != 0)
+            || (!self.vexpand() && !self.fixed_height())
+        {
             self.set_fixed_height(child_size.height());
         }
 
@@ -427,9 +431,14 @@ impl LayoutManager {
     pub(crate) fn layout_change(&self, widget: &mut dyn WidgetImpl, is_animation: bool) {
         let _track = Tracker::start(format!("layout_change_{}", widget.name()));
 
+        // If the widget was not under animation-progressing, deal with the size first:
         if !is_animation {
-            // Deal with the size first
-            Self::child_size_probe(self.window_size, widget.size(), widget);
+            let parent_size = widget
+                .get_parent_ref()
+                .map(|p| p.size())
+                .unwrap_or(self.window_size);
+
+            Self::child_size_probe(self.window_size, parent_size, widget);
         }
 
         // Deal with the position
@@ -514,7 +523,7 @@ impl LayoutManager {
 
                                 child_size.set_height(child_size.height().max(inner.height()));
                                 child_size.add_width(inner.width());
-                                if idx != 0 && spacing != 0 {
+                                if idx != 0 && spacing != 0 && inner.width() != 0 {
                                     child_size.add_width(spacing);
                                 }
                             });
@@ -536,7 +545,7 @@ impl LayoutManager {
 
                                 child_size.set_width(child_size.width().max(inner.width()));
                                 child_size.add_height(inner.height());
-                                if idx != 0 && spacing != 0 {
+                                if idx != 0 && spacing != 0 && inner.height() != 0 {
                                     child_size.add_height(spacing);
                                 }
                             });

@@ -21,6 +21,10 @@ fn build_ui(window: &mut ApplicationWindow) {
     let mut pane = Pane::new();
     pane.set_vexpand(true);
     pane.set_hexpand(true);
+    pane.set_halign(Align::Center);
+    pane.set_valign(Align::Center);
+    pane.set_hscale(0.7);
+    pane.set_vscale(0.7);
 
     let mut left = Label::new(Some("Left child."));
     left.set_background(Color::GREY_MEDIUM);
