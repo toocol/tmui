@@ -32,7 +32,7 @@ pub use crate::layout::{
 };
 pub use crate::loading::{Loadable, LoadingModel, ReflectLoadable};
 pub use crate::overlay::{Overlaid, ReflectOverlaid};
-pub use crate::pane::{Pane, PaneDirection, PaneExt, ReflectPaneExt};
+pub use crate::pane::{Pane, PaneExt, ReflectPaneExt};
 pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
 pub use crate::primitive::global_watch::{
     GlobalWatch, GlobalWatchEvent, GlobalWatchImpl, ReflectGlobalWatch,

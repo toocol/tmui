@@ -933,7 +933,9 @@ impl WidgetExt for Widget {
         self.width_request = width;
         if let Some(parent) = self.get_parent_ref() {
             let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
-                s.size_exclude_spacing()
+                let mut size = parent.size();
+                s.spacing_size().remove_spacing_from(&mut size);
+                size
             } else {
                 parent.size()
             };
@@ -963,7 +965,9 @@ impl WidgetExt for Widget {
         self.height_request = height;
         if let Some(parent) = self.get_parent_ref() {
             let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
-                s.size_exclude_spacing()
+                let mut size = parent.size();
+                s.spacing_size().remove_spacing_from(&mut size);
+                size
             } else {
                 parent.size()
             };
