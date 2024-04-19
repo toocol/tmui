@@ -299,7 +299,8 @@ pub fn stack_impl(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn pane_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    match pane::generate_pane_impl(&ident) {
+    let use_prefix = Ident::new("crate", ident.span());
+    match pane::generate_pane_impl(&ident, &use_prefix) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
