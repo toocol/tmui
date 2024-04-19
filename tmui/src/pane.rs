@@ -8,11 +8,11 @@ use crate::{
     widget::{InnerCustomizeEventProcess, WidgetImpl},
 };
 use log::error;
-use tlib::{pane_impl, pane_init, pane_type_register};
+use tlib::{namespace::Orientation, pane_impl, pane_init, pane_type_register};
 
 #[extends(Container)]
 pub struct Pane {
-    direction: Direction,
+    orientation: Orientation,
     resize_zone: bool,
     resize_pressed: bool,
 }
@@ -26,13 +26,13 @@ impl Pane {
 
 #[reflect_trait]
 pub trait PaneExt: ContainerImpl {
-    /// Get the direction of `Pane`.
-    fn direction(&self) -> Direction;
+    /// Get the orientation of `Pane`.
+    fn orientation(&self) -> Orientation;
 
-    /// Set the direction of `Pane`.
+    /// Set the orientation of `Pane`.
     ///
-    /// The default value was [`Direction::Horizontal`](Direction::Horizontal)
-    fn set_direction(&mut self, direction: Direction);
+    /// The default value was [`Orientation::Horizontal`](Orientation::Horizontal)
+    fn set_orientation(&mut self, orientation: Orientation);
 
     /// Those function should be f**king private, dont know how to do it:
     fn is_resize_zone(&self) -> bool;
@@ -73,8 +73,8 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
         let mut first_rect = children[0].rect();
         first_rect.set_point(&self.map_to_widget(&first_rect.top_left()));
 
-        match self.direction() {
-            Direction::Horizontal => {
+        match self.orientation() {
+            Orientation::Horizontal => {
                 if pos.0 >= first_rect.right() - 2 && pos.0 <= first_rect.right() + 2 {
                     if !self.is_resize_zone() {
                         self.set_cursor_shape(SystemCursorShape::SizeHorCursor);
@@ -108,7 +108,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                     }
                 }
             }
-            Direction::Vertical => {
+            Orientation::Vertical => {
                 if pos.1 >= first_rect.bottom() - 2 && pos.1 <= first_rect.bottom() + 2 {
                     if !self.is_resize_zone() {
                         self.set_cursor_shape(SystemCursorShape::SizeVerCursor);
@@ -164,8 +164,8 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
         if self.is_resize_pressed() {
             self.set_resize_pressed(false);
 
-            match self.direction() {
-                Direction::Horizontal => {
+            match self.orientation() {
+                Orientation::Horizontal => {
                     if pos.0 >= first_rect.right() - 2 && pos.0 <= first_rect.right() + 2 {
                         if !self.is_resize_zone() {
                             self.set_cursor_shape(SystemCursorShape::SizeHorCursor);
@@ -176,7 +176,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                         self.set_resize_zone(false);
                     }
                 }
-                Direction::Vertical => {
+                Orientation::Vertical => {
                     if pos.1 >= first_rect.bottom() - 2 && pos.1 <= first_rect.bottom() + 2 {
                         if !self.is_resize_zone() {
                             self.set_cursor_shape(SystemCursorShape::SizeVerCursor);
@@ -240,23 +240,23 @@ impl StaticContainerScaleCalculate for Pane {
     fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
         let pane = cast!(c as PaneExt).unwrap();
 
-        match pane.direction() {
-            Direction::Horizontal => c
+        match pane.orientation() {
+            Orientation::Horizontal => c
                 .children()
                 .iter()
                 .filter(|c| !c.fixed_width())
                 .map(|c| c.hscale())
                 .sum(),
-            Direction::Vertical => SCALE_ADAPTION,
+            Orientation::Vertical => SCALE_ADAPTION,
         }
     }
 
     fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32 {
         let pane = cast!(c as PaneExt).unwrap();
 
-        match pane.direction() {
-            Direction::Horizontal => SCALE_ADAPTION,
-            Direction::Vertical => c
+        match pane.orientation() {
+            Orientation::Horizontal => SCALE_ADAPTION,
+            Orientation::Vertical => c
                 .children()
                 .iter()
                 .filter(|c| !c.fixed_height())
@@ -277,9 +277,9 @@ impl StaticSizeUnifiedAdjust for Pane {
     fn static_size_unified_adjust(container: &mut dyn ContainerImpl) {
         let pane = cast!(container as PaneExt).unwrap();
 
-        match pane.direction() {
-            Direction::Horizontal => HBox::static_size_unified_adjust(container),
-            Direction::Vertical => VBox::static_size_unified_adjust(container),
+        match pane.orientation() {
+            Orientation::Horizontal => HBox::static_size_unified_adjust(container),
+            Orientation::Vertical => VBox::static_size_unified_adjust(container),
         }
     }
 }
@@ -302,9 +302,9 @@ impl ContainerLayout for Pane {
     fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition {
         let pane = cast!(widget as PaneExt).unwrap();
 
-        match pane.direction() {
-            Direction::Horizontal => Composition::HorizontalArrange,
-            Direction::Vertical => Composition::VerticalArrange,
+        match pane.orientation() {
+            Orientation::Horizontal => Composition::HorizontalArrange,
+            Orientation::Vertical => Composition::VerticalArrange,
         }
     }
 
@@ -317,18 +317,9 @@ impl ContainerLayout for Pane {
 
         let pane = cast!(widget as PaneExt).unwrap();
 
-        match pane.direction() {
-            Direction::Horizontal => hbox_layout_homogeneous(widget, Align::Start, Align::Start),
-            Direction::Vertical => vbox_layout_homogeneous(widget, Align::Start, Align::Start),
+        match pane.orientation() {
+            Orientation::Horizontal => hbox_layout_homogeneous(widget, Align::Start, Align::Start),
+            Orientation::Vertical => vbox_layout_homogeneous(widget, Align::Start, Align::Start),
         }
     }
-}
-
-pub type PaneDirection = Direction;
-
-#[derive(Default, PartialEq, Eq, Clone, Copy)]
-pub enum Direction {
-    #[default]
-    Horizontal,
-    Vertical,
 }

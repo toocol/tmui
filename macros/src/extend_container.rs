@@ -81,7 +81,7 @@ pub(crate) fn expand(
                     }
                     if layout == LayoutType::Pane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            direction: PaneDirection
+                            orientation: Orientation 
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             resize_zone: bool

@@ -1,7 +1,7 @@
 use tmui::{
     label::Label,
     prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
+    tlib::{namespace::Orientation, object::{ObjectImpl, ObjectSubclass}},
     widget::WidgetImpl,
 };
 
@@ -23,7 +23,7 @@ impl ObjectImpl for PaneLayout {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_direction(PaneDirection::Vertical);
+        self.set_orientation(Orientation::Vertical);
         self.set_hexpand(true);
         self.set_vexpand(true);
 

@@ -256,6 +256,30 @@ pub trait StaticSizeUnifiedAdjust {
     fn static_size_unified_adjust(container: &mut dyn ContainerImpl);
 }
 
+pub struct SpacingSize {
+    spacing: i32,
+    orientation: Orientation,
+}
+impl SpacingSize {
+    #[inline]
+    pub fn spacing(&self) -> i32 {
+        self.spacing
+    }
+
+    #[inline]
+    pub fn orientation(&self) -> Orientation {
+        self.orientation
+    }
+
+    #[inline]
+    pub fn remove_spacing_from(&self, size: &mut Size) {
+        match self.orientation {
+            Orientation::Horizontal => size.set_width(size.width() - self.spacing),
+            Orientation::Vertical => size.set_height(size.height() - self.spacing),
+        }
+    }
+}
+
 const SPACING_PROPERTY_NAME: &str = "_container_spacing";
 #[reflect_trait]
 pub trait SpacingCapable: ContainerImpl {
@@ -274,19 +298,12 @@ pub trait SpacingCapable: ContainerImpl {
     }
 
     #[inline]
-    fn size_exclude_spacing(&self) -> Size {
-        let mut size = self.size();
-        let spacing = self.get_spacing() as i32;
+    fn spacing_size(&self) -> SpacingSize {
+        let spacing = (self.get_spacing() as i32) * (self.children().len() as i32 - 1);
 
-        match self.orientation() {
-            Orientation::Horizontal => {
-                size.set_width(size.width() - spacing * (self.children().len() as i32 - 1))
-            }
-            Orientation::Vertical => {
-                size.set_height(size.height() - spacing * (self.children().len() as i32 - 1))
-            }
+        SpacingSize {
+            spacing,
+            orientation: self.orientation(),
         }
-
-        size
     }
 }

@@ -41,13 +41,13 @@ pub(crate) fn generate_pane_impl(name: &Ident) -> syn::Result<proc_macro2::Token
     Ok(quote!(
         impl PaneExt for #name {
             #[inline]
-            fn direction(&self) -> PaneDirection {
-                self.direction
+            fn orientation(&self) -> Orientation {
+                self.orientation
             }
 
             #[inline]
-            fn set_direction(&mut self, direction: PaneDirection) {
-                self.direction = direction;
+            fn set_orientation(&mut self, orientation: Orientation) {
+                self.orientation = orientation;
 
                 if self.window().initialized() {
                     self.window().layout_change(self)
