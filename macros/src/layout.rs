@@ -285,7 +285,7 @@ fn gen_layout_clause(
     };
 
     let impl_pane = if is_pane {
-        generate_pane_impl(name)?
+        generate_pane_impl(name, &use_prefix)?
     } else {
         proc_macro2::TokenStream::new()
     };

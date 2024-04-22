@@ -453,6 +453,11 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
 
             #[inline]
+            fn font_mut(&mut self) -> &mut Font {
+                self.#(#widget_path).*.font_mut()
+            }
+
+            #[inline]
             fn set_font_families(&mut self, families: &[&str]) {
                 self.#(#widget_path).*.set_font_families(families);
                 self.font_changed()

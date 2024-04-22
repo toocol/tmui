@@ -116,7 +116,8 @@ impl ApplicationWindow {
         window
     }
 
-    /// SAFETY: `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
+    /// # Safety 
+    /// `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
     pub(crate) fn windows() -> &'static mut HashMap<ObjectId, ApplicationWindowContext> {
         static mut WINDOWS: Lazy<HashMap<ObjectId, ApplicationWindowContext>> =
@@ -216,6 +217,85 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub fn high_load_request(&mut self, high_load: bool) {
+        self.high_load_request = high_load
+    }
+
+    #[inline]
+    pub fn is_high_load_requested(&self) -> bool {
+        self.high_load_request
+    }
+
+    #[inline]
+    pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
+        self.run_after = Some(Box::new(run_after));
+    }
+
+    #[inline]
+    pub fn platform_type(&self) -> PlatformType {
+        self.platform_type
+    }
+
+    #[inline]
+    pub fn create_window(&self, window_bld: WindowBuilder) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not create window on slave side of shared memory application.");
+            return;
+        }
+
+        self.send_message(Message::CreateWindow(window_bld.build()));
+    }
+
+    #[inline]
+    pub fn window_layout_change(&mut self) {
+        Self::layout_of(self.id()).layout_change(self, false)
+    }
+
+    #[inline]
+    pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
+        // Layout changes should be based on its parent widget.
+        if let Some(parent) = widget.get_raw_parent_mut() {
+            let parent = unsafe { parent.as_mut().unwrap() };
+            widget = parent;
+        }
+
+        Self::layout_of(self.id()).layout_change(widget, false);
+
+        widget.update();
+    }
+
+    /// Should set the parent of widget before use this function.
+    pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
+        INTIALIZE_PHASE.with(|p| {
+            if *p.borrow() {
+                panic!(
+                    "`{}` Can not add ui component in function `ObjectImpl::initialize()`.",
+                    widget.name()
+                )
+            }
+        });
+
+        if widget.initialized() {
+            return;
+        }
+
+        let window_id = widget.window_id();
+        if window_id == 0 {
+            return;
+        }
+        let window = Self::window_of(window_id);
+        // There was no need to initialize the widget, it's created before ApplicationWindow's initialization,
+        // widget will be initialized later in function `child_initialize()`.
+        if !window.initialized() {
+            return;
+        }
+
+        child_initialize(Some(widget), window_id);
+    }
+}
+
+impl ApplicationWindow {
+    #[inline]
     pub(crate) fn shared_widget_size_changed(&self) -> bool {
         self.shared_widget_size_changed
     }
@@ -243,16 +323,6 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn ipc_bridge(&self) -> Option<&dyn IpcBridge> {
         self.ipc_bridge.as_deref()
-    }
-
-    #[inline]
-    pub fn high_load_request(&mut self, high_load: bool) {
-        self.high_load_request = high_load
-    }
-
-    #[inline]
-    pub fn is_high_load_requested(&self) -> bool {
-        self.high_load_request
     }
 
     #[inline]
@@ -332,44 +402,6 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
-        self.run_after = Some(Box::new(run_after));
-    }
-
-    #[inline]
-    pub fn platform_type(&self) -> PlatformType {
-        self.platform_type
-    }
-
-    #[inline]
-    pub fn create_window(&self, window_bld: WindowBuilder) {
-        if self.platform_type == PlatformType::Ipc {
-            error!("Can not create window on slave side of shared memory application.");
-            return;
-        }
-
-        self.send_message(Message::CreateWindow(window_bld.build()));
-    }
-
-    #[inline]
-    pub fn window_layout_change(&mut self) {
-        Self::layout_of(self.id()).layout_change(self, false)
-    }
-
-    #[inline]
-    pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
-        // Layout changes should be based on its parent widget.
-        if let Some(parent) = widget.get_raw_parent_mut() {
-            let parent = unsafe { parent.as_mut().unwrap() };
-            widget = parent;
-        }
-
-        Self::layout_of(self.id()).layout_change(widget, false);
-
-        widget.update();
-    }
-
-    #[inline]
     pub(crate) fn animation_layout_change(&self, widget: &mut dyn WidgetImpl) {
         Self::layout_of(self.id()).layout_change(widget, true)
     }
@@ -424,34 +456,6 @@ impl ApplicationWindow {
         }
     }
 
-    /// Should set the parent of widget before use this function.
-    pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
-        INTIALIZE_PHASE.with(|p| {
-            if *p.borrow() {
-                panic!(
-                    "`{}` Can not add ui component in function `ObjectImpl::initialize()`.",
-                    widget.name()
-                )
-            }
-        });
-
-        if widget.initialized() {
-            return;
-        }
-
-        let window_id = widget.window_id();
-        if window_id == 0 {
-            return;
-        }
-        let window = Self::window_of(window_id);
-        // There was no need to initialize the widget, it's created before ApplicationWindow's initialization,
-        // widget will be initialized later in function `child_initialize()`.
-        if !window.initialized() {
-            return;
-        }
-
-        child_initialize(Some(widget), window_id);
-    }
 }
 
 /// Get window id in current ui thread.

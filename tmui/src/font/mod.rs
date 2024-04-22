@@ -677,10 +677,11 @@ mod tests {
         let slice = us.as_slice();
         let mut widths = vec![0.; slice.len()];
         font.to_skia_fonts()[0].get_widths(slice, &mut widths);
+        println!("paragraph width: {}, font width: {}", td.0, widths.iter().sum::<f32>())
     }
 
     #[test]
-    fn test_font() {
+    fn test_font_convert() {
         let font  = Font::default();
         let skia_font: &SkiaFont = &font.to_skia_fonts()[0];
 
@@ -725,5 +726,17 @@ mod tests {
         assert_eq!(font.size(), skia_font.size());
         assert_eq!(font.scale_x(), skia_font.scale_x());
         assert_eq!(font.skew_x(), skia_font.skew_x());
+    }
+
+    #[test]
+    #[cfg(windows_platform)]
+    fn test_font() {
+        let font = Font::with_families(&["Consolas"]);
+        println!("{:?}", font.calc_font_dimension());
+        let font = &font.to_skia_fonts()[0];
+        let typeface = font.typeface();
+        let bound = typeface.bounds();
+        println!("{}, {}", bound.width(), bound.height());
+        println!("is fixed pitch: {}", typeface.is_fixed_pitch());
     }
 }

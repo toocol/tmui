@@ -37,16 +37,16 @@ pub(crate) fn generate_pane_inner_init() -> syn::Result<proc_macro2::TokenStream
     ))
 }
 
-pub(crate) fn generate_pane_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_pane_impl(name: &Ident, use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         impl PaneExt for #name {
             #[inline]
-            fn orientation(&self) -> Orientation {
+            fn orientation(&self) -> #use_prefix::tlib::namespace::Orientation {
                 self.orientation
             }
 
             #[inline]
-            fn set_orientation(&mut self, orientation: Orientation) {
+            fn set_orientation(&mut self, orientation: #use_prefix::tlib::namespace::Orientation) {
                 self.orientation = orientation;
 
                 if self.window().initialized() {
