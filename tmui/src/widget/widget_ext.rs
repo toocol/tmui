@@ -220,6 +220,11 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::font) (Defined in [`WidgetExt`])
     fn font(&self) -> &Font;
 
+    /// Get the mutable reference of font of widget.
+    /// 
+    /// Go to[`Function defination`](WidgetExt::font_mut) (Defined in [`WidgetExt`])
+    fn font_mut(&mut self) -> &mut Font;
+
     /// Set the font family of Widget.
     ///
     /// Go to[`Function defination`](WidgetExt::set_font_families) (Defined in [`WidgetExt`])
@@ -1052,6 +1057,12 @@ impl WidgetExt for Widget {
     #[inline]
     fn font(&self) -> &Font {
         &self.font
+    }
+
+
+    #[inline]
+    fn font_mut(&mut self) -> &mut Font {
+        &mut self.font
     }
 
     #[inline]
