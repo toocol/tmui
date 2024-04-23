@@ -1,4 +1,3 @@
-use log::debug;
 use std::time::Instant;
 use tlib::payload::PayloadWeight;
 
@@ -20,8 +19,6 @@ pub(crate) struct FrameManager {
     frame: Frame,
     last_frame: Instant,
     frame_cnt: i32,
-    time_distribution: (i32, i32, i32, i32),
-    log_instant: Instant,
 }
 
 impl FrameManager {
@@ -30,8 +27,6 @@ impl FrameManager {
             frame: Frame::empty_frame(),
             last_frame: Instant::now(),
             frame_cnt: 0,
-            time_distribution: (0, 0, 0, 0),
-            log_instant: Instant::now(),
         }
     }
 
@@ -65,21 +60,7 @@ impl FrameManager {
             window.set_shared_widget_size_changed(false);
 
             self.last_frame = Instant::now();
-            let frame_time = elapsed.as_micros() as f32 / 1000.;
             self.frame_cnt += 1;
-            match frame_time as i32 {
-                0..=16 => self.time_distribution.0 += 1,
-                17..=19 => self.time_distribution.1 += 1,
-                20..=24 => self.time_distribution.2 += 1,
-                _ => self.time_distribution.3 += 1,
-            }
-            if self.log_instant.elapsed().as_secs() >= 1 {
-                debug!(
-                    "frame time distribution rate: [<17ms: {}%, 17-20ms: {}%, 20-25ms: {}%, >=25ms: {}%], frame time: {}ms",
-                    self.time_distribution.0 as f32 / self.frame_cnt as f32 * 100., self.time_distribution.1 as f32 / self.frame_cnt as f32 * 100., self.time_distribution.2 as f32 / self.frame_cnt as f32 * 100., self.time_distribution.3 as f32 / self.frame_cnt as f32 * 100., frame_time
-                    );
-                self.log_instant = Instant::now();
-            }
 
             self.frame = self.frame.next();
             AnimationManager::with(|m| m.borrow_mut().process(self.frame));

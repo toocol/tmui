@@ -26,6 +26,10 @@ name = "child_attr_widget"
 path = "child_attr_widget/main.rs"
 
 [[bin]]
+name = "complex_layout"
+path = "complex_layout/main.rs"
+
+[[bin]]
 name = "custom_diff_handle"
 path = "custom_diff_handle/main.rs"
 
