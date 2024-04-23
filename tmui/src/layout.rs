@@ -67,12 +67,20 @@ impl RemainSize for dyn WidgetImpl {
         if let Some(container) = cast!(self as ContainerImpl) {
             let mut size = container.size();
             for c in container.children() {
-                let cs = c.size();
+                let (mut cw, mut ch) = c.size().into();
+
                 if c.fixed_width() {
-                    size.set_width(size.width() - cs.width());
+                    if cw == 0 {
+                        cw = c.get_width_request();
+                    }
+                    size.set_width(size.width() - cw);
                 }
+
                 if c.fixed_height() {
-                    size.set_height(size.height() - cs.height());
+                    if ch == 0 {
+                        ch = c.get_height_request();
+                    }
+                    size.set_height(size.height() - ch);
                 }
             }
 

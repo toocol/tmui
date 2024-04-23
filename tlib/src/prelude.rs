@@ -7,7 +7,7 @@ pub use crate::emit;
 pub use crate::figure::region::CoordRegion;
 pub use crate::figure::rectangle::CoordRect;
 pub use crate::global::AsAny;
-pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape};
+pub use crate::namespace::{Align, BorderStyle, Coordinate, SystemCursorShape, Orientation};
 pub use crate::object::{
     InnerInitializer, Object, ObjectAcquire, ObjectChildrenConstruct, ObjectExt, ObjectImpl,
     ObjectImplExt, ObjectOperation, ReflectObjectChildrenConstruct, ReflectObjectImpl,
