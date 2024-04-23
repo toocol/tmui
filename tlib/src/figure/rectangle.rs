@@ -1,6 +1,10 @@
-use super::{point::Point, FPoint, FSize, Size, CoordPoint};
+use super::{point::Point, CoordPoint, FPoint, FSize, Size};
 use crate::{
-    namespace::Coordinate, typedef::{SkiaIRect, SkiaRect}, types::StaticType, values::{FromBytes, FromValue, ToBytes, ToValue}, Type, Value
+    namespace::Coordinate,
+    typedef::{SkiaIRect, SkiaRect},
+    types::StaticType,
+    values::{FromBytes, FromValue, ToBytes, ToValue},
+    Type, Value,
 };
 use std::{
     ops::{Add, Div, Mul, Sub},
@@ -1025,12 +1029,7 @@ impl From<FRect> for (f32, f32, f32, f32) {
 impl From<FRect> for SkiaRect {
     #[inline]
     fn from(value: FRect) -> Self {
-        SkiaRect::from_xywh(
-            value.x,
-            value.y,
-            value.width,
-            value.height,
-        )
+        SkiaRect::from_xywh(value.x, value.y, value.width, value.height)
     }
 }
 
@@ -1672,46 +1671,52 @@ impl From<AtomicRect> for Rect {
 /// CoordRect
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug, Default, PartialEq, Clone, Copy)]
-pub struct CoordRect(FRect, Coordinate);
+pub struct CoordRect {
+    rect: FRect,
+    coord: Coordinate,
+}
 impl CoordRect {
     #[inline]
     pub fn new<T: Into<FRect>>(rect: T, coord: Coordinate) -> Self {
-        Self(rect.into(), coord)
+        Self {
+            rect: rect.into(),
+            coord,
+        }
     }
 
     #[inline]
     pub fn rect(&self) -> FRect {
-        self.0
+        self.rect
     }
 
     #[inline]
     pub fn coord(&self) -> Coordinate {
-        self.1
+        self.coord
     }
 
     #[inline]
     pub fn point(&self) -> CoordPoint {
-        CoordPoint::new(self.0.point(), self.1)
+        CoordPoint::new(self.rect.point(), self.coord)
     }
 
     #[inline]
     pub fn top_left(&self) -> CoordPoint {
-        CoordPoint::new(self.0.top_left(), self.1)
+        CoordPoint::new(self.rect.top_left(), self.coord)
     }
 
     #[inline]
     pub fn top_right(&self) -> CoordPoint {
-        CoordPoint::new(self.0.top_left(), self.1)
+        CoordPoint::new(self.rect.top_left(), self.coord)
     }
 
     #[inline]
     pub fn bottom_left(&self) -> CoordPoint {
-        CoordPoint::new(self.0.top_left(), self.1)
+        CoordPoint::new(self.rect.top_left(), self.coord)
     }
 
     #[inline]
     pub fn bottom_right(&self) -> CoordPoint {
-        CoordPoint::new(self.0.top_left(), self.1)
+        CoordPoint::new(self.rect.top_left(), self.coord)
     }
 }
 
@@ -1728,17 +1733,17 @@ impl StaticType for CoordRect {
 impl ToBytes for CoordRect {
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.0.to_bytes());
-        bytes.append(&mut self.1.to_bytes());
+        bytes.append(&mut self.rect.to_bytes());
+        bytes.append(&mut self.coord.to_bytes());
         bytes
     }
 }
 
 impl FromBytes for CoordRect {
     fn from_bytes(data: &[u8], _len: usize) -> Self {
-        let point = FRect::from_bytes(&data[0..16], 16);
+        let rect = FRect::from_bytes(&data[0..16], 16);
         let coord = Coordinate::from_bytes(&data[16..17], 1);
-        Self(point, coord)
+        Self { rect, coord }
     }
 }
 
