@@ -310,16 +310,17 @@ fn gen_layout_clause(
         }
 
         impl Layout for #name {
+            #[inline]
             fn composition(&self) -> Composition {
                 #layout::static_composition(self)
             }
 
+            #[inline]
             fn position_layout(
                 &mut self,
-                previous: Option<&dyn WidgetImpl>,
                 parent: Option<&dyn WidgetImpl>,
             ) {
-                #layout::container_position_layout(self, previous, parent)
+                #layout::container_position_layout(self, parent)
             }
         }
 

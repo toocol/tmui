@@ -61,30 +61,31 @@ impl ContainerImplExt for HBox {
 }
 
 impl Layout for HBox {
+    #[inline]
     fn composition(&self) -> Composition {
         HBox::static_composition(self)
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        HBox::container_position_layout(self, previous, parent)
+        HBox::container_position_layout(self, parent)
     }
 }
 
 impl ContainerLayout for HBox {
+    #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::HorizontalArrange
     }
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent);
+        LayoutManager::base_widget_position_layout(widget, parent);
 
         let content_align = cast!(widget as ContentAlignment).unwrap();
         let homogeneous = content_align.homogeneous();

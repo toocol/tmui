@@ -1065,25 +1065,30 @@ pub trait WidgetImplExt: WidgetImpl {
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
 impl<T: WidgetAcquire> Layout for T {
+    #[inline]
     fn composition(&self) -> crate::layout::Composition {
         crate::layout::Composition::Default
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(self, previous, parent)
+        LayoutManager::base_widget_position_layout(self, parent)
     }
 }
 
 impl Layout for Widget {
+    #[inline]
     fn composition(&self) -> crate::layout::Composition {
         crate::layout::Composition::Default
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>) {}
+    #[inline]
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
+        LayoutManager::base_widget_position_layout(self, parent)
+    }
 }
 
 ////////////////////////////////////// ZInddexStep //////////////////////////////////////

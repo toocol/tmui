@@ -4,11 +4,13 @@ use tmui::{
     widget::WidgetImpl,
 };
 
+use super::LeftPanel;
+
 #[extends(Widget, Layout(Pane))]
 #[derive(Childrenable)]
 pub struct CentralPanel {
     #[children]
-    widget1: Box<Widget>,
+    widget1: Box<LeftPanel>,
 
     #[children]
     widget2: Box<Widget>,
@@ -24,11 +26,7 @@ impl ObjectImpl for CentralPanel {
         self.set_vexpand(true);
         self.set_strict_children_layout(true);
 
-        self.widget1.set_background(Color::GREY_DARK);
         self.widget2.set_background(Color::GREY_MEDIUM);
-
-        self.widget1.width_request(300);
-        self.widget1.set_vexpand(true);
 
         self.widget2.set_hexpand(true);
         self.widget2.set_vexpand(true);

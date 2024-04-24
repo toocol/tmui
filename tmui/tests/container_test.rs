@@ -55,7 +55,7 @@ impl Layout for TestContainer {
         tmui::layout::Composition::HorizontalArrange
     }
 
-    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>, _: Option<&dyn WidgetImpl>) {}
+    fn position_layout(&mut self, _: Option<&dyn WidgetImpl>) {}
 }
 
 impl ContainerScaleCalculate for TestContainer {

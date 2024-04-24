@@ -285,20 +285,22 @@ impl StaticSizeUnifiedAdjust for Pane {
 }
 
 impl Layout for Pane {
+    #[inline]
     fn composition(&self) -> Composition {
         Self::static_composition(self)
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        Self::container_position_layout(self, previous, parent);
+        Self::container_position_layout(self, parent);
     }
 }
 
 impl ContainerLayout for Pane {
+    #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition {
         let pane = cast!(widget as PaneExt).unwrap();
 
@@ -310,10 +312,9 @@ impl ContainerLayout for Pane {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent);
+        LayoutManager::base_widget_position_layout(widget, parent);
 
         let pane = cast!(widget as PaneExt).unwrap();
 
