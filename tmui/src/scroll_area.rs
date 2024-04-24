@@ -193,20 +193,22 @@ impl ContainerImplExt for ScrollArea {
 }
 
 impl Layout for ScrollArea {
+    #[inline]
     fn composition(&self) -> Composition {
         Self::static_composition(self)
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        Self::container_position_layout(self, previous, parent);
+        Self::container_position_layout(self, parent);
     }
 }
 
 impl ContainerLayout for ScrollArea {
+    #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition {
         let widget = cast!(widget as ScrollAreaExt).unwrap();
         match widget.get_scroll_bar().orientation() {
@@ -217,10 +219,9 @@ impl ContainerLayout for ScrollArea {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent);
+        LayoutManager::base_widget_position_layout(widget, parent);
 
         let widget = cast_mut!(widget as ScrollAreaExt).unwrap();
 

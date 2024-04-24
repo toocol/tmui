@@ -25,11 +25,7 @@ pub enum Composition {
 pub trait Layout {
     fn composition(&self) -> Composition;
 
-    fn position_layout(
-        &mut self,
-        previous: Option<&dyn WidgetImpl>,
-        parent: Option<&dyn WidgetImpl>,
-    );
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>);
 }
 
 pub trait ContainerLayout {
@@ -37,7 +33,6 @@ pub trait ContainerLayout {
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     );
 }
@@ -466,7 +461,7 @@ impl LayoutManager {
         }
 
         // Deal with the position
-        Self::child_position_probe(None, widget.get_raw_parent_mut(), Some(widget));
+        Self::child_position_probe(widget.get_raw_parent_mut(), Some(widget));
     }
 
     pub(crate) fn child_size_probe(
@@ -597,18 +592,16 @@ impl LayoutManager {
     }
 
     pub(crate) fn child_position_probe(
-        mut previous: Option<*const dyn WidgetImpl>,
         mut parent: Option<*mut dyn WidgetImpl>,
         mut widget: Option<*mut dyn WidgetImpl>,
     ) {
         let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
         while let Some(widget_ptr) = widget {
             let widget_ref = unsafe { widget_ptr.as_mut().unwrap() };
-            let previous_ref = unsafe { previous.as_ref().and_then(|p| p.as_ref()) };
             let parent_ref = unsafe { parent.as_ref().and_then(|p| p.as_ref()) };
 
             // Deal with the widget's postion.
-            widget_ref.position_layout(previous_ref, parent_ref);
+            widget_ref.position_layout(parent_ref);
             debug!(
                 "Widget position probe: {}, position: {:?}, is_manage_by_container: {}",
                 widget_ref.name(),
@@ -650,7 +643,6 @@ impl LayoutManager {
                 }
             }
             widget = children.pop_front().and_then(|widget| widget);
-            previous = Some(widget_ptr);
             parent = if let Some(c) = widget.as_ref() {
                 unsafe { c.as_mut().unwrap().get_raw_parent_mut() }
             } else {
@@ -659,9 +651,9 @@ impl LayoutManager {
         }
     }
 
+    #[inline]
     pub(crate) fn base_widget_position_layout(
         widget: &mut dyn WidgetImpl,
-        _: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
         if parent.is_none() || cast!(widget as Overlaid).is_some() {
@@ -671,6 +663,13 @@ impl LayoutManager {
             return;
         }
 
+        Self::base_widget_position_layout_inner(widget, parent)
+    }
+
+    pub(crate) fn base_widget_position_layout_inner(
+        widget: &mut dyn WidgetImpl,
+        parent: Option<&dyn WidgetImpl>,
+    ) {
         let parent = parent.unwrap();
         let widget_rect = widget.rect();
         let parent_rect = parent.rect();

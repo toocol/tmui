@@ -207,7 +207,7 @@ impl TreeNode {
             children: vec![],
             children_id_holder: vec![],
             idx: 0,
-            level: 0,
+            level: -1,
             status: Status::Default,
             cells: vec![],
             node_render: NodeRender::default(),

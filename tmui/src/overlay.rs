@@ -63,30 +63,32 @@ impl ContainerImplExt for Overlay {
 }
 
 impl Layout for Overlay {
+    #[inline]
     fn composition(&self) -> Composition {
         Self::static_composition(self)
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        Self::container_position_layout(self, previous, parent)
+        Self::container_position_layout(self, parent)
     }
 }
 
 impl ContainerLayout for Overlay {
+    #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::Overlay
     }
 
+    #[inline]
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent)
+        LayoutManager::base_widget_position_layout(widget, parent)
 
         // Do nothing, users need to manually specify the position coordinates of overlay subcomponents
     }

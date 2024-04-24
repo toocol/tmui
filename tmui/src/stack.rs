@@ -1,14 +1,15 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{
-        ContainerImpl, ContainerImplExt, ContainerScaleCalculate, StaticContainerScaleCalculate, ContainerLayoutEnum,
+        ContainerImpl, ContainerImplExt, ContainerLayoutEnum, ContainerScaleCalculate,
+        StaticContainerScaleCalculate,
     },
     layout::{ContainerLayout, LayoutManager},
     prelude::*,
 };
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
-    stack_impl,
+    ptr_ref, stack_impl,
 };
 
 #[extends(Container)]
@@ -66,40 +67,40 @@ impl ContainerImplExt for Stack {
 }
 
 impl Layout for Stack {
+    #[inline]
     fn composition(&self) -> Composition {
         Stack::static_composition(self)
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        Stack::container_position_layout(self, previous, parent)
+        Stack::container_position_layout(self, parent)
     }
 }
 
 impl ContainerLayout for Stack {
+    #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::Stack
     }
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent);
+        LayoutManager::base_widget_position_layout(widget, parent);
 
         // deal with the children's position
         let widget_ptr = widget as *const dyn WidgetImpl;
-        let previous = unsafe { Some(widget_ptr.as_ref().unwrap()) };
 
         let stack_trait_obj = cast!(widget as StackTrait).unwrap();
         let index = stack_trait_obj.current_index();
 
         if let Some(child) = widget.children_mut().get_mut(index) {
-            child.position_layout(previous, previous);
+            LayoutManager::base_widget_position_layout_inner(*child, Some(ptr_ref!(widget_ptr)))
         }
     }
 }

@@ -80,16 +80,17 @@ impl ContainerImplExt for SplitPane {
 }
 
 impl Layout for SplitPane {
+    #[inline]
     fn composition(&self) -> Composition {
         SplitPane::static_composition(self)
     }
 
+    #[inline]
     fn position_layout(
         &mut self,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        SplitPane::container_position_layout(self, previous, parent)
+        SplitPane::container_position_layout(self, parent)
     }
 }
 
@@ -107,16 +108,16 @@ macro_rules! split_from {
 }
 
 impl ContainerLayout for SplitPane {
+    #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(_: &T) -> Composition {
         Composition::FixedContainer
     }
 
     fn container_position_layout<T: WidgetImpl + ContainerImpl>(
         widget: &mut T,
-        previous: Option<&dyn WidgetImpl>,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, previous, parent);
+        LayoutManager::base_widget_position_layout(widget, parent);
 
         let parent_rect = widget.contents_rect(None);
         let split_infos_getter = cast_mut!(widget as SplitInfosGetter).unwrap();
