@@ -39,6 +39,9 @@ pub(crate) struct GeneralAttr<'a> {
     // fields about `glboal_watch`
     pub(crate) global_watch_impl_clause: TokenStream,
     pub(crate) global_watch_reflect_clause: TokenStream,
+
+    // fields about `iter_executor`
+    pub(crate) iter_executor_reflect_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -59,6 +62,8 @@ impl<'a> GeneralAttr<'a> {
         let mut loadable = None;
 
         let mut global_watch = None;
+
+        let mut iter_executor = false;
 
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
@@ -83,6 +88,7 @@ impl<'a> GeneralAttr<'a> {
                         gw.set_generics(generics);
                         global_watch = Some(gw);
                     },
+                    "iter_executor" => iter_executor = true,
                     _ => {}
                 }
             }
@@ -218,6 +224,16 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // Iter executor
+        let iter_executor_reflect_clause = if iter_executor {
+            let (_, ty_generics, _) = generics;
+            quote!(
+                type_registry.register::<#name #ty_generics, ReflectIterExecutor>();
+            )
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -242,6 +258,7 @@ impl<'a> GeneralAttr<'a> {
             loadable_reflect_clause,
             global_watch_impl_clause,
             global_watch_reflect_clause,
+            iter_executor_reflect_clause,
         })
     }
 }

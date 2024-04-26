@@ -1,3 +1,4 @@
+mod ctrl_button;
 mod icons;
 mod font_icons;
 mod svg_icons;

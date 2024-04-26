@@ -203,6 +203,8 @@ where
             Application::<T, M>::process_request_ignored()
         }
 
+        window.iter_execute();
+
         cpu_balance.payload_check();
         if window.is_high_load_requested() {
             cpu_balance.request_high_load();

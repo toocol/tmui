@@ -1,5 +1,5 @@
 use super::{Shortcut, ShortcutTrigger};
-use crate::widget::WidgetImpl;
+use crate::widget::{WidgetHnd, WidgetImpl};
 use std::{cell::RefCell, collections::HashMap, ptr::NonNull};
 use tlib::{
     events::{EventTrait, EventType, KeyEvent},
@@ -14,7 +14,7 @@ thread_local! {
 type ShortcutMap = HashMap<
     Shortcut,
     Vec<(
-        Option<NonNull<dyn WidgetImpl>>,
+        WidgetHnd,
         Box<dyn Fn(&mut dyn WidgetImpl)>,
     )>,
 >;

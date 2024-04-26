@@ -11,7 +11,9 @@ use crate::{
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
-    widget::{widget_inner::WidgetInnerExt, WidgetImpl, WidgetSignals, ZIndexStep},
+    widget::{
+        widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, WidgetSignals, ZIndexStep,
+    },
     window::win_builder::WindowBuilder,
 };
 use log::{debug, error};
@@ -48,12 +50,13 @@ pub struct ApplicationWindow {
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
-    widgets: HashMap<String, Option<NonNull<dyn WidgetImpl>>>,
-    run_afters: Vec<Option<NonNull<dyn WidgetImpl>>>,
+    widgets: HashMap<String, WidgetHnd>,
+    run_afters: Vec<WidgetHnd>,
+    iter_executors: Vec<IterExecutorHnd>,
 
     focused_widget: ObjectId,
     pressed_widget: ObjectId,
-    mouse_over_widget: Option<NonNull<dyn WidgetImpl>>,
+    mouse_over_widget: WidgetHnd,
     high_load_request: bool,
 
     run_after: Option<FnRunAfter>,
@@ -116,7 +119,7 @@ impl ApplicationWindow {
         window
     }
 
-    /// # Safety 
+    /// # Safety
     /// `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
     pub(crate) fn windows() -> &'static mut HashMap<ObjectId, ApplicationWindowContext> {
@@ -126,9 +129,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn widgets_of(
-        id: ObjectId,
-    ) -> &'static mut HashMap<String, Option<NonNull<dyn WidgetImpl>>> {
+    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<String, WidgetHnd> {
         let window = Self::window_of(id);
         &mut window.widgets
     }
@@ -140,7 +141,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn run_afters_of(id: ObjectId) -> &'static mut Vec<Option<NonNull<dyn WidgetImpl>>> {
+    pub fn run_afters_of(id: ObjectId) -> &'static mut Vec<WidgetHnd> {
         let window = Self::window_of(id);
         &mut window.run_afters
     }
@@ -358,12 +359,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn mouse_over_widget(&self) -> Option<NonNull<dyn WidgetImpl>> {
+    pub(crate) fn mouse_over_widget(&self) -> WidgetHnd {
         self.mouse_over_widget
     }
 
     #[inline]
-    pub(crate) fn set_mouse_over_widget(&mut self, widget: Option<NonNull<dyn WidgetImpl>>) {
+    pub(crate) fn set_mouse_over_widget(&mut self, widget: WidgetHnd) {
         self.mouse_over_widget = widget
     }
 
@@ -432,6 +433,13 @@ impl ApplicationWindow {
         wed::win_evt_dispatch(self, evt)
     }
 
+    #[inline]
+    pub(crate) fn iter_execute(&mut self) {
+        self.iter_executors
+            .iter_mut()
+            .for_each(|hnd| nonnull_mut!(hnd).iter_execute())
+    }
+
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
         for w in Self::widgets_of(self.id()).values_mut() {
@@ -455,7 +463,6 @@ impl ApplicationWindow {
             }
         }
     }
-
 }
 
 /// Get window id in current ui thread.
@@ -527,6 +534,11 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         }
         if let Some(watch) = cast_mut!(child_ref as GlobalWatch) {
             watch.register_global_watch();
+        }
+        if let Some(executor) = cast_mut!(child_ref as IterExecutor) {
+            ApplicationWindow::window_of(window_id)
+                .iter_executors
+                .push(NonNull::new(executor))
         }
 
         // Determine whether the widget is a container.

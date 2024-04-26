@@ -4,27 +4,32 @@ use crate::{
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use std::io::Read;
-use tlib::{skia_safe::FontMgr, typedef::SkiaSvgDom};
+use tlib::{connect, skia_safe::FontMgr, typedef::SkiaSvgDom};
 use usvg::{fontdb::Database, Options, Tree};
 
 /// TODO: Wait to improve, see https://github.com/rust-skia/rust-skia/discussions/928
 #[extends(Widget)]
 pub struct SvgIcon {
     dom: Option<SkiaSvgDom>,
+    view_size: Size,
+    origin: FPoint,
 }
 
 impl ObjectSubclass for SvgIcon {
     const NAME: &'static str = "SvgIcon";
 }
 
-impl ObjectImpl for SvgIcon {}
+impl ObjectImpl for SvgIcon {
+    fn initialize(&mut self) {
+        connect!(self, geometry_changed(), self, handle_geometry_changed(Rect));
+    }
+}
 
 impl WidgetImpl for SvgIcon {
     fn paint(&mut self, painter: &mut Painter) {
-        let origin = self.contents_rect(None).top_left();
         if let Some(ref dom) = self.dom {
             painter.save();
-            painter.translate(origin.x() as f32, origin.y() as f32);
+            painter.translate(self.origin.x(), self.origin.y());
             painter.draw_dom(dom);
             painter.restore();
         }
@@ -63,6 +68,8 @@ impl SvgIcon {
         let size = svg_tree.size();
         let (w, h) = (size.width().ceil() as i32, size.height().ceil() as i32);
 
+        self.view_size = (w, h).into();
+
         self.set_fixed_width(w);
         self.set_detecting_width(w);
         self.set_fixed_height(h);
@@ -72,5 +79,12 @@ impl SvgIcon {
             .expect("Create svg dom failed");
 
         self.dom = Some(dom);
+    }
+
+    #[inline]
+    fn handle_geometry_changed(&mut self, rect: Rect) {
+        let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
+        let (w2, h2) = (self.view_size.width(), self.view_size.height());
+        self.origin = FPoint::new((x1 + (w1 - w2) / 2) as f32, (y1 + (h1 - h2) / 2) as f32);
     }
 }
