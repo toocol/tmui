@@ -696,6 +696,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_pressed(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_pressed {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
 
         let mut pos: Point = event.position().into();
@@ -725,6 +730,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_released(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_released {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
 
         let mut pos: Point = event.position().into();
@@ -750,6 +760,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_move(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_move {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_mouse_move => self.mouse_move(), event);
 
         let mut pos: Point = event.position().into();
@@ -773,6 +788,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     fn inner_mouse_wheel(&mut self, event: &MouseEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_mouse_wheel(event)
+        }
+
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_wheel {
+            f(ptr_mut!(ptr), event)
         }
 
         emit!(Widget::inner_mouse_wheel => self.mouse_wheel(), event);
@@ -826,6 +846,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_key_pressed(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().key_pressed {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_key_pressed => self.key_pressed(), event);
 
         if let Some(parent) = self.get_parent_mut() {
@@ -842,6 +867,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     fn inner_key_released(&mut self, event: &KeyEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_key_released(event)
+        }
+
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().key_released {
+            f(ptr_mut!(ptr), event)
         }
 
         emit!(Widget::inner_key_released => self.key_released(), event);
