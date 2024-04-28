@@ -2,6 +2,8 @@ use tmui::{
     icons::svg_icon::SvgIcon, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl
 };
 
+use crate::ctrl_button::CtrlButtons;
+
 #[extends(Widget, Layout(HBox))]
 #[derive(Childrenable)]
 pub struct SvgIcons {
@@ -20,6 +22,9 @@ pub struct SvgIcons {
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/sword_rose.svg\")"))]
     icon4: Box<SvgIcon>,
+
+    #[children]
+    icon5: Box<CtrlButtons>,
 }
 
 impl ObjectSubclass for SvgIcons {

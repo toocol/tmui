@@ -349,3 +349,8 @@ pub fn loadable(_args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn global_watch(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
+
+#[proc_macro_attribute]
+pub fn iter_executor(_: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}

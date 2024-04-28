@@ -65,7 +65,7 @@ impl ContainerImplExt for SplitPane {
         }
         child.set_parent(self);
         ApplicationWindow::initialize_dynamic_component(child.as_mut());
-        let widget_ptr: Option<NonNull<dyn WidgetImpl>> = NonNull::new(child.as_mut());
+        let widget_ptr: WidgetHnd = NonNull::new(child.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),
             widget_ptr,
@@ -189,7 +189,7 @@ pub struct SplitInfo {
     /// The id of self widget.
     pub id: ObjectId,
     /// The self widget ptr which the `SplitInfo` binded.
-    pub widget: Option<NonNull<dyn WidgetImpl>>,
+    pub widget: WidgetHnd,
     /// The ptr of `SplitInfo` which this widget splited from.
     pub split_from: Option<NonNull<SplitInfo>>,
     /// The vector of `SplitInfo` ptr which was splited from this widget.
@@ -202,7 +202,7 @@ impl SplitInfo {
     #[inline]
     pub fn new(
         id: ObjectId,
-        widget: Option<NonNull<dyn WidgetImpl>>,
+        widget: WidgetHnd,
         split_from: Option<NonNull<SplitInfo>>,
         ty: SplitType,
     ) -> Self {

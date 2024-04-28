@@ -1,6 +1,5 @@
 use super::{
-    EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl,
-    WindowAcquire,
+    callbacks::Callbacks, EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire
 };
 use crate::{
     application_window::ApplicationWindow,
@@ -694,6 +693,16 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::is_resize_redraw) (Defined in [`WidgetExt`])
     fn is_resize_redraw(&self) -> bool;
+
+    /// Get the reference of [`Callbacks`]
+    ///
+    /// Go to[`Function defination`](WidgetExt::callbacks) (Defined in [`WidgetExt`])
+    fn callbacks(&self) -> &Callbacks;
+
+    /// Get the mutable reference of [`Callbacks`]
+    ///
+    /// Go to[`Function defination`](WidgetExt::callbacks_mut) (Defined in [`WidgetExt`])
+    fn callbacks_mut(&mut self) -> &mut Callbacks;
 }
 
 impl WidgetExt for Widget {
@@ -1178,6 +1187,8 @@ impl WidgetExt for Widget {
         self.set_rerender_styles(true);
         self.background = color;
         emit!(Widget::set_background => self.background_changed(), color);
+
+        self.update();
     }
 
     #[inline]
@@ -1694,5 +1705,15 @@ impl WidgetExt for Widget {
     #[inline]
     fn is_resize_redraw(&self) -> bool {
         self.resize_redraw
+    }
+    
+    #[inline]
+    fn callbacks(&self) -> &Callbacks {
+        &self.callbacks
+    }
+    
+    #[inline]
+    fn callbacks_mut(&mut self) -> &mut Callbacks {
+        &mut self.callbacks
     }
 }

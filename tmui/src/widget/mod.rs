@@ -1,3 +1,4 @@
+pub mod callbacks;
 pub mod widget_ext;
 pub mod widget_inner;
 
@@ -25,19 +26,21 @@ use tlib::{
     figure::Color,
     namespace::{Align, BlendMode, Coordinate},
     object::{ObjectImpl, ObjectSubclass},
-    signals,
+    ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
 };
 
-use self::widget_inner::WidgetInnerExt;
+use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 
 pub type Transparency = u8;
+pub type WidgetHnd = Option<NonNull<dyn WidgetImpl>>;
 
 #[extends(Element)]
 pub struct Widget {
-    parent: Option<NonNull<dyn WidgetImpl>>,
+    parent: WidgetHnd,
+
     child: Option<Box<dyn WidgetImpl>>,
-    child_ref: Option<NonNull<dyn WidgetImpl>>,
+    child_ref: WidgetHnd,
 
     old_image_rect: Rect,
     child_image_rect_union: Rect,
@@ -141,6 +144,8 @@ pub struct Widget {
 
     resize_redraw: bool,
     manage_by_container: bool,
+
+    callbacks: Callbacks,
 }
 
 bitflags! {
@@ -691,6 +696,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_pressed(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_pressed {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
 
         let mut pos: Point = event.position().into();
@@ -720,6 +730,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_released(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_released {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
 
         let mut pos: Point = event.position().into();
@@ -743,6 +758,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     fn inner_mouse_move(&mut self, event: &MouseEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_mouse_move(event)
+        }
+
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_move {
+            f(ptr_mut!(ptr), event)
         }
 
         emit!(Widget::inner_mouse_move => self.mouse_move(), event);
@@ -770,6 +790,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_wheel(event)
         }
 
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().mouse_wheel {
+            f(ptr_mut!(ptr), event)
+        }
+
         emit!(Widget::inner_mouse_wheel => self.mouse_wheel(), event);
 
         let mut pos: Point = event.position().into();
@@ -794,6 +819,10 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_mouse_enter(event)
         }
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().hover_in {
+            f(ptr_mut!(ptr))
+        }
 
         emit!(Widget::inner_mouse_enter => self.mouse_enter(), event);
     }
@@ -803,6 +832,10 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_mouse_leave(event)
         }
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().hover_out {
+            f(ptr_mut!(ptr))
+        }
 
         emit!(Widget::inner_mouse_leave => self.mouse_leave(), event);
     }
@@ -811,6 +844,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_key_pressed(event)
+        }
+
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().key_pressed {
+            f(ptr_mut!(ptr), event)
         }
 
         emit!(Widget::inner_key_pressed => self.key_pressed(), event);
@@ -829,6 +867,11 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     fn inner_key_released(&mut self, event: &KeyEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_key_released(event)
+        }
+
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().key_released {
+            f(ptr_mut!(ptr), event)
         }
 
         emit!(Widget::inner_key_released => self.key_released(), event);
@@ -1057,7 +1100,7 @@ pub trait WidgetImplExt: WidgetImpl {
 
     /// # Safety
     /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
-    /// 
+    ///
     /// @see [`Widget::child_ref_internal`](Widget) <br>
     /// Go to[`Function defination`](WidgetImplExt::child_ref) (Defined in [`WidgetImplExt`])
     unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
@@ -1071,10 +1114,7 @@ impl<T: WidgetAcquire> Layout for T {
     }
 
     #[inline]
-    fn position_layout(
-        &mut self,
-        parent: Option<&dyn WidgetImpl>,
-    ) {
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         LayoutManager::base_widget_position_layout(self, parent)
     }
 }
@@ -1141,6 +1181,14 @@ impl<T: WidgetImpl> WindowAcquire for T {
         ApplicationWindow::window_of(self.window_id())
     }
 }
+
+////////////////////////////////////// IterExecutor //////////////////////////////////////
+#[reflect_trait]
+pub trait IterExecutor {
+    /// This function will be executed in each iteration of the UI main thread loop.
+    fn iter_execute(&mut self);
+}
+pub type IterExecutorHnd = Option<NonNull<dyn IterExecutor>>;
 
 #[cfg(test)]
 mod tests {

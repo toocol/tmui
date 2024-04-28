@@ -23,6 +23,8 @@ pub(crate) fn expand(
     let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
     let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
 
+    let iter_executor_reflect_clause = &general_attr.iter_executor_reflect_clause;
+
     let set_shared_id_clause = match id {
         Some(id) => quote!(
             self.set_shared_id(#id);
@@ -131,6 +133,7 @@ pub(crate) fn expand(
                         type_registry.register::<#name, ReflectSharedWidgetImpl>();
                         #popupable_reflect_clause
                         #global_watch_reflect_clause
+                        #iter_executor_reflect_clause
                     }
 
                     #[inline]

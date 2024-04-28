@@ -32,6 +32,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
     let global_watch_impl_clause = &general_attr.global_watch_impl_clause;
     let global_watch_reflect_clause = &general_attr.global_watch_reflect_clause;
 
+    let iter_executor_reflect_clause = &general_attr.iter_executor_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -157,6 +159,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                         #animation_state_holder_reflect
                         #loadable_reflect_clause
                         #global_watch_reflect_clause
+                        #iter_executor_reflect_clause
                     }
 
                     #[inline]
@@ -911,6 +914,16 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn is_resize_redraw(&self) -> bool {
                 self.#(#widget_path).*.is_resize_redraw()
+            }
+
+            #[inline]
+            fn callbacks(&self) -> &Callbacks {
+                self.#(#widget_path).*.callbacks()
+            }
+
+            #[inline]
+            fn callbacks_mut(&mut self) -> &mut Callbacks {
+                self.#(#widget_path).*.callbacks_mut()
             }
         }
 
