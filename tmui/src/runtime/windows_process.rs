@@ -14,7 +14,7 @@ use crate::{
         event::{Event, WindowEvent},
     },
 };
-use log::{debug, error};
+use log::error;
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -385,15 +385,11 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                     }
 
                     // VSync event.
-                    Event::UserEvent(Message::VSync(window_id, ins)) => {
+                    Event::UserEvent(Message::VSync(window_id, _)) => {
                         let window = self.windows.get_mut(&window_id).unwrap_or_else(|| {
                             panic!("Can not find window with id {:?}", window_id)
                         });
 
-                        debug!(
-                            "vscyn track: {}ms",
-                            ins.elapsed().as_micros() as f64 / 1000.
-                        );
                         window.request_redraw();
                         target.set_control_flow(ControlFlow::Poll)
                     }
