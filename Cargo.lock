@@ -789,6 +789,7 @@ dependencies = [
  "log",
  "log4rs",
  "once_cell",
+ "rust-embed",
  "tipc",
  "tmui",
  "widestring",

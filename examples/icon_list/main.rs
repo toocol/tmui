@@ -17,6 +17,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("Icon List")
+        .transparent(true)
         .build();
 
     app.connect_activate(build_ui);

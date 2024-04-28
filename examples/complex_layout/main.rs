@@ -1,4 +1,5 @@
 mod layouts;
+mod asset;
 
 use layouts::View;
 use tmui::{
@@ -14,6 +15,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("Complex Layout")
+        .transparent(true)
         .build();
 
     app.connect_activate(build_ui);

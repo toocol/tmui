@@ -427,7 +427,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         if !self.visible() && !self.is_animation_progressing() {
             return;
         }
+
         let mut geometry = self.rect();
+        self.set_rect_record(geometry);
+        self.set_image_rect_record(self.image_rect());
+
         if geometry.width() == 0 || geometry.height() == 0 {
             return;
         }
@@ -479,9 +483,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             } else {
                 painter.fill_rect(geometry, background);
             }
-
-            self.set_rect_record(self.rect());
-            self.set_image_rect_record(self.image_rect());
 
             // Draw the border of the Widget.
             self.border_ref().render(&mut painter, geometry.into());
