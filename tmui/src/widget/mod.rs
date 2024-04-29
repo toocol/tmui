@@ -1031,6 +1031,18 @@ pub trait WidgetImpl:
     /// Invoke when widget losing focus.
     #[inline]
     fn on_lose_focus(&mut self) {}
+
+    /// Invoke when window minimized.
+    #[inline]
+    fn on_window_minimized(&mut self) {}
+
+    /// Invoke when window maximized.
+    #[inline]
+    fn on_window_maximized(&mut self) {}
+
+    /// Invoke when window restored.
+    #[inline]
+    fn on_window_restored(&mut self) {}
 }
 
 impl dyn WidgetImpl {

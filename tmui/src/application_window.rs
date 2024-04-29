@@ -248,6 +248,46 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub fn close(&self) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not close window on slave side of shared memory application.");
+            return;
+        }
+
+        self.send_message(Message::WindowCloseRequest(self.winit_id.unwrap()))
+    }
+
+    #[inline]
+    pub fn maximize(&self) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not maximize window on slave side of shared memory application.");
+            return;
+        }
+
+        self.send_message(Message::WindowMaximizeRequest(self.winit_id.unwrap()))
+    }
+
+    #[inline]
+    pub fn minimize(&self) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not minimize window on slave side of shared memory application.");
+            return;
+        }
+
+        self.send_message(Message::WindowMinimizeRequest(self.winit_id.unwrap()))
+    }
+
+    #[inline]
+    pub fn restore(&self) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not restore window on slave side of shared memory application.");
+            return;
+        }
+
+        self.send_message(Message::WindowRestoreRequest(self.winit_id.unwrap()))
+    }
+
+    #[inline]
     pub fn window_layout_change(&mut self) {
         Self::layout_of(self.id()).layout_change(self, false)
     }

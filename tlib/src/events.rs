@@ -48,6 +48,9 @@ pub enum EventType {
     HoveredFileCancelled,
     ReceivedCharacter,
     InputMethod,
+    WindowMaximized,
+    WindowMinimized,
+    WindowRestored,
 }
 impl From<u8> for EventType {
     fn from(value: u8) -> Self {
@@ -1001,6 +1004,105 @@ impl EventTrait for InputMethodEvent {
 }
 
 impl PayloadWeight for InputMethodEvent {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`WindowMinimized`] window has minimized.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct WindowMinimized {
+    type_: EventType,
+}
+impl Default for WindowMinimized {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl WindowMinimized {
+    #[inline]
+    pub fn new() -> Self {
+        Self { type_: EventType::WindowMinimized }
+    }
+}
+impl EventTrait for WindowMinimized {
+    #[inline]
+    fn event_type(&self) -> EventType {
+        self.type_
+    }
+}
+impl_as_any!(WindowMinimized);
+impl PayloadWeight for WindowMinimized {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`WindowMaximized`] window has maximized.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct WindowMaximized {
+    type_: EventType,
+}
+impl Default for WindowMaximized {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl WindowMaximized {
+    #[inline]
+    pub fn new() -> Self {
+        Self { type_: EventType::WindowMaximized }
+    }
+}
+impl EventTrait for WindowMaximized {
+    #[inline]
+    fn event_type(&self) -> EventType {
+        self.type_
+    }
+}
+impl_as_any!(WindowMaximized);
+impl PayloadWeight for WindowMaximized {
+    #[inline]
+    fn payload_wieght(&self) -> f32 {
+        1.
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// [`WindowRestored`] window has restored.
+/////////////////////////////////////////////////////////////////////////////////////
+#[derive(Debug)]
+pub struct WindowRestored {
+    type_: EventType,
+}
+impl Default for WindowRestored {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl WindowRestored {
+    #[inline]
+    pub fn new() -> Self {
+        Self { type_: EventType::WindowRestored }
+    }
+}
+impl EventTrait for WindowRestored {
+    #[inline]
+    fn event_type(&self) -> EventType {
+        self.type_
+    }
+}
+impl_as_any!(WindowRestored);
+impl PayloadWeight for WindowRestored {
     #[inline]
     fn payload_wieght(&self) -> f32 {
         1.

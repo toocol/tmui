@@ -3,7 +3,7 @@ use tmui::{
     icons::{svg_icon::SvgIcon, svg_toggle_icon::SvgToggleIcon},
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    widget::{callbacks::CallbacksRegister, WidgetImpl},
 };
 
 #[extends(Widget, Layout(HBox))]
@@ -42,14 +42,36 @@ impl ObjectImpl for WinCtrlBtns {
         self.set_vexpand(true);
         self.width_request(138);
 
+        let background = self.background();
+        const CTRL_BTN_GREY: Color = Color::grey_with(225);
+        const CTRL_BTN_RED: Color = Color::from_rgb(245, 40, 40);
+
         self.minimize.width_request(46);
         self.minimize.height_request(30);
+        self.minimize.callback_hover_in(|w| w.set_background(CTRL_BTN_GREY));
+        self.minimize.callback_hover_out(move |w| w.set_background(background));
+        self.minimize.callback_mouse_released(|w, _| w.window().minimize());
 
         self.large_restore.width_request(46);
         self.large_restore.height_request(30);
+        self.large_restore.callback_hover_in(|w| w.set_background(CTRL_BTN_GREY));
+        self.large_restore.callback_hover_out(move |w| w.set_background(background));
+        self.large_restore.callback_mouse_released(|w, _| {
+            let icon = w.downcast_mut::<SvgToggleIcon>().unwrap();
+            match icon.current_icon() {
+                0 => icon.window().maximize(),
+                1 => icon.window().restore(),
+                _ => unreachable!()
+            }
+        });
+        self.large_restore.callback_window_maximized(|w| w.downcast_mut::<SvgToggleIcon>().unwrap().set_current_icon(1));
+        self.large_restore.callback_window_restored(|w| w.downcast_mut::<SvgToggleIcon>().unwrap().set_current_icon(0));
 
         self.close.width_request(46);
         self.close.height_request(30);
+        self.close.callback_hover_in(|w| w.set_background(CTRL_BTN_RED));
+        self.close.callback_hover_out(move |w| w.set_background(background));
+        self.close.callback_mouse_released(|w, _| w.window().close());
     }
 }
 
