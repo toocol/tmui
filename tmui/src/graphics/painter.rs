@@ -743,6 +743,6 @@ impl<'a> Painter<'a> {
     #[cfg(svg)]
     #[inline]
     pub fn draw_dom(&self, dom: &tlib::typedef::SkiaSvgDom) {
-        dom.render(self.canvas)
+        dom.render(self.canvas);
     }
 }
