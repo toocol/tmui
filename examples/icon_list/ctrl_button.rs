@@ -1,5 +1,5 @@
 use tmui::{
-    icons::{svg_icon::SvgIcon, svg_toggle_icon::SvgToggleIcon},
+    icons::{svg_icon::{RenderMode, SvgIcon}, svg_toggle_icon::SvgToggleIcon},
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{callbacks::CallbacksRegister, WidgetImpl},
@@ -43,6 +43,7 @@ impl ObjectImpl for CtrlButtons {
         self.maximize_restore
             .callback_hover_out(|w| w.set_background(Color::GREY_LIGHT));
         self.maximize_restore.callback_mouse_released(|w, _| w.downcast_mut::<SvgToggleIcon>().unwrap().toggle());
+        self.maximize_restore.set_render_mode(RenderMode::TempSurface);
 
         self.close.set_background(Color::GREY_LIGHT);
         self.close.width_request(30);
