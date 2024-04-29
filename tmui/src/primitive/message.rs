@@ -4,7 +4,8 @@ use tlib::{
     events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
     namespace::AsNumeric,
     payload::PayloadWeight,
-    prelude::SystemCursorShape, winit::window::WindowId,
+    prelude::SystemCursorShape,
+    winit::window::WindowId,
 };
 
 use crate::window::Window;
@@ -20,11 +21,23 @@ pub enum Message {
     /// Events like MouseEvent, KeyEvent...
     Event(Event),
 
-    // Create new window.
+    /// Create new window.
     CreateWindow(Window),
 
-    // Window has closed.
+    /// Window has closed.
     WindowClosed,
+
+    /// Reqeust window to close.
+    WindowCloseRequest(WindowId),
+
+    /// Reqeust window to minimize.
+    WindowMinimizeRequest(WindowId),
+
+    /// Reqeust window to maximize.
+    WindowMaximizeRequest(WindowId),
+
+    /// Reqeust window to restore.
+    WindowRestoreRequest(WindowId),
 }
 
 impl PayloadWeight for Message {
@@ -36,6 +49,7 @@ impl PayloadWeight for Message {
             Self::Event(..) => 1.,
             Self::CreateWindow(_) => 1.,
             Self::WindowClosed => 0.,
+            _ => 0.,
         }
     }
 }
@@ -47,8 +61,7 @@ impl<T: 'static + Copy + Sync + Send> From<Message> for IpcEvent<T> {
             Message::VSync(_, a) => IpcEvent::VSync(a),
             Message::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
             Message::Event(evt) => convert_event(&evt),
-            Message::CreateWindow(_) => unreachable!(),
-            Message::WindowClosed => unreachable!(),
+            _ => unreachable!(),
         }
     }
 }

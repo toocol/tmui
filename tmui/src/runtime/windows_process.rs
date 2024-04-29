@@ -25,7 +25,7 @@ use std::{
 };
 use tipc::{ipc_event::IpcEvent, raw_sync::Timeout, IpcNode};
 use tlib::{
-    events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent},
+    events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized, WindowMinimized, WindowRestored},
     figure::Point,
     global::to_static,
     namespace::{KeyCode, KeyboardModifier, MouseButton},
@@ -33,7 +33,7 @@ use tlib::{
     prelude::SystemCursorShape,
     winit::{
         event::{ElementState, MouseScrollDelta},
-        event_loop::{ControlFlow, EventLoopProxy},
+        event_loop::{ControlFlow, EventLoopProxy, EventLoopWindowTarget},
         keyboard::{Key, ModifiersState, NamedKey, PhysicalKey},
         window::WindowId,
     },
@@ -51,6 +51,7 @@ pub(crate) struct WindowsProcess<
     platform_context: &'a dyn PlatformContext<T, M>,
 
     windows: HashMap<WindowId, PhysWindow<T, M>>,
+    window_extremed: HashMap<WindowId, bool>,
     main_window_id: Option<WindowId>,
     proxy: Option<EventLoopProxy<Message>>,
 }
@@ -66,6 +67,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
             ui_stack_size,
             platform_context,
             windows: HashMap::new(),
+            window_extremed: HashMap::new(),
             main_window_id: None,
             proxy: None,
         }
@@ -164,6 +166,33 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                     ));
                 }
 
+                #[inline]
+                fn close_window<
+                    T: 'static + Copy + Send + Sync,
+                    M: 'static + Copy + Send + Sync,
+                >(
+                    window_id: WindowId,
+                    main_window_id: WindowId,
+                    window: &mut PhysWindow<T, M>,
+                    target: &EventLoopWindowTarget<Message>,
+                ) {
+                    if window_id != main_window_id {
+                        window.send_input(Message::WindowClosed);
+                        let _ = window.take_winit_window();
+                        return;
+                    }
+
+                    if let Some(ref master) = window.master {
+                        let master_guard = master.read();
+                        master_guard.try_send(IpcEvent::Exit).unwrap();
+                        master_guard.wait(Timeout::Val(Duration::from_secs(1)));
+                    }
+
+                    target.exit();
+
+                    APP_STOPPED.store(true, Ordering::SeqCst);
+                }
+
                 match event {
                     Event::WindowEvent { window_id, event } => {
                         let main_window_id = self.main_window_id();
@@ -185,6 +214,21 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 if !Application::<T, M>::is_app_started() {
                                     return;
                                 }
+
+                                if window.winit_window().is_maximized() {
+                                    self.window_extremed.insert(window_id, true);
+                                    window.send_input(Message::Event(Box::new(WindowMaximized::new())));
+                                } else if window.winit_window().is_minimized().unwrap_or_default() {
+                                    self.window_extremed.insert(window_id, true);
+                                    window.send_input(Message::Event(Box::new(WindowMinimized::new())));
+                                } else {
+                                    let is_extremed = self.window_extremed.get(&window_id).copied().unwrap_or_default();
+                                    if is_extremed {
+                                        self.window_extremed.insert(window_id, false);
+                                        window.send_input(Message::Event(Box::new(WindowRestored::new())));
+                                    }
+                                }
+
                                 let evt = ResizeEvent::new(size.width as i32, size.height as i32);
                                 window.send_input(Message::Event(Box::new(evt)));
 
@@ -193,21 +237,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             // Window close requested event.
                             WindowEvent::CloseRequested => {
-                                if window_id != main_window_id {
-                                    window.send_input(Message::WindowClosed);
-                                    let _ = window.take_winit_window();
-                                    return;
-                                }
-
-                                if let Some(ref master) = window.master {
-                                    let master_guard = master.read();
-                                    master_guard.try_send(IpcEvent::Exit).unwrap();
-                                    master_guard.wait(Timeout::Val(Duration::from_secs(1)));
-                                }
-
-                                target.exit();
-
-                                APP_STOPPED.store(true, Ordering::SeqCst);
+                                close_window(window_id, main_window_id, window, target);
                             }
 
                             // Window destroy event.
@@ -395,40 +425,86 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                     }
 
                     // SetCursorShape event.
-                    Event::UserEvent(Message::SetCursorShape(cursor)) => {
-                        let window_id = self.main_window_id();
-                        let window = self.windows.get_mut(&window_id).unwrap_or_else(|| {
-                            panic!("Can not find window with id {:?}", window_id)
-                        });
+                    Event::UserEvent(evt) => {
+                        let main_window_id = self.main_window_id();
 
-                        match cursor {
-                            SystemCursorShape::BlankCursor => {
-                                window.winit_window().set_cursor_visible(false)
+                        match evt {
+                            Message::SetCursorShape(cursor) => {
+                                let window_id = self.main_window_id();
+                                let window =
+                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", window_id)
+                                    });
+
+                                match cursor {
+                                    SystemCursorShape::BlankCursor => {
+                                        window.winit_window().set_cursor_visible(false)
+                                    }
+                                    _ => {
+                                        window.winit_window().set_cursor_visible(true);
+                                        window.winit_window().set_cursor_icon(cursor.into())
+                                    }
+                                }
                             }
-                            _ => {
-                                window.winit_window().set_cursor_visible(true);
-                                window.winit_window().set_cursor_icon(cursor.into())
+
+                            Message::CreateWindow(mut win) => {
+                                let (mut logic_window, physical_window) =
+                                    self.platform_context.create_window(
+                                        win.take_config(),
+                                        Some(target),
+                                        Some(self.proxy()),
+                                    );
+
+                                logic_window.on_activate = win.take_on_activate();
+
+                                let phys_window = physical_window.into_phys_window();
+
+                                self.windows.insert(phys_window.window_id(), phys_window);
+
+                                ui_joins.push(super::start_ui_runtime(
+                                    win.index(),
+                                    self.ui_stack_size,
+                                    logic_window,
+                                ));
                             }
+
+                            Message::WindowCloseRequest(window_id) => {
+                                let window =
+                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", window_id)
+                                    });
+                                close_window(window_id, main_window_id, window, target)
+                            }
+
+                            Message::WindowMaximizeRequest(window_id) => {
+                                let window =
+                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", window_id)
+                                    });
+                                window.winit_window().set_maximized(true);
+                                window.winit_window().set_minimized(false);
+                            }
+
+                            Message::WindowMinimizeRequest(window_id) => {
+                                let window =
+                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", window_id)
+                                    });
+                                window.winit_window().set_maximized(false);
+                                window.winit_window().set_minimized(true);
+                            }
+
+                            Message::WindowRestoreRequest(window_id) => {
+                                let window =
+                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", window_id)
+                                    });
+                                window.winit_window().set_maximized(false);
+                                window.winit_window().set_minimized(false);
+                            }
+
+                            _ => {}
                         }
-                    }
-
-                    // VSync event.
-                    Event::UserEvent(Message::CreateWindow(mut win)) => {
-                        let (mut logic_window, physical_window) = self
-                            .platform_context
-                            .create_window(win.take_config(), Some(target), Some(self.proxy()));
-
-                        logic_window.on_activate = win.take_on_activate();
-
-                        let phys_window = physical_window.into_phys_window();
-
-                        self.windows.insert(phys_window.window_id(), phys_window);
-
-                        ui_joins.push(super::start_ui_runtime(
-                            win.index(),
-                            self.ui_stack_size,
-                            logic_window,
-                        ));
                     }
 
                     _ => (),

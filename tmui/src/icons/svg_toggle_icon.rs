@@ -91,8 +91,13 @@ impl SvgToggleIcon {
     }
 
     #[inline]
+    pub fn current_icon(&self) -> usize {
+        self.index
+    }
+
+    #[inline]
     pub fn set_current_icon(&mut self, index: usize) {
-        if index >= self.doms.len() {
+        if index >= self.doms.len() || index == self.index {
             return;
         }
         self.index = index;

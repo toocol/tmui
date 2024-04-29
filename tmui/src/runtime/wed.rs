@@ -262,6 +262,45 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             }
         }
 
+        EventType::WindowMaximized => {
+            let widgets_map = ApplicationWindow::widgets_of(window.id());
+            for (_name, widget_opt) in widgets_map.iter_mut() {
+                let widget = nonnull_mut!(widget_opt);
+
+                widget.on_window_maximized();
+
+                if let Some(ref f) = widget.callbacks().window_maximized {
+                    f(nonnull_mut!(widget_opt))
+                }
+            }
+        },
+
+        EventType::WindowMinimized => {
+            let widgets_map = ApplicationWindow::widgets_of(window.id());
+            for (_name, widget_opt) in widgets_map.iter_mut() {
+                let widget = nonnull_mut!(widget_opt);
+
+                widget.on_window_minimized();
+
+                if let Some(ref f) = widget.callbacks().window_minimized {
+                    f(nonnull_mut!(widget_opt))
+                }
+            }
+        },
+
+        EventType::WindowRestored => {
+            let widgets_map = ApplicationWindow::widgets_of(window.id());
+            for (_name, widget_opt) in widgets_map.iter_mut() {
+                let widget = nonnull_mut!(widget_opt);
+
+                widget.on_window_restored();
+
+                if let Some(ref f) = widget.callbacks().window_restored {
+                    f(nonnull_mut!(widget_opt))
+                }
+            }
+        },
+
         EventType::FocusIn => event = Some(evt),
         EventType::FocusOut => event = Some(evt),
         EventType::Moved => {}
