@@ -4,7 +4,7 @@ use tmui::{
     widget::WidgetImpl,
 };
 
-use super::LeftPanel;
+use super::{right_panel::RightPanel, LeftPanel};
 
 #[extends(Widget, Layout(Pane))]
 #[derive(Childrenable)]
@@ -13,7 +13,7 @@ pub struct CentralPanel {
     widget1: Box<LeftPanel>,
 
     #[children]
-    widget2: Box<Widget>,
+    widget2: Box<RightPanel>,
 }
 
 impl ObjectSubclass for CentralPanel {

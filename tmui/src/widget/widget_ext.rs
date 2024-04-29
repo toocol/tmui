@@ -874,7 +874,7 @@ impl WidgetExt for Widget {
     fn hide(&mut self) {
         self.set_property("visible", false.to_value());
 
-        if !self.is_animation_progressing() {
+        if !self.is_animation_progressing() && self.window().initialized() {
             self.window()
                 .invalid_effected_widgets(self.image_rect(), self.id());
         }

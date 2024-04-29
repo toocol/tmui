@@ -1,5 +1,6 @@
 mod activity_bar;
 mod central_panel;
+mod right_panel;
 mod left_panel;
 mod status_bar;
 mod title_bar;

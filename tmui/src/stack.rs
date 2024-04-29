@@ -96,12 +96,9 @@ impl ContainerLayout for Stack {
         // deal with the children's position
         let widget_ptr = widget as *const dyn WidgetImpl;
 
-        let stack_trait_obj = cast!(widget as StackTrait).unwrap();
-        let index = stack_trait_obj.current_index();
-
-        if let Some(child) = widget.children_mut().get_mut(index) {
-            LayoutManager::base_widget_position_layout_inner(*child, Some(ptr_ref!(widget_ptr)))
-        }
+        widget.children_mut().iter_mut().for_each(|child| {
+            LayoutManager::base_widget_position_layout_inner(*child, Some(ptr_ref!(widget_ptr)));
+        });
     }
 }
 

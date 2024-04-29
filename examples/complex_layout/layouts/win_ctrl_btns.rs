@@ -1,9 +1,6 @@
 use crate::asset::Asset;
 use tmui::{
-    icons::{
-        svg_icon::{RenderMode, SvgIcon},
-        svg_toggle_icon::SvgToggleIcon,
-    },
+    icons::{svg_icon::SvgIcon, svg_toggle_icon::SvgToggleIcon},
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
@@ -47,11 +44,9 @@ impl ObjectImpl for WinCtrlBtns {
 
         self.minimize.width_request(46);
         self.minimize.height_request(30);
-        self.minimize.set_render_mode(RenderMode::TempSurface);
 
         self.large_restore.width_request(46);
         self.large_restore.height_request(30);
-        self.large_restore.set_render_mode(RenderMode::TempSurface);
 
         self.close.width_request(46);
         self.close.height_request(30);
