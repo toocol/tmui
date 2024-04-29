@@ -1,5 +1,5 @@
 use tmui::{
-    icons::{svg_icon::{RenderMode, SvgIcon}, svg_toggle_icon::SvgToggleIcon},
+    icons::{svg_icon::SvgIcon, svg_toggle_icon::SvgToggleIcon},
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{callbacks::CallbacksRegister, WidgetImpl},
@@ -13,7 +13,9 @@ pub struct CtrlButtons {
     minimize: Box<SvgIcon>,
 
     #[children]
-    #[derivative(Default(value = "SvgToggleIcon::from_files(&[\"examples/resources/restore.svg\",\"examples/resources/large.svg\"])"))]
+    #[derivative(Default(
+        value = "SvgToggleIcon::from_files(&[\"examples/resources/restore.svg\",\"examples/resources/large.svg\"])"
+    ))]
     maximize_restore: Box<SvgToggleIcon>,
 
     #[children]
@@ -42,8 +44,8 @@ impl ObjectImpl for CtrlButtons {
             .callback_hover_in(|w| w.set_background(Color::grey_with(223)));
         self.maximize_restore
             .callback_hover_out(|w| w.set_background(Color::GREY_LIGHT));
-        self.maximize_restore.callback_mouse_released(|w, _| w.downcast_mut::<SvgToggleIcon>().unwrap().toggle());
-        self.maximize_restore.set_render_mode(RenderMode::TempSurface);
+        self.maximize_restore
+            .callback_mouse_released(|w, _| w.downcast_mut::<SvgToggleIcon>().unwrap().toggle());
 
         self.close.set_background(Color::GREY_LIGHT);
         self.close.width_request(30);

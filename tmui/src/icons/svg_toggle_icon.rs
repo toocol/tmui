@@ -5,10 +5,12 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
-use tlib::{connect, skia_safe::{surfaces, FontMgr, Surface}, typedef::SkiaSvgDom};
+use tlib::{
+    connect,
+    skia_safe::FontMgr,
+    typedef::SkiaSvgDom,
+};
 use usvg::{fontdb::Database, Options, Tree};
-
-use super::svg_icon::RenderMode;
 
 #[extends(Widget)]
 pub struct SvgToggleIcon {
@@ -16,9 +18,6 @@ pub struct SvgToggleIcon {
     view_size: Size,
     origin: FPoint,
     index: usize,
-
-    render_mode: RenderMode,
-    surface: Option<Surface>,
 }
 
 impl ObjectSubclass for SvgToggleIcon {
@@ -38,35 +37,12 @@ impl ObjectImpl for SvgToggleIcon {
 
 impl WidgetImpl for SvgToggleIcon {
     #[inline]
-    fn paint(&mut self,painter: &mut Painter) {
+    fn paint(&mut self, painter: &mut Painter) {
         if let Some(dom) = self.doms.get(self.index) {
-            match self.render_mode {
-                RenderMode::Direct => {
-                    painter.save();
-                    painter.translate(self.origin.x(), self.origin.y());
-                    painter.draw_dom(dom);
-                    painter.restore();
-                }
-                RenderMode::TempSurface => {
-                    if self.surface.is_none() {
-                        self.surface = Some(
-                            surfaces::raster_n32_premul((
-                                self.view_size.width(),
-                                self.view_size.height(),
-                            ))
-                            .unwrap(),
-                        );
-                    }
-
-                    let surface = self.surface.as_mut().unwrap();
-                    let canvas = surface.canvas();
-                    canvas.clear(Color::TRANSPARENT);
-                    dom.render(canvas);
-                    let image = surface.image_snapshot();
-                    let mapping_origin = self.map_to_widget_f(&self.origin);
-                    painter.draw_image(image, mapping_origin);
-                }
-            }
+            painter.save();
+            painter.translate(self.origin.x(), self.origin.y());
+            painter.draw_dom(dom);
+            painter.restore();
         }
     }
 }
@@ -117,16 +93,9 @@ impl SvgToggleIcon {
     #[inline]
     pub fn set_current_icon(&mut self, index: usize) {
         if index >= self.doms.len() {
-            return
+            return;
         }
         self.index = index;
-        self.update();
-    }
-
-    #[inline]
-    pub fn set_render_mode(&mut self, mode: RenderMode) {
-        self.render_mode = mode;
-
         self.update();
     }
 }

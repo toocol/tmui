@@ -6,19 +6,10 @@ use crate::{
 use std::io::Read;
 use tlib::{
     connect,
-    skia_safe::{surfaces, FontMgr, Surface},
+    skia_safe::FontMgr,
     typedef::SkiaSvgDom,
 };
 use usvg::{fontdb::Database, Options, Tree};
-
-// TODO: The reason for adding a new rendering mode is that when directly using the existing Canvas for rendering, 
-// the rendered image may appear abnormally transparent, and it cannot be reproduced.
-#[derive(Default, PartialEq, Eq, Clone, Copy)]
-pub enum RenderMode {
-    #[default]
-    Direct,
-    TempSurface,
-}
 
 /// TODO: Wait to improve, see https://github.com/rust-skia/rust-skia/discussions/928
 #[extends(Widget)]
@@ -26,9 +17,6 @@ pub struct SvgIcon {
     dom: Option<SkiaSvgDom>,
     view_size: Size,
     origin: FPoint,
-
-    render_mode: RenderMode,
-    surface: Option<Surface>,
 }
 
 impl ObjectSubclass for SvgIcon {
@@ -49,33 +37,10 @@ impl ObjectImpl for SvgIcon {
 impl WidgetImpl for SvgIcon {
     fn paint(&mut self, painter: &mut Painter) {
         if let Some(ref dom) = self.dom {
-            match self.render_mode {
-                RenderMode::Direct => {
-                    painter.save();
-                    painter.translate(self.origin.x(), self.origin.y());
-                    painter.draw_dom(dom);
-                    painter.restore();
-                }
-                RenderMode::TempSurface => {
-                    if self.surface.is_none() {
-                        self.surface = Some(
-                            surfaces::raster_n32_premul((
-                                self.view_size.width(),
-                                self.view_size.height(),
-                            ))
-                            .unwrap(),
-                        );
-                    }
-
-                    let surface = self.surface.as_mut().unwrap();
-                    let canvas = surface.canvas();
-                    canvas.clear(Color::TRANSPARENT);
-                    dom.render(canvas);
-                    let image = surface.image_snapshot();
-                    let mapping_origin = self.map_to_widget_f(&self.origin);
-                    painter.draw_image(image, mapping_origin);
-                }
-            }
+            painter.save();
+            painter.translate(self.origin.x(), self.origin.y());
+            painter.draw_dom(dom);
+            painter.restore();
         }
     }
 }
@@ -101,13 +66,6 @@ impl SvgIcon {
         icon.build_from_data(data);
 
         icon
-    }
-
-    #[inline]
-    pub fn set_render_mode(&mut self, mode: RenderMode) {
-        self.render_mode = mode;
-
-        self.update();
     }
 }
 
