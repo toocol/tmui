@@ -111,6 +111,11 @@ pub(crate) fn generate_scroll_area_impl(
                     area.set_hscale(size.width() as f32 - 10.);
                 }
             }
+
+            #[inline]
+            fn layout_mode(&self) -> #use_prefix::scroll_area::LayoutMode {
+                self.layout_mode
+            }
         }
 
         impl ScrollAreaGenericExt for #name {

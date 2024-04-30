@@ -15,6 +15,7 @@ pub(crate) fn expand(
     has_content_alignment: bool,
     has_size_unified_adjust: bool,
     layout: LayoutType,
+    use_prefix: &Ident,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -79,6 +80,9 @@ pub(crate) fn expand(
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             area: Option<Box<dyn WidgetImpl>>
+                        })?);
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            layout_mode: #use_prefix::scroll_area::LayoutMode
                         })?);
                     }
                     if layout == LayoutType::Pane {

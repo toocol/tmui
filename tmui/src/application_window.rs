@@ -50,7 +50,7 @@ pub struct ApplicationWindow {
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
-    widgets: HashMap<String, WidgetHnd>,
+    widgets: HashMap<ObjectId, WidgetHnd>,
     run_afters: Vec<WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
 
@@ -78,7 +78,7 @@ impl ObjectImpl for ApplicationWindow {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
         debug!("Initialize-phase start.");
 
-        Self::widgets_of(self.id()).insert(self.name(), NonNull::new(self));
+        Self::widgets_of(self.id()).insert(self.id(), NonNull::new(self));
 
         connect!(self, size_changed(), self, when_size_change(Size));
         let window_id = self.id();
@@ -129,7 +129,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<String, WidgetHnd> {
+    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<ObjectId, WidgetHnd> {
         let window = Self::window_of(id);
         &mut window.widgets
     }
@@ -195,26 +195,12 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
-        let mut find = None;
-        for (_, widget) in self.widgets.iter() {
-            let widget = nonnull_ref!(widget);
-            if widget.id() == id {
-                find = Some(widget);
-            }
-        }
-        find
+        self.widgets.get(&id).map(|w| nonnull_ref!(w))
     }
 
     #[inline]
     pub fn finds_by_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
-        let mut find = None;
-        for (_, widget) in self.widgets.iter_mut() {
-            let widget = nonnull_mut!(widget);
-            if widget.id() == id {
-                find = Some(widget);
-            }
-        }
-        find
+        self.widgets.get_mut(&id).map(|w| nonnull_mut!(w))
     }
 
     #[inline]
@@ -519,7 +505,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
 
     while let Some(child_ref) = child {
         board.add_element(child_ref.as_element());
-        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ref));
+        ApplicationWindow::widgets_of(window_id).insert(child_ref.id(), NonNull::new(child_ref));
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);

@@ -20,6 +20,7 @@ use tlib::{
 
 #[extends(Object, ignore_default = true)]
 pub struct TreeStore {
+    view: WidgetHnd,
     root: Box<TreeNode>,
 
     nodes_buffer: Vec<Option<NonNull<TreeNode>>>,
@@ -147,6 +148,7 @@ impl TreeStore {
         nodes_map.insert(root.id(), NonNull::new(root.as_mut()));
 
         let mut store = Self {
+            view: None,
             object: Default::default(),
             root,
             nodes_buffer: vec![],
@@ -161,6 +163,16 @@ impl TreeStore {
         store.root_mut().store = store.id();
 
         store
+    }
+
+    #[inline]
+    pub(crate) fn get_view(&mut self) -> &mut dyn WidgetImpl {
+        nonnull_mut!(self.view)
+    }
+
+    #[inline]
+    pub(crate) fn set_view(&mut self, view: WidgetHnd) {
+        self.view = view;
     }
 
     #[inline]

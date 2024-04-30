@@ -9,7 +9,7 @@ use self::{tree_node::TreeNode, tree_store::TreeStore, tree_view_image::TreeView
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    widget::{WidgetHndAsable, WidgetImpl},
 };
 use tlib::{connect, signals};
 
@@ -73,6 +73,9 @@ impl ObjectImpl for TreeView {
         connect!(self, background_changed(), image, set_background(Color));
 
         self.set_area(image);
+
+        let hnd = self.as_hnd();
+        self.get_image_mut().get_store_mut().set_view(hnd);
     }
 
     #[allow(clippy::single_match)]

@@ -59,8 +59,8 @@ impl ObjectImpl for TreeViewHolder {
                 }
             }
         });
-        self.tree_view.register_node_released(|node, _| {
-            println!("Node released, id = {}", node.id());
+        self.tree_view.register_node_released(|node, evt| {
+            println!("Node released, id = {}, position = {:?}", node.id(), evt.position());
         });
         self.tree_view.register_node_enter(|node, _| {
             println!("Node enter, id = {}", node.id());

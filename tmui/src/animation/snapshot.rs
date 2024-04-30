@@ -23,7 +23,7 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
         self.animation_model_mut().set_shown(show);
         self.propagate_animation_progressing(true);
-                self.handle_dirty_rect(false);
+        self.handle_dirty_rect(false);
 
         let animation = self.animation();
 

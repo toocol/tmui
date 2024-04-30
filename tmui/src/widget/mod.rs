@@ -1203,6 +1203,15 @@ pub trait IterExecutor {
 }
 pub type IterExecutorHnd = Option<NonNull<dyn IterExecutor>>;
 
+////////////////////////////////////// WidgetHndAsable //////////////////////////////////////
+pub(crate) trait WidgetHndAsable: WidgetImpl + Sized {
+    #[inline]
+    fn as_hnd(&mut self) -> WidgetHnd {
+        NonNull::new(self)
+    }
+}
+impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
+
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;

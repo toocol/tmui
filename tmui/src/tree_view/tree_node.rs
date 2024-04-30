@@ -191,6 +191,11 @@ impl TreeNode {
             deleted,
         );
     }
+
+    #[inline]
+    pub fn get_view(&mut self) -> &mut dyn WidgetImpl {
+        TreeStore::store_mut(self.store).unwrap().get_view()
+    }
 }
 
 impl TreeNode {

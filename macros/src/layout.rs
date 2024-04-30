@@ -110,6 +110,9 @@ fn gen_layout_clause(
     let is_scroll_area = layout == ScrollArea;
     let is_pane = layout == Pane;
 
+    let use_prefix = if internal { "crate" } else { "tmui" };
+    let use_prefix = Ident::new(use_prefix, ast.ident.span());
+
     let mut token = extend_container::expand(
         ast,
         ignore_default,
@@ -117,13 +120,11 @@ fn gen_layout_clause(
         has_content_alignment,
         has_size_unified_adjust,
         layout,
+        &use_prefix,
     )?;
 
     let name = &ast.ident;
     let span = ast.span();
-
-    let use_prefix = if internal { "crate" } else { "tmui" };
-    let use_prefix = Ident::new(use_prefix, name.span());
     let layout_ident = Ident::new(layout.as_str(), name.span());
 
     let children_fields = get_childrened_fields(ast);
