@@ -925,6 +925,26 @@ pub(crate) fn gen_widget_trait_impl_clause(
             fn callbacks_mut(&mut self) -> &mut Callbacks {
                 self.#(#widget_path).*.callbacks_mut()
             }
+
+            #[inline]
+            fn is_occupy_space(&self) -> bool {
+                self.#(#widget_path).*.is_occupy_space()
+            }
+            
+            #[inline]
+            fn set_occupy_space(&mut self, occupy_space: bool) {
+                self.#(#widget_path).*.set_occupy_space(occupy_space)
+            }
+
+            #[inline]
+            fn overlaid_rect(&self) -> Rect {
+                self.#(#widget_path).*.overlaid_rect()
+            }
+
+            #[inline]
+            fn set_overlaid_rect(&mut self, rect: Rect) {
+                self.#(#widget_path).*.set_overlaid_rect(rect)
+            }
         }
 
         impl #impl_generics WidgetImplExt for #name #ty_generics #where_clause {

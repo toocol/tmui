@@ -356,25 +356,31 @@ macro_rules! connect {
 #[macro_export]
 macro_rules! disconnect {
     ( null, null, $target:expr, null ) => {
-        $target.disconnect(None, None, Some($target.id()));
+        let target_id = $target.id();
+        $target.disconnect(None, None, Some(target_id));
     };
     ( $emiter:expr, null, null, null ) => {
         $emiter.disconnect_all();
     };
     ( $emiter:expr, $signal:ident(), null, null ) => {
         let signal = $emiter.$signal();
-        $emiter.disconnect(Some($emiter.id()), Some(signal.signal()), None);
+        let emiter_id = $emiter.id();
+        $emiter.disconnect(Some(emiter_id), Some(signal.signal()), None);
     };
     ( $emiter:expr, $signal:ident(), $target:expr, null ) => {
         let signal = $emiter.$signal();
+        let emiter_id = $emiter.id();
+        let target_id = $target.id();
         $emiter.disconnect(
-            Some($emiter.id()),
+            Some(emiter_id),
             Some(signal.signal()),
-            Some($target.id()),
+            Some(target_id),
         );
     };
     ( $emiter:expr, null, $target:expr, null ) => {
-        $emiter.disconnect(Some($emiter.id()), None, Some($target.id()));
+        let emiter_id = $emiter.id();
+        let target_id = $target.id();
+        $emiter.disconnect(Some(emiter_id), None, Some(target_id));
     };
 }
 

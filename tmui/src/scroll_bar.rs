@@ -1,5 +1,8 @@
 use crate::{
-    application::wheel_scroll_lines, graphics::painter::Painter, prelude::*, widget::WidgetImpl,
+    application::wheel_scroll_lines,
+    graphics::painter::Painter,
+    prelude::*,
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use derivative::Derivative;
 use std::mem::size_of;
@@ -57,8 +60,14 @@ impl ObjectImpl for ScrollBar {
         self.parent_construct();
 
         match self.orientation {
-            Orientation::Horizontal => self.height_request(DEFAULT_SCROLL_BAR_HEIGHT),
-            Orientation::Vertical => self.width_request(DEFAULT_SCROLL_BAR_WIDTH),
+            Orientation::Horizontal => {
+                self.set_hexpand(true);
+                self.height_request(DEFAULT_SCROLL_BAR_HEIGHT);
+            }
+            Orientation::Vertical => {
+                self.set_vexpand(true);
+                self.width_request(DEFAULT_SCROLL_BAR_WIDTH);
+            }
         }
 
         self.set_mouse_tracking(true);
@@ -79,7 +88,7 @@ impl WidgetImpl for ScrollBar {
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
         let horizontal = event.delta().x().abs() > event.delta().y().abs();
 
-        if !horizontal && event.delta().x() != 0 && self.orientation() == Orientation::Horizontal {
+        if !horizontal && event.delta().x() != 0 || self.orientation() == Orientation::Horizontal {
             return;
         }
 
@@ -98,18 +107,30 @@ impl WidgetImpl for ScrollBar {
     }
 
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
-        let (_, y) = event.position();
+        let (x, y) = event.position();
         let slider = self.calculate_slider();
 
         if slider.contains(&event.position().into()) {
-            self.press_offset = y - slider.y();
+            match self.orientation {
+                Orientation::Horizontal => self.press_offset = x - slider.x(),
+                Orientation::Vertical => self.press_offset = y - slider.y(),
+            }
             self.pressed = true
         } else {
             let size = self.size();
             let slider_len = self.slider_len();
-            let start_y = y - slider_len / 2;
 
-            let value = (start_y * self.maximum) / (size.height() - slider_len);
+            let value = match self.orientation {
+                Orientation::Horizontal => {
+                    let start_x = x - slider_len / 2;
+                    (start_x * self.maximum) / (size.height() - slider_len)
+                }
+                Orientation::Vertical => {
+                    let start_y = y - slider_len / 2;
+                    (start_y * self.maximum) / (size.height() - slider_len)
+                }
+            };
+
             self.set_value(value.min(self.maximum).max(0));
         }
 
@@ -123,15 +144,30 @@ impl WidgetImpl for ScrollBar {
 
     fn on_mouse_move(&mut self, event: &MouseEvent) {
         if self.pressed {
-            let size = self.size();
-            let (_, y) = event.position();
+            match self.orientation {
+                Orientation::Horizontal => {
+                    let size = self.size();
+                    let (x, _) = event.position();
 
-            let start_y = y - self.press_offset;
+                    let start_x = x - self.press_offset;
 
-            let slider_len = self.slider_len();
-            let maximum = self.maximum();
-            let value = (start_y * maximum) / (size.height() - slider_len);
-            self.set_value(value.min(maximum).max(0));
+                    let slider_len = self.slider_len();
+                    let maximum = self.maximum();
+                    let value = (start_x * maximum) / (size.width() - slider_len);
+                    self.set_value(value.min(maximum).max(0));
+                }
+                Orientation::Vertical => {
+                    let size = self.size();
+                    let (_, y) = event.position();
+
+                    let start_y = y - self.press_offset;
+
+                    let slider_len = self.slider_len();
+                    let maximum = self.maximum();
+                    let value = (start_y * maximum) / (size.height() - slider_len);
+                    self.set_value(value.min(maximum).max(0));
+                }
+            }
         }
     }
 }
@@ -184,6 +220,20 @@ impl ScrollBar {
     #[inline]
     pub fn set_orientation(&mut self, orientation: Orientation) {
         self.orientation = orientation;
+        match orientation {
+            Orientation::Horizontal => {
+                self.height_request(DEFAULT_SCROLL_BAR_HEIGHT);
+                self.cancel_fixed_width();
+                self.set_hexpand(true);
+                self.set_vexpand(false);
+            }
+            Orientation::Vertical => {
+                self.width_request(DEFAULT_SCROLL_BAR_WIDTH);
+                self.cancel_fixed_height();
+                self.set_hexpand(false);
+                self.set_vexpand(true);
+            }
+        }
     }
 
     /// Setter of property `value`.
@@ -417,7 +467,10 @@ impl ScrollBar {
 
     #[inline]
     fn slider_len(&self) -> i32 {
-        (self.size().height() as f32 * 0.2) as i32
+        match self.orientation {
+            Orientation::Vertical => (self.size().height() as f32 * 0.2) as i32,
+            Orientation::Horizontal => (self.size().width() as f32 * 0.2) as i32,
+        }
     }
 
     fn calculate_slider(&mut self) -> Rect {

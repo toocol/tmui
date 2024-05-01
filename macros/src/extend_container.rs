@@ -258,7 +258,7 @@ pub(crate) fn expand(
             };
 
             let scroll_area_inner_init = if layout.is(LayoutType::ScrollArea) {
-                generate_scroll_area_inner_init()?
+                generate_scroll_area_inner_init(use_prefix)?
             } else {
                 proc_macro2::TokenStream::new()
             };

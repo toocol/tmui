@@ -1,9 +1,9 @@
 use crate::{application_window::current_window_id, widget::WidgetImpl};
 use super::{board::Board, drawing_context::DrawingContext};
 use tlib::{
-    figure::{Rect, CoordRegion, CoordRect},
+    figure::{CoordRect, CoordRegion, Rect},
     object::{ObjectImpl, ObjectSubclass},
-    prelude::*,
+    prelude::*, signals, signal,
 };
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
@@ -32,6 +32,16 @@ impl ObjectImpl for Element {
         }
     }
 }
+
+pub trait ElementSignals: ActionExt {
+    signals! {
+        ElementSignals:
+
+        /// Emit when element was calling function [`update()`],[`force_update()`]..etc.
+        invalidated();
+    }
+}
+impl<T: ElementImpl> ElementSignals for T {}
 
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt: 'static {
@@ -207,7 +217,7 @@ impl ElementExt for Element {
 
     #[inline]
     fn validate(&mut self) {
-        self.set_property("invalidate", false.to_value())
+        self.set_property("invalidate", false.to_value());
     }
 
     #[inline]
@@ -224,7 +234,7 @@ impl ElementExt for Element {
 /// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>
 /// Each subclass which impl [`WidgetImpl`] will impl this trait automatically.
 #[reflect_trait]
-pub trait ElementImpl: ElementExt + ObjectImpl + ObjectOperation + SuperType + 'static {
+pub trait ElementImpl: ElementExt + ObjectImpl + ObjectOperation + SuperType + ElementSignals + 'static {
     fn on_renderer(&mut self, cr: &DrawingContext);
 }
 

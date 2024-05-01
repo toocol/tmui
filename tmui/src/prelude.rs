@@ -20,7 +20,7 @@ pub use crate::graphics::board::Board;
 pub use crate::graphics::border::Border;
 pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{
-    Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl,
+    Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl, ElementSignals
 };
 pub use crate::graphics::painter::Painter;
 pub use crate::graphics::render_difference::{

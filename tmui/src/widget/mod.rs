@@ -45,6 +45,7 @@ pub struct Widget {
     old_image_rect: Rect,
     child_image_rect_union: Rect,
     child_overflow_rect: Rect,
+    overlaid_rect: Rect,
     need_update_geometry: bool,
 
     #[derivative(Default(value = "true"))]
@@ -67,6 +68,12 @@ pub struct Widget {
 
     detecting_width: i32,
     detecting_height: i32,
+
+    /// Control whether to occupy parent widget's space.
+    /// 
+    /// This field only affects a container parent when a fixed child widget is overlaid..
+    #[derivative(Default(value = "true"))]
+    occupy_space: bool,
 
     /// Widget's width was fixed or not,
     /// `true` when user invoke [`width_request`](WidgetExt::width_request)
@@ -352,14 +359,6 @@ impl ObjectImpl for Widget {
         self.parent_on_property_set(name, value);
 
         match name {
-            "width" => {
-                let width = value.get::<i32>();
-                self.set_fixed_width(width);
-            }
-            "height" => {
-                let height = value.get::<i32>();
-                self.set_fixed_height(height);
-            }
             "invalidate" => {
                 let invalidate = value.get::<bool>();
                 if invalidate {
@@ -624,6 +623,9 @@ impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
         let self_rect = self.rect();
         if !self_rect.contains(point) {
+            return false;
+        }
+        if self.overlaid_rect().contains(point) {
             return false;
         }
 
@@ -1215,7 +1217,7 @@ impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;
-    use crate::{prelude::*, skia_safe, widget::WidgetGenericExt};
+    use crate::{prelude::*, skia_safe};
     use tlib::{
         object::{ObjectImpl, ObjectSubclass},
         skia_safe::region::RegionOp,
@@ -1242,23 +1244,6 @@ mod tests {
     impl ObjectImpl for ChildWidget {}
 
     impl WidgetImpl for ChildWidget {}
-
-    #[test]
-    fn test_sub_widget() {
-        let mut widget: Box<SubWidget> = Object::new(&[("width", &&120), ("height", &&80)]);
-        assert_eq!(120, widget.get_property("width").unwrap().get::<i32>());
-        assert_eq!(80, widget.get_property("height").unwrap().get::<i32>());
-
-        let child: Box<ChildWidget> = Object::new(&[("width", &&120), ("height", &&80)]);
-        let child_id = child.id();
-
-        widget.child(child);
-
-        let child_ref = widget.child_ref::<ChildWidget>().unwrap();
-        assert_eq!(child_ref.id(), child_id);
-        assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
-        assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());
-    }
 
     #[test]
     fn test_skia_region() {

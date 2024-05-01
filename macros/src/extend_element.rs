@@ -105,18 +105,27 @@ pub(crate) fn gen_element_trait_impl_clause(
 
             #[inline]
             fn update(&mut self) {
+                if !self.invalidate() {
+                    emit!(self.invalidated());
+                }
                 self.set_property("invalidate", true.to_value());
-                Board::notify_update()
+                Board::notify_update();
             }
 
             #[inline]
             fn force_update(&mut self) {
-                self.update();
+                if !self.invalidate() {
+                    emit!(self.invalidated());
+                }
+                self.set_property("invalidate", true.to_value());
                 Board::force_update();
             }
 
             #[inline]
             fn update_rect(&mut self, rect: CoordRect) {
+                if !self.invalidate() {
+                    emit!(self.invalidated());
+                }
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
                 self.#(#element_path).*.update_rect(rect);
@@ -124,6 +133,9 @@ pub(crate) fn gen_element_trait_impl_clause(
 
             #[inline]
             fn update_styles_rect(&mut self, rect: CoordRect) {
+                if !self.invalidate() {
+                    emit!(self.invalidated());
+                }
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
                 self.#(#element_path).*.update_styles_rect(rect);
@@ -131,6 +143,9 @@ pub(crate) fn gen_element_trait_impl_clause(
 
             #[inline]
             fn update_region(&mut self, region: &CoordRegion) {
+                if !self.invalidate() {
+                    emit!(self.invalidated());
+                }
                 self.set_property("invalidate", true.to_value());
                 Board::notify_update();
                 self.#(#element_path).*.update_region(region);

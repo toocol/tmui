@@ -10,37 +10,34 @@ pub(crate) fn generate_scroll_area_add_child(name: &Ident) -> syn::Result<proc_m
 pub(crate) fn generate_scroll_area_get_children() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         fn children(&self) -> Vec<&dyn WidgetImpl> {
-            let mut children: Vec<&dyn WidgetImpl> = vec![self.scroll_bar.as_ref()];
+            let mut children: Vec<&dyn WidgetImpl> = vec![];
             if self.area.is_some() {
                 children.push(self.area.as_ref().unwrap().as_ref())
             }
+            children.push(self.scroll_bar.as_ref());
             children
         }
 
         fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-            let mut children: Vec<&mut dyn WidgetImpl> = vec![self.scroll_bar.as_mut()];
+            let mut children: Vec<&mut dyn WidgetImpl> = vec![];
             if self.area.is_some() {
                 children.push(self.area.as_mut().unwrap().as_mut())
             }
+            children.push(self.scroll_bar.as_mut());
             children
         }
     ))
 }
 
-pub(crate) fn generate_scroll_area_inner_init() -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_scroll_area_inner_init(use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         self.set_rerender_difference(true);
-        self.set_vexpand(true);
-        self.set_hexpand(true);
 
-        self.scroll_bar.set_vexpand(true);
-        self.scroll_bar.set_hscale(10.);
+        self.scroll_bar
+            .set_occupy_space(self.layout_mode == #use_prefix::scroll_area::LayoutMode::Normal);
 
         let parent = self as *mut dyn WidgetImpl;
         self.scroll_bar.set_parent(parent);
-
-        use tlib::connect;
-        connect!(self, size_changed(), self, adjust_area_layout(Size));
     ))
 }
 
@@ -99,22 +96,26 @@ pub(crate) fn generate_scroll_area_impl(
             }
 
             #[inline]
-            fn adjust_area_layout(&mut self, size: Size) {
-                if size.width() == 0 || size.height() == 0 {
-                    debug!("The size of `{}` was not specified, skip adjust_area_layout()", stringify!(#name));
-                    return;
-                }
-
-                if let Some(area) = self.get_area_mut() {
-                    area.set_vexpand(true);
-                    area.set_hexpand(true);
-                    area.set_hscale(size.width() as f32 - 10.);
-                }
+            fn layout_mode(&self) -> #use_prefix::scroll_area::LayoutMode {
+                self.layout_mode
             }
 
             #[inline]
-            fn layout_mode(&self) -> #use_prefix::scroll_area::LayoutMode {
-                self.layout_mode
+            fn set_layout_mode(&mut self, layout_mode: #use_prefix::scroll_area::LayoutMode) {
+                self.layout_mode = layout_mode;
+                self.scroll_bar.set_occupy_space(layout_mode == #use_prefix::scroll_area::LayoutMode::Normal);
+
+                if self.area.is_some() {
+                    if layout_mode == #use_prefix::scroll_area::LayoutMode::Normal {
+                        #use_prefix::tlib::disconnect!(self.get_area_mut().unwrap(), invalidated(), self.scroll_bar, null);
+                    } else {
+                        #use_prefix::tlib::connect!(self.get_area_mut().unwrap(), invalidated(), self.scroll_bar, update());
+                    }
+                }
+
+                if self.window().initialized() {
+                    self.window().layout_change(self.scroll_bar.as_mut())
+                }
             }
         }
 
@@ -126,11 +127,13 @@ pub(crate) fn generate_scroll_area_impl(
                 area.set_parent(self);
                 area.set_vexpand(true);
                 area.set_hexpand(true);
+                if self.layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay {
+                    #use_prefix::tlib::connect!(area, invalidated(), self.scroll_bar, update());
+                    area.set_overlaid_rect(self.scroll_bar.rect());
+                }
 
                 ApplicationWindow::initialize_dynamic_component(area.as_mut());
                 self.area = Some(area);
-
-                self.adjust_area_layout(self.size());
             }
 
             #[inline]

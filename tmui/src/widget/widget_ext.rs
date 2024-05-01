@@ -1,5 +1,6 @@
 use super::{
-    callbacks::Callbacks, EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget, WidgetImpl, WindowAcquire
+    callbacks::Callbacks, EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget,
+    WidgetImpl, WindowAcquire,
 };
 use crate::{
     application_window::ApplicationWindow,
@@ -220,7 +221,7 @@ pub trait WidgetExt {
     fn font(&self) -> &Font;
 
     /// Get the mutable reference of font of widget.
-    /// 
+    ///
     /// Go to[`Function defination`](WidgetExt::font_mut) (Defined in [`WidgetExt`])
     fn font_mut(&mut self) -> &mut Font;
 
@@ -703,6 +704,24 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::callbacks_mut) (Defined in [`WidgetExt`])
     fn callbacks_mut(&mut self) -> &mut Callbacks;
+
+    /// Whether the fixed widget occupy the parent widget's space.
+    ///
+    /// @see [`Widget::occupy_space`]
+    ///
+    /// Go to[`Function defination`](WidgetExt::is_occupy_space) (Defined in [`WidgetExt`])
+    fn is_occupy_space(&self) -> bool;
+
+    /// Set the fixed widget occupy the parent widget's space or not.
+    ///
+    /// @see [`Widget::occupy_space`]
+    ///
+    /// Go to[`Function defination`](WidgetExt::set_occupy_space) (Defined in [`WidgetExt`])
+    fn set_occupy_space(&mut self, occupy_space: bool);
+
+    fn overlaid_rect(&self) -> Rect;
+
+    fn set_overlaid_rect(&mut self, rect: Rect);
 }
 
 impl WidgetExt for Widget {
@@ -915,10 +934,10 @@ impl WidgetExt for Widget {
     #[inline]
     fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
         if let Some(width) = width {
-            self.set_property("width", width.to_value());
+            self.set_fixed_width(width)
         }
         if let Some(height) = height {
-            self.set_property("height", height.to_value());
+            self.set_fixed_height(height)
         }
         if self.id() != self.window_id() {
             if !self.window().initialized() {
@@ -942,7 +961,7 @@ impl WidgetExt for Widget {
                 return;
             }
         }
-        self.set_property("width", width.to_value());
+        self.set_fixed_width(width);
         self.fixed_width = true;
         self.width_request = width;
         if let Some(parent) = self.get_parent_ref() {
@@ -974,7 +993,7 @@ impl WidgetExt for Widget {
                 return;
             }
         }
-        self.set_property("height", height.to_value());
+        self.set_fixed_height(height);
         self.fixed_height = true;
         self.height_request = height;
         if let Some(parent) = self.get_parent_ref() {
@@ -1067,7 +1086,6 @@ impl WidgetExt for Widget {
     fn font(&self) -> &Font {
         &self.font
     }
-
 
     #[inline]
     fn font_mut(&mut self) -> &mut Font {
@@ -1706,14 +1724,34 @@ impl WidgetExt for Widget {
     fn is_resize_redraw(&self) -> bool {
         self.resize_redraw
     }
-    
+
     #[inline]
     fn callbacks(&self) -> &Callbacks {
         &self.callbacks
     }
-    
+
     #[inline]
     fn callbacks_mut(&mut self) -> &mut Callbacks {
         &mut self.callbacks
+    }
+
+    #[inline]
+    fn is_occupy_space(&self) -> bool {
+        self.occupy_space
+    }
+
+    #[inline]
+    fn set_occupy_space(&mut self, occupy_space: bool) {
+        self.occupy_space = occupy_space;
+    }
+
+    #[inline]
+    fn overlaid_rect(&self) -> Rect {
+        self.overlaid_rect
+    }
+
+    #[inline]
+    fn set_overlaid_rect(&mut self, rect: Rect) {
+        self.overlaid_rect = rect
     }
 }

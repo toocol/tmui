@@ -1,19 +1,13 @@
 use crate::{
     application_window::ApplicationWindow,
-    container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION, SCALE_DISMISS},
+    container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutManager,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, DEFAULT_SCROLL_BAR_WIDTH},
+    scroll_bar::{ScrollBar, ScrollBarPosition},
 };
 use derivative::Derivative;
-use log::debug;
 use tlib::{
-    connect,
-    events::{DeltaType, MouseEvent},
-    namespace::{KeyboardModifier, Orientation},
-    object::ObjectSubclass,
-    prelude::extends,
-    ptr_mut,
+    connect, disconnect, events::{DeltaType, MouseEvent}, namespace::{KeyboardModifier, Orientation}, object::ObjectSubclass, prelude::extends, ptr_mut
 };
 
 /// The layout mode of scroll bar.
@@ -60,9 +54,9 @@ pub trait ScrollAreaExt: WidgetImpl {
 
     fn scroll(&mut self, delta: i32, delta_type: DeltaType);
 
-    fn adjust_area_layout(&mut self, size: Size);
-
     fn layout_mode(&self) -> LayoutMode;
+
+    fn set_layout_mode(&mut self, layout_mode: LayoutMode);
 }
 
 pub trait ScrollAreaGenericExt {
@@ -103,7 +97,9 @@ impl ScrollAreaExt for ScrollArea {
     #[inline]
     fn set_orientation(&mut self, orientation: Orientation) {
         self.scroll_bar.set_orientation(orientation);
-        self.update();
+        if self.window().initialized() {
+            self.window().layout_change(self.scroll_bar.as_mut());
+        }
     }
 
     /// Scroll the widget. </br>
@@ -115,22 +111,29 @@ impl ScrollAreaExt for ScrollArea {
     }
 
     #[inline]
-    fn adjust_area_layout(&mut self, size: Size) {
-        if size.width() == 0 || size.height() == 0 {
-            debug!("The size of `ScrollArea` was not specified, skip adjust_area_layout()");
-            return;
-        }
-
-        if let Some(area) = self.get_area_mut() {
-            area.set_vexpand(true);
-            area.set_hexpand(true);
-            // area.set_hscale(size.width() as f32 - 10.);
-        }
+    fn layout_mode(&self) -> LayoutMode {
+        self.layout_mode
     }
 
     #[inline]
-    fn layout_mode(&self) -> LayoutMode {
-        self.layout_mode
+    fn set_layout_mode(&mut self, layout_mode: LayoutMode) {
+        self.layout_mode = layout_mode;
+        self.scroll_bar
+            .set_occupy_space(layout_mode == LayoutMode::Normal);
+        let layout_mode = self.layout_mode;
+
+        if self.area.is_some() {
+            if layout_mode == LayoutMode::Normal {
+                disconnect!(self.get_area_mut().unwrap(), invalidated(), self.scroll_bar, null);
+            } else {
+                connect!(self.get_area_mut().unwrap(), invalidated(), self.scroll_bar, update());
+            }
+        }
+
+        // Area'a overlaid rect will be changed when re-layout.
+        if self.window().initialized() {
+            self.window().layout_change(self.scroll_bar.as_mut())
+        }
     }
 }
 
@@ -140,11 +143,13 @@ impl ScrollAreaGenericExt for ScrollArea {
         area.set_parent(self);
         area.set_vexpand(true);
         area.set_hexpand(true);
+        if self.layout_mode == LayoutMode::Overlay {
+            connect!(area, invalidated(), self.scroll_bar, update());
+            area.set_overlaid_rect(self.scroll_bar.rect());
+        }
 
         ApplicationWindow::initialize_dynamic_component(area.as_mut());
         self.area = Some(area);
-
-        self.adjust_area_layout(self.size());
     }
 
     #[inline]
@@ -168,13 +173,11 @@ impl ObjectImpl for ScrollArea {
         self.parent_construct();
         self.set_rerender_difference(true);
 
-        self.scroll_bar.set_vexpand(true);
-        self.scroll_bar.width_request(10);
+        self.scroll_bar
+            .set_occupy_space(self.layout_mode == LayoutMode::Normal);
 
         let parent = self as *mut dyn WidgetImpl;
         self.scroll_bar.set_parent(parent);
-
-        connect!(self, size_changed(), self, adjust_area_layout(Size));
     }
 
     #[inline]
@@ -193,19 +196,21 @@ impl WidgetImpl for ScrollArea {
 impl ContainerImpl for ScrollArea {
     #[inline]
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        let mut children: Vec<&dyn WidgetImpl> = vec![self.scroll_bar.as_ref()];
+        let mut children: Vec<&dyn WidgetImpl> = vec![];
         if self.area.is_some() {
             children.push(self.area.as_ref().unwrap().as_ref())
         }
+        children.push(self.scroll_bar.as_ref());
         children
     }
 
     #[inline]
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-        let mut children: Vec<&mut dyn WidgetImpl> = vec![self.scroll_bar.as_mut()];
+        let mut children: Vec<&mut dyn WidgetImpl> = vec![];
         if self.area.is_some() {
             children.push(self.area.as_mut().unwrap().as_mut())
         }
+        children.push(self.scroll_bar.as_mut());
         children
     }
 
@@ -240,9 +245,12 @@ impl ContainerLayout for ScrollArea {
     #[inline]
     fn static_composition<T: WidgetImpl + ContainerImpl>(widget: &T) -> Composition {
         let widget = cast!(widget as ScrollAreaExt).unwrap();
-        match widget.get_scroll_bar().orientation() {
-            Orientation::Horizontal => Composition::VerticalArrange,
-            Orientation::Vertical => Composition::HorizontalArrange,
+        match widget.layout_mode() {
+            LayoutMode::Normal => match widget.get_scroll_bar().orientation() {
+                Orientation::Horizontal => Composition::VerticalArrange,
+                Orientation::Vertical => Composition::HorizontalArrange,
+            },
+            LayoutMode::Overlay => Composition::Stack,
         }
     }
 
@@ -256,7 +264,7 @@ impl ContainerLayout for ScrollArea {
 
         match widget.layout_mode() {
             LayoutMode::Normal => layout_normal(widget),
-            LayoutMode::Overlay => {},
+            LayoutMode::Overlay => layout_overlay(widget),
         }
     }
 }
@@ -284,17 +292,66 @@ fn layout_normal(widget: &mut dyn ScrollAreaExt) {
                 area.set_fixed_y(rect.y() + area.margin_top());
 
                 let area_rect = area.rect();
-                scroll_bar.set_fixed_x(
-                    rect.x() + rect.width() + scroll_bar.margin_left() - DEFAULT_SCROLL_BAR_WIDTH,
-                );
-                scroll_bar.set_fixed_y(area_rect.y() + scroll_bar.margin_top());
+                match scroll_bar.orientation() {
+                    Orientation::Vertical => {
+                        scroll_bar
+                            .set_fixed_x(rect.x() + area_rect.width() + scroll_bar.margin_left());
+                        scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
+                    }
+                    Orientation::Horizontal => {
+                        scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
+                        scroll_bar
+                            .set_fixed_y(rect.y() + area_rect.height() + scroll_bar.margin_top());
+                    }
+                }
             } else {
                 widget.get_scroll_bar_mut().set_fixed_x(
-                    rect.x() + rect.width() + scroll_bar.margin_left() - DEFAULT_SCROLL_BAR_WIDTH,
+                    rect.x() + rect.width() + scroll_bar.margin_left() - scroll_bar.size().width(),
                 );
                 scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
             }
         }
+    }
+
+    if let Some(area) = widget.get_area_mut() {
+        area.set_overlaid_rect(Rect::default());
+    }
+}
+
+fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
+    let rect = widget.rect();
+    let scroll_bar = ptr_mut!(widget as *mut dyn ScrollAreaExt).get_scroll_bar_mut();
+    match scroll_bar.scroll_bar_position() {
+        ScrollBarPosition::Start => {
+            scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
+            scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
+
+            if let Some(area) = widget.get_area_mut() {
+                area.set_fixed_x(rect.x() + area.margin_left());
+                area.set_fixed_y(rect.y() + area.margin_top());
+            }
+        }
+        ScrollBarPosition::End => {
+            if let Some(area) = widget.get_area_mut() {
+                area.set_fixed_x(rect.x() + area.margin_left());
+                area.set_fixed_y(rect.y() + area.margin_top());
+            }
+
+            match scroll_bar.orientation() {
+                Orientation::Vertical => {
+                    scroll_bar.set_fixed_x(rect.x() + rect.width() + scroll_bar.margin_left() - scroll_bar.size().width());
+                    scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
+                }
+                Orientation::Horizontal => {
+                    scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
+                    scroll_bar.set_fixed_y(rect.y() + rect.height() + scroll_bar.margin_top() - scroll_bar.size().height());
+                }
+            }
+        }
+    }
+
+    if let Some(area) = widget.get_area_mut() {
+        area.set_overlaid_rect(scroll_bar.rect());
     }
 }
 
@@ -311,12 +368,8 @@ impl ContainerScaleCalculate for ScrollArea {
 }
 impl StaticContainerScaleCalculate for ScrollArea {
     #[inline]
-    fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32 {
-        let scroll = cast!(c as ScrollAreaExt).unwrap();
-        match scroll.get_area() {
-            Some(area) => area.hscale(),
-            None => SCALE_DISMISS,
-        }
+    fn static_container_hscale_calculate(_: &dyn ContainerImpl) -> f32 {
+        SCALE_ADAPTION
     }
 
     #[inline]

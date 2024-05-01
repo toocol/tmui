@@ -111,7 +111,9 @@ impl ApplicationWindow {
     pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
         let mut window: Box<ApplicationWindow> =
-            Object::new(&[("width", &width), ("height", &height)]);
+            Object::new(&[]);
+        window.set_fixed_width(width);
+        window.set_fixed_height(height);
         window.platform_type = platform_type;
         window.set_window_id(window.id());
         WINDOW_ID.with(|id| *id.borrow_mut() = window.id());

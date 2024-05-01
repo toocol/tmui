@@ -5,6 +5,10 @@ pub(crate) trait WidgetInnerExt {
 
     fn set_fixed_height_ration(&mut self, ration: f32);
 
+    fn cancel_fixed_width(&mut self);
+
+    fn cancel_fixed_height(&mut self);
+
     fn event_bubble(&self) -> EventBubble;
 
     fn set_event_bubble(&mut self, event_bubble: EventBubble);
@@ -34,6 +38,20 @@ macro_rules! widget_inner_ext_impl {
         #[inline]
         fn set_fixed_height_ration(&mut self, ration: f32) {
             self.widget_props_mut().fixed_height_ration = ration;
+        }
+
+        #[inline]
+        fn cancel_fixed_width(&mut self) {
+            self.set_fixed_width(0);
+            self.widget_props_mut().fixed_width = false;
+            self.widget_props_mut().width_request = 0;
+        }
+
+        #[inline]
+        fn cancel_fixed_height(&mut self) {
+            self.set_fixed_height(0);
+            self.widget_props_mut().fixed_height = false;
+            self.widget_props_mut().height_request = 0;
         }
 
         #[inline]
