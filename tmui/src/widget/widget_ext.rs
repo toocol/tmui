@@ -1747,11 +1747,11 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn overlaid_rect(&self) -> Rect {
-        self.overlaid_rect
+        self.get_property("overliad_rect").map(|v| v.get::<Rect>()).unwrap_or_default()
     }
 
     #[inline]
     fn set_overlaid_rect(&mut self, rect: Rect) {
-        self.overlaid_rect = rect
+        self.set_property("overlaid_rect", rect.to_value())
     }
 }

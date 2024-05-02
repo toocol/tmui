@@ -14,7 +14,7 @@ use tlib::{
     global::SemanticExt,
     namespace::MouseButton,
     nonnull_mut, nonnull_ref,
-    object::{ObjectId, ObjectOperation, ObjectSubclass},
+    object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass},
     signals,
 };
 
@@ -32,6 +32,8 @@ pub struct TreeStore {
     enterd_node: Option<NonNull<TreeNode>>,
     hovered_node: Option<NonNull<TreeNode>>,
     selected_node: Option<NonNull<TreeNode>>,
+
+    pub(crate) id_increment: IdGenerator,
 }
 
 pub trait TreeStoreSignals: ActionExt {
@@ -88,9 +90,7 @@ impl TreeStore {
         obj: &dyn TreeViewObject,
     ) -> Option<&mut TreeNode> {
         if self.nodes_cache.contains_key(&parent_id) {
-            let mut tree_node = TreeNode::create_from_obj(obj);
-
-            tree_node.store = self.id();
+            let tree_node = TreeNode::create_from_obj(obj, self.id());
 
             nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap())
                 .add_node_inner(tree_node.boxed())
@@ -158,6 +158,7 @@ impl TreeStore {
             enterd_node: None,
             hovered_node: None,
             selected_node: None,
+            id_increment: Default::default(),
         };
 
         store.root_mut().store = store.id();

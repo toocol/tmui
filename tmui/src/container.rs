@@ -44,6 +44,7 @@ impl ObjectSubclass for Container {
 impl ObjectImpl for Container {
     fn on_property_set(&mut self, name: &str, value: &Value) {
         self.parent_on_property_set(name, value);
+        println!("set property {}", name);
 
         match name {
             "invalidate" => {
@@ -116,6 +117,14 @@ impl ObjectImpl for Container {
                 let transparency = value.get::<Transparency>();
                 for child in self.children.iter_mut() {
                     child.propagate_set_transparency(transparency)
+                }
+            }
+            "overlaid_rect" => {
+                let overlaid = value.get::<Rect>();
+                println!("{} set overliad {:?}", self.name(), overlaid);
+                for child in self.children.iter_mut() {
+                    println!("Child {} set overliad {:?}", child.name(), overlaid);
+                    child.set_overlaid_rect(overlaid)
                 }
             }
             _ => {}

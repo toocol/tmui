@@ -45,7 +45,7 @@ pub trait PopupExt {
 
 #[reflect_trait]
 pub trait PopupImpl: WidgetImpl + PopupExt {
-    /// Calculate the position of the component when it becomes visible.
+    /// Calculate the position of the popup widget when it becomes visible.
     ///
     /// @param: `base_rect` the rectangle of base widget.<br>
     /// @param: `point` the hitting point.
@@ -54,6 +54,11 @@ pub trait PopupImpl: WidgetImpl + PopupExt {
         point.set_y(base_rect.y() - size.height() - 3);
         point.set_x(point.x() - size.width() / 2);
         point
+    }
+
+    /// If true, the popup widget will be a modal widget.
+    fn is_modal(&self) -> bool {
+        false
     }
 }
 
@@ -74,7 +79,7 @@ pub trait Popupable: WidgetImpl {
     /// basic_point: `global coordinate` point needed.
     fn show_popup(&mut self, basic_point: Point) {
         let rect = self.rect();
-        if let Some(popup) = self.get_popup_mut() {
+        let rect = if let Some(popup) = self.get_popup_mut() {
             if popup.visible() {
                 return;
             }
@@ -87,17 +92,22 @@ pub trait Popupable: WidgetImpl {
             if window.initialized() {
                 window.layout_change(popup.as_widget_impl_mut());
             }
-            
+
             popup.show();
-        }
+            popup.rect()
+        } else {
+            Rect::default()
+        };
+        self.set_overlaid_rect(rect);
     }
 
     /// Change the popup's visibility to false, hide the popup.
     #[inline]
     fn hide_popup(&mut self) {
         if let Some(popup) = self.get_popup_mut() {
-            popup.hide()
+            popup.hide();
         }
+        self.set_overlaid_rect(Rect::default());
     }
 
     /// Set the popup to widget.

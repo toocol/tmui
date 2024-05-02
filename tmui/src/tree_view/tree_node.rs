@@ -12,17 +12,14 @@ use tlib::{
     figure::Rect,
     global::SemanticExt,
     nonnull_mut,
-    object::IdGenerator,
     types::StaticType,
     values::{FromValue, ToValue},
 };
 
-static TREE_NODE_ID_INCREMENT: IdGenerator = IdGenerator::new(1);
-
 #[allow(clippy::vec_box)]
 pub struct TreeNode {
-    id: ObjectId,
     pub(crate) store: ObjectId,
+    id: ObjectId,
 
     parent: Option<NonNull<TreeNode>>,
     is_root: bool,
@@ -44,9 +41,8 @@ unsafe impl Send for TreeNode {}
 
 impl TreeNode {
     pub fn create(store_id: ObjectId, level: i32, obj: &dyn TreeViewObject) -> Box<TreeNode> {
-        let mut node = Self::create_from_obj(obj);
+        let mut node = Self::create_from_obj(obj, store_id);
 
-        node.store = store_id;
         node.level = level;
 
         Box::new(node)
@@ -59,9 +55,7 @@ impl TreeNode {
         if !self.extensible {
             return None;
         }
-        let mut node = Self::create_from_obj(obj);
-
-        node.store = self.store;
+        let node = Self::create_from_obj(obj, self.store);
 
         self.add_node_inner(node.boxed())
     }
@@ -202,7 +196,7 @@ impl TreeNode {
     #[inline]
     pub(crate) fn empty() -> Self {
         Self {
-            id: TREE_NODE_ID_INCREMENT.fetch_add(1, Ordering::Acquire),
+            id: 0,
             store: 0,
             parent: None,
             is_root: true,
@@ -220,10 +214,10 @@ impl TreeNode {
     }
 
     #[inline]
-    pub(crate) fn create_from_obj(obj: &dyn TreeViewObject) -> Self {
+    pub(crate) fn create_from_obj(obj: &dyn TreeViewObject, store: ObjectId) -> Self {
         Self {
-            id: TREE_NODE_ID_INCREMENT.fetch_add(1, Ordering::Acquire),
-            store: 0,
+            id: TreeStore::store_ref(store).unwrap().id_increment.fetch_add(1, Ordering::Acquire),
+            store,
             parent: None,
             is_root: false,
             extensible: obj.extensible(),
@@ -238,6 +232,8 @@ impl TreeNode {
             node_render: obj.node_render(),
         }
     }
+
+
 
     #[inline]
     pub(crate) fn render_node(

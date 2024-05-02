@@ -45,7 +45,6 @@ pub struct Widget {
     old_image_rect: Rect,
     child_image_rect_union: Rect,
     child_overflow_rect: Rect,
-    overlaid_rect: Rect,
     need_update_geometry: bool,
 
     #[derivative(Default(value = "true"))]
@@ -339,6 +338,13 @@ impl Widget {
             child.propagate_set_transparency(transparency)
         }
     }
+
+    #[inline]
+    fn notify_overliad_rect(&mut self, overlaid: Rect) {
+        if let Some(child) = self.get_child_mut() {
+            child.set_overlaid_rect(overlaid)
+        }
+    }
 }
 
 impl ObjectSubclass for Widget {
@@ -411,6 +417,10 @@ impl ObjectImpl for Widget {
                 let transparency = value.get::<Transparency>();
                 self.notify_propagate_transparency(transparency);
             }
+            "overlaid_rect" => {
+                let overlaid = value.get::<Rect>();
+                self.notify_overliad_rect(overlaid);
+            }
             _ => {}
         }
     }
@@ -462,6 +472,12 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             if cast!(parent as ContainerImpl).is_some() {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
             }
+        }
+
+        let overlaid = self.overlaid_rect();
+        if overlaid.is_valid() {
+            println!("Clipp differen overlaid: {:?}", overlaid);
+            painter.clip_rect_global(overlaid, ClipOp::Difference);
         }
 
         painter_clip(self, &mut painter, self.styles_redraw_region().iter());
