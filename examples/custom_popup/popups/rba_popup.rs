@@ -52,8 +52,6 @@ impl ObjectImpl for RbaPopup {
 
 impl WidgetImpl for RbaPopup {
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         println!("CustomPopup run after.")
     }
 }

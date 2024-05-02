@@ -27,7 +27,7 @@ use std::{
 use tlib::{
     connect, emit,
     events::Event,
-    figure::{Color, Size},
+    figure::Size,
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
     winit::window::WindowId,
@@ -110,8 +110,7 @@ impl ApplicationWindow {
     #[inline]
     pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
-        let mut window: Box<ApplicationWindow> =
-            Object::new(&[]);
+        let mut window: Box<ApplicationWindow> = Object::new(&[]);
         window.set_fixed_width(width);
         window.set_fixed_height(height);
         window.platform_type = platform_type;

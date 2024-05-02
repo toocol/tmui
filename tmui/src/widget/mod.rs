@@ -2,6 +2,7 @@ pub mod callbacks;
 pub mod widget_ext;
 pub mod widget_inner;
 
+use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -29,8 +30,6 @@ use tlib::{
     ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
 };
-
-use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 
 pub type Transparency = u8;
 pub type WidgetHnd = Option<NonNull<dyn WidgetImpl>>;
@@ -69,7 +68,7 @@ pub struct Widget {
     detecting_height: i32,
 
     /// Control whether to occupy parent widget's space.
-    /// 
+    ///
     /// This field only affects a container parent when a fixed child widget is overlaid..
     #[derivative(Default(value = "true"))]
     occupy_space: bool,
@@ -476,7 +475,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         let overlaid = self.overlaid_rect();
         if overlaid.is_valid() {
-            println!("Clipp differen overlaid: {:?}", overlaid);
             painter.clip_rect_global(overlaid, ClipOp::Difference);
         }
 
@@ -963,6 +961,7 @@ pub trait InnerCustomizeEventProcess {
 #[reflect_trait]
 pub trait WidgetImpl:
     WidgetExt
+    + WidgetPropsAcquire
     + ElementImpl
     + ElementExt
     + ObjectOperation
@@ -996,9 +995,7 @@ pub trait WidgetImpl:
     ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
     #[inline]
-    fn run_after(&mut self) {
-        self.parent_run_after();
-    }
+    fn run_after(&mut self) {}
 
     /// Invoke when widget's receive mouse pressed event.
     #[inline]
@@ -1229,6 +1226,26 @@ pub(crate) trait WidgetHndAsable: WidgetImpl + Sized {
     }
 }
 impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
+
+////////////////////////////////////// WidgetPropsAcquire //////////////////////////////////////
+pub trait WidgetPropsAcquire {
+    /// Get the ref of widget model.
+    fn widget_props(&self) -> &Widget;
+
+    /// Get the mutable ref of widget model.
+    fn widget_props_mut(&mut self) -> &mut Widget;
+}
+impl WidgetPropsAcquire for Widget {
+    #[inline]
+    fn widget_props(&self) -> &Widget {
+        self
+    }
+
+    #[inline]
+    fn widget_props_mut(&mut self) -> &mut Widget {
+        self
+    }
+}
 
 #[cfg(test)]
 mod tests {

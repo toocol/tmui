@@ -88,7 +88,6 @@ pub(crate) fn expand(
 
             let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
                 name,
-                Some("shared_widget"),
                 vec!["shared_widget", "widget"],
                 (&impl_generics, &ty_generics, &where_clause),
             )?;

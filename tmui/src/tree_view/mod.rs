@@ -47,7 +47,7 @@ use tlib::{connect, signals};
 ///        NodeRender::default()
 ///   }
 /// }
-/// 
+///
 /// fn test_build_ui() {
 ///     let mut tree_view = TreeView::new();
 ///     let _node_added = tree_view
@@ -68,7 +68,7 @@ impl ObjectImpl for TreeView {
     fn construct(&mut self) {
         self.parent_construct();
 
-        let mut image = TreeViewImage::new(self.get_scroll_bar_mut());
+        let mut image = TreeViewImage::new(self.scroll_bar_mut());
 
         connect!(self, background_changed(), image, set_background(Color));
 

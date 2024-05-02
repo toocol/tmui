@@ -1,13 +1,13 @@
 use super::{
-    callbacks::Callbacks, EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency, Widget,
-    WidgetImpl, WindowAcquire,
+    callbacks::Callbacks, EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency,
+    WidgetImpl,
 };
 use crate::{
     application_window::ApplicationWindow,
     font::FontTypeface,
     graphics::{
         border::Border,
-        element::{ElementExt, ElementImpl},
+        element::ElementImpl,
     },
     primitive::Message,
     widget::WidgetSignals,
@@ -16,7 +16,7 @@ use std::ptr::NonNull;
 use tlib::{
     figure::{Color, CoordRect, FPoint, FRect, Point, Rect, Size},
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
-    object::{ObjectId, ObjectOperation},
+    object::ObjectId,
     prelude::*,
     ptr_mut,
 };
@@ -24,16 +24,6 @@ use tlib::{
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
-    /// Get the ref of widget model.
-    ///
-    /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
-    fn widget_props(&self) -> &Widget;
-
-    /// Get the mutable ref of widget model.
-    ///
-    /// Go to[`Function defination`](WidgetExt::widget_model) (Defined in [`WidgetExt`])
-    fn widget_props_mut(&mut self) -> &mut Widget;
-
     /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
     fn name(&self) -> String;
 
@@ -479,11 +469,6 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_mouse_tracking(&mut self, is_tracking: bool);
 
-    /// Parent run after function.
-    ///
-    /// Go to[`Function defination`](WidgetExt::parent_run_after) (Defined in [`WidgetExt`])
-    fn parent_run_after(&mut self);
-
     /// Get `hexpand` of widget.
     ///
     /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally
@@ -724,17 +709,7 @@ pub trait WidgetExt {
     fn set_overlaid_rect(&mut self, rect: Rect);
 }
 
-impl WidgetExt for Widget {
-    #[inline]
-    fn widget_props(&self) -> &Widget {
-        self
-    }
-
-    #[inline]
-    fn widget_props_mut(&mut self) -> &mut Widget {
-        self
-    }
-
+impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn name(&self) -> String {
         self.get_property("name").unwrap().get::<String>()
@@ -742,12 +717,12 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn initialized(&self) -> bool {
-        self.initialized
+        self.widget_props().initialized
     }
 
     #[inline]
     fn set_initialized(&mut self, initialized: bool) {
-        self.initialized = initialized
+        self.widget_props_mut().initialized = initialized
     }
 
     #[inline]
@@ -757,12 +732,12 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn first_rendered(&self) -> bool {
-        self.first_rendered
+        self.widget_props().first_rendered
     }
 
     #[inline]
     fn set_first_rendered(&mut self) {
-        self.first_rendered = true
+        self.widget_props_mut().first_rendered = true
     }
 
     #[inline]
@@ -780,26 +755,26 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn rerender_difference(&self) -> bool {
-        self.rerender_difference
+        self.widget_props().rerender_difference
     }
 
     #[inline]
     fn set_rerender_difference(&mut self, rerender_difference: bool) {
-        self.rerender_difference = rerender_difference
+        self.widget_props_mut().rerender_difference = rerender_difference
     }
 
     #[inline]
     fn set_parent(&mut self, parent: *mut dyn WidgetImpl) {
-        self.parent = NonNull::new(parent)
+        self.widget_props_mut().parent = NonNull::new(parent)
     }
 
     #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        let mut child = self.child.as_ref().map(|c| c.as_ref().as_ptr());
+        let mut child = self.widget_props().child.as_ref().map(|c| c.as_ref().as_ptr());
 
         if child.is_none() {
             unsafe {
-                child = match self.child_ref {
+                child = match self.widget_props().child_ref {
                     Some(ref c) => Some(c.as_ref().as_ptr()),
                     None => None,
                 }
@@ -811,11 +786,11 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        let mut child = self.child.as_mut().map(|c| c.as_mut().as_ptr_mut());
+        let mut child = self.widget_props_mut().child.as_mut().map(|c| c.as_mut().as_ptr_mut());
 
         if child.is_none() {
             unsafe {
-                child = match self.child_ref {
+                child = match self.widget_props_mut().child_ref {
                     Some(ref mut c) => Some(c.as_mut().as_ptr_mut()),
                     None => None,
                 }
@@ -827,11 +802,11 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
-        let mut child = self.child.as_ref().map(|c| c.as_ref());
+        let mut child = self.widget_props().child.as_ref().map(|c| c.as_ref());
 
         if child.is_none() {
             unsafe {
-                child = match self.child_ref {
+                child = match self.widget_props().child_ref {
                     Some(ref c) => Some(c.as_ref()),
                     None => None,
                 }
@@ -843,11 +818,12 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
-        let mut child = self.child.as_mut().map(|c| c.as_mut());
+        let props = self.widget_props_mut();
+        let mut child = props.child.as_mut().map(|c| c.as_mut());
 
         if child.is_none() {
             unsafe {
-                child = match self.child_ref {
+                child = match props.child_ref {
                     Some(ref mut c) => Some(c.as_mut()),
                     None => None,
                 }
@@ -859,7 +835,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl> {
-        match self.parent.as_ref() {
+        match self.widget_props().parent.as_ref() {
             Some(parent) => Some(unsafe { parent.as_ref() }),
             None => None,
         }
@@ -867,7 +843,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        match self.parent.as_mut() {
+        match self.widget_props_mut().parent.as_mut() {
             Some(parent) => Some(unsafe { parent.as_mut() }),
             None => None,
         }
@@ -875,7 +851,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_parent_ref(&self) -> Option<&dyn WidgetImpl> {
-        match self.parent {
+        match self.widget_props().parent {
             Some(ref parent) => unsafe { Some(parent.as_ref()) },
             None => None,
         }
@@ -883,7 +859,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn get_parent_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
-        match self.parent {
+        match self.widget_props_mut().parent {
             Some(ref mut parent) => unsafe { Some(parent.as_mut()) },
             None => None,
         }
@@ -962,8 +938,8 @@ impl WidgetExt for Widget {
             }
         }
         self.set_fixed_width(width);
-        self.fixed_width = true;
-        self.width_request = width;
+        self.widget_props_mut().fixed_width = true;
+        self.widget_props_mut().width_request = width;
         if let Some(parent) = self.get_parent_ref() {
             let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
                 let mut size = parent.size();
@@ -976,7 +952,7 @@ impl WidgetExt for Widget {
                 return;
             }
 
-            self.fixed_width_ration = width as f32 / parent_size.width() as f32;
+            self.widget_props_mut().fixed_width_ration = width as f32 / parent_size.width() as f32;
         }
     }
 
@@ -994,8 +970,8 @@ impl WidgetExt for Widget {
             }
         }
         self.set_fixed_height(height);
-        self.fixed_height = true;
-        self.height_request = height;
+        self.widget_props_mut().fixed_height = true;
+        self.widget_props_mut().height_request = height;
         if let Some(parent) = self.get_parent_ref() {
             let parent_size = if let Some(s) = cast!(parent as SpacingCapable) {
                 let mut size = parent.size();
@@ -1008,18 +984,18 @@ impl WidgetExt for Widget {
                 return;
             }
 
-            self.fixed_height_ration = height as f32 / parent_size.height() as f32;
+            self.widget_props_mut().fixed_height_ration = height as f32 / parent_size.height() as f32;
         }
     }
 
     #[inline]
     fn get_width_request(&self) -> i32 {
-        self.width_request
+        self.widget_props().width_request
     }
 
     #[inline]
     fn get_height_request(&self) -> i32 {
-        self.height_request
+        self.widget_props().height_request
     }
 
     #[inline]
@@ -1039,22 +1015,22 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn fixed_width(&self) -> bool {
-        self.fixed_width
+        self.widget_props().fixed_width
     }
 
     #[inline]
     fn fixed_height(&self) -> bool {
-        self.fixed_height
+        self.widget_props().fixed_height
     }
 
     #[inline]
     fn fixed_width_ration(&self) -> f32 {
-        self.fixed_width_ration
+        self.widget_props().fixed_width_ration
     }
 
     #[inline]
     fn fixed_height_ration(&self) -> f32 {
-        self.fixed_height_ration
+        self.widget_props().fixed_height_ration
     }
 
     #[inline]
@@ -1079,17 +1055,17 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn set_font(&mut self, font: Font) {
-        self.font = font;
+        self.widget_props_mut().font = font;
     }
 
     #[inline]
     fn font(&self) -> &Font {
-        &self.font
+        &self.widget_props().font
     }
 
     #[inline]
     fn font_mut(&mut self) -> &mut Font {
-        &mut self.font
+        &mut self.widget_props_mut().font
     }
 
     #[inline]
@@ -1099,7 +1075,7 @@ impl WidgetExt for Widget {
             let typeface = FontTypeface::new(f);
             typefaces.push(typeface);
         }
-        self.font.set_typefaces(typefaces);
+        self.widget_props_mut().font.set_typefaces(typefaces);
         self.update()
     }
 
@@ -1197,13 +1173,13 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn background(&self) -> Color {
-        self.background
+        self.widget_props().background
     }
 
     #[inline]
     fn set_background(&mut self, color: Color) {
         self.set_rerender_styles(true);
-        self.background = color;
+        self.widget_props_mut().background = color;
         emit!(Widget::set_background => self.background_changed(), color);
 
         self.update();
@@ -1211,100 +1187,103 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn margins(&self) -> (i32, i32, i32, i32) {
+        let props = self.widget_props();
         (
-            self.margins[0],
-            self.margins[1],
-            self.margins[2],
-            self.margins[3],
+            props.margins[0],
+            props.margins[1],
+            props.margins[2],
+            props.margins[3],
         )
     }
 
     #[inline]
     fn margin_top(&self) -> i32 {
-        self.margins[0]
+        self.widget_props().margins[0]
     }
 
     #[inline]
     fn margin_right(&self) -> i32 {
-        self.margins[1]
+        self.widget_props().margins[1]
     }
 
     #[inline]
     fn margin_bottom(&self) -> i32 {
-        self.margins[2]
+        self.widget_props().margins[2]
     }
 
     #[inline]
     fn margin_left(&self) -> i32 {
-        self.margins[3]
+        self.widget_props().margins[3]
     }
 
     #[inline]
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
-        self.margins[0] = top;
-        self.margins[1] = right;
-        self.margins[2] = bottom;
-        self.margins[3] = left;
+        let props = self.widget_props_mut();
+        props.margins[0] = top;
+        props.margins[1] = right;
+        props.margins[2] = bottom;
+        props.margins[3] = left;
 
-        self.need_update_geometry = top != 0 || right != 0 || bottom != 0 || left != 0;
+        props.need_update_geometry = top != 0 || right != 0 || bottom != 0 || left != 0;
     }
 
     #[inline]
     fn set_margin_top(&mut self, val: i32) {
-        self.margins[0] = val;
+        self.widget_props_mut().margins[0] = val;
 
-        self.need_update_geometry = val != 0;
+        self.widget_props_mut().need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_right(&mut self, val: i32) {
-        self.margins[1] = val;
+        self.widget_props_mut().margins[1] = val;
 
-        self.need_update_geometry = val != 0;
+        self.widget_props_mut().need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_bottom(&mut self, val: i32) {
-        self.margins[2] = val;
+        self.widget_props_mut().margins[2] = val;
 
-        self.need_update_geometry = val != 0;
+        self.widget_props_mut().need_update_geometry = val != 0;
     }
 
     #[inline]
     fn set_margin_left(&mut self, val: i32) {
-        self.margins[3] = val;
+        self.widget_props_mut().margins[3] = val;
 
-        self.need_update_geometry = val != 0;
+        self.widget_props_mut().need_update_geometry = val != 0;
     }
 
     #[inline]
     fn paddings(&self) -> (i32, i32, i32, i32) {
+        let props = self.widget_props();
         (
-            self.paddings[0],
-            self.paddings[1],
-            self.paddings[2],
-            self.paddings[3],
+            props.paddings[0],
+            props.paddings[1],
+            props.paddings[2],
+            props.paddings[3],
         )
     }
 
     #[inline]
     fn padding_top(&self) -> i32 {
-        self.paddings[0]
+        self.widget_props().paddings[0]
     }
 
     #[inline]
     fn padding_right(&self) -> i32 {
-        self.paddings[1]
+        self.widget_props().paddings[1]
     }
 
     #[inline]
     fn padding_bottom(&self) -> i32 {
-        self.paddings[2]
+        self.widget_props().paddings[2]
     }
 
     #[inline]
     fn padding_left(&self) -> i32 {
-        self.paddings[3]
+        self.widget_props().paddings[3]
     }
 
     #[inline]
@@ -1322,10 +1301,11 @@ impl WidgetExt for Widget {
             left = 0;
         }
 
-        self.paddings[0] = top;
-        self.paddings[1] = right;
-        self.paddings[2] = bottom;
-        self.paddings[3] = left;
+        let props = self.widget_props_mut();
+        props.paddings[0] = top;
+        props.paddings[1] = right;
+        props.paddings[2] = bottom;
+        props.paddings[3] = left;
     }
 
     #[inline]
@@ -1333,7 +1313,7 @@ impl WidgetExt for Widget {
         if val < 0 {
             val = 0;
         }
-        self.paddings[0] = val;
+        self.widget_props_mut().paddings[0] = val;
     }
 
     #[inline]
@@ -1341,7 +1321,7 @@ impl WidgetExt for Widget {
         if val < 0 {
             val = 0;
         }
-        self.paddings[1] = val;
+        self.widget_props_mut().paddings[1] = val;
     }
 
     #[inline]
@@ -1349,7 +1329,7 @@ impl WidgetExt for Widget {
         if val < 0 {
             val = 0;
         }
-        self.paddings[2] = val;
+        self.widget_props_mut().paddings[2] = val;
     }
 
     #[inline]
@@ -1357,12 +1337,12 @@ impl WidgetExt for Widget {
         if val < 0 {
             val = 0;
         }
-        self.paddings[3] = val;
+        self.widget_props_mut().paddings[3] = val;
     }
 
     #[inline]
     fn border_ref(&self) -> &Border {
-        &self.border
+        &self.widget_props().border
     }
 
     #[inline]
@@ -1379,55 +1359,56 @@ impl WidgetExt for Widget {
         if left < 0. {
             left = 0.;
         }
-        self.border.width.0 = top;
-        self.border.width.1 = right;
-        self.border.width.2 = bottom;
-        self.border.width.3 = left;
+        let props = self.widget_props_mut();
+        props.border.width.0 = top;
+        props.border.width.1 = right;
+        props.border.width.2 = bottom;
+        props.border.width.3 = left;
     }
 
     #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
-        self.border.style = style;
+        self.widget_props_mut().border.style = style;
     }
 
     #[inline]
     fn set_border_color(&mut self, color: Color) {
-        self.border.border_color = (color, color, color, color);
+        self.widget_props_mut().border.border_color = (color, color, color, color);
     }
 
     #[inline]
     fn set_border_top_color(&mut self, color: Color) {
-        self.border.border_color.0 = color;
+        self.widget_props_mut().border.border_color.0 = color;
     }
 
     #[inline]
     fn set_border_right_color(&mut self, color: Color) {
-        self.border.border_color.1 = color;
+        self.widget_props_mut().border.border_color.1 = color;
     }
 
     #[inline]
     fn set_border_bottom_color(&mut self, color: Color) {
-        self.border.border_color.2 = color;
+        self.widget_props_mut().border.border_color.2 = color;
     }
 
     #[inline]
     fn set_border_left_color(&mut self, color: Color) {
-        self.border.border_color.3 = color;
+        self.widget_props_mut().border.border_color.3 = color;
     }
 
     #[inline]
     fn borders(&self) -> (f32, f32, f32, f32) {
-        self.border.width
+        self.widget_props().border.width
     }
 
     #[inline]
     fn border_style(&self) -> BorderStyle {
-        self.border.style
+        self.widget_props().border.style
     }
 
     #[inline]
     fn border_color(&self) -> (Color, Color, Color, Color) {
-        self.border.border_color
+        self.widget_props().border.border_color
     }
 
     #[inline]
@@ -1474,87 +1455,84 @@ impl WidgetExt for Widget {
     }
 
     #[inline]
-    fn parent_run_after(&mut self) {}
-
-    #[inline]
     fn hexpand(&self) -> bool {
-        self.hexpand
+        self.widget_props().hexpand
     }
 
     #[inline]
     fn set_hexpand(&mut self, hexpand: bool) {
-        self.hexpand = hexpand
+        self.widget_props_mut().hexpand = hexpand
     }
 
     #[inline]
     fn vexpand(&self) -> bool {
-        self.vexpand
+        self.widget_props().vexpand
     }
 
     #[inline]
     fn set_vexpand(&mut self, vexpand: bool) {
-        self.vexpand = vexpand
+        self.widget_props_mut().vexpand = vexpand
     }
 
     #[inline]
     fn hscale(&self) -> f32 {
-        if self.fixed_width {
+        if self.widget_props().fixed_width {
             return 0.;
         }
-        self.hscale
+        self.widget_props().hscale
     }
 
     #[inline]
     fn set_hscale(&mut self, hscale: f32) {
-        self.hscale = hscale
+        self.widget_props_mut().hscale = hscale
     }
 
     #[inline]
     fn vscale(&self) -> f32 {
-        if self.fixed_height {
+        if self.widget_props().fixed_height {
             return 0.;
         }
-        self.vscale
+        self.widget_props().vscale
     }
 
     #[inline]
     fn set_vscale(&mut self, vscale: f32) {
-        self.vscale = vscale
+        self.widget_props_mut().vscale = vscale
     }
 
     #[inline]
     fn child_image_rect_union(&self) -> &Rect {
-        &self.child_image_rect_union
+        &self.widget_props().child_image_rect_union
     }
 
     #[inline]
     fn child_image_rect_union_mut(&mut self) -> &mut Rect {
-        &mut self.child_image_rect_union
+        &mut self.widget_props_mut().child_image_rect_union
     }
 
     #[inline]
     fn need_update_geometry(&self) -> bool {
-        self.need_update_geometry
+        self.widget_props().need_update_geometry
     }
 
     #[inline]
     fn child_overflow_rect(&self) -> &Rect {
-        &self.child_overflow_rect
+        &self.widget_props().child_overflow_rect
     }
 
     #[inline]
     fn child_overflow_rect_mut(&mut self) -> &mut Rect {
-        &mut self.child_overflow_rect
+        &mut self.widget_props_mut().child_overflow_rect
     }
 
     #[inline]
     fn image_rect_record(&self) -> Rect {
-        self.old_image_rect
+        self.widget_props().old_image_rect
     }
 
     #[inline]
     fn set_image_rect_record(&mut self, image_rect: Rect) {
-        self.old_image_rect = image_rect
+        self.widget_props_mut().old_image_rect = image_rect
     }
 
     #[inline]
@@ -1575,12 +1553,12 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn repaint_when_resize(&self) -> bool {
-        self.repaint_when_resize
+        self.widget_props().repaint_when_resize
     }
 
     #[inline]
     fn set_repaint_when_resize(&mut self, repaint: bool) {
-        self.repaint_when_resize = repaint
+        self.widget_props_mut().repaint_when_resize = repaint
     }
 
     #[inline]
@@ -1657,7 +1635,7 @@ impl WidgetExt for Widget {
 
     #[inline]
     fn size_hint(&self) -> SizeHint {
-        self.size_hint
+        self.widget_props().size_hint
     }
 
     #[inline]
@@ -1672,82 +1650,82 @@ impl WidgetExt for Widget {
                 panic!("`Minimum size hint can not be larger than maximum size hint.")
             }
         }
-        self.size_hint = size_hint
+        self.widget_props_mut().size_hint = size_hint
     }
 
     #[inline]
     fn is_event_bubbled(&self, event_bubble: EventBubble) -> bool {
-        self.event_bubble.contains(event_bubble)
+        self.widget_props().event_bubble.contains(event_bubble)
     }
 
     #[inline]
     fn enable_bubble(&mut self, event_bubble: EventBubble) {
-        self.event_bubble.insert(event_bubble)
+        self.widget_props_mut().event_bubble.insert(event_bubble)
     }
 
     #[inline]
     fn disable_bubble(&mut self, event_bubble: EventBubble) {
-        self.event_bubble.remove(event_bubble)
+        self.widget_props_mut().event_bubble.remove(event_bubble)
     }
 
     #[inline]
     fn is_propagate_event_bubble(&self) -> bool {
-        self.propagate_event_bubble
+        self.widget_props().propagate_event_bubble
     }
 
     #[inline]
     fn set_propagate_event_bubble(&mut self, is: bool) {
-        self.propagate_event_bubble = is
+        self.widget_props_mut().propagate_event_bubble = is
     }
 
     #[inline]
     fn is_propagate_mouse_tracking(&self) -> bool {
-        self.propagate_mouse_tracking
+        self.widget_props().propagate_mouse_tracking
     }
 
     #[inline]
     fn set_propagate_mouse_tracking(&mut self, is: bool) {
-        self.propagate_mouse_tracking = is
+        self.widget_props_mut().propagate_mouse_tracking = is
     }
 
     #[inline]
     fn is_strict_clip_widget(&self) -> bool {
-        self.strict_clip_widget
+        self.widget_props().strict_clip_widget
     }
 
     #[inline]
     fn set_strict_clip_widget(&mut self, strict_clip_widget: bool) {
-        self.strict_clip_widget = strict_clip_widget
+        self.widget_props_mut().strict_clip_widget = strict_clip_widget
     }
 
     #[inline]
     fn is_resize_redraw(&self) -> bool {
-        self.resize_redraw
+        self.widget_props().resize_redraw
     }
 
     #[inline]
     fn callbacks(&self) -> &Callbacks {
-        &self.callbacks
+        &self.widget_props().callbacks
     }
 
     #[inline]
     fn callbacks_mut(&mut self) -> &mut Callbacks {
-        &mut self.callbacks
+        &mut self.widget_props_mut().callbacks
     }
 
     #[inline]
     fn is_occupy_space(&self) -> bool {
-        self.occupy_space
+        self.widget_props().occupy_space
     }
 
     #[inline]
     fn set_occupy_space(&mut self, occupy_space: bool) {
-        self.occupy_space = occupy_space;
+        self.widget_props_mut().occupy_space = occupy_space;
     }
 
     #[inline]
     fn overlaid_rect(&self) -> Rect {
-        self.get_property("overliad_rect").map(|v| v.get::<Rect>()).unwrap_or_default()
+        self.get_property("overlaid_rect").map(|v| v.get::<Rect>()).unwrap_or_default()
     }
 
     #[inline]

@@ -1,5 +1,10 @@
 use crate::{
-    extend_element, extend_object, extend_widget, general_attr::GeneralAttr, layout::LayoutType, pane::{generate_pane_inner_init, generate_pane_type_register}, scroll_area::generate_scroll_area_inner_init, SplitGenericsRef
+    extend_element, extend_object, extend_widget,
+    general_attr::GeneralAttr,
+    layout::LayoutType,
+    pane::{generate_pane_inner_init, generate_pane_type_register},
+    scroll_area::generate_scroll_area_pre_construct,
+    SplitGenericsRef,
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -75,19 +80,12 @@ pub(crate) fn expand(
                     }
                     if layout == LayoutType::ScrollArea {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            #[derivative(Default(value = "Object::new(&[])"))]
-                            scroll_bar: Box<ScrollBar>
-                        })?);
-                        fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            area: Option<Box<dyn WidgetImpl>>
-                        })?);
-                        fields.named.push(syn::Field::parse_named.parse2(quote! {
                             layout_mode: #use_prefix::scroll_area::LayoutMode
                         })?);
                     }
                     if layout == LayoutType::Pane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            orientation: Orientation 
+                            orientation: Orientation
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             resize_zone: bool
@@ -195,7 +193,6 @@ pub(crate) fn expand(
 
             let widget_trait_impl_clause = extend_widget::gen_widget_trait_impl_clause(
                 name,
-                Some("container"),
                 vec!["container", "widget"],
                 (&impl_generics, &ty_generics, &where_clause),
             )?;
@@ -225,11 +222,12 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let reflect_spacing_capable = if layout.is(LayoutType::VBox) || layout.is(LayoutType::HBox) {
-                quote!(type_registry.register::<#name, ReflectSpacingCapable>();)
-            } else {
-                proc_macro2::TokenStream::new()
-            };
+            let reflect_spacing_capable =
+                if layout.is(LayoutType::VBox) || layout.is(LayoutType::HBox) {
+                    quote!(type_registry.register::<#name, ReflectSpacingCapable>();)
+                } else {
+                    proc_macro2::TokenStream::new()
+                };
 
             let reflect_split_infos_getter = if layout.is(LayoutType::SplitPane) {
                 quote!(
@@ -257,8 +255,8 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
-            let scroll_area_inner_init = if layout.is(LayoutType::ScrollArea) {
-                generate_scroll_area_inner_init(use_prefix)?
+            let scroll_area_pre_construct = if layout.is(LayoutType::ScrollArea) {
+                generate_scroll_area_pre_construct(use_prefix)?
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -325,13 +323,12 @@ pub(crate) fn expand(
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
-                        #scroll_area_inner_init
                         #pane_inner_init
                     }
 
                     #[inline]
                     fn pretreat_construct(&mut self) {
-
+                        #scroll_area_pre_construct
                     }
                 }
 

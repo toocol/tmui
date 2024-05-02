@@ -23,13 +23,15 @@ impl ObjectSubclass for CtxMenu {
 
 impl ObjectImpl for CtxMenu {
     fn initialize(&mut self) {
-        self.width_request(100);
-        self.height_request(40);
+        self.width_request(150);
+        self.height_request(60);
+
         self.set_borders(1., 1., 1., 1.);
         self.set_border_color(Color::GREY_LIGHT);
 
         self.selection_list.set_vexpand(true);
         self.selection_list.set_hexpand(true);
+        self.selection_list.set_mouse_tracking(true);
         self.selection_list.get_store_mut().root_mut().add_node(&Selection {name: "New seesion"});
     }
 }
@@ -57,7 +59,7 @@ impl TreeViewObject for Selection {
     fn cells(&self) -> Vec<Cell> {
         vec![Cell::string()
             .value(self.name.to_string())
-            .cell_render(TextCellRender::builder().build())
+            .cell_render(TextCellRender::builder().color(Color::BLACK).build())
             .build()]
     }
 

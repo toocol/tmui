@@ -46,8 +46,6 @@ impl ObjectImpl for TbaPopup {
 
 impl WidgetImpl for TbaPopup {
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         println!("CustomPopup run after.")
     }
 }

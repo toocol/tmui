@@ -31,8 +31,6 @@ impl ObjectImpl for RunAfterLayoutWidget {
 
 impl WidgetImpl for RunAfterLayoutWidget {
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         println!("`RunAfterLayoutWidget` run after.")
     }
 }
