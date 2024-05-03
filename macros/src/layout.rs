@@ -1,11 +1,12 @@
 use crate::{
     extend_container,
+    pane::{generate_pane_add_child, generate_pane_impl},
     scroll_area::{
         generate_scroll_area_add_child, generate_scroll_area_get_children,
         generate_scroll_area_impl,
     },
     split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
-    stack::{generate_stack_add_child, generate_stack_impl}, pane::{generate_pane_add_child, generate_pane_impl},
+    stack::{generate_stack_add_child, generate_stack_impl},
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -37,7 +38,10 @@ impl LayoutType {
             STR_SPLIT_PANE => Ok(Self::SplitPane),
             STR_SCROLL_AREA => Ok(Self::ScrollArea),
             STR_PANE => Ok(Self::Pane),
-            _ => Err(syn::Error::new_spanned(meta, format!("Unsupported layout type {}.", value))),
+            _ => Err(syn::Error::new_spanned(
+                meta,
+                format!("Unsupported layout type {}.", value),
+            )),
         }
     }
 
@@ -66,7 +70,12 @@ pub(crate) fn expand(
     internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    gen_layout_clause(ast, LayoutType::from(layout_meta, layout)?, internal, ignore_default)
+    gen_layout_clause(
+        ast,
+        LayoutType::from(layout_meta, layout)?,
+        internal,
+        ignore_default,
+    )
 }
 
 /// Get the fileds' Ident which defined the attribute `#[children]` provided by the derive macro [`Childrenable`](crate::Childrenable)
@@ -101,8 +110,7 @@ fn gen_layout_clause(
 ) -> syn::Result<proc_macro2::TokenStream> {
     use LayoutType::*;
     let has_content_alignment = layout == VBox || layout == HBox;
-    let has_size_unified_adjust =
-        layout == VBox || layout == HBox || layout == SplitPane;
+    let has_size_unified_adjust = layout == VBox || layout == HBox || layout == SplitPane;
     let is_hbox = layout == HBox;
     let is_vbox = layout == VBox;
     let is_split_pane = layout == SplitPane;
@@ -232,17 +240,17 @@ fn gen_layout_clause(
     let add_child_clause = match (is_split_pane, is_stack, is_scroll_area, is_pane) {
         (false, false, false, false) => {
             quote! {
-                use tmui::application_window::ApplicationWindow;
+                use #use_prefix::application_window::ApplicationWindow;
                 child.set_parent(self);
                 ApplicationWindow::initialize_dynamic_component(child.as_mut());
                 self.container.children.push(child);
                 self.update();
             }
         }
-        (true, _, _, _) => generate_split_pane_add_child()?,
-        (_, true, _, _) => generate_stack_add_child()?,
+        (true, _, _, _) => generate_split_pane_add_child(&use_prefix)?,
+        (_, true, _, _) => generate_stack_add_child(&use_prefix)?,
         (_, _, true, _) => generate_scroll_area_add_child(name)?,
-        (_, _, _, true) => generate_pane_add_child()?,
+        (_, _, _, true) => generate_pane_add_child(&use_prefix)?,
     };
 
     let children_clause = if is_scroll_area {

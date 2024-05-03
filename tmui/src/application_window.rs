@@ -12,7 +12,7 @@ use crate::{
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
     widget::{
-        widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, WidgetSignals, ZIndexStep,
+        index_children, widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, ZIndexStep,
     },
     window::win_builder::WindowBuilder,
 };
@@ -25,7 +25,6 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
-    connect, emit,
     events::Event,
     figure::Size,
     nonnull_mut, nonnull_ref,
@@ -80,11 +79,10 @@ impl ObjectImpl for ApplicationWindow {
 
         Self::widgets_of(self.id()).insert(self.id(), NonNull::new(self));
 
-        connect!(self, size_changed(), self, when_size_change(Size));
         let window_id = self.id();
         child_initialize(self.get_child_mut(), window_id);
-        emit!(ApplicationWindow::initialize => self.size_changed(), self.size());
 
+        self.when_size_change(self.size());
         self.set_initialized(true);
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
         debug!("Initialize-phase end.");
@@ -507,6 +505,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
     while let Some(child_ref) = child {
         board.add_element(child_ref.as_element());
         ApplicationWindow::widgets_of(window_id).insert(child_ref.id(), NonNull::new(child_ref));
+        index_children(child_ref);
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);

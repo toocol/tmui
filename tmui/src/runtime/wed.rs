@@ -1,7 +1,6 @@
 use crate::{
     application_window::ApplicationWindow, prelude::SharedWidget,
     primitive::global_watch::GlobalWatchEvent, shortcut::manager::ShortcutManager,
-    widget::widget_ext::WidgetExt,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -11,13 +10,17 @@ use tlib::{
     types::StaticType,
 };
 
+use super::ElementExt;
+
 pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Option<Event> {
     let mut event: Option<Event> = None;
     match evt.event_type() {
         // Window Resize.
         EventType::Resize => {
             let evt = downcast_event::<ResizeEvent>(evt).unwrap();
-            window.resize(Some(evt.width()), Some(evt.height()));
+            window.set_fixed_width(evt.width());
+            window.set_fixed_height(evt.height());
+            window.when_size_change(evt.size());
         }
 
         // Mouse pressed.
@@ -273,7 +276,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     f(nonnull_mut!(widget_opt))
                 }
             }
-        },
+        }
 
         EventType::WindowMinimized => {
             let widgets_map = ApplicationWindow::widgets_of(window.id());
@@ -286,7 +289,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     f(nonnull_mut!(widget_opt))
                 }
             }
-        },
+        }
 
         EventType::WindowRestored => {
             let widgets_map = ApplicationWindow::widgets_of(window.id());
@@ -299,7 +302,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     f(nonnull_mut!(widget_opt))
                 }
             }
-        },
+        }
 
         EventType::FocusIn => event = Some(evt),
         EventType::FocusOut => event = Some(evt),

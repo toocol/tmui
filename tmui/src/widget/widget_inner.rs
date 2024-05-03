@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+use tlib::object::ObjectId;
+
 use super::{EventBubble, WidgetImpl};
 
 pub(crate) trait WidgetInnerExt {
@@ -26,6 +30,10 @@ pub(crate) trait WidgetInnerExt {
     fn is_manage_by_container(&self) -> bool;
 
     fn set_manage_by_container(&mut self, manage_by_container: bool);
+
+    fn children_index(&self) -> &HashSet<ObjectId>;
+
+    fn children_index_mut(&mut self) -> &mut HashSet<ObjectId>;
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -97,6 +105,16 @@ macro_rules! widget_inner_ext_impl {
         #[inline]
         fn set_manage_by_container(&mut self, manage_by_container: bool) {
             self.widget_props_mut().manage_by_container = manage_by_container
+        }
+
+        #[inline]
+        fn children_index(&self) -> &HashSet<ObjectId> {
+            &self.widget_props().children_index
+        }
+
+        #[inline]
+        fn children_index_mut(&mut self) -> &mut HashSet<ObjectId> {
+            &mut self.widget_props_mut().children_index
         }
     };
 }

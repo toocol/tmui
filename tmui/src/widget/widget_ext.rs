@@ -1,14 +1,12 @@
 use super::{
-    callbacks::Callbacks, EventBubble, Font, ReflectSpacingCapable, SizeHint, Transparency,
-    WidgetImpl,
+    callbacks::Callbacks, widget_inner::WidgetInnerExt, EventBubble, Font, ReflectSpacingCapable,
+    SizeHint, Transparency, WidgetImpl,
 };
 use crate::{
+    animation::snapshot::ReflectSnapshot,
     application_window::ApplicationWindow,
     font::FontTypeface,
-    graphics::{
-        border::Border,
-        element::ElementImpl,
-    },
+    graphics::{border::Border, element::ElementImpl},
     primitive::Message,
     widget::WidgetSignals,
 };
@@ -770,7 +768,11 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        let mut child = self.widget_props().child.as_ref().map(|c| c.as_ref().as_ptr());
+        let mut child = self
+            .widget_props()
+            .child
+            .as_ref()
+            .map(|c| c.as_ref().as_ptr());
 
         if child.is_none() {
             unsafe {
@@ -786,7 +788,11 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        let mut child = self.widget_props_mut().child.as_mut().map(|c| c.as_mut().as_ptr_mut());
+        let mut child = self
+            .widget_props_mut()
+            .child
+            .as_mut()
+            .map(|c| c.as_mut().as_ptr_mut());
 
         if child.is_none() {
             unsafe {
@@ -867,6 +873,10 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn hide(&mut self) {
+        if let Some(snapshot) = cast_mut!(self as Snapshot) {
+            snapshot.start(false);
+        }
+
         self.set_property("visible", false.to_value());
 
         if !self.is_animation_progressing() && self.window().initialized() {
@@ -877,6 +887,10 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn show(&mut self) {
+        if let Some(snapshot) = cast_mut!(self as Snapshot) {
+            snapshot.start(true);
+        }
+
         self.set_property("visible", true.to_value());
         self.set_rerender_styles(true);
         self.update();
@@ -889,6 +903,10 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_focus(&mut self, focus: bool) {
+        if !self.enable_focus() {
+            return;
+        }
+
         let id = if focus {
             if self.is_focus() {
                 return;
@@ -909,12 +927,21 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
+        let mut resized = false;
+
         if let Some(width) = width {
-            self.set_fixed_width(width)
+            self.set_fixed_width(width);
+            resized = true;
         }
         if let Some(height) = height {
-            self.set_fixed_height(height)
+            self.set_fixed_height(height);
+            resized = true;
         }
+
+        if resized {
+            emit!(self.size_changed(), self.size())
+        }
+
         if self.id() != self.window_id() {
             if !self.window().initialized() {
                 return;
@@ -984,7 +1011,8 @@ impl<T: WidgetImpl> WidgetExt for T {
                 return;
             }
 
-            self.widget_props_mut().fixed_height_ration = height as f32 / parent_size.height() as f32;
+            self.widget_props_mut().fixed_height_ration =
+                height as f32 / parent_size.height() as f32;
         }
     }
 
@@ -1056,6 +1084,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_font(&mut self, font: Font) {
         self.widget_props_mut().font = font;
+        self.font_changed();
     }
 
     #[inline]
@@ -1076,7 +1105,8 @@ impl<T: WidgetImpl> WidgetExt for T {
             typefaces.push(typeface);
         }
         self.widget_props_mut().font.set_typefaces(typefaces);
-        self.update()
+        self.update();
+        self.font_changed();
     }
 
     #[inline]
@@ -1589,15 +1619,11 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn descendant_of(&self, id: ObjectId) -> bool {
-        let mut parent = self.get_parent_ref();
-        while let Some(p) = parent {
-            if p.id() == id {
-                return true;
-            }
-
-            parent = p.get_parent_ref();
+        if let Some(p) = self.window().finds_by_id(id) {
+            p.children_index().contains(&self.id())
+        } else {
+            false
         }
-        false
     }
 
     #[inline]
@@ -1725,7 +1751,9 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn overlaid_rect(&self) -> Rect {
-        self.get_property("overlaid_rect").map(|v| v.get::<Rect>()).unwrap_or_default()
+        self.get_property("overlaid_rect")
+            .map(|v| v.get::<Rect>())
+            .unwrap_or_default()
     }
 
     #[inline]

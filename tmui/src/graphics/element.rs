@@ -270,7 +270,13 @@ pub trait ElementImpl:
     + ElementSignals
     + 'static
 {
+    #[inline]
+    fn before_renderer(&mut self) {}
+
     fn on_renderer(&mut self, cr: &DrawingContext);
+
+    #[inline]
+    fn after_renderer(&mut self) {}
 }
 
 pub trait ElementAcquire: ElementImpl + Default {}

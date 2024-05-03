@@ -19,7 +19,7 @@ use crate::{
 };
 use derivative::Derivative;
 use log::error;
-use std::{ptr::NonNull, slice::Iter};
+use std::{collections::HashSet, ptr::NonNull, slice::Iter};
 use tlib::{
     bitflags::bitflags,
     emit,
@@ -40,6 +40,7 @@ pub struct Widget {
 
     child: Option<Box<dyn WidgetImpl>>,
     child_ref: WidgetHnd,
+    children_index: HashSet<ObjectId>,
 
     old_image_rect: Rect,
     child_image_rect_union: Rect,
@@ -346,6 +347,26 @@ impl Widget {
     }
 }
 
+#[inline]
+pub fn index_children(mut widget: &mut dyn WidgetImpl) {
+    loop {
+        let ptr = widget.as_ptr_mut();
+
+        let id = widget.id();
+        let ids = widget.children_index();
+
+        let parent = ptr_mut!(ptr).get_parent_mut();
+
+        if let Some(p) = parent {
+            p.children_index_mut().insert(id);
+            p.children_index_mut().extend(ids);
+            widget = p;
+        } else {
+            break;
+        }
+    }
+}
+
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";
 }
@@ -437,8 +458,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         }
 
         let mut geometry = self.rect();
-        self.set_rect_record(geometry);
-        self.set_image_rect_record(self.image_rect());
 
         if geometry.width() == 0 || geometry.height() == 0 {
             return;
@@ -529,6 +548,12 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         painter.restore();
 
         self.set_resize_redraw(false);
+    }
+
+    #[inline]
+    fn after_renderer(&mut self) {
+        self.set_rect_record(self.rect());
+        self.set_image_rect_record(self.image_rect());
     }
 }
 

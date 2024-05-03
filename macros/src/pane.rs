@@ -1,9 +1,9 @@
 use proc_macro2::Ident;
 use quote::quote;
 
-pub(crate) fn generate_pane_add_child() -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_pane_add_child(use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
-        use tmui::application_window::ApplicationWindow;
+        use #use_prefix::application_window::ApplicationWindow;
 
         if self.container.children.len() >= 2 {
             tlib::log::error!("`Pane` can only have two child component.");
@@ -37,7 +37,10 @@ pub(crate) fn generate_pane_inner_init() -> syn::Result<proc_macro2::TokenStream
     ))
 }
 
-pub(crate) fn generate_pane_impl(name: &Ident, use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_pane_impl(
+    name: &Ident,
+    use_prefix: &Ident,
+) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         impl PaneExt for #name {
             #[inline]

@@ -183,7 +183,6 @@ impl ScrollAreaGenericExt for ScrollArea {
         }
 
         ApplicationWindow::initialize_dynamic_component(area.as_mut());
-        // self.area = Some(area);
         self.container.children.insert(0, area)
     }
 
