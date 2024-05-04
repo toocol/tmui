@@ -338,13 +338,6 @@ impl Widget {
             child.propagate_set_transparency(transparency)
         }
     }
-
-    #[inline]
-    fn notify_overliad_rect(&mut self, overlaid: Rect) {
-        if let Some(child) = self.get_child_mut() {
-            child.set_overlaid_rect(overlaid)
-        }
-    }
 }
 
 #[inline]
@@ -437,10 +430,6 @@ impl ObjectImpl for Widget {
                 let transparency = value.get::<Transparency>();
                 self.notify_propagate_transparency(transparency);
             }
-            "overlaid_rect" => {
-                let overlaid = value.get::<Rect>();
-                self.notify_overliad_rect(overlaid);
-            }
             _ => {}
         }
     }
@@ -492,9 +481,12 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             }
         }
 
-        let overlaid = self.overlaid_rect();
-        if overlaid.is_valid() {
-            painter.clip_rect_global(overlaid, ClipOp::Difference);
+        for (&id, &overlaid) in self.window().overlaid_rects().iter() {
+            if let Some(widget) = self.window().finds_by_id(id) {
+                if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
+                    painter.clip_rect_global(overlaid, ClipOp::Difference);
+                }
+            }
         }
 
         painter_clip(self, &mut painter, self.styles_redraw_region().iter());
@@ -664,8 +656,13 @@ impl PointEffective for Widget {
         if !self_rect.contains(point) {
             return false;
         }
-        if self.overlaid_rect().contains(point) {
-            return false;
+        for (&id, overlaid) in self.window().overlaid_rects().iter() {
+            if self.descendant_of(id) || self.id() == id {
+                continue;
+            }
+            if overlaid.contains(point) {
+                return false;
+            }
         }
 
         if let Some(child) = self.get_child_ref() {

@@ -118,12 +118,6 @@ impl ObjectImpl for Container {
                     child.propagate_set_transparency(transparency)
                 }
             }
-            "overlaid_rect" => {
-                let overlaid = value.get::<Rect>();
-                for child in self.children.iter_mut() {
-                    child.set_overlaid_rect(overlaid)
-                }
-            }
             _ => {}
         }
     }
@@ -182,6 +176,15 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
 
         if !self_rect.contains(point) {
             return false;
+        }
+
+        for (&id, overlaid) in self.window().overlaid_rects().iter() {
+            if self.descendant_of(id) || self.id() == id {
+                continue;
+            }
+            if overlaid.contains(point) {
+                return false;
+            }
         }
 
         for child in self.children() {

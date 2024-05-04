@@ -33,8 +33,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_pressed(&evt);
             });
 
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+
+                if let Some(ref modal) = modal_widget {
+                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        continue;
+                    }
+                }
 
                 if widget.point_effective(&pos) {
                     let widget_point = widget.map_to_widget(&pos);
@@ -61,11 +69,14 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_released(&evt);
             });
 
+            let pressed_widget = window.pressed_widget();
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
-                if window.pressed_widget() != 0 {
-                    if widget.id() == window.pressed_widget() {
+                if pressed_widget != 0 {
+                    if widget.id() == pressed_widget {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
 
@@ -77,17 +88,25 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                         }
                         break;
                     }
-                } else if widget.point_effective(&pos) {
-                    let widget_point = widget.map_to_widget(&pos);
-                    evt.set_position((widget_point.x(), widget_point.y()));
-
-                    widget.on_mouse_released(evt.as_ref());
-                    widget.inner_mouse_released(evt.as_ref(), false);
-
-                    if widget.super_type().is_a(SharedWidget::static_type()) {
-                        event = Some(evt);
+                } else {
+                    if let Some(ref modal) = modal_widget {
+                        if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                            continue;
+                        }
                     }
-                    break;
+
+                    if widget.point_effective(&pos) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+
+                        widget.on_mouse_released(evt.as_ref());
+                        widget.inner_mouse_released(evt.as_ref(), false);
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -102,8 +121,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_move(&evt);
             });
 
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+
+                if let Some(ref modal) = modal_widget {
+                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        continue;
+                    }
+                }
 
                 let widget_position = widget.map_to_widget(&pos);
 
@@ -181,8 +208,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_whell(&evt);
             });
 
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+
+                if let Some(ref modal) = modal_widget {
+                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        continue;
+                    }
+                }
 
                 if widget.point_effective(&evt.position().into()) {
                     let widget_point = widget.map_to_widget(&pos);

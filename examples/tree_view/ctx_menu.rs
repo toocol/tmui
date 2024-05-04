@@ -2,10 +2,10 @@ use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     tree_view::{
-        cell::{
-            cell_render::TextCellRender,
-            Cell,
-        }, node_render::NodeRender, tree_view_object::TreeViewObject, TreeView
+        cell::{cell_render::TextCellRender, Cell},
+        node_render::NodeRender,
+        tree_view_object::TreeViewObject,
+        TreeView,
     },
     widget::WidgetImpl,
 };
@@ -32,15 +32,24 @@ impl ObjectImpl for CtxMenu {
         self.selection_list.set_vexpand(true);
         self.selection_list.set_hexpand(true);
         self.selection_list.set_mouse_tracking(true);
-        self.selection_list.get_store_mut().root_mut().add_node(&Selection {name: "New seesion"});
+        self.selection_list
+            .get_store_mut()
+            .root_mut()
+            .add_node(&Selection {
+                name: "New seesion",
+            });
     }
 }
 
 impl WidgetImpl for CtxMenu {}
 
 impl PopupImpl for CtxMenu {
-    fn calculate_position(&self, _:Rect, point:Point) -> Point {
+    fn calculate_position(&self, _: Rect, point: Point) -> Point {
         point
+    }
+
+    fn is_modal(&self) -> bool {
+        true
     }
 }
 

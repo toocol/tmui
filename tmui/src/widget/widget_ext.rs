@@ -586,6 +586,11 @@ pub trait WidgetExt {
     /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
     fn propagate_update_styles_rect(&mut self, rect: CoordRect);
 
+    /// Check if the widget is the ancestor of the widget represented by the specified id.
+    ///
+    /// Go to[`Function defination`](WidgetExt::ancestor_of) (Defined in [`WidgetExt`])
+    fn ancestor_of(&self, id: ObjectId) -> bool;
+
     /// Check if the widget is a descendant of the widget represented by the specified id.
     ///
     /// Go to[`Function defination`](WidgetExt::descendant_of) (Defined in [`WidgetExt`])
@@ -701,10 +706,6 @@ pub trait WidgetExt {
     ///
     /// Go to[`Function defination`](WidgetExt::set_occupy_space) (Defined in [`WidgetExt`])
     fn set_occupy_space(&mut self, occupy_space: bool);
-
-    fn overlaid_rect(&self) -> Rect;
-
-    fn set_overlaid_rect(&mut self, rect: Rect);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -1618,6 +1619,11 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
+    fn ancestor_of(&self, id: ObjectId) -> bool {
+        self.children_index().contains(&id)
+    }
+
+    #[inline]
     fn descendant_of(&self, id: ObjectId) -> bool {
         if let Some(p) = self.window().finds_by_id(id) {
             p.children_index().contains(&self.id())
@@ -1747,17 +1753,5 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_occupy_space(&mut self, occupy_space: bool) {
         self.widget_props_mut().occupy_space = occupy_space;
-    }
-
-    #[inline]
-    fn overlaid_rect(&self) -> Rect {
-        self.get_property("overlaid_rect")
-            .map(|v| v.get::<Rect>())
-            .unwrap_or_default()
-    }
-
-    #[inline]
-    fn set_overlaid_rect(&mut self, rect: Rect) {
-        self.set_property("overlaid_rect", rect.to_value())
     }
 }

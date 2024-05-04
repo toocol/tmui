@@ -55,11 +55,13 @@ pub struct ApplicationWindow {
 
     focused_widget: ObjectId,
     pressed_widget: ObjectId,
+    modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
     high_load_request: bool,
 
     run_after: Option<FnRunAfter>,
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
+    overlaid_rects: HashMap<ObjectId, Rect>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -465,7 +467,33 @@ impl ApplicationWindow {
             .for_each(|hnd| nonnull_mut!(hnd).iter_execute())
     }
 
+    #[inline]
+    pub(crate) fn overlaid_rects(&self) -> &HashMap<ObjectId, Rect> {
+        &self.overlaid_rects
+    }
+
+    #[inline]
+    pub(crate) fn overlaid_rects_mut(&mut self) -> &mut HashMap<ObjectId, Rect> {
+        &mut self.overlaid_rects
+    }
+
+    #[inline]
+    pub(crate) fn set_modal_widget(&mut self, id: Option<ObjectId>) {
+        self.modal_widget = id;
+    }
+
+    #[inline]
+    pub(crate) fn modal_widget(&mut self) -> Option<&mut dyn WidgetImpl> {
+        if let Some(ref id) = self.modal_widget {
+            self.widgets.get_mut(id).map(|v| nonnull_mut!(v))
+        } else {
+            None
+        }
+    }
+
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
+    ///
+    /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
         for w in Self::widgets_of(self.id()).values_mut() {
             let widget = nonnull_mut!(w);

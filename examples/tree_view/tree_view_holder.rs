@@ -38,6 +38,8 @@ impl ObjectImpl for TreeViewHolder {
     fn construct(&mut self) {
         self.parent_construct();
 
+        self.tree_view
+            .set_layout_mode(tmui::scroll_area::LayoutMode::Overlay);
         self.tree_view.add_popup(CtxMenu::new());
         self.tree_view.start_loading();
         self.tree_view.set_hexpand(true);
@@ -68,10 +70,7 @@ impl ObjectImpl for TreeViewHolder {
                 node.id(),
                 evt.position()
             );
-            let view = 
-            node.get_view()
-                .downcast_mut::<TreeView>()
-                .unwrap();
+            let view = node.get_view().downcast_mut::<TreeView>().unwrap();
             view.show_popup(view.map_to_global(&evt.position().into()));
         });
         self.tree_view.register_node_enter(|node, _| {

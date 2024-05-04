@@ -1,6 +1,7 @@
 use crate::{
     application::wheel_scroll_lines,
     graphics::painter::Painter,
+    overlay::OverlaidRegister,
     prelude::*,
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
@@ -517,6 +518,8 @@ impl ScrollBar {
         new_value
     }
 }
+
+impl OverlaidRegister for ScrollBar {}
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]

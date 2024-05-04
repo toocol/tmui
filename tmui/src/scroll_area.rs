@@ -2,6 +2,7 @@ use crate::{
     application_window::ApplicationWindow,
     container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutManager,
+    overlay::OverlaidRegister,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition},
 };
@@ -79,7 +80,6 @@ impl ScrollAreaExt for ScrollArea {
             return None;
         }
         self.container.children.first().map(|w| w.as_ref())
-        // self.area.as_ref().map(|w| w.as_ref())
     }
 
     #[inline]
@@ -88,7 +88,6 @@ impl ScrollAreaExt for ScrollArea {
             return None;
         }
         self.container.children.first_mut().map(|w| w.as_mut())
-        // self.area.as_mut().map(|w| w.as_mut())
     }
 
     #[inline]
@@ -98,7 +97,6 @@ impl ScrollAreaExt for ScrollArea {
             .last()
             .map(|w| w.downcast_ref::<ScrollBar>().unwrap())
             .unwrap()
-        // &self.scroll_bar
     }
 
     #[inline]
@@ -108,7 +106,6 @@ impl ScrollAreaExt for ScrollArea {
             .last_mut()
             .map(|w| w.downcast_mut::<ScrollBar>().unwrap())
             .unwrap()
-        // &mut self.scroll_bar
     }
 
     #[inline]
@@ -179,7 +176,7 @@ impl ScrollAreaGenericExt for ScrollArea {
         area.set_hexpand(true);
         if self.layout_mode == LayoutMode::Overlay {
             connect!(area, invalidated(), self.scroll_bar_mut(), update());
-            area.set_overlaid_rect(self.scroll_bar().rect());
+            self.scroll_bar().register_overlaid();
         }
 
         ApplicationWindow::initialize_dynamic_component(area.as_mut());
@@ -344,9 +341,7 @@ fn layout_normal(widget: &mut dyn ScrollAreaExt) {
         }
     }
 
-    if let Some(area) = widget.area_mut() {
-        area.set_overlaid_rect(Rect::default());
-    }
+    scroll_bar.remove_overlaid();
 }
 
 fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
@@ -387,9 +382,7 @@ fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
         }
     }
 
-    if let Some(area) = widget.area_mut() {
-        area.set_overlaid_rect(scroll_bar.rect());
-    }
+    scroll_bar.register_overlaid();
 }
 
 impl ContainerScaleCalculate for ScrollArea {
