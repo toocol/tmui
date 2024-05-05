@@ -14,9 +14,7 @@ impl ObjectSubclass for MyWidget {
 }
 
 impl ObjectImpl for MyWidget {
-    fn construct(&mut self) {
-        self.parent_construct();
-
+    fn initialize(&mut self) {
         self.set_vexpand(true);
         self.set_hexpand(true);
     }
@@ -27,6 +25,7 @@ impl WidgetImpl for MyWidget {
         self.window().create_window(
             WindowBuilder::new()
                 .config(WindowConfig::builder().width(300).height(100).build())
+                .modal(true)
                 .on_activate(|window| {
                     println!(
                         "{} => Child window created.",

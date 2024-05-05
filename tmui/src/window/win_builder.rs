@@ -1,9 +1,10 @@
-use super::{Window, win_config::WindowConfig};
+use super::{win_config::WindowConfig, Window};
 use crate::{application::FnActivate, application_window::ApplicationWindow};
 
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
+    modal: bool,
     on_activate: Option<FnActivate>,
 }
 
@@ -13,9 +14,19 @@ impl WindowBuilder {
         Self::default()
     }
 
+    /// Set the configuration of new window.
     #[inline]
     pub fn config(mut self, config: WindowConfig) -> Self {
         self.win_cfg = Some(config);
+        self
+    }
+
+    /// Set the new window is modal or not.
+    ///
+    /// The default value was [`false`]
+    #[inline]
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -37,6 +48,7 @@ impl WindowBuilder {
                 .expect("build `Window` must specify the window config."),
         );
         window.on_activate = self.on_activate;
+        window.modal = self.modal;
 
         window
     }

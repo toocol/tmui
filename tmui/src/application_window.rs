@@ -231,7 +231,10 @@ impl ApplicationWindow {
             return;
         }
 
-        self.send_message(Message::CreateWindow(window_bld.build()));
+        let mut window = window_bld.build();
+        window.set_parent(self.winit_id.unwrap());
+
+        self.send_message(Message::CreateWindow(window));
     }
 
     #[inline]

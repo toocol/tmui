@@ -25,7 +25,10 @@ use std::{
 };
 use tipc::{ipc_event::IpcEvent, raw_sync::Timeout, IpcNode};
 use tlib::{
-    events::{DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized, WindowMinimized, WindowRestored},
+    events::{
+        DeltaType, EventType, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized, WindowMinimized,
+        WindowRestored,
+    },
     figure::Point,
     global::to_static,
     namespace::{KeyCode, KeyboardModifier, MouseButton},
@@ -54,6 +57,7 @@ pub(crate) struct WindowsProcess<
     window_extremed: HashMap<WindowId, bool>,
     main_window_id: Option<WindowId>,
     proxy: Option<EventLoopProxy<Message>>,
+    modal_windows: Vec<WindowId>,
 }
 
 impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
@@ -70,6 +74,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
             window_extremed: HashMap::new(),
             main_window_id: None,
             proxy: None,
+            modal_windows: vec![],
         }
     }
 
@@ -217,15 +222,25 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                                 if window.winit_window().is_maximized() {
                                     self.window_extremed.insert(window_id, true);
-                                    window.send_input(Message::Event(Box::new(WindowMaximized::new())));
+                                    window.send_input(Message::Event(Box::new(
+                                        WindowMaximized::new(),
+                                    )));
                                 } else if window.winit_window().is_minimized().unwrap_or_default() {
                                     self.window_extremed.insert(window_id, true);
-                                    window.send_input(Message::Event(Box::new(WindowMinimized::new())));
+                                    window.send_input(Message::Event(Box::new(
+                                        WindowMinimized::new(),
+                                    )));
                                 } else {
-                                    let is_extremed = self.window_extremed.get(&window_id).copied().unwrap_or_default();
+                                    let is_extremed = self
+                                        .window_extremed
+                                        .get(&window_id)
+                                        .copied()
+                                        .unwrap_or_default();
                                     if is_extremed {
                                         self.window_extremed.insert(window_id, false);
-                                        window.send_input(Message::Event(Box::new(WindowRestored::new())));
+                                        window.send_input(Message::Event(Box::new(
+                                            WindowRestored::new(),
+                                        )));
                                     }
                                 }
 
@@ -237,6 +252,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             // Window close requested event.
                             WindowEvent::CloseRequested => {
+                                self.modal_windows.retain(|id| window_id != *id);
                                 close_window(window_id, main_window_id, window, target);
                             }
 
@@ -458,8 +474,12 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 logic_window.on_activate = win.take_on_activate();
 
                                 let phys_window = physical_window.into_phys_window();
+                                let win_id = phys_window.window_id();
 
-                                self.windows.insert(phys_window.window_id(), phys_window);
+                                self.windows.insert(win_id, phys_window);
+                                if win.is_modal() {
+                                    self.modal_windows.push(win_id)
+                                }
 
                                 ui_joins.push(super::start_ui_runtime(
                                     win.index(),
@@ -473,6 +493,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     self.windows.get_mut(&window_id).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", window_id)
                                     });
+                                self.modal_windows.retain(|id| window_id != *id);
                                 close_window(window_id, main_window_id, window, target)
                             }
 

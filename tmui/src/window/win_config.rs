@@ -2,12 +2,12 @@ use crate::{graphics::icon::Icon, primitive::Message};
 use derivative::Derivative;
 use tlib::{
     figure::Size,
-    typedef::WinitIcon,
+    typedef::{WinitIcon, WinitWindowBuilder},
     winit::{
         dpi::PhysicalSize,
         error::OsError,
         event_loop::EventLoopWindowTarget,
-        window::{Window, WindowBuilder, WindowButtons},
+        window::{Window, WindowButtons},
     },
 };
 
@@ -142,10 +142,10 @@ impl WindowConfig {
         self.active
     }
 
-    pub(crate) fn create_window_builder(self) -> WindowBuilder {
+    pub(crate) fn create_window_builder(self) -> WinitWindowBuilder {
         let (width, height) = self.size();
 
-        let mut window_bld = WindowBuilder::new()
+        let mut window_bld = WinitWindowBuilder::new()
             .with_title(&self.title)
             .with_inner_size(WinitSize::Physical(PhysicalSize::new(width, height)))
             .with_decorations(self.decoration)
