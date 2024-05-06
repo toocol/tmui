@@ -38,10 +38,11 @@ use tlib::{
         event::{ElementState, MouseScrollDelta},
         event_loop::{ControlFlow, EventLoopProxy, EventLoopWindowTarget},
         keyboard::{Key, ModifiersState, NamedKey, PhysicalKey},
-        platform::windows::WindowExtWindows,
         window::WindowId,
     },
 };
+#[cfg(windows_platform)]
+use tlib::winit::platform::windows::WindowExtWindows;
 
 pub(crate) struct WindowsProcess<
     'a,
@@ -253,12 +254,14 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             WindowEvent::CloseRequested => {
                                 self.modal_windows.retain(|id| window_id != *id);
                                 if let Some(modal) = self.modal_windows.last() {
+                                    #[cfg(windows_platform)]
                                     self.windows.iter().for_each(|(_, w)| {
                                         if w.window_id().eq(modal) {
                                             w.winit_window().set_enable(true)
                                         }
                                     })
                                 } else {
+                                    #[cfg(windows_platform)]
                                     self.windows
                                         .iter()
                                         .for_each(|(_, w)| w.winit_window().set_enable(true));
@@ -497,6 +500,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                                 if win.is_modal() {
                                     self.modal_windows.push(win_id);
+                                    #[cfg(windows_platform)]
                                     self.windows
                                         .iter()
                                         .for_each(|(_, w)| w.winit_window().set_enable(false))
@@ -513,12 +517,14 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             Message::WindowCloseRequest(window_id) => {
                                 self.modal_windows.retain(|id| window_id != *id);
                                 if let Some(modal) = self.modal_windows.last() {
+                                    #[cfg(windows_platform)]
                                     self.windows.iter().for_each(|(_, w)| {
                                         if w.window_id().eq(modal) {
                                             w.winit_window().set_enable(true)
                                         }
                                     })
                                 } else {
+                                    #[cfg(windows_platform)]
                                     self.windows
                                         .iter()
                                         .for_each(|(_, w)| w.winit_window().set_enable(true));
