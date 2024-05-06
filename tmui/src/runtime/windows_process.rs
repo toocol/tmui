@@ -24,6 +24,8 @@ use std::{
     time::{Duration, Instant},
 };
 use tipc::{ipc_event::IpcEvent, raw_sync::Timeout, IpcNode};
+#[cfg(windows_platform)]
+use tlib::winit::platform::windows::WindowExtWindows;
 use tlib::{
     events::{
         DeltaType, EventType, FocusEvent, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized,
@@ -41,8 +43,6 @@ use tlib::{
         window::WindowId,
     },
 };
-#[cfg(windows_platform)]
-use tlib::winit::platform::windows::WindowExtWindows;
 
 pub(crate) struct WindowsProcess<
     'a,
@@ -211,6 +211,15 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             // Window redraw event.
                             WindowEvent::RedrawRequested => {
                                 let _track = Tracker::start("physical_window_redraw");
+                                #[cfg(macos_platform)]
+                                self.windows
+                                    .get_mut(&window_id)
+                                    .unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", window_id)
+                                    })
+                                    .redraw();
+
+                                #[cfg(not(macos_platform))]
                                 window.redraw();
                             }
 
@@ -253,15 +262,14 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             // Window close requested event.
                             WindowEvent::CloseRequested => {
                                 self.modal_windows.retain(|id| window_id != *id);
+                                #[cfg(windows_platform)]
                                 if let Some(modal) = self.modal_windows.last() {
-                                    #[cfg(windows_platform)]
                                     self.windows.iter().for_each(|(_, w)| {
                                         if w.window_id().eq(modal) {
                                             w.winit_window().set_enable(true)
                                         }
                                     })
                                 } else {
-                                    #[cfg(windows_platform)]
                                     self.windows
                                         .iter()
                                         .for_each(|(_, w)| w.winit_window().set_enable(true));
@@ -516,15 +524,14 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             Message::WindowCloseRequest(window_id) => {
                                 self.modal_windows.retain(|id| window_id != *id);
+                                #[cfg(windows_platform)]
                                 if let Some(modal) = self.modal_windows.last() {
-                                    #[cfg(windows_platform)]
                                     self.windows.iter().for_each(|(_, w)| {
                                         if w.window_id().eq(modal) {
                                             w.winit_window().set_enable(true)
                                         }
                                     })
                                 } else {
-                                    #[cfg(windows_platform)]
                                     self.windows
                                         .iter()
                                         .for_each(|(_, w)| w.winit_window().set_enable(true));
@@ -557,19 +564,17 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             Message::WindowRestoreRequest(window_id) => {
-                                let window =
-                                    self.windows.get(&window_id).unwrap_or_else(|| {
-                                        panic!("Can not find window with id {:?}", window_id)
-                                    });
+                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                    panic!("Can not find window with id {:?}", window_id)
+                                });
                                 window.winit_window().set_maximized(false);
                                 window.winit_window().set_minimized(false);
                             }
 
                             Message::WindowResponse(window_id, closure) => {
-                                let window =
-                                    self.windows.get(&window_id).unwrap_or_else(|| {
-                                        panic!("Can not find window with id {:?}", window_id)
-                                    });
+                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                    panic!("Can not find window with id {:?}", window_id)
+                                });
                                 window.send_input(Message::WindowResponse(window_id, closure))
                             }
 
