@@ -69,6 +69,11 @@ impl Window {
     }
 
     #[inline]
+    pub(crate) fn get_parent(&self) -> WindowId {
+        self.parent.unwrap()
+    }
+
+    #[inline]
     pub fn index(&self) -> usize {
         self.index
     }

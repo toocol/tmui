@@ -41,6 +41,7 @@ pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    parent_window: Option<WindowId>,
     winit_id: Option<WindowId>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
@@ -54,6 +55,7 @@ pub struct ApplicationWindow {
     iter_executors: Vec<IterExecutorHnd>,
 
     focused_widget: ObjectId,
+    focused_widget_mem: ObjectId,
     pressed_widget: ObjectId,
     modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
@@ -157,11 +159,6 @@ impl ApplicationWindow {
             panic!("Get `ApplicationWindow` in the wrong thread.");
         }
         nonnull_mut!(window)
-    }
-
-    #[inline]
-    pub fn send_message_with_id(id: ObjectId, message: Message) {
-        Self::window_of(id).send_message(message)
     }
 
     #[inline]
@@ -295,6 +292,17 @@ impl ApplicationWindow {
         widget.update();
     }
 
+    /// If the window has parent window(created by other window),
+    /// the parent window will execute the given function closure.
+    pub fn call_response<F>(&self, f: F)
+    where
+        F: FnOnce(&mut ApplicationWindow) + 'static + Send + Sync,
+    {
+        if let Some(parent_window) = self.parent_window {
+            self.send_message(Message::WindowResponse(parent_window, Box::new(f)))
+        }
+    }
+
     /// Should set the parent of widget before use this function.
     pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
         INTIALIZE_PHASE.with(|p| {
@@ -371,6 +379,30 @@ impl ApplicationWindow {
             }
         }
         self.focused_widget = id
+    }
+
+    /// Let the focused widget lose focus temporarily.
+    pub(crate) fn temp_lose_focus(&mut self) {
+        if self.focused_widget != 0 {
+            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+                widget.on_lose_focus();
+            }
+
+            self.focused_widget_mem = self.focused_widget;
+            self.focused_widget = 0;
+        }
+    }
+
+    /// Restore the previous focused widget.
+    pub(crate) fn restore_focus(&mut self) {
+        if self.focused_widget_mem != 0 {
+            if let Some(widget) = self.finds_by_id_mut(self.focused_widget_mem) {
+                widget.on_get_focus();
+            }
+
+            self.focused_widget = self.focused_widget_mem;
+            self.focused_widget_mem = 0;
+        }
     }
 
     #[inline]
@@ -492,6 +524,11 @@ impl ApplicationWindow {
         } else {
             None
         }
+    }
+
+    #[inline]
+    pub(crate) fn set_parent_window(&mut self, parent: WindowId) {
+        self.parent_window = Some(parent)
     }
 
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).

@@ -19,6 +19,7 @@ use tlib::winit::window::WindowId;
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     window_id: Option<WindowId>,
+    parent_window: Option<WindowId>,
     gl_env: Option<Arc<GlEnv>>,
 
     bitmap: Arc<RwLock<Bitmap>>,
@@ -57,6 +58,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         let lock = master.as_ref().map(|m| m.read().buffer_lock());
         Self {
             window_id: Some(window_id),
+            parent_window: None, 
             gl_env,
             bitmap,
             lock,
@@ -84,6 +86,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         let lock = Some(slave.read().buffer_lock());
         Self {
             window_id: None,
+            parent_window: None,
             gl_env: None,
             bitmap,
             lock,
@@ -100,6 +103,17 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             on_request_receive: None,
         }
     }
+
+    #[inline]
+    pub(crate) fn set_parent_window(&mut self, parent: WindowId) {
+        self.parent_window = Some(parent);
+    }
+
+    #[inline]
+    pub(crate) fn get_parent_window(&self) -> Option<WindowId> {
+        self.parent_window
+    }
+
 
     #[inline]
     pub fn window_id(&self) -> Option<WindowId> {

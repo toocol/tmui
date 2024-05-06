@@ -1444,7 +1444,8 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape) {
-        ApplicationWindow::send_message_with_id(self.window_id(), Message::SetCursorShape(cursor))
+        let window = self.window();
+        window.send_message(Message::SetCursorShape(cursor, window.winit_id().unwrap()))
     }
 
     #[inline]

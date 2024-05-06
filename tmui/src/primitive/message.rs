@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{fmt::Debug, time::Instant};
 use tipc::ipc_event::IpcEvent;
 use tlib::{
     events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
@@ -8,15 +8,14 @@ use tlib::{
     winit::window::WindowId,
 };
 
-use crate::window::Window;
+use crate::{application_window::ApplicationWindow, window::Window};
 
-#[derive(Debug)]
-pub enum Message {
+pub(crate) enum Message {
     /// VSync signal to redraw the window
     VSync(WindowId, Instant),
 
     /// Set the cursor shape by user.
-    SetCursorShape(SystemCursorShape),
+    SetCursorShape(SystemCursorShape, WindowId),
 
     /// Events like MouseEvent, KeyEvent...
     Event(Event),
@@ -38,6 +37,25 @@ pub enum Message {
 
     /// Reqeust window to restore.
     WindowRestoreRequest(WindowId),
+
+    WindowResponse(WindowId, Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>)
+}
+
+impl Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::VSync(arg0, arg1) => f.debug_tuple("VSync").field(arg0).field(arg1).finish(),
+            Self::SetCursorShape(arg0, arg1) => f.debug_tuple("SetCursorShape").field(arg0).field(arg1).finish(),
+            Self::Event(arg0) => f.debug_tuple("Event").field(arg0).finish(),
+            Self::CreateWindow(arg0) => f.debug_tuple("CreateWindow").field(arg0).finish(),
+            Self::WindowClosed => write!(f, "WindowClosed"),
+            Self::WindowCloseRequest(arg0) => f.debug_tuple("WindowCloseRequest").field(arg0).finish(),
+            Self::WindowMinimizeRequest(arg0) => f.debug_tuple("WindowMinimizeRequest").field(arg0).finish(),
+            Self::WindowMaximizeRequest(arg0) => f.debug_tuple("WindowMaximizeRequest").field(arg0).finish(),
+            Self::WindowRestoreRequest(arg0) => f.debug_tuple("WindowRestoreRequest").field(arg0).finish(),
+            Self::WindowResponse(arg0, _) => f.debug_tuple("WindowResponse").field(arg0).finish(),
+        }
+    }
 }
 
 impl PayloadWeight for Message {
@@ -59,7 +77,7 @@ impl<T: 'static + Copy + Sync + Send> From<Message> for IpcEvent<T> {
     fn from(val: Message) -> Self {
         match val {
             Message::VSync(_, a) => IpcEvent::VSync(a),
-            Message::SetCursorShape(a) => IpcEvent::SetCursorShape(a),
+            Message::SetCursorShape(a, _) => IpcEvent::SetCursorShape(a),
             Message::Event(evt) => convert_event(&evt),
             _ => unreachable!(),
         }

@@ -339,8 +339,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             }
         }
 
-        EventType::FocusIn => event = Some(evt),
-        EventType::FocusOut => event = Some(evt),
+        EventType::FocusIn => {
+            window.restore_focus();
+            event = Some(evt);
+        },
+
+        EventType::FocusOut => { 
+            window.temp_lose_focus();
+            event = Some(evt);
+        },
+
         EventType::Moved => {}
         EventType::DroppedFile => {}
         EventType::HoveredFile => {}

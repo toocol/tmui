@@ -6,4 +6,4 @@ pub mod global_watch;
 pub(crate) mod message;
 pub(crate) mod shared_channel;
 
-pub use message::*;
+pub(crate) use message::*;

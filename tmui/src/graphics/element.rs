@@ -161,9 +161,9 @@ impl<T: ElementImpl> ElementExt for T {
     fn update(&mut self) {
         if !self.invalidate() {
             emit!(self.invalidated());
+            self.set_property("invalidate", true.to_value());
+            Board::notify_update()
         }
-        self.set_property("invalidate", true.to_value());
-        Board::notify_update()
     }
 
     #[inline]
