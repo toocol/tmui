@@ -1,9 +1,10 @@
-use crate::{application_window::current_window_id, widget::WidgetImpl};
 use super::{board::Board, drawing_context::DrawingContext};
+use crate::{application_window::current_window_id, widget::WidgetImpl};
 use tlib::{
-    figure::{Rect, CoordRegion, CoordRect},
+    figure::{CoordRect, CoordRegion, Rect},
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
+    signal, signals,
 };
 
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
@@ -24,7 +25,8 @@ impl ObjectImpl for Element {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.update();
+        self.set_property("invalidate", true.to_value());
+        Board::notify_update();
 
         let try_window_id = current_window_id();
         if try_window_id != 0 {
@@ -33,8 +35,37 @@ impl ObjectImpl for Element {
     }
 }
 
+pub trait ElementSignals: ActionExt {
+    signals! {
+        ElementSignals:
+
+        /// Emit when element was calling function [`update()`],[`force_update()`]..etc.
+        invalidated();
+    }
+}
+impl<T: ElementImpl> ElementSignals for T {}
+
+pub trait ElementPropsAcquire {
+    /// Get the property reference of Element.
+    fn element_props(&self) -> &Element;
+
+    /// Get the mutable property reference of Element.
+    fn element_props_mut(&mut self) -> &mut Element;
+}
+impl ElementPropsAcquire for Element {
+    #[inline]
+    fn element_props(&self) -> &Element {
+        self
+    }
+
+    #[inline]
+    fn element_props_mut(&mut self) -> &mut Element {
+        self
+    }
+}
+
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
-pub trait ElementExt: 'static {
+pub trait ElementExt {
     /// Set the application window id which the element belongs to.
     ///
     /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
@@ -115,21 +146,24 @@ pub trait ElementExt: 'static {
     fn set_rect_record(&mut self, rect: Rect);
 }
 
-impl ElementExt for Element {
+impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn set_window_id(&mut self, id: ObjectId) {
-        self.window_id = id
+        self.element_props_mut().window_id = id
     }
 
     #[inline]
     fn window_id(&self) -> ObjectId {
-        self.window_id
+        self.element_props().window_id
     }
 
     #[inline]
     fn update(&mut self) {
-        self.set_property("invalidate", true.to_value());
-        Board::notify_update()
+        if !self.invalidate() {
+            emit!(self.invalidated());
+            self.set_property("invalidate", true.to_value());
+            Board::notify_update()
+        }
     }
 
     #[inline]
@@ -140,61 +174,64 @@ impl ElementExt for Element {
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
-        self.redraw_region.add_rect(rect)
+        self.update();
+        self.element_props_mut().redraw_region.add_rect(rect)
     }
 
     #[inline]
     fn update_styles_rect(&mut self, rect: CoordRect) {
-        self.styles_redraw_region.add_rect(rect)
+        self.update();
+        self.element_props_mut().styles_redraw_region.add_rect(rect)
     }
 
     #[inline]
     fn update_region(&mut self, region: &CoordRegion) {
         if region.is_empty() {
-            return
+            return;
         }
-        self.redraw_region.add_region(region)
+        self.update();
+        self.element_props_mut().redraw_region.add_region(region)
     }
 
     #[inline]
     fn clear_regions(&mut self) {
-        self.redraw_region.clear();
-        self.styles_redraw_region.clear();
+        self.element_props_mut().redraw_region.clear();
+        self.element_props_mut().styles_redraw_region.clear();
     }
 
     #[inline]
     fn redraw_region(&self) -> &CoordRegion {
-        &self.redraw_region
+        &self.element_props().redraw_region
     }
 
     #[inline]
     fn styles_redraw_region(&self) -> &CoordRegion {
-        &self.styles_redraw_region
+        &self.element_props().styles_redraw_region
     }
 
     #[inline]
     fn rect(&self) -> Rect {
-        self.rect
+        self.element_props().rect
     }
 
     #[inline]
     fn set_fixed_width(&mut self, width: i32) {
-        self.rect.set_width(width)
+        self.element_props_mut().rect.set_width(width)
     }
 
     #[inline]
     fn set_fixed_height(&mut self, height: i32) {
-        self.rect.set_height(height)
+        self.element_props_mut().rect.set_height(height)
     }
 
     #[inline]
     fn set_fixed_x(&mut self, x: i32) {
-        self.rect.set_x(x)
+        self.element_props_mut().rect.set_x(x)
     }
 
     #[inline]
     fn set_fixed_y(&mut self, y: i32) {
-        self.rect.set_y(y)
+        self.element_props_mut().rect.set_y(y)
     }
 
     #[inline]
@@ -207,25 +244,39 @@ impl ElementExt for Element {
 
     #[inline]
     fn validate(&mut self) {
-        self.set_property("invalidate", false.to_value())
+        self.set_property("invalidate", false.to_value());
     }
 
     #[inline]
     fn rect_record(&self) -> Rect {
-        self.old_rect
+        self.element_props().old_rect
     }
 
     #[inline]
     fn set_rect_record(&mut self, rect: Rect) {
-        self.old_rect = rect
+        self.element_props_mut().old_rect = rect
     }
 }
 
 /// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>
 /// Each subclass which impl [`WidgetImpl`] will impl this trait automatically.
 #[reflect_trait]
-pub trait ElementImpl: ElementExt + ObjectImpl + ObjectOperation + SuperType + 'static {
+pub trait ElementImpl:
+    ElementExt
+    + ElementPropsAcquire
+    + ObjectImpl
+    + ObjectOperation
+    + SuperType
+    + ElementSignals
+    + 'static
+{
+    #[inline]
+    fn before_renderer(&mut self) {}
+
     fn on_renderer(&mut self, cr: &DrawingContext);
+
+    #[inline]
+    fn after_renderer(&mut self) {}
 }
 
 pub trait ElementAcquire: ElementImpl + Default {}
@@ -270,8 +321,7 @@ mod tests {
 
     #[test]
     fn test_element() {
-        let mut element = Object::new::<Element>(&[("prop1", &&12), ("prop2", &"12")]);
-        element.update();
+        let element = Object::new::<Element>(&[("prop1", &&12), ("prop2", &"12")]);
         assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
         test_is_a(element);
@@ -282,7 +332,6 @@ mod tests {
         assert_eq!(12, element.get_property("prop1").unwrap().get::<i32>());
         assert_eq!("12", element.get_property("prop2").unwrap().get::<String>());
 
-        let element = obj.downcast_ref::<Element>().unwrap();
-        assert!(element.invalidate());
+        let _ = obj.downcast_ref::<Element>().unwrap();
     }
 }

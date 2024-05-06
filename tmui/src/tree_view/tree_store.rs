@@ -14,12 +14,13 @@ use tlib::{
     global::SemanticExt,
     namespace::MouseButton,
     nonnull_mut, nonnull_ref,
-    object::{ObjectId, ObjectOperation, ObjectSubclass},
+    object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass},
     signals,
 };
 
 #[extends(Object, ignore_default = true)]
 pub struct TreeStore {
+    view: WidgetHnd,
     root: Box<TreeNode>,
 
     nodes_buffer: Vec<Option<NonNull<TreeNode>>>,
@@ -31,6 +32,8 @@ pub struct TreeStore {
     enterd_node: Option<NonNull<TreeNode>>,
     hovered_node: Option<NonNull<TreeNode>>,
     selected_node: Option<NonNull<TreeNode>>,
+
+    pub(crate) id_increment: IdGenerator,
 }
 
 pub trait TreeStoreSignals: ActionExt {
@@ -87,9 +90,7 @@ impl TreeStore {
         obj: &dyn TreeViewObject,
     ) -> Option<&mut TreeNode> {
         if self.nodes_cache.contains_key(&parent_id) {
-            let mut tree_node = TreeNode::create_from_obj(obj);
-
-            tree_node.store = self.id();
+            let tree_node = TreeNode::create_from_obj(obj, self.id());
 
             nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap())
                 .add_node_inner(tree_node.boxed())
@@ -147,6 +148,7 @@ impl TreeStore {
         nodes_map.insert(root.id(), NonNull::new(root.as_mut()));
 
         let mut store = Self {
+            view: None,
             object: Default::default(),
             root,
             nodes_buffer: vec![],
@@ -156,11 +158,22 @@ impl TreeStore {
             enterd_node: None,
             hovered_node: None,
             selected_node: None,
+            id_increment: Default::default(),
         };
 
         store.root_mut().store = store.id();
 
         store
+    }
+
+    #[inline]
+    pub(crate) fn get_view(&mut self) -> &mut dyn WidgetImpl {
+        nonnull_mut!(self.view)
+    }
+
+    #[inline]
+    pub(crate) fn set_view(&mut self, view: WidgetHnd) {
+        self.view = view;
     }
 
     #[inline]

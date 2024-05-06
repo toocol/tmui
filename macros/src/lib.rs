@@ -99,13 +99,15 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
             Err(e) => e.to_compile_error().into(),
         },
         "Container" => {
+            let use_prefix = Ident::new("crate", ast.ident.span());
             match extend_container::expand(
                 &mut ast,
                 extend_attr.ignore_default,
                 true,
                 false,
                 false,
-                LayoutType::Non
+                LayoutType::Non,
+                &use_prefix
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),

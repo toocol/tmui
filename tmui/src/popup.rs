@@ -44,8 +44,8 @@ pub trait PopupExt {
 }
 
 #[reflect_trait]
-pub trait PopupImpl: WidgetImpl + PopupExt {
-    /// Calculate the position of the component when it becomes visible.
+pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
+    /// Calculate the position of the popup widget when it becomes visible.
     ///
     /// @param: `base_rect` the rectangle of base widget.<br>
     /// @param: `point` the hitting point.
@@ -54,6 +54,11 @@ pub trait PopupImpl: WidgetImpl + PopupExt {
         point.set_y(base_rect.y() - size.height() - 3);
         point.set_x(point.x() - size.width() / 2);
         point
+    }
+
+    /// If true, the popup widget will be a modal widget.
+    fn is_modal(&self) -> bool {
+        false
     }
 }
 
@@ -87,8 +92,13 @@ pub trait Popupable: WidgetImpl {
             if window.initialized() {
                 window.layout_change(popup.as_widget_impl_mut());
             }
-            
+
             popup.show();
+            popup.register_overlaid();
+            if popup.is_modal() {
+                popup.set_focus(true);
+                window.set_modal_widget(Some(popup.id()));
+            }
         }
     }
 
@@ -96,7 +106,12 @@ pub trait Popupable: WidgetImpl {
     #[inline]
     fn hide_popup(&mut self) {
         if let Some(popup) = self.get_popup_mut() {
-            popup.hide()
+            popup.hide();
+            popup.remove_overlaid();
+            if popup.is_modal() {
+                popup.set_focus(false);
+                self.window().set_modal_widget(None);
+            }
         }
     }
 

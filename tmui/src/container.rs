@@ -178,6 +178,15 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
             return false;
         }
 
+        for (&id, overlaid) in self.window().overlaid_rects().iter() {
+            if self.descendant_of(id) || self.id() == id {
+                continue;
+            }
+            if overlaid.contains(point) {
+                return false;
+            }
+        }
+
         for child in self.children() {
             if child.visible() && child.rect().contains(point) {
                 return false;

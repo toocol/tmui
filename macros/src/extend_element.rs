@@ -92,108 +92,15 @@ pub(crate) fn gen_element_trait_impl_clause(
         .collect();
 
     Ok(quote!(
-        impl #impl_generics ElementExt for #name #ty_generics #where_clause {
+        impl #impl_generics ElementPropsAcquire for #name #ty_generics #where_clause {
             #[inline]
-            fn set_window_id(&mut self, id: ObjectId) {
-                self.#(#element_path).*.set_window_id(id)
+            fn element_props(&self) -> &Element {
+                &self.#(#element_path).*
             }
 
             #[inline]
-            fn window_id(&self) -> ObjectId {
-                self.#(#element_path).*.window_id()
-            }
-
-            #[inline]
-            fn update(&mut self) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update()
-            }
-
-            #[inline]
-            fn force_update(&mut self) {
-                self.update();
-                Board::force_update();
-            }
-
-            #[inline]
-            fn update_rect(&mut self, rect: CoordRect) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_rect(rect);
-            }
-
-            #[inline]
-            fn update_styles_rect(&mut self, rect: CoordRect) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_styles_rect(rect);
-            }
-
-            #[inline]
-            fn update_region(&mut self, region: &CoordRegion) {
-                self.set_property("invalidate", true.to_value());
-                Board::notify_update();
-                self.#(#element_path).*.update_region(region);
-            }
-
-            #[inline]
-            fn clear_regions(&mut self) {
-                self.#(#element_path).*.clear_regions();
-            }
-
-            #[inline]
-            fn redraw_region(&self) -> &CoordRegion {
-                self.#(#element_path).*.redraw_region()
-            }
-
-            #[inline]
-            fn styles_redraw_region(&self) -> &CoordRegion {
-                self.#(#element_path).*.styles_redraw_region()
-            }
-
-            #[inline]
-            fn rect(&self) -> Rect {
-                self.#(#element_path).*.rect()
-            }
-
-            #[inline]
-            fn set_fixed_width(&mut self, width: i32) {
-                self.#(#element_path).*.set_fixed_width(width)
-            }
-
-            #[inline]
-            fn set_fixed_height(&mut self, height: i32) {
-                self.#(#element_path).*.set_fixed_height(height)
-            }
-
-            #[inline]
-            fn set_fixed_x(&mut self, x: i32) {
-                self.#(#element_path).*.set_fixed_x(x)
-            }
-
-            #[inline]
-            fn set_fixed_y(&mut self, y: i32) {
-                self.#(#element_path).*.set_fixed_y(y)
-            }
-
-            #[inline]
-            fn invalidate(&self) -> bool {
-                self.#(#element_path).*.invalidate()
-            }
-
-            #[inline]
-            fn validate(&mut self) {
-                self.#(#element_path).*.validate()
-            }
-
-            #[inline]
-            fn rect_record(&self) -> Rect {
-                self.#(#element_path).*.rect_record()
-            }
-
-            #[inline]
-            fn set_rect_record(&mut self, rect: Rect) {
-                self.#(#element_path).*.set_rect_record(rect)
+            fn element_props_mut(&mut self) -> &mut Element {
+                &mut self.#(#element_path).*
             }
         }
 

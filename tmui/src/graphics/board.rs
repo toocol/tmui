@@ -3,11 +3,7 @@ use crate::{
     backend::Backend, opti::tracker::Tracker, primitive::bitmap::Bitmap,
     shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
 };
-use std::{
-    cell::RefCell,
-    ptr::NonNull,
-    sync::Arc,
-};
+use std::{cell::RefCell, ptr::NonNull, sync::Arc};
 use tipc::{
     parking_lot::RwLock,
     parking_lot::{lock_api::RwLockWriteGuard, RawRwLock},
@@ -120,7 +116,9 @@ impl Board {
                             shared_widget.shared_validate();
                         }
 
+                        element.before_renderer();
                         element.on_renderer(&cr);
+                        element.after_renderer();
                         element.validate();
                         element.clear_regions();
                         update = true;

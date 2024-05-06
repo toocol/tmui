@@ -72,8 +72,6 @@ impl ObjectImpl for Holder {
 
 impl WidgetImpl for Holder {
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         self.text1.set_focus(true);
     }
 }

@@ -1,7 +1,6 @@
 use crate::{
     application_window::ApplicationWindow, prelude::SharedWidget,
     primitive::global_watch::GlobalWatchEvent, shortcut::manager::ShortcutManager,
-    widget::widget_ext::WidgetExt,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -11,13 +10,17 @@ use tlib::{
     types::StaticType,
 };
 
+use super::ElementExt;
+
 pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Option<Event> {
     let mut event: Option<Event> = None;
     match evt.event_type() {
         // Window Resize.
         EventType::Resize => {
             let evt = downcast_event::<ResizeEvent>(evt).unwrap();
-            window.resize(Some(evt.width()), Some(evt.height()));
+            window.set_fixed_width(evt.width());
+            window.set_fixed_height(evt.height());
+            window.when_size_change(evt.size());
         }
 
         // Mouse pressed.
@@ -30,8 +33,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_pressed(&evt);
             });
 
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+
+                if let Some(ref modal) = modal_widget {
+                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        continue;
+                    }
+                }
 
                 if widget.point_effective(&pos) {
                     let widget_point = widget.map_to_widget(&pos);
@@ -58,11 +69,14 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_released(&evt);
             });
 
+            let pressed_widget = window.pressed_widget();
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
-                if window.pressed_widget() != 0 {
-                    if widget.id() == window.pressed_widget() {
+                if pressed_widget != 0 {
+                    if widget.id() == pressed_widget {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
 
@@ -74,17 +88,25 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                         }
                         break;
                     }
-                } else if widget.point_effective(&pos) {
-                    let widget_point = widget.map_to_widget(&pos);
-                    evt.set_position((widget_point.x(), widget_point.y()));
-
-                    widget.on_mouse_released(evt.as_ref());
-                    widget.inner_mouse_released(evt.as_ref(), false);
-
-                    if widget.super_type().is_a(SharedWidget::static_type()) {
-                        event = Some(evt);
+                } else {
+                    if let Some(ref modal) = modal_widget {
+                        if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                            continue;
+                        }
                     }
-                    break;
+
+                    if widget.point_effective(&pos) {
+                        let widget_point = widget.map_to_widget(&pos);
+                        evt.set_position((widget_point.x(), widget_point.y()));
+
+                        widget.on_mouse_released(evt.as_ref());
+                        widget.inner_mouse_released(evt.as_ref(), false);
+
+                        if widget.super_type().is_a(SharedWidget::static_type()) {
+                            event = Some(evt);
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -99,8 +121,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_move(&evt);
             });
 
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+
+                if let Some(ref modal) = modal_widget {
+                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        continue;
+                    }
+                }
 
                 let widget_position = widget.map_to_widget(&pos);
 
@@ -178,8 +208,16 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_whell(&evt);
             });
 
+            let modal_widget = window.modal_widget();
+
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+
+                if let Some(ref modal) = modal_widget {
+                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        continue;
+                    }
+                }
 
                 if widget.point_effective(&evt.position().into()) {
                     let widget_point = widget.map_to_widget(&pos);
@@ -273,7 +311,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     f(nonnull_mut!(widget_opt))
                 }
             }
-        },
+        }
 
         EventType::WindowMinimized => {
             let widgets_map = ApplicationWindow::widgets_of(window.id());
@@ -286,7 +324,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     f(nonnull_mut!(widget_opt))
                 }
             }
-        },
+        }
 
         EventType::WindowRestored => {
             let widgets_map = ApplicationWindow::widgets_of(window.id());
@@ -299,10 +337,18 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     f(nonnull_mut!(widget_opt))
                 }
             }
+        }
+
+        EventType::FocusIn => {
+            window.restore_focus();
+            event = Some(evt);
         },
 
-        EventType::FocusIn => event = Some(evt),
-        EventType::FocusOut => event = Some(evt),
+        EventType::FocusOut => { 
+            window.temp_lose_focus();
+            event = Some(evt);
+        },
+
         EventType::Moved => {}
         EventType::DroppedFile => {}
         EventType::HoveredFile => {}

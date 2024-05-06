@@ -1,5 +1,7 @@
 use crate::{
-    container::{ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS, ContainerLayoutEnum},
+    container::{
+        ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS,
+    },
     layout::LayoutManager,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -69,10 +71,7 @@ impl Layout for Overlay {
     }
 
     #[inline]
-    fn position_layout(
-        &mut self,
-        parent: Option<&dyn WidgetImpl>,
-    ) {
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         Self::container_position_layout(self, parent)
     }
 }
@@ -118,4 +117,19 @@ impl StaticContainerScaleCalculate for Overlay {
 }
 
 #[reflect_trait]
-pub trait Overlaid {}
+pub trait Overlaid: OverlaidRegister {}
+
+pub trait OverlaidRegister: WidgetImpl {
+    #[inline]
+    fn register_overlaid(&self) {
+        self.window()
+            .overlaid_rects_mut()
+            .insert(self.id(), self.rect());
+    }
+
+    #[inline]
+    fn remove_overlaid(&self) {
+        self.window().overlaid_rects_mut().remove(&self.id());
+    }
+}
+impl<T: Overlaid> OverlaidRegister for T {}

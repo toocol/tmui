@@ -17,6 +17,8 @@ use tmui::{
     widget::{WidgetImpl, WidgetImplExt},
 };
 
+use crate::ctx_menu::CtxMenu;
+
 const DATA_SIZE: i32 = 500000;
 
 #[extends(Widget)]
@@ -36,6 +38,9 @@ impl ObjectImpl for TreeViewHolder {
     fn construct(&mut self) {
         self.parent_construct();
 
+        self.tree_view
+            .set_layout_mode(tmui::scroll_area::LayoutMode::Overlay);
+        self.tree_view.add_popup(CtxMenu::new());
         self.tree_view.start_loading();
         self.tree_view.set_hexpand(true);
         self.tree_view.set_vexpand(true);
@@ -59,8 +64,14 @@ impl ObjectImpl for TreeViewHolder {
                 }
             }
         });
-        self.tree_view.register_node_released(|node, _| {
-            println!("Node released, id = {}", node.id());
+        self.tree_view.register_node_released(|node, evt| {
+            println!(
+                "Node released, id = {}, position = {:?}",
+                node.id(),
+                evt.position()
+            );
+            let view = node.get_view().downcast_mut::<TreeView>().unwrap();
+            view.show_popup(view.map_to_global(&evt.position().into()));
         });
         self.tree_view.register_node_enter(|node, _| {
             println!("Node enter, id = {}", node.id());

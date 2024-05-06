@@ -2,6 +2,7 @@ pub mod callbacks;
 pub mod widget_ext;
 pub mod widget_inner;
 
+use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
@@ -18,7 +19,7 @@ use crate::{
 };
 use derivative::Derivative;
 use log::error;
-use std::{ptr::NonNull, slice::Iter};
+use std::{collections::HashSet, ptr::NonNull, slice::Iter};
 use tlib::{
     bitflags::bitflags,
     emit,
@@ -30,8 +31,6 @@ use tlib::{
     skia_safe::{region::RegionOp, ClipOp},
 };
 
-use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
-
 pub type Transparency = u8;
 pub type WidgetHnd = Option<NonNull<dyn WidgetImpl>>;
 
@@ -41,6 +40,7 @@ pub struct Widget {
 
     child: Option<Box<dyn WidgetImpl>>,
     child_ref: WidgetHnd,
+    children_index: HashSet<ObjectId>,
 
     old_image_rect: Rect,
     child_image_rect_union: Rect,
@@ -67,6 +67,12 @@ pub struct Widget {
 
     detecting_width: i32,
     detecting_height: i32,
+
+    /// Control whether to occupy parent widget's space.
+    ///
+    /// This field only affects a container parent when a fixed child widget is overlaid..
+    #[derivative(Default(value = "true"))]
+    occupy_space: bool,
 
     /// Widget's width was fixed or not,
     /// `true` when user invoke [`width_request`](WidgetExt::width_request)
@@ -334,6 +340,26 @@ impl Widget {
     }
 }
 
+#[inline]
+pub fn index_children(mut widget: &mut dyn WidgetImpl) {
+    loop {
+        let ptr = widget.as_ptr_mut();
+
+        let id = widget.id();
+        let ids = widget.children_index();
+
+        let parent = ptr_mut!(ptr).get_parent_mut();
+
+        if let Some(p) = parent {
+            p.children_index_mut().insert(id);
+            p.children_index_mut().extend(ids);
+            widget = p;
+        } else {
+            break;
+        }
+    }
+}
+
 impl ObjectSubclass for Widget {
     const NAME: &'static str = "Widget";
 }
@@ -352,14 +378,6 @@ impl ObjectImpl for Widget {
         self.parent_on_property_set(name, value);
 
         match name {
-            "width" => {
-                let width = value.get::<i32>();
-                self.set_fixed_width(width);
-            }
-            "height" => {
-                let height = value.get::<i32>();
-                self.set_fixed_height(height);
-            }
             "invalidate" => {
                 let invalidate = value.get::<bool>();
                 if invalidate {
@@ -429,8 +447,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         }
 
         let mut geometry = self.rect();
-        self.set_rect_record(geometry);
-        self.set_image_rect_record(self.image_rect());
 
         if geometry.width() == 0 || geometry.height() == 0 {
             return;
@@ -462,6 +478,14 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         if let Some(parent) = self.get_parent_ref() {
             if cast!(parent as ContainerImpl).is_some() {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
+            }
+        }
+
+        for (&id, &overlaid) in self.window().overlaid_rects().iter() {
+            if let Some(widget) = self.window().finds_by_id(id) {
+                if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
+                    painter.clip_rect_global(overlaid, ClipOp::Difference);
+                }
             }
         }
 
@@ -516,6 +540,12 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         painter.restore();
 
         self.set_resize_redraw(false);
+    }
+
+    #[inline]
+    fn after_renderer(&mut self) {
+        self.set_rect_record(self.rect());
+        self.set_image_rect_record(self.image_rect());
     }
 }
 
@@ -625,6 +655,14 @@ impl PointEffective for Widget {
         let self_rect = self.rect();
         if !self_rect.contains(point) {
             return false;
+        }
+        for (&id, overlaid) in self.window().overlaid_rects().iter() {
+            if self.descendant_of(id) || self.id() == id {
+                continue;
+            }
+            if overlaid.contains(point) {
+                return false;
+            }
         }
 
         if let Some(child) = self.get_child_ref() {
@@ -945,6 +983,7 @@ pub trait InnerCustomizeEventProcess {
 #[reflect_trait]
 pub trait WidgetImpl:
     WidgetExt
+    + WidgetPropsAcquire
     + ElementImpl
     + ElementExt
     + ObjectOperation
@@ -978,9 +1017,7 @@ pub trait WidgetImpl:
     ///
     /// ### Should call `self.parent_run_after()` mannually if override this function.
     #[inline]
-    fn run_after(&mut self) {
-        self.parent_run_after();
-    }
+    fn run_after(&mut self) {}
 
     /// Invoke when widget's receive mouse pressed event.
     #[inline]
@@ -1203,10 +1240,39 @@ pub trait IterExecutor {
 }
 pub type IterExecutorHnd = Option<NonNull<dyn IterExecutor>>;
 
+////////////////////////////////////// WidgetHndAsable //////////////////////////////////////
+pub(crate) trait WidgetHndAsable: WidgetImpl + Sized {
+    #[inline]
+    fn as_hnd(&mut self) -> WidgetHnd {
+        NonNull::new(self)
+    }
+}
+impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
+
+////////////////////////////////////// WidgetPropsAcquire //////////////////////////////////////
+pub trait WidgetPropsAcquire {
+    /// Get the ref of widget model.
+    fn widget_props(&self) -> &Widget;
+
+    /// Get the mutable ref of widget model.
+    fn widget_props_mut(&mut self) -> &mut Widget;
+}
+impl WidgetPropsAcquire for Widget {
+    #[inline]
+    fn widget_props(&self) -> &Widget {
+        self
+    }
+
+    #[inline]
+    fn widget_props_mut(&mut self) -> &mut Widget {
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::WidgetImpl;
-    use crate::{prelude::*, skia_safe, widget::WidgetGenericExt};
+    use crate::{prelude::*, skia_safe};
     use tlib::{
         object::{ObjectImpl, ObjectSubclass},
         skia_safe::region::RegionOp,
@@ -1233,23 +1299,6 @@ mod tests {
     impl ObjectImpl for ChildWidget {}
 
     impl WidgetImpl for ChildWidget {}
-
-    #[test]
-    fn test_sub_widget() {
-        let mut widget: Box<SubWidget> = Object::new(&[("width", &&120), ("height", &&80)]);
-        assert_eq!(120, widget.get_property("width").unwrap().get::<i32>());
-        assert_eq!(80, widget.get_property("height").unwrap().get::<i32>());
-
-        let child: Box<ChildWidget> = Object::new(&[("width", &&120), ("height", &&80)]);
-        let child_id = child.id();
-
-        widget.child(child);
-
-        let child_ref = widget.child_ref::<ChildWidget>().unwrap();
-        assert_eq!(child_ref.id(), child_id);
-        assert_eq!(120, child_ref.get_property("width").unwrap().get::<i32>());
-        assert_eq!(80, child_ref.get_property("height").unwrap().get::<i32>());
-    }
 
     #[test]
     fn test_skia_region() {

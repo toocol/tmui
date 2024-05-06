@@ -139,8 +139,6 @@ impl ObjectImpl for Text {
 impl WidgetImpl for Text {
     #[inline]
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         self.calc_text_geometry();
 
         self.on_value_changed();

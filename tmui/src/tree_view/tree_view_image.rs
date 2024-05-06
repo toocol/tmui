@@ -53,8 +53,6 @@ impl WidgetImpl for TreeViewImage {
     }
 
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         self.font_changed();
 
         self.calculate_window_lines();

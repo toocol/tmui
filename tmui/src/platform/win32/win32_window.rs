@@ -78,6 +78,11 @@ impl<T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync> Win32Wind
 
     #[inline]
     pub fn send_input(&self, msg: Message) {
+        if self.winit_window.is_none() {
+            // The window has been closed.
+            return;
+        }
+
         self.input_sender().send(msg).unwrap_or_else(|_| {
             error!("Error sending Message: The UI thread may have been closed.");
         });

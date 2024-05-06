@@ -12,7 +12,7 @@ use crate::{
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
     widget::{
-        widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, WidgetSignals, ZIndexStep,
+        index_children, widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, ZIndexStep,
     },
     window::win_builder::WindowBuilder,
 };
@@ -25,9 +25,8 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
-    connect, emit,
     events::Event,
-    figure::{Color, Size},
+    figure::Size,
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
     winit::window::WindowId,
@@ -42,6 +41,7 @@ pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    parent_window: Option<WindowId>,
     winit_id: Option<WindowId>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
@@ -50,17 +50,20 @@ pub struct ApplicationWindow {
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_manager: LayoutManager,
-    widgets: HashMap<String, WidgetHnd>,
+    widgets: HashMap<ObjectId, WidgetHnd>,
     run_afters: Vec<WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
 
     focused_widget: ObjectId,
+    focused_widget_mem: ObjectId,
     pressed_widget: ObjectId,
+    modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
     high_load_request: bool,
 
     run_after: Option<FnRunAfter>,
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
+    overlaid_rects: HashMap<ObjectId, Rect>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -78,13 +81,12 @@ impl ObjectImpl for ApplicationWindow {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
         debug!("Initialize-phase start.");
 
-        Self::widgets_of(self.id()).insert(self.name(), NonNull::new(self));
+        Self::widgets_of(self.id()).insert(self.id(), NonNull::new(self));
 
-        connect!(self, size_changed(), self, when_size_change(Size));
         let window_id = self.id();
         child_initialize(self.get_child_mut(), window_id);
-        emit!(ApplicationWindow::initialize => self.size_changed(), self.size());
 
+        self.when_size_change(self.size());
         self.set_initialized(true);
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
         debug!("Initialize-phase end.");
@@ -110,8 +112,9 @@ impl ApplicationWindow {
     #[inline]
     pub fn new(platform_type: PlatformType, width: i32, height: i32) -> Box<ApplicationWindow> {
         let thread_id = thread::current().id();
-        let mut window: Box<ApplicationWindow> =
-            Object::new(&[("width", &width), ("height", &height)]);
+        let mut window: Box<ApplicationWindow> = Object::new(&[]);
+        window.set_fixed_width(width);
+        window.set_fixed_height(height);
         window.platform_type = platform_type;
         window.set_window_id(window.id());
         WINDOW_ID.with(|id| *id.borrow_mut() = window.id());
@@ -129,7 +132,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<String, WidgetHnd> {
+    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<ObjectId, WidgetHnd> {
         let window = Self::window_of(id);
         &mut window.widgets
     }
@@ -156,11 +159,6 @@ impl ApplicationWindow {
             panic!("Get `ApplicationWindow` in the wrong thread.");
         }
         nonnull_mut!(window)
-    }
-
-    #[inline]
-    pub fn send_message_with_id(id: ObjectId, message: Message) {
-        Self::window_of(id).send_message(message)
     }
 
     #[inline]
@@ -195,26 +193,12 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
-        let mut find = None;
-        for (_, widget) in self.widgets.iter() {
-            let widget = nonnull_ref!(widget);
-            if widget.id() == id {
-                find = Some(widget);
-            }
-        }
-        find
+        self.widgets.get(&id).map(|w| nonnull_ref!(w))
     }
 
     #[inline]
     pub fn finds_by_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
-        let mut find = None;
-        for (_, widget) in self.widgets.iter_mut() {
-            let widget = nonnull_mut!(widget);
-            if widget.id() == id {
-                find = Some(widget);
-            }
-        }
-        find
+        self.widgets.get_mut(&id).map(|w| nonnull_mut!(w))
     }
 
     #[inline]
@@ -244,7 +228,10 @@ impl ApplicationWindow {
             return;
         }
 
-        self.send_message(Message::CreateWindow(window_bld.build()));
+        let mut window = window_bld.build();
+        window.set_parent(self.winit_id.unwrap());
+
+        self.send_message(Message::CreateWindow(window));
     }
 
     #[inline]
@@ -303,6 +290,17 @@ impl ApplicationWindow {
         Self::layout_of(self.id()).layout_change(widget, false);
 
         widget.update();
+    }
+
+    /// If the window has parent window(created by other window),
+    /// the parent window will execute the given function closure.
+    pub fn call_response<F>(&self, f: F)
+    where
+        F: FnOnce(&mut ApplicationWindow) + 'static + Send + Sync,
+    {
+        if let Some(parent_window) = self.parent_window {
+            self.send_message(Message::WindowResponse(parent_window, Box::new(f)))
+        }
     }
 
     /// Should set the parent of widget before use this function.
@@ -381,6 +379,30 @@ impl ApplicationWindow {
             }
         }
         self.focused_widget = id
+    }
+
+    /// Let the focused widget lose focus temporarily.
+    pub(crate) fn temp_lose_focus(&mut self) {
+        if self.focused_widget != 0 {
+            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+                widget.on_lose_focus();
+            }
+
+            self.focused_widget_mem = self.focused_widget;
+            self.focused_widget = 0;
+        }
+    }
+
+    /// Restore the previous focused widget.
+    pub(crate) fn restore_focus(&mut self) {
+        if self.focused_widget_mem != 0 {
+            if let Some(widget) = self.finds_by_id_mut(self.focused_widget_mem) {
+                widget.on_get_focus();
+            }
+
+            self.focused_widget = self.focused_widget_mem;
+            self.focused_widget_mem = 0;
+        }
     }
 
     #[inline]
@@ -480,7 +502,38 @@ impl ApplicationWindow {
             .for_each(|hnd| nonnull_mut!(hnd).iter_execute())
     }
 
+    #[inline]
+    pub(crate) fn overlaid_rects(&self) -> &HashMap<ObjectId, Rect> {
+        &self.overlaid_rects
+    }
+
+    #[inline]
+    pub(crate) fn overlaid_rects_mut(&mut self) -> &mut HashMap<ObjectId, Rect> {
+        &mut self.overlaid_rects
+    }
+
+    #[inline]
+    pub(crate) fn set_modal_widget(&mut self, id: Option<ObjectId>) {
+        self.modal_widget = id;
+    }
+
+    #[inline]
+    pub(crate) fn modal_widget(&mut self) -> Option<&mut dyn WidgetImpl> {
+        if let Some(ref id) = self.modal_widget {
+            self.widgets.get_mut(id).map(|v| nonnull_mut!(v))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub(crate) fn set_parent_window(&mut self, parent: WindowId) {
+        self.parent_window = Some(parent)
+    }
+
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
+    ///
+    /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
         for w in Self::widgets_of(self.id()).values_mut() {
             let widget = nonnull_mut!(w);
@@ -519,7 +572,8 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
 
     while let Some(child_ref) = child {
         board.add_element(child_ref.as_element());
-        ApplicationWindow::widgets_of(window_id).insert(child_ref.name(), NonNull::new(child_ref));
+        ApplicationWindow::widgets_of(window_id).insert(child_ref.id(), NonNull::new(child_ref));
+        index_children(child_ref);
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);

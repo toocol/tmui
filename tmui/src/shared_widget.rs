@@ -61,8 +61,6 @@ impl WidgetImpl for SharedWidget {
         if ApplicationWindow::window_of(self.window_id()).platform_type() == PlatformType::Ipc {
             panic!("`SharedWidget` can not be used on `PlatformType::Ipc`")
         }
-        self.parent_run_after();
-
         let bridge = self.window().ipc_bridge().unwrap();
 
         let size = self.size();

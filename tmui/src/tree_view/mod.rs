@@ -9,7 +9,7 @@ use self::{tree_node::TreeNode, tree_store::TreeStore, tree_view_image::TreeView
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    widget::{WidgetHndAsable, WidgetImpl},
 };
 use tlib::{connect, signals};
 
@@ -47,7 +47,7 @@ use tlib::{connect, signals};
 ///        NodeRender::default()
 ///   }
 /// }
-/// 
+///
 /// fn test_build_ui() {
 ///     let mut tree_view = TreeView::new();
 ///     let _node_added = tree_view
@@ -68,11 +68,14 @@ impl ObjectImpl for TreeView {
     fn construct(&mut self) {
         self.parent_construct();
 
-        let mut image = TreeViewImage::new(self.get_scroll_bar_mut());
+        let mut image = TreeViewImage::new(self.scroll_bar_mut());
 
         connect!(self, background_changed(), image, set_background(Color));
 
         self.set_area(image);
+
+        let hnd = self.as_hnd();
+        self.get_image_mut().get_store_mut().set_view(hnd);
     }
 
     #[allow(clippy::single_match)]

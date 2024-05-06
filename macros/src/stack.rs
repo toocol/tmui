@@ -1,9 +1,11 @@
 use quote::quote;
 use syn::Ident;
 
-pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_stack_add_child(
+    use_prefix: &Ident,
+) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
-        use tmui::application_window::ApplicationWindow;
+        use #use_prefix::application_window::ApplicationWindow;
         child.set_parent(self);
         if self.current_index == self.container.children.len() {
             child.show()

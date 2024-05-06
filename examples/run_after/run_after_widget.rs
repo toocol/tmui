@@ -26,8 +26,6 @@ impl ObjectImpl for RunAfterWidget {
 
 impl WidgetImpl for RunAfterWidget {
     fn run_after(&mut self) {
-        self.parent_run_after();
-
         println!("`RunAfterWidget` run after.")
     }
 }

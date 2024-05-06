@@ -1,24 +1,26 @@
 use tmui::{
-    label::Label,
-    prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
-    window::{win_builder::WindowBuilder, win_config::WindowConfig},
+    input::text::Text, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl, window::{win_builder::WindowBuilder, win_config::WindowConfig}
 };
 
+use crate::input_dialog::InputDialog;
+
 #[extends(Widget)]
-pub struct MyWidget {}
+#[derive(Childable)]
+pub struct MyWidget {
+    #[child]
+    text: Box<Text>
+}
 
 impl ObjectSubclass for MyWidget {
     const NAME: &'static str = "MyWidget";
 }
 
 impl ObjectImpl for MyWidget {
-    fn construct(&mut self) {
-        self.parent_construct();
-
+    fn initialize(&mut self) {
         self.set_vexpand(true);
         self.set_hexpand(true);
+
+        self.text.set_margins(10, 0, 0, 10);
     }
 }
 
@@ -27,13 +29,13 @@ impl WidgetImpl for MyWidget {
         self.window().create_window(
             WindowBuilder::new()
                 .config(WindowConfig::builder().width(300).height(100).build())
+                .modal(true)
                 .on_activate(|window| {
                     println!(
                         "{} => Child window created.",
                         std::thread::current().name().unwrap()
                     );
-                    let label = Label::new(Some("Hello World!"));
-                    window.child(label);
+                    window.child(InputDialog::new());
                 }),
         )
     }
