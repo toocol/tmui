@@ -9,7 +9,7 @@ use tmui::{
     container::ContainerImplExt,
     label::Label,
     pane::Pane,
-    widget::{widget_ext::WidgetExt, WidgetImplExt},
+    widget::{widget_ext::WidgetExt, ChildOp},
 };
 
 pub const IPC_NAME: &str = "shmem_ipc140";

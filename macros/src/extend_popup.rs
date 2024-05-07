@@ -177,7 +177,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                     }
                 }
 
-                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
+                impl #impl_generics ChildRegionAcquire for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.popup.widget.child_region()

@@ -19,6 +19,9 @@ impl ObjectSubclass for Button {
 impl ObjectImpl for Button {
     fn initialize(&mut self) {
         self.set_borders(1., 1., 1., 1.);
+        self.set_border_color(Color::grey_with(96));
+
+        self.set_background(Color::grey_with(235));
     }
 }
 

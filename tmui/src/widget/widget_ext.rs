@@ -22,481 +22,311 @@ use tlib::{
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
-    /// Go to[`Function defination`](WidgetExt::name) (Defined in [`WidgetExt`])
+    /// Get the name of widget.
     fn name(&self) -> String;
 
-    /// Go to[`Function defination`](WidgetExt::initialized) (Defined in [`WidgetExt`])
+    /// The widget was initialized or not.
     fn initialized(&self) -> bool;
 
-    /// Go to[`Function defination`](WidgetExt::set_initialized) (Defined in [`WidgetExt`])
-    fn set_initialized(&mut self, initialized: bool);
-
-    /// Go to[`Function defination`](WidgetExt::as_element) (Defined in [`WidgetExt`])
+    /// Upcast widget to `&mut dyn ElementImpl`
     fn as_element(&mut self) -> &mut dyn ElementImpl;
 
-    /// Go to[`Function defination`](WidgetExt::first_rendered) (Defined in [`WidgetExt`])
-    fn first_rendered(&self) -> bool;
+    /// Widget need re-render styles in next frame or not.
+    fn render_styles(&self) -> bool;
 
-    /// Go to[`Function defination`](WidgetExt::set_first_rendered) (Defined in [`WidgetExt`])
-    fn set_first_rendered(&mut self);
+    /// Set the widget need re-render styles in next frame or not.
+    fn set_render_styles(&mut self, rerender: bool);
 
-    /// Go to[`Function defination`](WidgetExt::rerender_styles) (Defined in [`WidgetExt`])
-    fn rerender_styles(&self) -> bool;
+    /// Is the widget only render the difference after size changed.
+    fn is_render_difference(&self) -> bool;
 
-    /// Go to[`Function defination`](WidgetExt::set_rerender_styles) (Defined in [`WidgetExt`])
-    fn set_rerender_styles(&mut self, rerender: bool);
+    /// Set the widget is only render the difference after size changed.
+    fn set_render_difference(&mut self, rerender_difference: bool);
 
-    /// Go to[`Function defination`](WidgetExt::rerender_difference) (Defined in [`WidgetExt`])
-    fn rerender_difference(&self) -> bool;
-
-    /// Go to[`Function defination`](WidgetExt::set_rerender_difference) (Defined in [`WidgetExt`])
-    fn set_rerender_difference(&mut self, rerender_difference: bool);
-
-    /// ## Do not invoke this function directly.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_parent) (Defined in [`WidgetExt`])
+    /// ## Do not invoke this parent directly.
     fn set_parent(&mut self, parent: *mut dyn WidgetImpl);
 
     /// Get the raw pointer of child.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_raw_child) (Defined in [`WidgetExt`])
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl>;
 
     /// Get the raw mut pointer of child.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_raw_child_mut) (Defined in [`WidgetExt`])
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl>;
 
     /// Get the ref of child.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_child_ref) (Defined in [`WidgetExt`])
     fn get_child_ref(&self) -> Option<&dyn WidgetImpl>;
 
     /// Get the ref mut of child.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_child_mut) (Defined in [`WidgetExt`])
     fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
 
     /// Get the raw pointer of parent.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_raw_parent) (Defined in [`WidgetExt`])
     fn get_raw_parent(&self) -> Option<*const dyn WidgetImpl>;
 
     /// Get the raw mut pointer of parent.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_raw_parent) (Defined in [`WidgetExt`])
     fn get_raw_parent_mut(&mut self) -> Option<*mut dyn WidgetImpl>;
 
     /// Get the ref of parent.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_child_ref) (Defined in [`WidgetExt`])
     fn get_parent_ref(&self) -> Option<&dyn WidgetImpl>;
 
     /// Get the ref mut of child.
-    ///
-    /// Go to[`Function defination`](WidgetExt::get_parent_mut) (Defined in [`WidgetExt`])
     fn get_parent_mut(&mut self) -> Option<&mut dyn WidgetImpl>;
 
     /// Hide the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::hide) (Defined in [`WidgetExt`])
     fn hide(&mut self);
 
     /// Show the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::show) (Defined in [`WidgetExt`])
     fn show(&mut self);
 
     /// Return true if widget is visble, otherwise, false is returned.
-    ///
-    /// Go to[`Function defination`](WidgetExt::visible) (Defined in [`WidgetExt`])
     fn visible(&self) -> bool;
 
     /// Setter of property `focus`. <br>
     /// Only effected after phase `run_after`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_focus) (Defined in [`WidgetExt`])
     fn set_focus(&mut self, focus: bool);
 
     /// Getter of property `focus`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::is_focus) (Defined in [`WidgetExt`])
     fn is_focus(&self) -> bool;
 
     /// Resize the widget. <br>
     /// `resize() will set fixed_width and fixed_height to false`, make widget flexible.
-    ///
-    /// Go to[`Function defination`](WidgetExt::resize) (Defined in [`WidgetExt`])
     fn resize(&mut self, width: Option<i32>, height: Option<i32>);
 
     /// Request the widget's width. <br>
     /// This function should be used in construct phase of the ui component,
     /// the function will not change the layout and will not trigger the signal `size_changed()`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::width_request) (Defined in [`WidgetExt`])
     fn width_request(&mut self, width: i32);
 
     /// Request the widget's width. <br>
     /// This function should be used in construct phase of the ui component,
     /// the function will not change the layout and will not trigger the signal `size_changed()`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::height_request) (Defined in [`WidgetExt`])
     fn height_request(&mut self, width: i32);
 
-    /// Go to[`Function defination`](WidgetExt::get_width_request) (Defined in [`WidgetExt`])
+    /// Get the width request of widget.
     fn get_width_request(&self) -> i32;
 
-    /// Go to[`Function defination`](WidgetExt::get_height_request) (Defined in [`WidgetExt`])
+    /// Get the height request of widget.
     fn get_height_request(&self) -> i32;
 
     /// Update widget's child image rect union.
-    ///
-    /// Go to[`Function defination`](WidgetExt::update_geometry) (Defined in [`WidgetExt`])
     fn update_geometry(&mut self);
 
     /// Widget's width was fixed or not,
     /// `true` when user invoke [`width_request`](WidgetExt::width_request)
-    ///
-    /// Go to[`Function defination`](WidgetExt::fixed_width) (Defined in [`WidgetExt`])
     fn fixed_width(&self) -> bool;
 
     /// Widget's height was fixed or not,
     /// `true` when user invoke [`height_request`](WidgetExt::height_request)
-    ///
-    /// Go to[`Function defination`](WidgetExt::fixed_height) (Defined in [`WidgetExt`])
     fn fixed_height(&self) -> bool;
 
     /// Used in conjunction with the function [`hexpand`],
     /// if widget was width fixed and hexpanded, `the width ration = width / parent_width`
-    ///
-    /// Go to[`Function defination`](WidgetExt::fixed_width_ration) (Defined in [`WidgetExt`])
     fn fixed_width_ration(&self) -> f32;
 
     /// Used in conjunction with the function [`vexpand`],
     /// if widget was height fixed and vexpanded, `the height ration = height / parent_height`
-    ///
-    /// Go to[`Function defination`](WidgetExt::fixed_height_ration) (Defined in [`WidgetExt`])
     fn fixed_height_ration(&self) -> f32;
 
     /// Set alignment on the horizontal direction.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_halign) (Defined in [`WidgetExt`])
     fn set_halign(&mut self, halign: Align);
 
     /// Set alignment on the vertical direction.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_valign) (Defined in [`WidgetExt`])
     fn set_valign(&mut self, valign: Align);
 
     /// Get alignment on the horizontal direction.
-    ///
-    /// Go to[`Function defination`](WidgetExt::halign) (Defined in [`WidgetExt`])
     fn halign(&self) -> Align;
 
     /// Get alignment on the vertical direction.
-    ///
-    /// Go to[`Function defination`](WidgetExt::valign) (Defined in [`WidgetExt`])
     fn valign(&self) -> Align;
 
     /// Set the font of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_font) (Defined in [`WidgetExt`])
     fn set_font(&mut self, font: Font);
 
     /// Get the font of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::font) (Defined in [`WidgetExt`])
     fn font(&self) -> &Font;
 
     /// Get the mutable reference of font of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::font_mut) (Defined in [`WidgetExt`])
     fn font_mut(&mut self) -> &mut Font;
 
     /// Set the font family of Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_font_families) (Defined in [`WidgetExt`])
     fn set_font_families(&mut self, families: &[&str]);
 
     /// Get the rect of widget without borders.
-    ///
-    /// Go to[`Function defination`](WidgetExt::borderless_rect) (Defined in [`WidgetExt`])
     fn borderless_rect(&self) -> FRect;
 
     /// Get the size of widget. The size does not include the margins.
-    ///
-    /// Go to[`Function defination`](WidgetExt::size) (Defined in [`WidgetExt`])
     fn size(&self) -> Size;
 
     /// Get the area of widget's total image Rect with the margins. <br>
     /// The [`Coordinate`] was `World`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::image_rect) (Defined in [`WidgetExt`])
     fn image_rect(&self) -> Rect;
 
     /// Get the area of widget's total image Rect with the margins. <br>
     /// The [`Coordinate`] was `World`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::image_rect_f) (Defined in [`WidgetExt`])
     fn image_rect_f(&self) -> FRect;
 
     /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::origin_rect) (Defined in [`WidgetExt`])
     fn origin_rect(&self, coord: Option<Coordinate>) -> Rect;
 
     /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::origin_rect_f) (Defined in [`WidgetExt`])
     fn origin_rect_f(&self, coord: Option<Coordinate>) -> FRect;
 
     /// Get the area inside the widget's paddings. <br>
     /// The default [`Coordinate`] was `World`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::contents_rect) (Defined in [`WidgetExt`])
     fn contents_rect(&self, coord: Option<Coordinate>) -> Rect;
 
     /// Get the area inside the widget's paddings. <br>
     /// The default [`Coordinate`] was `World`.
-    ///
-    /// Go to[`Function defination`](WidgetExt::contents_rect) (Defined in [`WidgetExt`])
     fn contents_rect_f(&self, coord: Option<Coordinate>) -> FRect;
 
     /// Get the widget's background color.
-    ///
-    /// Go to[`Function defination`](WidgetExt::background) (Defined in [`WidgetExt`])
     fn background(&self) -> Color;
 
     /// Set the widget's background color.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_background) (Defined in [`WidgetExt`])
     fn set_background(&mut self, color: Color);
 
     /// Get the margins of the Widget. (top, right, bottom, left)
-    ///
-    /// Go to[`Function defination`](WidgetExt::margins) (Defined in [`WidgetExt`])
     fn margins(&self) -> (i32, i32, i32, i32);
 
     /// Get the top margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::margin_top) (Defined in [`WidgetExt`])
     fn margin_top(&self) -> i32;
 
     /// Get the right margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::margin_right) (Defined in [`WidgetExt`])
     fn margin_right(&self) -> i32;
 
     /// Get the bottom margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::margin_bottom) (Defined in [`WidgetExt`])
     fn margin_bottom(&self) -> i32;
 
     /// Get the left margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::margin_left) (Defined in [`WidgetExt`])
     fn margin_left(&self) -> i32;
 
     /// Set the margins of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_margins) (Defined in [`WidgetExt`])
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32);
 
     /// Set the top margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_margin_top) (Defined in [`WidgetExt`])
     fn set_margin_top(&mut self, val: i32);
 
     /// Set the right margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_margin_right) (Defined in [`WidgetExt`])
     fn set_margin_right(&mut self, val: i32);
 
     /// Set the bottom margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_margin_bottom) (Defined in [`WidgetExt`])
     fn set_margin_bottom(&mut self, val: i32);
 
     /// Set the left margin of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_margin_left) (Defined in [`WidgetExt`])
     fn set_margin_left(&mut self, val: i32);
 
     /// Get the paddins of the Widget. (top, right, bottom, left)
-    ///
-    /// Go to[`Function defination`](WidgetExt::paddings) (Defined in [`WidgetExt`])
     fn paddings(&self) -> (i32, i32, i32, i32);
 
     /// Get the top padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::padding_top) (Defined in [`WidgetExt`])
     fn padding_top(&self) -> i32;
 
     /// Get the right padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::padding_right) (Defined in [`WidgetExt`])
     fn padding_right(&self) -> i32;
 
     /// Get the bottom padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::padding_bottom) (Defined in [`WidgetExt`])
     fn padding_bottom(&self) -> i32;
 
     /// Get the left padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::padding_left) (Defined in [`WidgetExt`])
     fn padding_left(&self) -> i32;
 
     /// Set the paddings of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_paddings) (Defined in [`WidgetExt`])
     fn set_paddings(&mut self, top: i32, right: i32, bottom: i32, left: i32);
 
     /// Set the top padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_padding_top) (Defined in [`WidgetExt`])
     fn set_padding_top(&mut self, val: i32);
 
     /// Set the right padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_padding_right) (Defined in [`WidgetExt`])
     fn set_padding_right(&mut self, val: i32);
 
     /// Set the bottom padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_padding_bottom) (Defined in [`WidgetExt`])
     fn set_padding_bottom(&mut self, val: i32);
 
     /// Set the left padding of the Widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_padding_left) (Defined in [`WidgetExt`])
     fn set_padding_left(&mut self, val: i32);
 
     /// Get the refrence of [`Border`].
-    ///
-    /// Go to[`Function defination`](WidgetExt::border_ref) (Defined in [`WidgetExt`])
     fn border_ref(&self) -> &Border;
 
     /// Set the borders of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_borders) (Defined in [`WidgetExt`])
     fn set_borders(&mut self, top: f32, right: f32, bottom: f32, left: f32);
 
+    /// Set the border radius of the widget.
+    fn set_border_radius(&mut self, radius: f32);
+
     /// Set the border style of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_border_style) (Defined in [`WidgetExt`])
     fn set_border_style(&mut self, style: BorderStyle);
 
     /// Set the border color(all directions) of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_border_color) (Defined in [`WidgetExt`])
     fn set_border_color(&mut self, color: Color);
 
     /// Set the top border color of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_border_top_color) (Defined in [`WidgetExt`])
     fn set_border_top_color(&mut self, color: Color);
 
     /// Set the right border color of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_border_right_color) (Defined in [`WidgetExt`])
     fn set_border_right_color(&mut self, color: Color);
 
     /// Set the bottom border color of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_border_bottom_color) (Defined in [`WidgetExt`])
     fn set_border_bottom_color(&mut self, color: Color);
 
     /// Set the left border color of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_border_left_color) (Defined in [`WidgetExt`])
     fn set_border_left_color(&mut self, color: Color);
 
     /// Get the borders of the widget. <br>
     /// @return (top, right, bottom, left)
-    ///
-    /// Go to[`Function defination`](WidgetExt::borders) (Defined in [`WidgetExt`])
     fn borders(&self) -> (f32, f32, f32, f32);
 
     /// Get the border style of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::border_style) (Defined in [`WidgetExt`])
     fn border_style(&self) -> BorderStyle;
 
     /// Get the border color of the widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::border_color) (Defined in [`WidgetExt`])
     fn border_color(&self) -> (Color, Color, Color, Color);
 
     /// Set the system cursor shape.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_cursor_shape) (Defined in [`WidgetExt`])
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape);
 
     /// Map the given point to global coordinate.
-    ///
-    /// Go to[`Function defination`](WidgetExt::map_to_global) (Defined in [`WidgetExt`])
     fn map_to_global(&self, point: &Point) -> Point;
 
     /// Map the given point to widget coordinate.
-    ///
-    /// Go to[`Function defination`](WidgetExt::map_to_widget) (Defined in [`WidgetExt`])
     fn map_to_widget(&self, point: &Point) -> Point;
 
     /// Map the given point to global coordinate.
-    ///
-    /// Go to[`Function defination`](WidgetExt::map_to_global_f) (Defined in [`WidgetExt`])
     fn map_to_global_f(&self, point: &FPoint) -> FPoint;
 
     /// Map the given point to widget coordinate.
-    ///
-    /// Go to[`Function defination`](WidgetExt::map_to_widget_f) (Defined in [`WidgetExt`])
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint;
 
     /// The widget tracking the `MouseMoveEvent` or not.
-    ///
-    /// Go to[`Function defination`](WidgetExt::mouse_tracking) (Defined in [`WidgetExt`])
     fn mouse_tracking(&self) -> bool;
 
     /// Set the `mouse_tracking` status of widget.
     ///
     /// when `ture`, widget will track the movement of mouse.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_mouse_tracking(&mut self, is_tracking: bool);
 
     /// Get `hexpand` of widget.
     ///
     /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally
     /// with changes in the width of the parent widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::hexpand) (Defined in [`WidgetExt`])
     fn hexpand(&self) -> bool;
 
     /// Set `hexpand` of widget.
     ///
     /// `hexpand`: Horizontal scalability, if `true` can cause child widget to expand horizontally
     /// with changes in the width of the parent widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_hexpand) (Defined in [`WidgetExt`])
     fn set_hexpand(&mut self, hexpand: bool);
 
     /// Get `vexpand` of widget.
     ///
     /// `vexpand`: Vertical scalability, if `true` can cause child widget to expand vertically
     /// height changes in the height of the parent widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::vexpand) (Defined in [`WidgetExt`])
     fn vexpand(&self) -> bool;
 
     /// Set `vexpand` of widget.
     ///
     /// `vexpand`: Vertical scalability, if `true` can cause child widget to expand vertically
     /// height changes in the height of the parent widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_vexpand) (Defined in [`WidgetExt`])
     fn set_vexpand(&mut self, vexpand: bool);
 
     /// The scale factor on horizontal, ratio of child width to parent component,
@@ -507,13 +337,9 @@ pub trait WidgetExt {
     ///
     /// ### when parent was coontainer:
     /// `width ration = hscale / parent_children_total_hscales`
-    ///
-    /// Go to[`Function defination`](WidgetExt::hscale) (Defined in [`WidgetExt`])
     fn hscale(&self) -> f32;
 
     /// See [`hscale`](WidgetExt::hscale)
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_hscale) (Defined in [`WidgetExt`])
     fn set_hscale(&mut self, hscale: f32);
 
     /// The scale factor on vertical, ratio of child height to parent component,
@@ -524,187 +350,112 @@ pub trait WidgetExt {
     ///
     /// ### when parent was coontainer:
     /// `height ration = vscale / parent_children_total_vscales`
-    ///
-    /// Go to[`Function defination`](WidgetExt::vscale) (Defined in [`WidgetExt`])
     fn vscale(&self) -> f32;
 
     /// See [`vscale`](WidgetExt::vscale)
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_vscale) (Defined in [`WidgetExt`])
     fn set_vscale(&mut self, vscale: f32);
 
-    /// Go to[`Function defination`](WidgetExt::child_image_rect_union) (Defined in [`WidgetExt`])
-    fn child_image_rect_union(&self) -> &Rect;
-
-    /// Go to[`Function defination`](WidgetExt::child_image_rect_union_mut) (Defined in [`WidgetExt`])
-    fn child_image_rect_union_mut(&mut self) -> &mut Rect;
-
-    /// Go to[`Function defination`](WidgetExt::need_update_geometry) (Defined in [`WidgetExt`])
-    fn need_update_geometry(&self) -> bool;
-
-    /// Go to[`Function defination`](WidgetExt::child_overflow_rect) (Defined in [`WidgetExt`])
-    fn child_overflow_rect(&self) -> &Rect;
-
-    /// Go to[`Function defination`](WidgetExt::child_overflow_rect_mut) (Defined in [`WidgetExt`])
-    fn child_overflow_rect_mut(&mut self) -> &mut Rect;
-
-    /// Go to[`Function defination`](WidgetExt::image_rect_record) (Defined in [`WidgetExt`])
-    fn image_rect_record(&self) -> Rect;
-
-    /// Go to[`Function defination`](WidgetExt::set_image_rect_record) (Defined in [`WidgetExt`])
-    fn set_image_rect_record(&mut self, image_rect: Rect);
-
-    /// Go to[`Function defination`](WidgetExt::minimized) (Defined in [`WidgetExt`])
+    /// Is the widget's size was minimized or not.
     fn minimized(&self) -> bool;
 
-    /// Go to[`Function defination`](WidgetExt::set_minimized) (Defined in [`WidgetExt`])
+    /// Set the widget's minimized status.
     fn set_minimized(&mut self, minimized: bool);
 
-    /// Go to[`Function defination`](WidgetExt::repaint_when_resize) (Defined in [`WidgetExt`])
+    /// Is the widget repaint when resize.
     fn repaint_when_resize(&self) -> bool;
 
-    /// Go to[`Function defination`](WidgetExt::set_repaint_when_resize) (Defined in [`WidgetExt`])
+    /// Set the widget is repaint when resize.
     fn set_repaint_when_resize(&mut self, repaint: bool);
 
-    /// Go to[`Function defination`](WidgetExt::is_pressed) (Defined in [`WidgetExt`])
+    /// Is the widget under mouse pressed.
     fn is_pressed(&self) -> bool;
 
     /// Invalidate this widget to update it, and also update the child widget..
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_update) (Defined in [`WidgetExt`])
     fn propagate_update(&mut self);
 
     /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
     /// This will result in clipping the drawing area of the widget.(after styles render)
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
     fn propagate_update_rect(&mut self, rect: CoordRect);
 
     /// Invalidate this widget with dirty styles rect to update it, and also update the child widget..<br>
     /// This will result in clipping the drawing area of the widget.(before styles render)
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_update_rect) (Defined in [`WidgetExt`])
     fn propagate_update_styles_rect(&mut self, rect: CoordRect);
 
     /// Check if the widget is the ancestor of the widget represented by the specified id.
-    ///
-    /// Go to[`Function defination`](WidgetExt::ancestor_of) (Defined in [`WidgetExt`])
     fn ancestor_of(&self, id: ObjectId) -> bool;
 
     /// Check if the widget is a descendant of the widget represented by the specified id.
-    ///
-    /// Go to[`Function defination`](WidgetExt::descendant_of) (Defined in [`WidgetExt`])
     fn descendant_of(&self, id: ObjectId) -> bool;
 
     /// Propagate setting the property `animation_progressing`
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_animation_progressing) (Defined in [`WidgetExt`])
     fn propagate_animation_progressing(&mut self, is: bool);
 
-    /// Go to[`Function defination`](WidgetExt::is_animation_progressing) (Defined in [`WidgetExt`])
+    /// Is the widget under animation pregressing.
     fn is_animation_progressing(&self) -> bool;
 
     /// Getting the transparency of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::transparency) (Defined in [`WidgetExt`])
     fn transparency(&self) -> Transparency;
 
     /// Setting the transparency of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_transparency) (Defined in [`WidgetExt`])
     fn set_transparency(&mut self, transparency: Transparency);
 
     /// Propagate setting the transparency of widget.
-    ///
-    /// Go to[`Function defination`](WidgetExt::propagate_set_transparency) (Defined in [`WidgetExt`])
     fn propagate_set_transparency(&mut self, transparency: Transparency);
 
     /// Get the size hint of widget.
     ///
     /// For specific information about size_hint, please refer to [`size_hint`](crate::widget::Widget::size_hint)
-    ///
-    /// Go to[`Function defination`](WidgetExt::size_hint) (Defined in [`WidgetExt`])
     fn size_hint(&self) -> SizeHint;
 
     /// Set the size hint of widget.
     ///
     /// For specific information about size_hint, please refer to [`size_hint`](crate::widget::Widget::size_hint)
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_size_hint) (Defined in [`WidgetExt`])
     fn set_size_hint(&mut self, size_hint: SizeHint);
 
     /// Whether the event will be bubbled or not.
-    ///
-    /// Go to[`Function defination`](WidgetExt::event_bubbled) (Defined in [`WidgetExt`])
     fn is_event_bubbled(&self, event_bubble: EventBubble) -> bool;
 
     /// Enable the event bubble.
-    ///
-    /// Go to[`Function defination`](WidgetExt::enable_bubble) (Defined in [`WidgetExt`])
     fn enable_bubble(&mut self, event_bubble: EventBubble);
 
     /// Disable the event bubble.
-    ///
-    /// Go to[`Function defination`](WidgetExt::disable_bubble) (Defined in [`WidgetExt`])
     fn disable_bubble(&mut self, event_bubble: EventBubble);
 
     /// Get the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
-    ///
-    /// Go to[`Function defination`](WidgetExt::is_propagate_event_bubble) (Defined in [`WidgetExt`])
     fn is_propagate_event_bubble(&self) -> bool;
 
     /// Set the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_propagate_event_bubble) (Defined in [`WidgetExt`])
     fn set_propagate_event_bubble(&mut self, is: bool);
 
     /// Get the value of [`propagate_mouse_tracking`](Widget::propagate_mouse_tracking).
-    ///
-    /// Go to[`Function defination`](WidgetExt::is_propagate_mouse_tracking) (Defined in [`WidgetExt`])
     fn is_propagate_mouse_tracking(&self) -> bool;
 
     /// Set the value of [`propagate_event_bubble`](Widget::propagate_event_bubble).
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_propagate_mouse_tracking) (Defined in [`WidgetExt`])
     fn set_propagate_mouse_tracking(&mut self, is: bool);
 
     /// Get the value of [`strict_clip_widget`](Widget::strict_clip_widget).
-    ///
-    /// Go to[`Function defination`](WidgetExt::is_strict_clip_widget) (Defined in [`WidgetExt`])
     fn is_strict_clip_widget(&self) -> bool;
 
     /// Set the value of [`strict_clip_widget`](Widget::strict_clip_widget).
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_strict_clip_widget) (Defined in [`WidgetExt`])
     fn set_strict_clip_widget(&mut self, strict_clip_widget: bool);
 
     /// Get the value of [`strict_clip_widget`](Widget::resize_redraw).
-    ///
-    /// Go to[`Function defination`](WidgetExt::is_resize_redraw) (Defined in [`WidgetExt`])
     fn is_resize_redraw(&self) -> bool;
 
     /// Get the reference of [`Callbacks`]
-    ///
-    /// Go to[`Function defination`](WidgetExt::callbacks) (Defined in [`WidgetExt`])
     fn callbacks(&self) -> &Callbacks;
 
     /// Get the mutable reference of [`Callbacks`]
-    ///
-    /// Go to[`Function defination`](WidgetExt::callbacks_mut) (Defined in [`WidgetExt`])
     fn callbacks_mut(&mut self) -> &mut Callbacks;
 
     /// Whether the fixed widget occupy the parent widget's space.
     ///
     /// @see [`Widget::occupy_space`]
-    ///
-    /// Go to[`Function defination`](WidgetExt::is_occupy_space) (Defined in [`WidgetExt`])
     fn is_occupy_space(&self) -> bool;
 
     /// Set the fixed widget occupy the parent widget's space or not.
     ///
     /// @see [`Widget::occupy_space`]
-    ///
-    /// Go to[`Function defination`](WidgetExt::set_occupy_space) (Defined in [`WidgetExt`])
     fn set_occupy_space(&mut self, occupy_space: bool);
 }
 
@@ -720,27 +471,12 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn set_initialized(&mut self, initialized: bool) {
-        self.widget_props_mut().initialized = initialized
-    }
-
-    #[inline]
     fn as_element(&mut self) -> &mut dyn ElementImpl {
         self
     }
 
     #[inline]
-    fn first_rendered(&self) -> bool {
-        self.widget_props().first_rendered
-    }
-
-    #[inline]
-    fn set_first_rendered(&mut self) {
-        self.widget_props_mut().first_rendered = true
-    }
-
-    #[inline]
-    fn rerender_styles(&self) -> bool {
+    fn render_styles(&self) -> bool {
         match self.get_property("rerender_styles") {
             Some(val) => val.get::<bool>(),
             None => false,
@@ -748,17 +484,17 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn set_rerender_styles(&mut self, rerender: bool) {
+    fn set_render_styles(&mut self, rerender: bool) {
         self.set_property("rerender_styles", rerender.to_value())
     }
 
     #[inline]
-    fn rerender_difference(&self) -> bool {
+    fn is_render_difference(&self) -> bool {
         self.widget_props().rerender_difference
     }
 
     #[inline]
-    fn set_rerender_difference(&mut self, rerender_difference: bool) {
+    fn set_render_difference(&mut self, rerender_difference: bool) {
         self.widget_props_mut().rerender_difference = rerender_difference
     }
 
@@ -893,7 +629,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", true.to_value());
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.update();
     }
 
@@ -1209,7 +945,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_background(&mut self, color: Color) {
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.widget_props_mut().background = color;
         emit!(Widget::set_background => self.background_changed(), color);
 
@@ -1398,6 +1134,15 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
+    fn set_border_radius(&mut self, radius: f32) {
+        if radius < 0. {
+            return;
+        }
+
+        self.widget_props_mut().border.border_radius = radius;
+    }
+
+    #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
         self.widget_props_mut().border.style = style;
     }
@@ -1530,41 +1275,6 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_vscale(&mut self, vscale: f32) {
         self.widget_props_mut().vscale = vscale
-    }
-
-    #[inline]
-    fn child_image_rect_union(&self) -> &Rect {
-        &self.widget_props().child_image_rect_union
-    }
-
-    #[inline]
-    fn child_image_rect_union_mut(&mut self) -> &mut Rect {
-        &mut self.widget_props_mut().child_image_rect_union
-    }
-
-    #[inline]
-    fn need_update_geometry(&self) -> bool {
-        self.widget_props().need_update_geometry
-    }
-
-    #[inline]
-    fn child_overflow_rect(&self) -> &Rect {
-        &self.widget_props().child_overflow_rect
-    }
-
-    #[inline]
-    fn child_overflow_rect_mut(&mut self) -> &mut Rect {
-        &mut self.widget_props_mut().child_overflow_rect
-    }
-
-    #[inline]
-    fn image_rect_record(&self) -> Rect {
-        self.widget_props().old_image_rect
-    }
-
-    #[inline]
-    fn set_image_rect_record(&mut self, image_rect: Rect) {
-        self.widget_props_mut().old_image_rect = image_rect
     }
 
     #[inline]

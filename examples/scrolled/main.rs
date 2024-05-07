@@ -3,8 +3,7 @@ mod scroll_window;
 use scroll_window::ScrollWindow;
 use tlib::Object;
 use tmui::{
-    application::Application, application_window::ApplicationWindow, prelude::*,
-    widget::WidgetImplExt,
+    application::Application, application_window::ApplicationWindow, prelude::*, widget::ChildOp,
 };
 
 fn main() {

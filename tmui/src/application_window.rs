@@ -74,7 +74,7 @@ impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_rerender_difference(true)
+        self.set_render_difference(true)
     }
 
     fn initialize(&mut self) {
@@ -551,7 +551,7 @@ impl ApplicationWindow {
 
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
             if region.intersects_rect(dirty_irect) {
-                widget.set_rerender_styles(true);
+                widget.set_render_styles(true);
                 widget.update_styles_rect(CoordRect::new(dirty_rect, Coordinate::World));
             }
         }

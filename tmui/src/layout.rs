@@ -480,7 +480,7 @@ impl LayoutManager {
                 widget.set_resize_redraw(true)
             }
             widget.update();
-            widget.set_rerender_styles(true);
+            widget.set_render_styles(true);
         }
         widget.child_image_rect_union_mut().clear();
         widget.child_overflow_rect_mut().clear();

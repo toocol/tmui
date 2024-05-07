@@ -209,14 +209,14 @@ impl Label {
         self.label = text.to_string();
         emit!(Label::set_text => self.text_changed(), old, text);
         self.font_changed();
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.update()
     }
 
     #[inline]
     pub fn set_color(&mut self, color: Color) {
         self.color = color;
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.update();
     }
 
@@ -225,7 +225,7 @@ impl Label {
         let font = self.font_mut();
         font.set_size(size as f32);
         self.font_changed();
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.update();
     }
 

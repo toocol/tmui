@@ -29,7 +29,6 @@ impl ObjectImpl for InputDialog {
         self.submit.width_request(30);
         self.submit.height_request(20);
         self.submit.set_halign(Align::Center);
-        self.submit.set_background(Color::GREY_LIGHT);
         self.submit.callback_mouse_released(|widget, _| {
             widget.window().call_response(|window| {
                 println!("Main window `{}` call response.", window.name())

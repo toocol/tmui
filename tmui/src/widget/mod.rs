@@ -293,7 +293,7 @@ impl Widget {
     #[inline]
     fn notify_rerender_styles(&mut self) {
         if let Some(child) = self.get_child_mut() {
-            child.set_rerender_styles(true)
+            child.set_render_styles(true)
         }
     }
 
@@ -473,7 +473,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         // Clip difference the children region:
         painter.save();
         if self.id() != self.window_id() {
-            painter.clip_region_global(self.child_region(), ClipOp::Difference);
+            self.clip_child_region(&mut painter);
         }
         if let Some(parent) = self.get_parent_ref() {
             if cast!(parent as ContainerImpl).is_some() {
@@ -491,13 +491,16 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
-        if !self.first_rendered() || self.rerender_styles() {
+        if !self.first_rendered() || self.render_styles() {
+            painter.save();
+            self.clip_rect(&mut painter, ClipOp::Intersect);
+
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
             // Draw the background color of the Widget.
             let mut background = self.background();
             background.set_transparency(self.transparency());
 
-            if self.rerender_difference() && self.first_rendered() && !self.window().minimized() {
+            if self.is_render_difference() && self.first_rendered() && !self.window().minimized() {
                 let mut border_rect: FRect = self.rect_record().into();
                 border_rect.set_point(&(0, 0).into());
                 self.border_ref()
@@ -512,17 +515,16 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             self.border_ref().render(&mut painter, geometry.into());
 
             self.set_first_rendered();
-            self.set_rerender_styles(false);
+            self.set_render_styles(false);
+
+            painter.restore();
         }
 
         painter.reset();
         painter.set_font(self.font().clone());
 
         if self.is_strict_clip_widget() {
-            painter.clip_rect(
-                self.contents_rect(Some(Coordinate::Widget)),
-                ClipOp::Intersect,
-            );
+            self.clip_rect(&mut painter, ClipOp::Intersect);
         }
 
         if let Some(loading) = cast_mut!(self as Loadable) {
@@ -675,11 +677,11 @@ impl PointEffective for Widget {
     }
 }
 
-////////////////////////////////////// ChildRegionAcquirer //////////////////////////////////////
-pub trait ChildRegionAcquirer {
+////////////////////////////////////// ChildRegionAcquire //////////////////////////////////////
+pub trait ChildRegionAcquire {
     fn child_region(&self) -> tlib::skia_safe::Region;
 }
-impl ChildRegionAcquirer for Widget {
+impl ChildRegionAcquire for Widget {
     fn child_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
         if let Some(child) = self.get_child_ref() {
@@ -689,6 +691,25 @@ impl ChildRegionAcquirer for Widget {
             }
         }
         region
+    }
+}
+
+
+////////////////////////////////////// ChildRegionClip //////////////////////////////////////
+pub(crate) trait ChildRegionClip {
+    fn clip_child_region(&self, painter: &mut Painter);
+}
+impl<T: WidgetImpl> ChildRegionClip for T {
+    #[inline]
+    fn clip_child_region(&self, painter: &mut Painter) {
+        let widget = self;
+        if let Some(container) = cast!(widget as ContainerImpl) {
+            for c in container.children() {
+                c.clip_rect(painter, ClipOp::Difference)
+            }
+        } else if let Some(c) = widget.get_child_ref() {
+            c.clip_rect(painter, ClipOp::Difference)
+        }
     }
 }
 
@@ -993,7 +1014,7 @@ pub trait WidgetImpl:
     + Layout
     + InnerEventProcess
     + PointEffective
-    + ChildRegionAcquirer
+    + ChildRegionAcquire
     + ActionExt
     + WindowAcquire
 {
@@ -1143,16 +1164,16 @@ impl dyn WidgetImpl {
     }
 }
 
-pub trait WidgetImplExt: WidgetImpl {
+pub trait ChildOp: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
-    /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
+    /// Go to[`Function defination`](ChildOp::child) (Defined in [`ChildOp`])
     fn child<T: WidgetImpl>(&mut self, child: Box<T>);
 
     /// # Safety
     /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
     ///
     /// @see [`Widget::child_ref_internal`](Widget) <br>
-    /// Go to[`Function defination`](WidgetImplExt::child_ref) (Defined in [`WidgetImplExt`])
+    /// Go to[`Function defination`](ChildOp::_child_ref) (Defined in [`ChildOp`])
     unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
 }
 
@@ -1251,10 +1272,10 @@ impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
 
 ////////////////////////////////////// WidgetPropsAcquire //////////////////////////////////////
 pub trait WidgetPropsAcquire {
-    /// Get the ref of widget model.
+    /// Get the ref of widget props.
     fn widget_props(&self) -> &Widget;
 
-    /// Get the mutable ref of widget model.
+    /// Get the mutable ref of widget props.
     fn widget_props_mut(&mut self) -> &mut Widget;
 }
 impl WidgetPropsAcquire for Widget {

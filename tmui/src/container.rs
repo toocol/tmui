@@ -74,7 +74,7 @@ impl ObjectImpl for Container {
                 let rerender = value.get::<bool>();
                 if rerender {
                     for child in self.children.iter_mut() {
-                        child.set_rerender_styles(true)
+                        child.set_render_styles(true)
                     }
                 }
             }

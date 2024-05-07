@@ -179,7 +179,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                     }
                 }
 
-                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
+                impl #impl_generics ChildRegionAcquire for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.widget.child_region()
@@ -231,7 +231,7 @@ pub(crate) fn gen_widget_trait_impl_clause(
             }
         }
 
-        impl #impl_generics WidgetImplExt for #name #ty_generics #where_clause {
+        impl #impl_generics ChildOp for #name #ty_generics #where_clause {
             #[inline]
             fn child<_T: WidgetImpl>(&mut self, mut child: Box<_T>) {
                 if self.super_type().is_a(Container::static_type()) {

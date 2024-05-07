@@ -1,10 +1,18 @@
 use std::collections::HashSet;
 
-use tlib::object::ObjectId;
+use tlib::{figure::Rect, object::ObjectId, typedef::SkiaClipOp};
+
+use crate::graphics::painter::Painter;
 
 use super::{EventBubble, WidgetImpl};
 
 pub(crate) trait WidgetInnerExt {
+    fn set_initialized(&mut self, initialized: bool);
+
+    fn first_rendered(&self) -> bool;
+
+    fn set_first_rendered(&mut self);
+
     fn set_fixed_width_ration(&mut self, ration: f32);
 
     fn set_fixed_height_ration(&mut self, ration: f32);
@@ -34,10 +42,41 @@ pub(crate) trait WidgetInnerExt {
     fn children_index(&self) -> &HashSet<ObjectId>;
 
     fn children_index_mut(&mut self) -> &mut HashSet<ObjectId>;
+
+    fn child_image_rect_union(&self) -> &Rect;
+
+    fn child_image_rect_union_mut(&mut self) -> &mut Rect;
+
+    fn need_update_geometry(&self) -> bool;
+
+    fn child_overflow_rect(&self) -> &Rect;
+
+    fn child_overflow_rect_mut(&mut self) -> &mut Rect;
+
+    fn image_rect_record(&self) -> Rect;
+
+    fn set_image_rect_record(&mut self, image_rect: Rect);
+
+    fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp);
 }
 
 macro_rules! widget_inner_ext_impl {
     () => {
+        #[inline]
+        fn set_initialized(&mut self, initialized: bool) {
+            self.widget_props_mut().initialized = initialized
+        }
+
+        #[inline]
+        fn first_rendered(&self) -> bool {
+            self.widget_props().first_rendered
+        }
+
+        #[inline]
+        fn set_first_rendered(&mut self) {
+            self.widget_props_mut().first_rendered = true
+        }
+
         #[inline]
         fn set_fixed_width_ration(&mut self, ration: f32) {
             self.widget_props_mut().fixed_width_ration = ration;
@@ -115,6 +154,50 @@ macro_rules! widget_inner_ext_impl {
         #[inline]
         fn children_index_mut(&mut self) -> &mut HashSet<ObjectId> {
             &mut self.widget_props_mut().children_index
+        }
+
+        #[inline]
+        fn child_image_rect_union(&self) -> &Rect {
+            &self.widget_props().child_image_rect_union
+        }
+
+        #[inline]
+        fn child_image_rect_union_mut(&mut self) -> &mut Rect {
+            &mut self.widget_props_mut().child_image_rect_union
+        }
+
+        #[inline]
+        fn need_update_geometry(&self) -> bool {
+            self.widget_props().need_update_geometry
+        }
+
+        #[inline]
+        fn child_overflow_rect(&self) -> &Rect {
+            &self.widget_props().child_overflow_rect
+        }
+
+        #[inline]
+        fn child_overflow_rect_mut(&mut self) -> &mut Rect {
+            &mut self.widget_props_mut().child_overflow_rect
+        }
+
+        #[inline]
+        fn image_rect_record(&self) -> Rect {
+            self.widget_props().old_image_rect
+        }
+
+        #[inline]
+        fn set_image_rect_record(&mut self, image_rect: Rect) {
+            self.widget_props_mut().old_image_rect = image_rect
+        }
+
+        #[inline]
+        fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp) {
+            if self.border_ref().border_radius != 0. {
+                painter.clip_round_rect_global(self.rect(), self.border_ref().border_radius, op);
+            } else {
+                painter.clip_rect_global(self.rect(), op);
+            }
         }
     };
 }

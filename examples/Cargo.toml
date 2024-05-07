@@ -22,6 +22,10 @@ name = "async_task"
 path = "async_task/main.rs"
 
 [[bin]]
+name = "border"
+path = "border/main.rs"
+
+[[bin]]
 name = "box_layout"
 path = "box_layout/main.rs"
 

@@ -7,7 +7,7 @@ use crate::{
 };
 use ::tlib::{
     namespace::BlendMode,
-    typedef::{SkiaBlendMode, SkiaFont, SkiaImage, SkiaPoint, SkiaRect},
+    typedef::{SkiaBlendMode, SkiaClipOp, SkiaFont, SkiaImage, SkiaPoint, SkiaRRect, SkiaRect, SkiaRegion},
 };
 use log::{error, warn};
 use std::ffi::c_uint;
@@ -665,21 +665,37 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn clip_rect<T: Into<skia_safe::Rect>>(&self, rect: T, op: skia_safe::ClipOp) {
-        let mut rect: skia_safe::Rect = rect.into();
+    pub fn clip_rect<T: Into<SkiaRect>>(&self, rect: T, op: SkiaClipOp) {
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
-        self.canvas.clip_rect(rect, op, false);
+        self.canvas.clip_rect(rect, op, true);
     }
 
     #[inline]
-    pub fn clip_rect_global<T: Into<skia_safe::Rect>>(&self, rect: T, op: skia_safe::ClipOp) {
-        let rect: skia_safe::Rect = rect.into();
-        self.canvas.clip_rect(rect, op, false);
+    pub fn clip_rect_global<T: Into<SkiaRect>>(&self, rect: T, op: SkiaClipOp) {
+        let rect: SkiaRect = rect.into();
+        self.canvas.clip_rect(rect, op, true);
+    }
+
+    #[inline]
+    pub fn clip_round_rect<T: Into<SkiaRect>>(&self, rect: T, radius: f32, op: SkiaClipOp) {
+        let mut rect: SkiaRect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        let rrect = SkiaRRect::new_rect_xy(rect, radius, radius);
+        self.canvas.clip_rrect(rrect, op, true);
+    }
+
+    #[inline]
+    pub fn clip_round_rect_global<T: Into<SkiaRect>>(&self, rect: T, radius: f32, op: SkiaClipOp) {
+        let rect: SkiaRect = rect.into();
+        let rrect = SkiaRRect::new_rect_xy(rect, radius, radius);
+        self.canvas.clip_rrect(rrect, op, true);
     }
 
     /// Clip the region to draw.
     #[inline]
-    pub fn clip_region_global(&self, region: skia_safe::Region, op: skia_safe::ClipOp) {
+    pub fn clip_region_global(&self, region: SkiaRegion, op: SkiaClipOp) {
         self.canvas.clip_region(&region, Some(op));
     }
 
