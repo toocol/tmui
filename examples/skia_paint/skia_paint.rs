@@ -235,42 +235,56 @@ impl SkiaPaint {
         path.move_to(lb.0);
         path.line_to(lb.1);
 
-        let start_x = lt.0.x();
-        let start_y = lt.0.y();
-        let end_x = lt.1.x();
-        let end_y = lt.1.y();
-        let radius = 10;
-
-        let center_x = start_x + radius;
-        let center_y = start_y + radius;
-
-        let oval: SkiaRect = Rect::new(
-            center_x - radius,
-            center_y - radius,
-            2 * radius,
-            2 * radius,
+        let lt: SkiaRect = Rect::new(
+            rect.left(),
+            rect.top(),
+            2 * 10,
+            2 * 10,
         ).into();
+        path.arc_to(lt, 180., 90., true);
 
-        // let start_angle = ((start_y - end_y) as f32).atan2((start_x - end_x) as f32);
-        // let mut sweep_angle = ((end_y - start_y) as f32).atan2((end_x - start_x) as f32);
+        let rt: SkiaRect = Rect::new(
+            rect.right() - 2 * 10,
+            rect.top(),
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(rt, 270., 90., true);
 
-        let start_angle = ((start_y - center_y) as f32).atan2((start_x - center_x) as f32);
-        let end_angle = ((end_y - center_y) as f32).atan2((end_x - center_x) as f32);
-        let mut sweep_angle = end_angle - start_angle;
-        if sweep_angle < 0.0 {
-            sweep_angle += 2.0 * std::f32::consts::PI;
-        }
+        let rb: SkiaRect = Rect::new(
+            rect.right() - 2 * 10,
+            rect.bottom() - 2 * 10,
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(rb, 0., 90., true);
 
-        println!("start_angle {}, sweep_angle {}", start_angle, sweep_angle);
-        path.arc_to(oval, start_angle * 180. / std::f32::consts::PI, sweep_angle * 180. / std::f32::consts::PI, true);
+        let lb: SkiaRect = Rect::new(
+            rect.left(),
+            rect.bottom() - 2 * 10,
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(lb, 90., 90., true);
 
         painter.set_antialiasing(true);
         painter.set_style(SkiaPaintStyle::Stroke);
         painter.set_color(Color::BLACK);
         painter.draw_path(&path);
+        painter.draw_rect(rect);
 
-
-        painter.draw_round_rect(Rect::new(600, 200, 100, 0), 5.);
+        let rect = Rect::new(600, 200, 100, 60);
+        let (lt, rt, _, lb) = rect.arc_points(20);
+        let oval: SkiaRect = Rect::new(
+            rect.left(),
+            rect.top(),
+            2 * 20,
+            2 * 20,
+        ).into();
+        painter.set_line_width(1.);
+        painter.draw_line(lb.1.x(), lb.1.y(), lt.0.x(), lt.0.y());
+        painter.draw_varying_arc_global(oval, 180., 90., 1., 4., 16);
+        painter.draw_line(lt.1.x(), lt.1.y(), rt.0.x(), rt.0.y());
     }
 
     fn draw_with_clip_difference(&mut self, painter: &mut Painter) {

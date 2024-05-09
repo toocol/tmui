@@ -434,6 +434,9 @@ impl Rect {
         self.height = 0;
     }
 
+    /// (left-top, right-top, right-bottom, left-bottom)
+    ///
+    /// Each points are ordered by clockwise.
     #[inline]
     pub fn arc_points(&self, radius: i32) -> ArcPoints {
         (
@@ -1032,6 +1035,9 @@ impl FRect {
         *self = self.union(other);
     }
 
+    /// (left-top, right-top, right-bottom, left-bottom)
+    ///
+    /// Each points are ordered by clockwise.
     #[inline]
     pub fn arc_points(&self, radius: f32) -> ArcFPoints {
         (
