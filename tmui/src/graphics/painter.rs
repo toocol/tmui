@@ -645,7 +645,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Draw the varying width arc.
-    /// 
+    ///
     /// the oval rect's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
     pub fn draw_varying_arc<T: Into<SkiaRect>>(
@@ -670,7 +670,7 @@ impl<'a> Painter<'a> {
     }
 
     /// Draw the varying width arc with global coordinate.
-    /// 
+    ///
     /// the oval rect's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
     pub fn draw_varying_arc_global<T: Into<SkiaRect>>(
@@ -684,20 +684,29 @@ impl<'a> Painter<'a> {
     ) {
         let oval: SkiaRect = oval.into();
         let mut path = Path::new();
-        let step_angle = sweep_angle / steps as f32;
-        let adjust_step_angle = step_angle + 1.;
-        let step_width_increase = (end_width - start_width) / steps as f32;
 
-        for i in 0..steps {
-            let angle = start_angle + i as f32 * step_angle;
-            let width = start_width + i as f32 * step_width_increase;
-
-            path.arc_to(oval, angle, adjust_step_angle, true);
+        if start_width == end_width {
+            path.arc_to(oval, start_angle, sweep_angle, true);
 
             self.set_style(SkiaPaintStyle::Stroke);
-            self.set_line_width(width);
+            self.set_line_width(start_width);
             self.draw_path(&path);
-            path.rewind();
+        } else {
+            let step_angle = sweep_angle / steps as f32;
+            let adjust_step_angle = step_angle + 1.;
+            let step_width_increase = (end_width - start_width) / steps as f32;
+
+            for i in 0..steps {
+                let angle = start_angle + i as f32 * step_angle;
+                let width = start_width + i as f32 * step_width_increase;
+
+                path.arc_to(oval, angle, adjust_step_angle, true);
+
+                self.set_style(SkiaPaintStyle::Stroke);
+                self.set_line_width(width);
+                self.draw_path(&path);
+                path.rewind();
+            }
         }
     }
 

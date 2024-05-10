@@ -19,15 +19,25 @@ fn build_ui(window: &mut ApplicationWindow) {
     let mut widget1: Box<Widget> = Object::new(&[]);
     let mut widget2: Box<Widget> = Object::new(&[]);
 
-    widget1.set_background(Color::BLUE);
+    widget1.set_background(Color::CYAN);
     widget1.width_request(400);
     widget1.height_request(400);
     widget1.set_border_radius(10.);
+    widget1.set_borders(2., 4., 6., 8.);
+    widget1.set_border_top_color(Color::BLACK);
+    widget1.set_border_right_color(Color::YELLOW);
+    widget1.set_border_bottom_color(Color::BLUE);
+    widget1.set_border_left_color(Color::GREEN);
 
-    widget2.set_background(Color::YELLOW);
+    widget2.set_background(Color::PURPLE);
     widget2.width_request(400);
     widget2.height_request(400);
-    widget2.set_border_radius(10.);
+    widget2.set_border_radius(20.);
+    widget2.set_borders(2., 2., 2., 2.);
+    widget2.set_border_top_color(Color::BLACK);
+    widget2.set_border_right_color(Color::YELLOW);
+    widget2.set_border_bottom_color(Color::BLUE);
+    widget2.set_border_left_color(Color::GREEN);
 
     hbox.add_child(widget1);
     hbox.add_child(widget2);

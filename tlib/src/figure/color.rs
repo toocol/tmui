@@ -252,6 +252,13 @@ impl Color {
         a: 0,
         valid: true,
     };
+    pub const PURPLE: Color = Color {
+        r: 128,
+        g: 0,
+        b: 128,
+        a: 0,
+        valid: true,
+    };
 }
 
 impl From<(u8, u8, u8)> for Color {
