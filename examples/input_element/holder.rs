@@ -1,12 +1,16 @@
 use tlib::{connect, run_after};
 use tmui::{
     input::{
-        text::{Text, TextSignals},
+        password::Password,
+        text::{Text, TextExt, TextSignals},
         Input, InputSignals,
     },
     prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    tlib::{
+        namespace::MouseButton,
+        object::{ObjectImpl, ObjectSubclass},
+    },
+    widget::{callbacks::CallbacksRegister, WidgetImpl},
 };
 
 #[extends(Widget, Layout(VBox))]
@@ -21,6 +25,9 @@ pub struct Holder {
 
     #[children]
     text3: Box<Text>,
+
+    #[children]
+    password: Box<Password>,
 }
 
 impl ObjectSubclass for Holder {
@@ -62,6 +69,16 @@ impl ObjectImpl for Holder {
         self.text3
             .set_placeholder("Placeholder of text-3/中文提示符");
         // self.text3.set_vexpand(true);
+
+        self.password.set_margin_left(20);
+        self.password.set_margin_top(10);
+        self.password.callback_mouse_released(|w, evt| {
+            if evt.mouse_button() == MouseButton::RightButton {
+                let pwd = w.downcast_mut::<Password>().unwrap();
+                let v = !pwd.is_password_visible();
+                pwd.set_password_visible(v);
+            }
+        });
 
         self.set_vexpand(true);
         self.set_spacing(30);

@@ -24,16 +24,16 @@ use tlib::{
     timer::Timer,
 };
 
-const TEXT_DEFAULT_MAX_MEMORIES_SIZE: usize = 50;
-const TEXT_DEFAULT_WIDTH: i32 = 150;
-const TEXT_DEFAULT_PADDING: f32 = 3.;
+pub(crate) const TEXT_DEFAULT_MAX_MEMORIES_SIZE: usize = 50;
+pub(crate) const TEXT_DEFAULT_WIDTH: i32 = 150;
+pub(crate) const TEXT_DEFAULT_PADDING: f32 = 3.;
 
-const TEXT_DEFAULT_BORDER_COLOR: Color = Color::grey_with(150);
+pub(crate) const TEXT_DEFAULT_BORDER_COLOR: Color = Color::grey_with(150);
 
-const TEXT_DEFAULT_DISABLE_COLOR: Color = Color::grey_with(80);
-const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
+pub(crate) const TEXT_DEFAULT_DISABLE_COLOR: Color = Color::grey_with(80);
+pub(crate) const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
 
-const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
+pub(crate) const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 
 #[extends(Widget)]
 #[run_after]
@@ -41,50 +41,80 @@ const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 #[global_watch(MouseMove)]
 pub struct Text {
     input_wrapper: InputWrapper<String>,
-    entered: bool,
+    props: TextProps,
+}
+
+#[derive(Derivative)]
+#[derivative(Default)]
+pub(crate) struct TextProps {
+    pub(crate) entered: bool,
 
     //////////////////////////// Revoke/Redo
-    revoke_memories: VecDeque<TextMemory>,
-    redo_memories: VecDeque<TextMemory>,
+    pub(crate) revoke_memories: VecDeque<TextMemory>,
+    pub(crate) redo_memories: VecDeque<TextMemory>,
     #[derivative(Default(value = "Instant::now()"))]
-    last_key_strike: Instant,
+    pub(crate) last_key_strike: Instant,
 
     //////////////////////////// Cursor
-    cursor_index: usize,
-    cursor_visible: bool,
+    pub(crate) cursor_index: usize,
+    pub(crate) cursor_visible: bool,
     #[derivative(Default(value = "true"))]
-    cursor_blink: bool,
-    blink_timer: Timer,
+    pub(crate) cursor_blink: bool,
+    pub(crate) blink_timer: Timer,
     /// The cursor color, if not set, defaults to the text color.
-    caret_color: Option<Color>,
-    predict_start: usize,
-    predict_start_len: f32,
+    pub(crate) caret_color: Option<Color>,
+    pub(crate) predict_start: usize,
+    pub(crate) predict_start_len: f32,
 
     //////////////////////////// Text
     #[derivative(Default(value = "TEXT_DEFAULT_PADDING"))]
-    text_padding: f32,
-    text_window: FRect,
-    text_draw_position: Option<FPoint>,
+    pub(crate) text_padding: f32,
+    pub(crate) text_window: FRect,
+    pub(crate) text_draw_position: Option<FPoint>,
     #[derivative(Default(value = "Color::BLACK"))]
-    text_color: Color,
-    max_length: Option<usize>,
-    letter_spacing: f32,
-    placeholder: String,
-    unicode_text: bool,
+    pub(crate) text_color: Color,
+    pub(crate) max_length: Option<usize>,
+    pub(crate) letter_spacing: f32,
+    pub(crate) placeholder: String,
+    pub(crate) unicode_text: bool,
 
     //////////////////////////// Font
-    font_dimension: (f32, f32),
+    pub(crate) font_dimension: (f32, f32),
 
     //////////////////////////// Selection
-    drag_status: DragStatus,
+    pub(crate) drag_status: DragStatus,
     #[derivative(Default(value = "-1"))]
-    selection_start: i32,
+    pub(crate) selection_start: i32,
     #[derivative(Default(value = "-1"))]
-    selection_end: i32,
+    pub(crate) selection_end: i32,
     #[derivative(Default(value = "Color::from_rgb(51, 167, 255)"))]
-    selection_background: Color,
+    pub(crate) selection_background: Color,
     #[derivative(Default(value = "Color::WHITE"))]
-    selection_color: Color,
+    pub(crate) selection_color: Color,
+}
+
+pub(crate) trait TextPropsAcquire: Input<Value = String> {
+    fn props(&self) -> &TextProps;
+
+    fn props_mut(&mut self) -> &mut TextProps;
+
+    fn shown_text(&self) -> Ref<String>;
+}
+impl TextPropsAcquire for Text {
+    #[inline]
+    fn props(&self) -> &TextProps {
+        &self.props
+    }
+
+    #[inline]
+    fn props_mut(&mut self) -> &mut TextProps {
+        &mut self.props
+    }
+
+    #[inline]
+    fn shown_text(&self) -> Ref<String> {
+        self.input_wrapper.value_ref()
+    }
 }
 
 pub trait TextSignals: ActionExt {
@@ -99,7 +129,7 @@ impl TextSignals for Text {}
 
 #[repr(u8)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-enum DragStatus {
+pub(crate) enum DragStatus {
     #[default]
     None,
     Pending,
@@ -122,11 +152,11 @@ impl ObjectImpl for Text {
         self.register_shortcuts();
 
         if self.is_enable() {
-            self.cursor_index = self.value_chars_count();
+            self.props.cursor_index = self.value_chars_count();
         }
 
         connect!(self, value_changed(), self, on_value_changed());
-        connect!(self.blink_timer, timeout(), self, blink_event());
+        connect!(self.props.blink_timer, timeout(), self, blink_event());
         connect!(
             self,
             geometry_changed(),
@@ -153,7 +183,7 @@ impl WidgetImpl for Text {
     fn paint(&mut self, painter: &mut Painter) {
         if self.is_enable() {
             painter.save();
-            painter.clip_rect_global(self.text_window, ClipOp::Intersect);
+            painter.clip_rect_global(self.props.text_window, ClipOp::Intersect);
 
             self.draw_enable(painter);
 
@@ -226,7 +256,7 @@ impl WidgetImpl for Text {
         if !self.is_enable() {
             return;
         }
-        if !self.entered {
+        if !self.props.entered {
             self.window()
                 .set_cursor_shape(SystemCursorShape::ArrowCursor);
         }
@@ -236,14 +266,14 @@ impl WidgetImpl for Text {
 
     #[inline]
     fn on_mouse_enter(&mut self, _: &MouseEvent) {
-        self.entered = true;
+        self.props.entered = true;
         self.window()
             .set_cursor_shape(SystemCursorShape::TextCursor);
     }
 
     #[inline]
     fn on_mouse_leave(&mut self, _: &MouseEvent) {
-        self.entered = false;
+        self.props.entered = false;
         let window = self.window();
         if self.id() == window.pressed_widget() {
             return;
@@ -277,22 +307,18 @@ impl Input for Text {
     }
 }
 
-impl Text {
+#[allow(private_bounds)]
+pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
-    }
-
-    #[inline]
-    pub fn set_text_padding(&mut self, text_padding: f32) {
+    fn set_text_padding(&mut self, text_padding: f32) {
         if text_padding < 0.
-            || text_padding * 2. + self.font_dimension.1 > self.size().height() as f32
+            || text_padding * 2. + self.props().font_dimension.1 > self.size().height() as f32
         {
             warn!("The value of text padding was invalid, ignore padding set.");
             return;
         }
 
-        self.text_padding = text_padding;
+        self.props_mut().text_padding = text_padding;
 
         if self.window().initialized() {
             self.calc_text_geometry();
@@ -301,8 +327,8 @@ impl Text {
     }
 
     #[inline]
-    pub fn set_blink_cursor(&mut self, cursor_blink: bool) {
-        if self.cursor_blink == cursor_blink {
+    fn set_blink_cursor(&mut self, cursor_blink: bool) {
+        if self.props().cursor_blink == cursor_blink {
             return;
         }
 
@@ -310,47 +336,40 @@ impl Text {
     }
 
     #[inline]
-    pub fn set_letter_spacing(&mut self, letter_spacing: f32) {
-        self.letter_spacing = letter_spacing;
+    fn set_letter_spacing(&mut self, letter_spacing: f32) {
+        self.props_mut().letter_spacing = letter_spacing;
 
         self.update();
     }
 
     #[inline]
-    pub fn set_text_color(&mut self, text_color: Color) {
-        self.text_color = text_color;
+    fn set_text_color(&mut self, text_color: Color) {
+        self.props_mut().text_color = text_color;
 
         self.update();
     }
 
     #[inline]
-    pub fn set_max_length(&mut self, max_length: usize) {
-        self.max_length = Some(max_length)
+    fn set_max_length(&mut self, max_length: usize) {
+        self.props_mut().max_length = Some(max_length)
     }
 
     #[inline]
-    pub fn set_caret_color(&mut self, caret_color: Color) {
-        self.caret_color = Some(caret_color);
+    fn set_caret_color(&mut self, caret_color: Color) {
+        self.props_mut().caret_color = Some(caret_color);
 
         self.update();
     }
 
     #[inline]
-    pub fn set_placeholder<Placeholder: ToString>(&mut self, placeholder: Placeholder) {
-        self.placeholder = placeholder.to_string();
+    fn set_placeholder<Placeholder: ToString>(&mut self, placeholder: Placeholder) {
+        self.props_mut().placeholder = placeholder.to_string();
 
         self.update();
     }
 
     #[inline]
-    pub fn has_selection(&self) -> bool {
-        self.selection_start != -1
-            && self.selection_end != -1
-            && self.selection_start != self.selection_end
-    }
-
-    #[inline]
-    pub fn get_selection(&self) -> Option<String> {
+    fn get_selection(&self) -> Option<String> {
         if self.has_selection() {
             let (start, end) = self.selection_range();
             let (start, end) = (self.map(start), self.map(end));
@@ -363,14 +382,14 @@ impl Text {
     }
 
     #[inline]
-    pub fn copy(&self) {
+    fn copy(&self) {
         if let Some(selection) = self.get_selection() {
             System::clipboard().set_text(selection, ClipboardLevel::Os)
         }
     }
 
     #[inline]
-    pub fn cut(&mut self) {
+    fn cut(&mut self) {
         if !self.has_selection() {
             return;
         }
@@ -383,12 +402,12 @@ impl Text {
         }
         self.value_remove_range(start, end);
 
-        self.cursor_index = start;
+        self.props_mut().cursor_index = start;
         self.clear_selection();
     }
 
     #[inline]
-    pub fn paste(&mut self) {
+    fn paste(&mut self) {
         if let Some(cp) = System::clipboard().text(ClipboardLevel::Os) {
             self.save_revoke();
 
@@ -396,28 +415,28 @@ impl Text {
                 let (start, end) = self.selection_range();
                 self.value_remove_range(start, end);
 
-                self.cursor_index = start;
+                self.props_mut().cursor_index = start;
                 self.clear_selection();
             }
 
             let mut cut = false;
             {
-                let idx = self.map(self.cursor_index);
-                self.input_wrapper.value_mut().insert_str(idx, &cp);
+                let idx = self.map(self.props().cursor_index);
+                self.input_wrapper().value_mut().insert_str(idx, &cp);
 
-                if let Some(max_length) = self.max_length {
+                if let Some(max_length) = self.props().max_length {
                     if self.value_chars_count() > max_length {
                         let idx = self.map(max_length);
-                        self.input_wrapper.value_mut().replace_range(idx.., "");
+                        self.input_wrapper().value_mut().replace_range(idx.., "");
                         cut = true;
                     }
                 }
             }
 
             if cut {
-                self.cursor_index = self.value_chars_count();
+                self.props_mut().cursor_index = self.value_chars_count();
             } else {
-                self.cursor_index += cp.chars().count();
+                self.props_mut().cursor_index += cp.chars().count();
             }
 
             if !cp.is_empty() {
@@ -428,18 +447,18 @@ impl Text {
     }
 
     #[inline]
-    pub fn revoke(&mut self) {
-        if let Some(mem) = self.revoke_memories.pop_back() {
+    fn revoke(&mut self) {
+        if let Some(mem) = self.props_mut().revoke_memories.pop_back() {
             self.save_redo();
 
-            self.cursor_index = mem.cursor_index;
-            self.selection_start = mem.selection_start;
-            self.selection_end = mem.selection_end;
-            self.text_draw_position = Some(mem.text_draw_position);
+            self.props_mut().cursor_index = mem.cursor_index;
+            self.props_mut().selection_start = mem.selection_start;
+            self.props_mut().selection_end = mem.selection_end;
+            self.props_mut().text_draw_position = Some(mem.text_draw_position);
 
             let mem_val = mem.value;
             if !mem_val.eq(self.value_ref().as_str()) {
-                self.input_wrapper.set_value(mem_val);
+                self.input_wrapper().set_value(mem_val);
                 emit!(self.value_changed())
             }
 
@@ -448,18 +467,18 @@ impl Text {
     }
 
     #[inline]
-    pub fn redo(&mut self) {
-        if let Some(mem) = self.redo_memories.pop_back() {
+    fn redo(&mut self) {
+        if let Some(mem) = self.props_mut().redo_memories.pop_back() {
             self.save_revoke();
 
-            self.cursor_index = mem.cursor_index;
-            self.selection_start = mem.selection_start;
-            self.selection_end = mem.selection_end;
-            self.text_draw_position = Some(mem.text_draw_position);
+            self.props_mut().cursor_index = mem.cursor_index;
+            self.props_mut().selection_start = mem.selection_start;
+            self.props_mut().selection_end = mem.selection_end;
+            self.props_mut().text_draw_position = Some(mem.text_draw_position);
 
             let mem_val = mem.value;
             if !mem_val.eq(self.value_ref().as_str()) {
-                self.input_wrapper.set_value(mem_val);
+                self.input_wrapper().set_value(mem_val);
                 emit!(self.value_changed())
             }
 
@@ -468,46 +487,82 @@ impl Text {
     }
 
     #[inline]
-    pub fn shift_select(&mut self, code: KeyCode) {
-        let start = if self.selection_start == -1 {
-            Some(self.cursor_index as i32)
+    fn shift_select(&mut self, code: KeyCode) {
+        let start = if self.props().selection_start == -1 {
+            Some(self.props().cursor_index as i32)
         } else {
             None
         };
 
         match code {
             KeyCode::KeyLeft => {
-                if self.cursor_index > 0 {
-                    self.cursor_index -= 1;
-                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
+                if self.props().cursor_index > 0 {
+                    self.props_mut().cursor_index -= 1;
+                    self.adjust_selection_range(start, Some(self.props().cursor_index as i32))
                 }
             }
             KeyCode::KeyRight => {
-                if self.cursor_index < self.value_chars_count() {
-                    self.cursor_index += 1;
-                    self.adjust_selection_range(start, Some(self.cursor_index as i32))
+                if self.props().cursor_index < self.value_chars_count() {
+                    self.props_mut().cursor_index += 1;
+                    self.adjust_selection_range(start, Some(self.props().cursor_index as i32))
                 }
             }
             KeyCode::KeyHome => {
-                self.cursor_index = 0;
+                self.props_mut().cursor_index = 0;
                 self.adjust_selection_range(start, Some(0));
             }
             KeyCode::KeyEnd => {
-                self.cursor_index = self.value_chars_count();
-                self.adjust_selection_range(start, Some(self.cursor_index as i32));
+                self.props_mut().cursor_index = self.value_chars_count();
+                self.adjust_selection_range(start, Some(self.props().cursor_index as i32));
             }
             _ => {}
         }
     }
 }
 
-impl Text {
+pub(crate) trait TextShorcutRegister: TextExt {
+    fn register_shortcuts(&mut self);
+}
+#[macro_export]
+macro_rules! impl_text_shortcut_register {
+    ($ty:ident) => {
+        impl TextShorcutRegister for $ty {
+            #[rustfmt::skip]
+            fn register_shortcuts(&mut self) {
+                self.register_shortcut(shortcut!(Control + A), cast_do!($ty::select_all()));
+
+                self.register_shortcut(shortcut!(Control + C), cast_do!($ty::copy()));
+
+                self.register_shortcut(shortcut!(Control + X), cast_do!($ty::cut()));
+
+                self.register_shortcut(shortcut!(Control + V), cast_do!($ty::paste()));
+
+                self.register_shortcut(shortcut!(Control + Z), cast_do!($ty::revoke()));
+
+                self.register_shortcut(shortcut!(Control + Y), cast_do!($ty::redo()));
+
+                self.register_shortcut(shortcut!(Shift + Left), cast_do!($ty::shift_select(KeyCode::KeyLeft)));
+
+                self.register_shortcut(shortcut!(Shift + Right), cast_do!($ty::shift_select(KeyCode::KeyRight)));
+
+                self.register_shortcut(shortcut!(Shift + Home), cast_do!($ty::shift_select(KeyCode::KeyHome)));
+
+                self.register_shortcut(shortcut!(Shift + End), cast_do!($ty::shift_select(KeyCode::KeyEnd)));
+            }
+        }
+    };
+}
+impl_text_shortcut_register!(Text);
+
+pub(crate) trait TextInnerExt:
+    TextPropsAcquire + WidgetImpl + WidgetInnerExt + TextSignals + Sized
+{
     fn draw_enable(&mut self, painter: &mut Painter) {
         // Calculates the position of cursor, and adjust the `text_draw_position`:
         let cursor_x = self.sync_cursor_text_draw();
 
         // Clear the text window:
-        painter.fill_rect_global(self.text_window, self.background());
+        painter.fill_rect_global(self.props().text_window, self.background());
 
         // Draw text:
         self.draw_text(painter);
@@ -524,11 +579,11 @@ impl Text {
     }
 
     fn draw_text(&self, painter: &mut Painter) {
-        let val_ref = self.value_ref();
+        let val_ref = self.shown_text();
 
         // Draw placeholder:
         if val_ref.is_empty() {
-            if !self.placeholder.is_empty() {
+            if !self.props().placeholder.is_empty() {
                 self.draw_text_placeholder(painter);
             }
 
@@ -536,9 +591,9 @@ impl Text {
         }
 
         // Draw normal:
-        if self.selection_start == -1
-            || self.selection_end == -1
-            || self.selection_start == self.selection_end
+        if self.props().selection_start == -1
+            || self.props().selection_end == -1
+            || self.props().selection_start == self.props().selection_end
         {
             self.draw_text_normal(painter, &val_ref)
         }
@@ -550,7 +605,7 @@ impl Text {
 
     fn draw_text_normal(&self, painter: &mut Painter, val_ref: &Ref<String>) {
         if self.is_enable() {
-            painter.set_color(self.text_color);
+            painter.set_color(self.props().text_color);
         } else {
             painter.set_color(TEXT_DEFAULT_DISABLE_COLOR);
         }
@@ -569,14 +624,18 @@ impl Text {
         let (pre, mid, suf) = {
             let font = self.font();
             let (start, end) = self.selection_range();
-            let (start, end) = (self.map(start), self.map(end));
+            let (start, end) = (self.map_shown(start), self.map_shown(end));
 
             let pre_str = &str[0..start];
             let mid_str = &str[start..end];
             let suf_str = &str[end..];
 
-            let pre_w = font.calc_text_dimension(pre_str, self.letter_spacing).0;
-            let mid_w = font.calc_text_dimension(mid_str, self.letter_spacing).0;
+            let pre_w = font
+                .calc_text_dimension(pre_str, self.props().letter_spacing)
+                .0;
+            let mid_w = font
+                .calc_text_dimension(mid_str, self.props().letter_spacing)
+                .0;
 
             let pre_point = *self.text_draw_position();
             let mut mid_point = pre_point;
@@ -589,24 +648,29 @@ impl Text {
                 (
                     mid_str,
                     mid_point,
-                    FRect::new(mid_point.x(), mid_point.y(), mid_w, self.font_dimension.1),
+                    FRect::new(
+                        mid_point.x(),
+                        mid_point.y(),
+                        mid_w,
+                        self.props().font_dimension.1,
+                    ),
                 ),
                 (suf_str, suf_point),
             )
         };
 
         if !pre.0.is_empty() {
-            painter.set_color(self.text_color);
+            painter.set_color(self.props().text_color);
             self.render_text(painter, pre.0, pre.1);
         }
         if !suf.0.is_empty() {
-            painter.set_color(self.text_color);
+            painter.set_color(self.props().text_color);
             self.render_text(painter, suf.0, suf.1);
         }
         if !mid.0.is_empty() {
-            painter.fill_rect_global(mid.2, self.selection_background);
+            painter.fill_rect_global(mid.2, self.props().selection_background);
 
-            painter.set_color(self.selection_color);
+            painter.set_color(self.props().selection_color);
             self.render_text(painter, mid.0, mid.1);
         }
     }
@@ -614,64 +678,71 @@ impl Text {
     fn draw_text_placeholder(&self, painter: &mut Painter) {
         painter.set_color(TEXT_DEFAULT_PLACEHOLDER_COLOR);
 
-        self.render_text(painter, &self.placeholder, *self.text_draw_position());
+        self.render_text(
+            painter,
+            &self.props().placeholder,
+            *self.text_draw_position(),
+        );
     }
 
     fn draw_cursor(&self, painter: &mut Painter, cursor_x: f32) {
-        if !self.cursor_visible || self.drag_status == DragStatus::Dragging {
+        if !self.props().cursor_visible || self.props().drag_status == DragStatus::Dragging {
             return;
         }
         if self.has_selection() {
             return;
         }
 
-        if let Some(color) = self.caret_color {
+        if let Some(color) = self.props().caret_color {
             painter.set_color(color);
         } else {
-            painter.set_color(self.text_color);
+            painter.set_color(self.props().text_color);
         }
         painter.set_line_width(1.);
         painter.draw_line_f_global(
             cursor_x,
-            self.text_window.top(),
+            self.props().text_window.top(),
             cursor_x,
-            self.text_window.bottom(),
+            self.props().text_window.bottom(),
         )
     }
 
     fn calc_text_geometry(&mut self) {
         let rect: FRect = self.rect().into();
-        let font_height = self.font_dimension.1;
+        let font_height = self.props().font_dimension.1;
         let calced_height = self.calc_widget_height();
         let mut window = FRect::default();
 
-        window.set_x(rect.x() + self.text_padding);
+        window.set_x(rect.x() + self.props().text_padding);
         if calced_height == rect.height() {
-            window.set_y(rect.y() + self.text_padding);
+            window.set_y(rect.y() + self.props().text_padding);
         } else {
             let offset = (rect.height() - font_height) / 2.;
             window.set_y(rect.y() + offset.floor());
         }
 
-        window.set_width(rect.width() - 2. * self.text_padding);
+        window.set_width(rect.width() - 2. * self.props().text_padding);
         window.set_height(font_height);
 
-        self.text_window = window;
-        if let Some(ref mut pos) = self.text_draw_position {
+        self.props_mut().text_window = window;
+        if let Some(ref mut pos) = self.props_mut().text_draw_position {
             pos.set_y(window.y());
         } else {
-            self.text_draw_position = Some(self.text_window.top_left());
+            self.props_mut().text_draw_position = Some(self.props().text_window.top_left());
         };
     }
 
     fn sync_cursor_text_draw(&mut self) -> f32 {
         let mut pos = {
-            let str_ref = self.value_ref();
+            let str_ref = self.shown_text();
             let str = str_ref.as_str();
 
-            let s = &str[..self.map(self.cursor_index)];
+            let s = &str[..self.map_shown(self.props().cursor_index)];
             self.text_draw_position().x()
-                + self.font().calc_text_dimension(s, self.letter_spacing).0
+                + self
+                    .font()
+                    .calc_text_dimension(s, self.props().letter_spacing)
+                    .0
         };
 
         let mut shift = false;
@@ -679,11 +750,11 @@ impl Text {
         // When cursor position exceeds the right side of the text window,
         // set the cursor to the end of the text window,
         // meanwhile the drawing position moves left.
-        if pos > self.text_window.right() {
-            let offset = pos - self.text_window.right() + 2.;
+        if pos > self.props().text_window.right() {
+            let offset = pos - self.props().text_window.right() + 2.;
             self.text_draw_position_mut().offset(-offset, 0.);
 
-            pos = self.text_window.right() - 2.;
+            pos = self.props().text_window.right() - 2.;
             if offset != 0. {
                 shift = true;
             }
@@ -691,11 +762,11 @@ impl Text {
         // When cursor position exceeds the left side of the text window,
         // set the cursor to the beginning of the text window,
         // meanwhile the drawing position moves right.
-        else if pos < self.text_window.left() {
-            let offset = self.text_window.left() + 2. - pos;
+        else if pos < self.props().text_window.left() {
+            let offset = self.props().text_window.left() + 2. - pos;
             self.text_draw_position_mut().offset(offset, 0.);
 
-            pos = self.text_window.left() + 2.;
+            pos = self.props().text_window.left() + 2.;
             if offset != 0. {
                 shift = true;
             }
@@ -703,13 +774,13 @@ impl Text {
         // When a character from the input string has been deleted,
         // and the cursor was at the end of both the input string and the text window,
         // the drawing position moves right.
-        else if self.cursor_index == self.value_chars_count()
-            && self.text_draw_position().x() < self.text_window.x()
+        else if self.props().cursor_index == self.value_chars_count()
+            && self.text_draw_position().x() < self.props().text_window.x()
         {
-            let offset = self.text_window.right() - 2. - pos;
+            let offset = self.props().text_window.right() - 2. - pos;
             self.text_draw_position_mut().offset(offset, 0.);
 
-            pos = self.text_window.right() - 2.;
+            pos = self.props().text_window.right() - 2.;
             if offset != 0. {
                 shift = true;
             }
@@ -722,34 +793,41 @@ impl Text {
         pos
     }
 
+    #[inline]
+    fn has_selection(&self) -> bool {
+        self.props().selection_start != -1
+            && self.props().selection_end != -1
+            && self.props().selection_start != self.props().selection_end
+    }
+
     fn check_blink_timer(&mut self, is_focus: bool) {
-        if self.cursor_blink && is_focus {
-            if self.blink_timer.is_active() {
+        if self.props().cursor_blink && is_focus {
+            if self.props().blink_timer.is_active() {
                 return;
             }
-            self.blink_timer.start(Duration::from_millis(
-                application::cursor_blinking_time() as u64
+            self.props_mut().blink_timer.start(Duration::from_millis(
+                application::cursor_blinking_time() as u64,
             ));
 
-            if !self.cursor_visible {
-                self.cursor_visible = true;
+            if !self.props().cursor_visible {
+                self.props_mut().cursor_visible = true;
                 self.update();
             }
         } else {
-            if !self.blink_timer.is_active() {
+            if !self.props().blink_timer.is_active() {
                 return;
             }
-            self.blink_timer.stop();
+            self.props_mut().blink_timer.stop();
 
-            if self.cursor_visible {
-                self.cursor_visible = false;
+            if self.props().cursor_visible {
+                self.props_mut().cursor_visible = false;
                 self.update();
             }
         }
     }
 
     fn handle_font_changed(&mut self) {
-        self.font_dimension = if self.unicode_text {
+        self.props_mut().font_dimension = if self.props().unicode_text {
             self.font().calc_font_dimension_unicode()
         } else {
             self.font().calc_font_dimension()
@@ -775,10 +853,10 @@ impl Text {
 
     fn handle_key_pressed(&mut self, event: &KeyEvent) {
         if event.modifier() == KeyboardModifier::NoModifier {
-            if self.last_key_strike.elapsed().as_millis() > 1000 {
+            if self.props().last_key_strike.elapsed().as_millis() > 1000 {
                 self.save_revoke();
             }
-            self.last_key_strike = Instant::now();
+            self.props_mut().last_key_strike = Instant::now();
         }
 
         match event.key_code() {
@@ -787,26 +865,26 @@ impl Text {
                     let (start, end) = self.selection_range();
                     self.value_remove_range(start, end);
 
-                    self.cursor_index = start;
+                    self.props_mut().cursor_index = start;
                     self.clear_selection();
                     return;
                 }
 
-                if self.cursor_index == 0 {
+                if self.props().cursor_index == 0 {
                     self.start_blink_timer();
                     return;
                 }
 
-                self.cursor_index -= 1;
-                let idx = self.map(self.cursor_index);
-                self.input_wrapper.value_mut().remove(idx);
+                self.props_mut().cursor_index -= 1;
+                let idx = self.map(self.props().cursor_index);
+                self.input_wrapper().value_mut().remove(idx);
 
                 emit!(self.value_changed());
             }
             KeyCode::KeyLeft => {
                 self.clear_selection();
-                if self.cursor_index > 0 {
-                    self.cursor_index -= 1;
+                if self.props().cursor_index > 0 {
+                    self.props_mut().cursor_index -= 1;
                 } else {
                     self.start_blink_timer();
                     return;
@@ -814,8 +892,8 @@ impl Text {
             }
             KeyCode::KeyRight => {
                 self.clear_selection();
-                if self.cursor_index < self.value_chars_count() {
-                    self.cursor_index += 1;
+                if self.props().cursor_index < self.value_chars_count() {
+                    self.props_mut().cursor_index += 1;
                 } else {
                     self.start_blink_timer();
                     return;
@@ -823,11 +901,11 @@ impl Text {
             }
             KeyCode::KeyEnd => {
                 self.clear_selection();
-                self.cursor_index = self.value_chars_count();
+                self.props_mut().cursor_index = self.value_chars_count();
             }
             KeyCode::KeyHome => {
                 self.clear_selection();
-                self.cursor_index = 0;
+                self.props_mut().cursor_index = 0;
             }
             _ => {
                 let modifier = event.modifier();
@@ -848,86 +926,63 @@ impl Text {
                     self.value_remove_range(start, end);
 
                     self.clear_selection();
-                    self.cursor_index = start;
+                    self.props_mut().cursor_index = start;
                 }
 
-                if let Some(max_length) = self.max_length {
+                if let Some(max_length) = self.props().max_length {
                     if self.value_chars_count() >= max_length {
                         self.start_blink_timer();
                         return;
                     }
                 }
 
-                let idx = self.map(self.cursor_index);
-                self.input_wrapper.value_mut().insert_str(idx, text);
-                self.cursor_index += 1;
+                let idx = self.map(self.props().cursor_index);
+                self.input_wrapper().value_mut().insert_str(idx, text);
+                self.props_mut().cursor_index += 1;
 
                 emit!(self.value_changed());
             }
         }
 
-        if self.blink_timer.is_active() {
-            self.blink_timer.stop();
+        if self.props().blink_timer.is_active() {
+            self.props_mut().blink_timer.stop();
         }
-        self.cursor_visible = true;
-    }
-
-    #[rustfmt::skip]
-    fn register_shortcuts(&mut self) {
-        self.register_shortcut(shortcut!(Control + A), cast_do!(Text::select_all()));
-
-        self.register_shortcut(shortcut!(Control + C), cast_do!(Text::copy()));
-
-        self.register_shortcut(shortcut!(Control + X), cast_do!(Text::cut()));
-
-        self.register_shortcut(shortcut!(Control + V), cast_do!(Text::paste()));
-
-        self.register_shortcut(shortcut!(Control + Z), cast_do!(Text::revoke()));
-
-        self.register_shortcut(shortcut!(Control + Y), cast_do!(Text::redo()));
-
-        self.register_shortcut(shortcut!(Shift + Left), cast_do!(Text::shift_select(KeyCode::KeyLeft)));
-
-        self.register_shortcut(shortcut!(Shift + Right), cast_do!(Text::shift_select(KeyCode::KeyRight)));
-
-        self.register_shortcut(shortcut!(Shift + Home), cast_do!(Text::shift_select(KeyCode::KeyHome)));
-
-        self.register_shortcut(shortcut!(Shift + End), cast_do!(Text::shift_select(KeyCode::KeyEnd)));
+        self.props_mut().cursor_visible = true;
     }
 
     fn handle_mouse_click(&mut self, event: &MouseEvent) {
-        self.drag_status = DragStatus::Pending;
+        self.props_mut().drag_status = DragStatus::Pending;
 
         let pos: FPoint = event.position().into();
         let pos = self.map_to_global_f(&pos);
 
-        self.cursor_index = self.calc_cursor_index(pos.x());
-        if self.selection_end != -1 {
+        self.props_mut().cursor_index = self.calc_cursor_index(pos.x());
+        if self.props().selection_end != -1 {
             self.clear_selection();
         } else {
-            self.adjust_selection_range(Some(self.cursor_index as i32), None);
+            self.adjust_selection_range(Some(self.props().cursor_index as i32), None);
         }
 
         self.update();
-        self.cursor_visible = true;
-        if self.blink_timer.is_active() {
-            self.blink_timer.stop();
+        self.props_mut().cursor_visible = true;
+        if self.props().blink_timer.is_active() {
+            self.props_mut().blink_timer.stop();
         }
     }
 
     fn handle_mouse_move(&mut self, event: &MouseEvent) {
-        if self.drag_status == DragStatus::None {
+        if self.props().drag_status == DragStatus::None {
             return;
         }
-        if self.selection_start == -1 {
+        if self.props().selection_start == -1 {
             return;
         }
-        self.drag_status = DragStatus::Dragging;
+        self.props_mut().drag_status = DragStatus::Dragging;
 
         let pos: FPoint = event.position().into();
-        self.cursor_index = self.calc_cursor_index(pos.x());
+        self.props_mut().cursor_index = self.calc_cursor_index(pos.x());
 
-        self.adjust_selection_range(None, Some(self.cursor_index as i32));
+        self.adjust_selection_range(None, Some(self.props().cursor_index as i32));
 
         self.update();
     }
@@ -935,39 +990,39 @@ impl Text {
     /// Calculate `cursor_index`(the index of the corresponding character in the text)
     /// based on the given x-coordinate.
     fn calc_cursor_index(&self, x_pos: f32) -> usize {
-        let str_ref = self.value_ref();
+        let str_ref = self.shown_text();
         let str = str_ref.as_str();
         let chars_cnt = str.chars().count();
 
         let offset = x_pos - self.text_draw_position().x();
-        let mut predict_idx = self.cursor_index;
+        let mut predict_idx = self.props().cursor_index;
 
         let mut last_diff = f32::MAX;
         let mut last_idx = predict_idx;
 
-        let mut predict_start = self.predict_start;
+        let mut predict_start = self.props().predict_start;
         let len_start = if predict_start > predict_idx {
             std::mem::swap(&mut predict_start, &mut predict_idx);
 
-            predict_start = self.map(predict_start);
+            predict_start = self.map_shown(predict_start);
 
             self.font()
-                .calc_text_dimension(&str[..predict_start], self.letter_spacing)
+                .calc_text_dimension(&str[..predict_start], self.props().letter_spacing)
                 .0
         } else {
-            predict_start = self.map(predict_start);
+            predict_start = self.map_shown(predict_start);
 
-            self.predict_start_len
+            self.props().predict_start_len
         };
 
         loop {
-            let map_idx = self.map(predict_idx);
+            let map_idx = self.map_shown(predict_idx);
             if predict_start > map_idx {
                 break;
             }
             let actual_len = self
                 .font()
-                .calc_text_dimension(&str[predict_start..map_idx], self.letter_spacing)
+                .calc_text_dimension(&str[predict_start..map_idx], self.props().letter_spacing)
                 .0
                 + len_start;
 
@@ -976,7 +1031,7 @@ impl Text {
                 predict_idx = last_idx;
                 break;
             }
-            if diff < self.font_dimension.0 * 0.3 {
+            if diff < self.props().font_dimension.0 * 0.3 {
                 break;
             }
 
@@ -987,12 +1042,12 @@ impl Text {
                 if predict_idx == chars_cnt {
                     break;
                 }
-                predict_idx += (diff / self.font_dimension.0).max(1.) as usize;
+                predict_idx += (diff / self.props().font_dimension.0).max(1.) as usize;
             } else {
                 if predict_idx == 0 {
                     break;
                 }
-                let sub = (diff / self.font_dimension.0).max(1.) as usize;
+                let sub = (diff / self.props().font_dimension.0).max(1.) as usize;
                 if sub >= predict_idx {
                     predict_idx = 0
                 } else {
@@ -1013,15 +1068,15 @@ impl Text {
         let mut changed = false;
 
         if let Some(start) = start {
-            if self.selection_start != start {
-                self.selection_start = start;
+            if self.props().selection_start != start {
+                self.props_mut().selection_start = start;
                 changed = true;
             }
         }
 
         if let Some(end) = end {
-            if self.selection_end != end {
-                self.selection_end = end;
+            if self.props().selection_end != end {
+                self.props_mut().selection_end = end;
                 changed = true;
 
                 emit!(self.selection_changed());
@@ -1043,8 +1098,8 @@ impl Text {
     #[inline]
     fn selection_range(&self) -> (usize, usize) {
         (
-            self.selection_start.min(self.selection_end) as usize,
-            self.selection_end.max(self.selection_start) as usize,
+            self.props().selection_start.min(self.props().selection_end) as usize,
+            self.props().selection_end.max(self.props().selection_start) as usize,
         )
     }
 
@@ -1055,14 +1110,14 @@ impl Text {
 
     #[inline]
     fn handle_mouse_release(&mut self) {
-        self.drag_status = DragStatus::None;
+        self.props_mut().drag_status = DragStatus::None;
 
-        if self.selection_start == self.selection_end {
-            self.selection_start = -1;
-            self.selection_end = -1;
+        if self.props().selection_start == self.props().selection_end {
+            self.props_mut().selection_start = -1;
+            self.props_mut().selection_end = -1;
         }
 
-        self.cursor_visible = true;
+        self.props_mut().cursor_visible = true;
         self.start_blink_timer();
         self.update();
     }
@@ -1078,59 +1133,75 @@ impl Text {
 
     #[inline]
     fn start_blink_timer(&mut self) {
-        if !self.blink_timer.is_active() {
-            self.blink_timer.start(Duration::from_millis(
-                application::cursor_blinking_time() as u64
+        if !self.props().blink_timer.is_active() {
+            self.props_mut().blink_timer.start(Duration::from_millis(
+                application::cursor_blinking_time() as u64,
             ))
         }
     }
 
     #[inline]
     fn calc_widget_height(&self) -> f32 {
-        (self.font_dimension.1 + 2. * self.text_padding).ceil()
+        (self.props().font_dimension.1 + 2. * self.props().text_padding).ceil()
     }
 
     #[inline]
     fn blink_event(&mut self) {
-        self.cursor_visible = !self.cursor_visible;
+        self.props_mut().cursor_visible = !self.props().cursor_visible;
         self.update();
     }
 
     #[inline]
     fn text_draw_position(&self) -> &FPoint {
-        self.text_draw_position
+        self.props()
+            .text_draw_position
             .as_ref()
             .expect("Fatal error: `text_draw_position` of `Text` was None.")
     }
 
     #[inline]
     fn text_draw_position_mut(&mut self) -> &mut FPoint {
-        self.text_draw_position
+        self.props_mut()
+            .text_draw_position
             .as_mut()
             .expect("Fatal error: `text_draw_position` of `Text` was None.")
     }
 
     #[inline]
     fn save_revoke(&mut self) {
-        self.revoke_memories.push_back(TextMemory::new(self));
-        if self.revoke_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
-            self.revoke_memories.pop_front();
+        let mem = TextMemory::new(self);
+        self.props_mut().revoke_memories.push_back(mem);
+        if self.props().revoke_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
+            self.props_mut().revoke_memories.pop_front();
         }
     }
 
     #[inline]
     fn save_redo(&mut self) {
-        self.redo_memories.push_back(TextMemory::new(self));
-        if self.redo_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
-            self.redo_memories.pop_front();
+        let mem = TextMemory::new(self);
+        self.props_mut().redo_memories.push_back(mem);
+        if self.props().redo_memories.len() > TEXT_DEFAULT_MAX_MEMORIES_SIZE {
+            self.props_mut().redo_memories.pop_front();
         }
     }
 
     /// Map the logic index `'from'` which represent the sequence of characters
-    /// to the actual index in string.
+    /// to the actual index in string of value.
     #[inline]
     fn map(&self, from: usize) -> usize {
         let value_ref = self.value_ref();
+        let (idx, _) = value_ref
+            .char_indices()
+            .nth(from)
+            .unwrap_or((value_ref.len(), '\0'));
+        idx
+    }
+
+    /// Map the logic index `'from'` which represent the sequence of characters
+    /// to the actual index in string of shown text.
+    #[inline]
+    fn map_shown(&self, from: usize) -> usize {
+        let value_ref = self.shown_text();
         let (idx, _) = value_ref
             .char_indices()
             .nth(from)
@@ -1148,14 +1219,16 @@ impl Text {
         let (start, end) = (self.map(start), self.map(end));
         let (offset, _) = self
             .font()
-            .calc_text_dimension(&self.value_ref()[start..end], self.letter_spacing);
+            .calc_text_dimension(&self.value_ref()[start..end], self.props().letter_spacing);
 
-        self.input_wrapper.value_mut().replace_range(start..end, "");
+        self.input_wrapper()
+            .value_mut()
+            .replace_range(start..end, "");
         if start != end {
             emit!(self.value_changed());
         }
 
-        let text_window = self.text_window;
+        let text_window = self.props().text_window;
         let draw_pos = self.text_draw_position_mut();
         if draw_pos.x() < text_window.left() {
             draw_pos.offset(offset, 0.);
@@ -1168,13 +1241,13 @@ impl Text {
 
     #[inline]
     fn render_text(&self, painter: &mut Painter, text: &str, mut origin: FPoint) {
-        painter.prepare_paragraph(text, self.letter_spacing, f32::MAX, None, false);
+        painter.prepare_paragraph(text, self.props().letter_spacing, f32::MAX, None, false);
 
         let paragraph = painter.get_paragraph().unwrap();
         let baseline = paragraph.single_line_baseline();
         let height = paragraph.height();
         if height > baseline {
-            origin.offset(0., self.text_window.height() - height);
+            origin.offset(0., self.props().text_window.height() - height);
         }
 
         painter.draw_paragrah_prepared_global(origin);
@@ -1189,37 +1262,41 @@ impl Text {
             (val.len(), val.chars().count())
         };
 
-        if bytes_len != chars_len && !self.unicode_text {
-            self.font_dimension = self.font().calc_font_dimension_unicode();
-            self.unicode_text = true;
-        } else if bytes_len == chars_len && self.unicode_text {
-            self.font_dimension = self.font().calc_font_dimension();
-            self.unicode_text = false;
+        if bytes_len != chars_len && !self.props().unicode_text {
+            self.props_mut().font_dimension = self.font().calc_font_dimension_unicode();
+            self.props_mut().unicode_text = true;
+        } else if bytes_len == chars_len && self.props().unicode_text {
+            self.props_mut().font_dimension = self.font().calc_font_dimension();
+            self.props_mut().unicode_text = false;
         }
     }
 
     #[inline]
     fn calc_predict_index(&mut self) {
         let (a, b) = {
-            let value_ref = self.value_ref();
+            let value_ref = self.shown_text();
             let str = value_ref.as_str();
 
             if str.is_empty() {
                 (0, 0.)
             } else {
-                let predict_start = (((self.text_window.x() + 2. - self.text_draw_position().x())
-                    / self.font_dimension.0) as usize)
+                let predict_start = (((self.props().text_window.x() + 2.
+                    - self.text_draw_position().x())
+                    / self.props().font_dimension.0) as usize)
                     .min(str.chars().count());
                 let predict_pref_len = self
                     .font()
-                    .calc_text_dimension(&str[..self.map(predict_start)], self.letter_spacing)
+                    .calc_text_dimension(
+                        &str[..self.map_shown(predict_start)],
+                        self.props().letter_spacing,
+                    )
                     .0;
                 (predict_start, predict_pref_len)
             }
         };
 
-        self.predict_start = a;
-        self.predict_start_len = b;
+        self.props_mut().predict_start = a;
+        self.props_mut().predict_start_len = b;
     }
 }
 
@@ -1234,13 +1311,23 @@ pub struct TextMemory {
 
 impl TextMemory {
     #[inline]
-    fn new(text: &Text) -> Self {
+    fn new<T: TextInnerExt>(text: &T) -> Self {
         TextMemory {
-            cursor_index: text.cursor_index,
-            selection_start: text.selection_start,
-            selection_end: text.selection_end,
+            cursor_index: text.props().cursor_index,
+            selection_start: text.props().selection_start,
+            selection_end: text.props().selection_end,
             value: text.value(),
             text_draw_position: *text.text_draw_position(),
         }
     }
 }
+
+impl Text {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
+    }
+}
+
+impl TextExt for Text {}
+impl TextInnerExt for Text {}

@@ -13,6 +13,7 @@ use crate::{
 use std::ptr::NonNull;
 use tlib::{
     figure::{Color, CoordRect, FPoint, FRect, Point, Rect, Size},
+    global::PrecisionOps,
     namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
     object::ObjectId,
     prelude::*,
@@ -918,15 +919,17 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         // Rect add the paddings.
         let (top, right, bottom, left) = self.paddings();
-        rect.set_x(rect.x() + left);
-        rect.set_y(rect.y() + top);
-        rect.set_width(rect.width() - left - right);
-        rect.set_height(rect.height() - top - bottom);
+        let (tb, rb, bb, lb) = self.borders().ceil();
+        let (tb, rb, bb, lb) = (tb as i32, rb as i32, bb as i32, lb as i32);
+        rect.set_x(rect.x() + left + lb);
+        rect.set_y(rect.y() + top + tb);
+        rect.set_width(rect.width() - left - right - lb - rb);
+        rect.set_height(rect.height() - top - bottom - tb - bb);
 
         if let Some(coord) = coord {
             if coord == Coordinate::Widget {
-                rect.set_x(left);
-                rect.set_y(top);
+                rect.set_x(left + lb);
+                rect.set_y(top + tb);
             }
         }
 
