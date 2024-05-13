@@ -1,8 +1,11 @@
 use tmui::{
-    button::Button, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{callbacks::CallbacksRegister, WidgetImpl}
+    button::Button,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::{callbacks::CallbacksRegister, WidgetFinder, WidgetImpl},
 };
 
-use crate::text_bundle::TextBundle;
+use crate::{password_bundle::PasswordBundle, text_bundle::TextBundle};
 
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
@@ -10,6 +13,10 @@ pub struct InputDialog {
     #[children]
     #[derivative(Default(value = "TextBundle::new(\"User Name: \")"))]
     username: Box<TextBundle>,
+
+    #[children]
+    #[derivative(Default(value = "PasswordBundle::new(\"Password: \")"))]
+    password: Box<PasswordBundle>,
 
     #[children]
     submit: Box<Button>,
@@ -24,15 +31,42 @@ impl ObjectImpl for InputDialog {
         self.set_vexpand(true);
         self.set_hexpand(true);
         self.set_homogeneous(false);
-        self.set_spacing(20);
+        self.set_spacing(5);
 
+        let username_id = self.username.id();
+        let password_id = self.password.id();
+
+        self.password.set_spacing(8);
+
+        self.submit.set_margin_top(15);
         self.submit.width_request(30);
         self.submit.height_request(20);
         self.submit.set_halign(Align::Center);
-        self.submit.callback_mouse_released(|widget, _| {
-            widget.window().call_response(|window| {
-                println!("Main window `{}` call response.", window.name())
+        self.submit.callback_mouse_released(move |widget, _| {
+            // let username = widget
+            //     .find_siblings::<TextBundle>()
+            //     .first()
+            //     .unwrap()
+            //     .value();
+            // let password = widget
+            //     .find_siblings::<PasswordBundle>()
+            //     .first()
+            //     .unwrap()
+            //     .value();
+            let username = widget.find_id::<TextBundle>(username_id).unwrap().value();
+            let password = widget
+                .find_id::<PasswordBundle>(password_id)
+                .unwrap()
+                .value();
+            widget.window().call_response(move |window| {
+                println!(
+                    "Main window `{}` call response, username={}, password={}",
+                    window.name(),
+                    username,
+                    password
+                )
             });
+            widget.window().close();
         });
     }
 }

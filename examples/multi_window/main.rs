@@ -1,6 +1,7 @@
 mod input_dialog;
 mod my_widget;
 mod text_bundle;
+mod password_bundle;
 
 use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 

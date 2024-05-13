@@ -192,12 +192,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
+    pub fn find_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
         self.widgets.get(&id).map(|w| nonnull_ref!(w))
     }
 
     #[inline]
-    pub fn finds_by_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
+    pub fn find_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
         self.widgets.get_mut(&id).map(|w| nonnull_mut!(w))
     }
 
@@ -367,12 +367,12 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_focused_widget(&mut self, id: ObjectId) {
         if self.focused_widget != 0 && self.focused_widget != id {
-            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+            if let Some(widget) = self.find_id_mut(self.focused_widget) {
                 widget.on_lose_focus();
             }
         }
         if id != 0 {
-            if let Some(widget) = self.finds_by_id_mut(id) {
+            if let Some(widget) = self.find_id_mut(id) {
                 widget.on_get_focus();
             } else {
                 return;
@@ -384,7 +384,7 @@ impl ApplicationWindow {
     /// Let the focused widget lose focus temporarily.
     pub(crate) fn temp_lose_focus(&mut self) {
         if self.focused_widget != 0 {
-            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+            if let Some(widget) = self.find_id_mut(self.focused_widget) {
                 widget.on_lose_focus();
             }
 
@@ -396,7 +396,7 @@ impl ApplicationWindow {
     /// Restore the previous focused widget.
     pub(crate) fn restore_focus(&mut self) {
         if self.focused_widget_mem != 0 {
-            if let Some(widget) = self.finds_by_id_mut(self.focused_widget_mem) {
+            if let Some(widget) = self.find_id_mut(self.focused_widget_mem) {
                 widget.on_get_focus();
             }
 
@@ -453,7 +453,7 @@ impl ApplicationWindow {
     ) {
         if let Some(ids) = self.watch_map.get(&ty) {
             for &id in ids.clone().iter() {
-                if let Some(widget) = self.finds_by_id_mut(id) {
+                if let Some(widget) = self.find_id_mut(id) {
                     let type_name = widget.type_name();
 
                     f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {

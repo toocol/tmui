@@ -482,7 +482,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         }
 
         for (&id, &overlaid) in self.window().overlaid_rects().iter() {
-            if let Some(widget) = self.window().finds_by_id(id) {
+            if let Some(widget) = self.window().find_id(id) {
                 if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
                     painter.clip_rect_global(overlaid, ClipOp::Difference);
                 }
@@ -693,7 +693,6 @@ impl ChildRegionAcquire for Widget {
         region
     }
 }
-
 
 ////////////////////////////////////// ChildRegionClip //////////////////////////////////////
 pub(crate) trait ChildRegionClip {
@@ -1289,6 +1288,69 @@ impl WidgetPropsAcquire for Widget {
         self
     }
 }
+
+////////////////////////////////////// WidgetFinder //////////////////////////////////////
+pub trait WidgetFinder: WidgetImpl {
+    #[inline]
+    fn finds<T: WidgetImpl + StaticType>(&self) -> Vec<&T> {
+        self.window().finds::<T>()
+    }
+
+    #[inline]
+    fn finds_mut<T: WidgetImpl + StaticType>(&self) -> Vec<&mut T> {
+        self.window().finds_mut::<T>()
+    }
+
+    #[inline]
+    fn find_id<T: WidgetImpl + StaticType>(&self, id: ObjectId) -> Option<&T> {
+        self.window()
+            .find_id(id)
+            .and_then(|w| w.downcast_ref::<T>())
+    }
+
+    #[inline]
+    fn find_id_mut<T: WidgetImpl + StaticType>(&self, id: ObjectId) -> Option<&mut T> {
+        self.window()
+            .find_id_mut(id)
+            .and_then(|w| w.downcast_mut::<T>())
+    }
+
+    /// Only affected when the parent is a container.
+    #[inline]
+    fn find_siblings<T: WidgetImpl + StaticType>(&self) -> Vec<&T> {
+        let mut siblings = vec![];
+        if let Some(parent) = self.get_parent_ref() {
+            if parent.super_type().is_a(Container::static_type()) {
+                let container = cast!(parent as ContainerImpl).unwrap();
+                for c in container.children() {
+                    if c.object_type().is_a(T::static_type()) {
+                        siblings.push(c.downcast_ref::<T>().unwrap())
+                    }
+                }
+            }
+        }
+        siblings
+    }
+
+    /// Only affected when the parent is a container.
+    #[inline]
+    fn find_siblings_mut<T: WidgetImpl + StaticType>(&mut self) -> Vec<&mut T> {
+        let mut siblings = vec![];
+        if let Some(parent) = self.get_parent_mut() {
+            if parent.super_type().is_a(Container::static_type()) {
+                let container = cast_mut!(parent as ContainerImpl).unwrap();
+                for c in container.children_mut() {
+                    if c.object_type().is_a(T::static_type()) {
+                        siblings.push(c.downcast_mut::<T>().unwrap())
+                    }
+                }
+            }
+        }
+        siblings
+    }
+}
+impl<T: WidgetImpl> WidgetFinder for T {}
+impl WidgetFinder for dyn WidgetImpl {}
 
 #[cfg(test)]
 mod tests {

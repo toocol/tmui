@@ -1339,7 +1339,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn descendant_of(&self, id: ObjectId) -> bool {
-        if let Some(p) = self.window().finds_by_id(id) {
+        if let Some(p) = self.window().find_id(id) {
             p.children_index().contains(&self.id())
         } else {
             false

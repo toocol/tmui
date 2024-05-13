@@ -1,5 +1,5 @@
 use tmui::{
-    input::text::Text,
+    input::password::Password,
     input::Input,
     label::Label,
     prelude::*,
@@ -9,23 +9,23 @@ use tmui::{
 
 #[extends(Widget, Layout(HBox))]
 #[derive(Childrenable)]
-pub struct TextBundle {
+pub struct PasswordBundle {
     #[children]
     label: Box<Label>,
 
     #[children]
-    text: Box<Text>,
+    password: Box<Password>,
 }
 
-impl ObjectSubclass for TextBundle {
-    const NAME: &'static str = "TextBundle";
+impl ObjectSubclass for PasswordBundle {
+    const NAME: &'static str = "PasswordBundle";
 }
 
-impl ObjectImpl for TextBundle {}
+impl ObjectImpl for PasswordBundle {}
 
-impl WidgetImpl for TextBundle {}
+impl WidgetImpl for PasswordBundle {}
 
-impl TextBundle {
+impl PasswordBundle {
     #[inline]
     pub fn new(label: &str) -> Box<Self> {
         let mut tb: Box<Self> = Object::new(&[]);
@@ -35,7 +35,12 @@ impl TextBundle {
     }
 
     #[inline]
+    pub fn set_spacing(&mut self, spacing: i32) {
+        self.password.set_margin_left(spacing);
+    }
+
+    #[inline]
     pub fn value(&self) -> String {
-        self.text.value()
+        self.password.value()
     }
 }
