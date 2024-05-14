@@ -38,6 +38,7 @@ thread_local! {
 }
 
 pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
+const DEFAULT_WINDOW_BACKGROUND: Color = Color::WHITE;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
@@ -74,6 +75,7 @@ impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
 
+        self.set_background(DEFAULT_WINDOW_BACKGROUND);
         self.set_render_difference(true)
     }
 
@@ -591,7 +593,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         if let Some(parent) = child_ref.get_parent_ref() {
             let is_passing_event_bubble = parent.is_propagate_event_bubble();
             let is_passing_mouse_tracking = parent.is_propagate_mouse_tracking();
-            let is_manage_by_container = parent.is_manage_by_container() || {
+            let is_manage_by_container = {
                 let container = cast!(parent as ContainerImpl);
                 match container {
                     Some(c) => c.container_layout() != ContainerLayoutEnum::Stack,

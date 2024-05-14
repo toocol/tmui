@@ -7,7 +7,7 @@ use crate::{
     shortcut::ShortcutRegister,
     system::System,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl, RegionClear},
 };
 use log::warn;
 use std::{
@@ -562,7 +562,7 @@ pub(crate) trait TextInnerExt:
         let cursor_x = self.sync_cursor_text_draw();
 
         // Clear the text window:
-        painter.fill_rect_global(self.props().text_window, self.background());
+        self.clear_global(painter, self.props().text_window);
 
         // Draw text:
         self.draw_text(painter);

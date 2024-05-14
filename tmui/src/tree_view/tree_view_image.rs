@@ -5,7 +5,7 @@ use crate::{
     scroll_bar::ScrollBar,
     tlib::object::{ObjectImpl, ObjectSubclass},
     tree_view::tree_store::TreeStoreSignals,
-    widget::WidgetImpl,
+    widget::{RegionClear, WidgetImpl},
 };
 use std::ptr::NonNull;
 use tlib::{connect, disconnect, events::MouseEvent, nonnull_mut, nonnull_ref, run_after};
@@ -87,7 +87,7 @@ impl WidgetImpl for TreeViewImage {
 
     fn paint(&mut self, painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
-            painter.fill_rect(redraw_rect.rect(), self.background());
+            self.clear(painter, redraw_rect.rect())
         }
 
         let rect = self.contents_rect(Some(Coordinate::Widget));
@@ -106,7 +106,7 @@ impl WidgetImpl for TreeViewImage {
             nonnull_ref!(node).render_node(
                 painter,
                 geometry,
-                self.background(),
+                self.opaque_background(),
                 self.indent_length,
             )
         }

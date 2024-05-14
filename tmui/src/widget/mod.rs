@@ -29,6 +29,7 @@ use tlib::{
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
+    typedef::SkiaRect,
 };
 
 pub type Transparency = u8;
@@ -55,7 +56,7 @@ pub struct Widget {
     #[derivative(Default(value = "false"))]
     rerender_difference: bool,
 
-    #[derivative(Default(value = "Color::WHITE"))]
+    #[derivative(Default(value = "Color::TRANSPARENT"))]
     background: Color,
     font: Font,
     margins: [i32; 4],
@@ -466,7 +467,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         // The default paint blend mode is set to `Src`,
         // it should be set to `SrcOver` when the widget is undergoing animation progress.
-        if self.is_animation_progressing() {
+        if self.is_animation_progressing() || self.background() == Color::TRANSPARENT {
             painter.set_blend_mode(BlendMode::SrcOver);
         }
 
@@ -498,7 +499,9 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
             // Draw the background color of the Widget.
             let mut background = self.background();
-            background.set_transparency(self.transparency());
+            if background != Color::TRANSPARENT {
+                background.set_transparency(self.transparency());
+            }
 
             if self.is_render_difference() && self.first_rendered() && !self.window().minimized() {
                 let mut border_rect: FRect = self.rect_record().into();
@@ -704,9 +707,15 @@ impl<T: WidgetImpl> ChildRegionClip for T {
         let widget = self;
         if let Some(container) = cast!(widget as ContainerImpl) {
             for c in container.children() {
+                if !c.visible() || !c.background().is_opaque() {
+                    continue;
+                }
                 c.clip_rect(painter, ClipOp::Difference)
             }
         } else if let Some(c) = widget.get_child_ref() {
+            if !c.visible() || !c.background().is_opaque() {
+                return;
+            }
             c.clip_rect(painter, ClipOp::Difference)
         }
     }
@@ -1351,6 +1360,23 @@ pub trait WidgetFinder: WidgetImpl {
 }
 impl<T: WidgetImpl> WidgetFinder for T {}
 impl WidgetFinder for dyn WidgetImpl {}
+
+////////////////////////////////////// RegionClear //////////////////////////////////////
+pub trait RegionClear: WidgetImpl {
+    /// The coordinate of given rect should be [`Coordinate::Widget`]
+    #[inline]
+    fn clear<T: Into<SkiaRect>>(&self, painter: &mut Painter, rect: T) {
+        painter.fill_rect(rect, self.opaque_background())
+    }
+
+    /// The coordinate of given rect should be [`Coordinate::Global`]
+    #[inline]
+    fn clear_global<T: Into<SkiaRect>>(&self, painter: &mut Painter, rect: T) {
+        painter.fill_rect_global(rect, self.opaque_background())
+    }
+}
+impl<T: WidgetImpl> RegionClear for T {}
+impl RegionClear for dyn WidgetImpl {}
 
 #[cfg(test)]
 mod tests {

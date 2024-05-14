@@ -34,10 +34,6 @@ impl ObjectSubclass for Label {
 }
 
 impl ObjectImpl for Label {
-    fn construct(&mut self) {
-        self.parent_construct();
-    }
-
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<Label, ReflectContentAlignment>();
     }

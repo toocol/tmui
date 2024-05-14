@@ -458,6 +458,8 @@ pub trait WidgetExt {
     ///
     /// @see [`Widget::occupy_space`]
     fn set_occupy_space(&mut self, occupy_space: bool);
+
+    fn opaque_background(&self) -> Color;
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -1467,5 +1469,24 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_occupy_space(&mut self, occupy_space: bool) {
         self.widget_props_mut().occupy_space = occupy_space;
+    }
+
+    fn opaque_background(&self) -> Color {
+        let mut bk = self.background();
+        let mut widget = self as &dyn WidgetImpl;
+
+        loop {
+            if bk.is_opaque() {
+                break;
+            }
+            if let Some(parent) = widget.get_parent_ref() {
+                bk = parent.background();
+                widget = parent;
+            } else {
+                break;
+            }
+        }
+
+        bk
     }
 }

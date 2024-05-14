@@ -33,7 +33,7 @@ impl WidgetImpl for MyWidget {
                 .on_activate(|window| {
                     println!(
                         "{} => Child window created.",
-                        std::thread::current().name().unwrap()
+                        std::thread::current().name().unwrap(),
                     );
                     window.child(InputDialog::new());
                 }),

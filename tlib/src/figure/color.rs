@@ -100,6 +100,11 @@ impl Color {
     }
 
     #[inline]
+    pub fn is_opaque(&self) -> bool {
+        self.a != 0
+    }
+
+    #[inline]
     pub fn r(&self) -> u8 {
         self.r as u8
     }

@@ -19,6 +19,7 @@ pub struct InputDialog {
     password: Box<PasswordBundle>,
 
     #[children]
+    #[derivative(Default(value = "Button::new(Some(\"Submit\"))"))]
     submit: Box<Button>,
 }
 

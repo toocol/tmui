@@ -65,10 +65,15 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
 
     if let Err(e) = extend_attr.check() {
-        return e.to_compile_error().into()
+        return e.to_compile_error().into();
     }
 
     let extend_str = extend_attr.extend.to_string();
+    let use_prefix = if extend_attr.internal {
+        Ident::new("crate", ast.ident.span())
+    } else {
+        Ident::new("tmui", ast.ident.span())
+    };
     match extend_str.as_str() {
         "Object" => match extend_object::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
@@ -94,12 +99,15 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 Err(e) => e.to_compile_error().into(),
             },
         },
-        "SharedWidget" => match extend_shared_widget::expand(&mut ast, extend_attr.id.as_ref(), extend_attr.ignore_default) {
+        "SharedWidget" => match extend_shared_widget::expand(
+            &mut ast,
+            extend_attr.id.as_ref(),
+            extend_attr.ignore_default,
+        ) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
         "Container" => {
-            let use_prefix = Ident::new("crate", ast.ident.span());
             match extend_container::expand(
                 &mut ast,
                 extend_attr.ignore_default,
@@ -107,13 +115,13 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 false,
                 false,
                 LayoutType::Non,
-                &use_prefix
+                &use_prefix,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             }
         }
-        "Popup" => match extend_popup::expand(&mut ast, extend_attr.ignore_default) {
+        "Popup" => match extend_popup::expand(&mut ast, extend_attr.ignore_default, &use_prefix) {
             Ok(tkn) => tkn.into(),
             Err(e) => e.to_compile_error().into(),
         },
@@ -139,7 +147,7 @@ pub fn childable_derive(_: TokenStream) -> TokenStream {
 /// Enable the trait has the ability of reflect, create the trait reflect struct.<br>
 /// The struct implemented the reflected trait should defined [`extends`](crate::extends),
 /// and register the reflect info to [`TypeRegistry`] in function [`ObjectImpl::type_register()`], like: <br>
-/// 
+///
 /// ```ignore
 /// ...
 /// #[reflect_trait]
