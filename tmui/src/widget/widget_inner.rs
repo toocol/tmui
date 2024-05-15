@@ -1,10 +1,15 @@
-use std::collections::HashSet;
-
-use tlib::{figure::Rect, object::ObjectId, typedef::SkiaClipOp};
-
+use super::{Container, EventBubble, WidgetImpl, WidgetSignals};
 use crate::graphics::painter::Painter;
-
-use super::{EventBubble, WidgetImpl};
+use std::collections::HashSet;
+use tlib::{
+    emit,
+    figure::{Rect, Size},
+    namespace::Overflow,
+    object::ObjectId,
+    prelude::*,
+    typedef::SkiaClipOp,
+    types::StaticType,
+};
 
 pub(crate) trait WidgetInnerExt {
     fn set_initialized(&mut self, initialized: bool);
@@ -58,6 +63,8 @@ pub(crate) trait WidgetInnerExt {
     fn set_image_rect_record(&mut self, image_rect: Rect);
 
     fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp);
+
+    fn handle_child_overflow_hidden(&mut self, child_size: Size);
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -197,6 +204,32 @@ macro_rules! widget_inner_ext_impl {
                 painter.clip_round_rect_global(self.rect(), self.border_ref().border_radius, op);
             } else {
                 painter.clip_rect_global(self.rect(), op);
+            }
+        }
+
+        fn handle_child_overflow_hidden(&mut self, child_size: Size) {
+            let size = self.size();
+            if !self.super_type().is_a(Container::static_type()) {
+                if let Some(c) = self.get_child_mut() {
+                    if c.overflow() != Overflow::Hidden {
+                        return
+                    }
+                    let mut resized = false;
+
+                    if child_size.width() > size.width() {
+                        c.set_fixed_width(size.width());
+                        resized = true;
+                    }
+
+                    if child_size.height() > size.height() {
+                        c.set_fixed_height(size.height());
+                        resized = true;
+                    }
+
+                    if resized {
+                        emit!(WidgetInnerExt::handle_child_overflow_hidden => c.size_changed(), c.size())
+                    }
+                }
             }
         }
     };

@@ -15,6 +15,8 @@ impl ObjectSubclass for ScrollAreaLayout {
 impl ObjectImpl for ScrollAreaLayout {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_vexpand(true);
+        self.set_hexpand(true);
 
         let mut label = Label::new(Some("Hello World"));
         label.set_background(Color::CYAN);

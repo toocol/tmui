@@ -156,7 +156,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                             window.set_mouse_over_widget(NonNull::new(widget));
 
                             let mouse_leave = MouseEvent::new(
-                                EventType::MouseLeave,
+                                EventType::MouseOut,
                                 (widget_position.x(), widget_position.y()),
                                 evt.mouse_button(),
                                 evt.modifier(),
@@ -165,11 +165,11 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                                 evt.delta_type(),
                             );
 
-                            mouse_over_widget.on_mouse_leave(&mouse_leave);
-                            mouse_over_widget.inner_mouse_leave(&mouse_leave);
+                            mouse_over_widget.inner_mouse_out(&mouse_leave);
+                            mouse_over_widget.on_mouse_out(&mouse_leave);
 
                             let mouse_enter = MouseEvent::new(
-                                EventType::MouseEnter,
+                                EventType::MouseOver,
                                 (widget_position.x(), widget_position.y()),
                                 evt.mouse_button(),
                                 evt.modifier(),
@@ -177,8 +177,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                                 evt.delta(),
                                 evt.delta_type(),
                             );
-                            widget.inner_mouse_enter(&mouse_enter);
-                            widget.on_mouse_enter(&mouse_enter);
+                            widget.inner_mouse_over(&mouse_enter);
+                            widget.on_mouse_over(&mouse_enter);
                         }
                     }
 
@@ -356,6 +356,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
         EventType::ReceivedCharacter => {}
         EventType::InputMethod => {}
         EventType::None => {}
+
+        _ => {}
     }
 
     event

@@ -25,7 +25,7 @@ use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
     figure::Color,
-    namespace::{Align, BlendMode, Coordinate},
+    namespace::{Align, BlendMode, Coordinate, Overflow},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
@@ -55,6 +55,7 @@ pub struct Widget {
     first_rendered: bool,
     #[derivative(Default(value = "false"))]
     rerender_difference: bool,
+    overflow: Overflow,
 
     #[derivative(Default(value = "Color::TRANSPARENT"))]
     background: Color,
@@ -162,8 +163,10 @@ bitflags! {
         const MOUSE_RELEASED = 1 << 1;
         const MOUSE_MOVE = 1 << 2;
         const MOUSE_WHEEL = 1 << 3;
-        const KEY_PRESSED = 1 << 4;
-        const KEY_RELEASED = 1 << 5;
+        const MOUSE_OVER = 1 << 4;
+        const MOUSE_OUT = 1 << 5;
+        const KEY_PRESSED = 1 << 6;
+        const KEY_RELEASED = 1 << 7;
     }
 }
 
@@ -208,14 +211,32 @@ pub trait WidgetSignals: ActionExt {
         mouse_wheel();
 
         /// Emit when widget's receive mouse enter event.
+        /// 
+        /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
         mouse_enter();
 
         /// Emit when widget's receive mouse leave event.
+        /// 
+        /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
         mouse_leave();
+
+        /// Emit when widget's receive mouse over event.
+        /// 
+        /// @see [`MouseEnterLeaveOverOutDesc`]
+        ///
+        /// @param [`MouseEvent`]
+        mouse_over();
+
+        /// Emit when widget's receive mouse out event.
+        /// 
+        /// @see [`MouseEnterLeaveOverOutDesc`]
+        ///
+        /// @param [`MouseEvent`]
+        mouse_out();
 
         /// Emit when widget's receive key pressed event.
         ///
@@ -721,6 +742,30 @@ impl<T: WidgetImpl> ChildRegionClip for T {
     }
 }
 
+/// `MouseEnter`/`MouseLeave`:
+/// - `MouseEnter` fires when the mouse pointer enters the bounds of an element,
+///   and does not bubble up from child elements. It is triggered less frequently,
+///   ideal for certain UI interactions where you only need to know if the mouse 
+///   has entered or left the boundary of an element, regardless of its children.
+///
+/// - `MouseLeave` fires when the mouse pointer leaves the bounds of an element,
+///   but, importantly, it does not fire when the mouse moves into child elements
+///   of the parent element. This makes it suitable for handling UI logic where
+///   you want an event to trigger only once when the mouse completely leaves the
+///   element including all its children.
+///
+/// `MouseOver`/`MouseOut`:
+/// - `MouseOver` occurs when the mouse pointer enters the element or any of its
+///   children. This event bubbles, meaning if the mouse moves over a child 
+///   element, the parent will also detect a `MouseOver` unless specifically
+///   handled to prevent event propagation (see [`WidgetExt::disable_bubble`]).
+///
+/// - `MouseOut` is similar in that it triggers both when the mouse leaves the
+///   element or moves into any of its child elements. Like `MouseOver`, this 
+///   event also bubbles, which can lead to it firing multiple times during 
+///   complex UI interactions involving multiple nested elements.
+pub struct MouseEnterLeaveOverOutDesc;
+
 ////////////////////////////////////// InnerEventProcess //////////////////////////////////////
 pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse pressed event.
@@ -736,10 +781,24 @@ pub trait InnerEventProcess {
     fn inner_mouse_wheel(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse enter event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_enter(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse leave event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_leave(&mut self, event: &MouseEvent);
+
+    /// Invoke when widget's receive mouse over event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    fn inner_mouse_over(&mut self, event: &MouseEvent);
+
+    /// Invoke when widget's receive mouse out event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    fn inner_mouse_out(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive key pressed event.
     fn inner_key_pressed(&mut self, event: &KeyEvent);
@@ -909,6 +968,54 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     }
 
     #[inline]
+    fn inner_mouse_over(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_over(event)
+        }
+
+        emit!(Widget::inner_mouse_enter => self.mouse_over(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_OVER) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = *event;
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_over(&evt);
+            parent.inner_mouse_over(&evt);
+        }
+    }
+
+    #[inline]
+    fn inner_mouse_out(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_out(event)
+        }
+
+        emit!(Widget::inner_mouse_enter => self.mouse_out(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_OUT) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = *event;
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_out(&evt);
+            parent.inner_mouse_out(&evt);
+        }
+    }
+
+    #[inline]
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_key_pressed(event)
@@ -984,12 +1091,28 @@ pub trait InnerCustomizeEventProcess {
     fn inner_customize_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_leave(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse over event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn inner_customize_mouse_over(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse out event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn inner_customize_mouse_out(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
     #[inline]
@@ -1067,12 +1190,28 @@ pub trait WidgetImpl:
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_leave(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse over event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn on_mouse_over(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse out event.
+    /// 
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn on_mouse_out(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
     #[inline]

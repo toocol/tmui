@@ -272,6 +272,8 @@ impl SizeCalculation for dyn WidgetImpl {
             if let Some(unified) = cast_mut!(self as SizeUnifiedAdjust) {
                 unified.size_unified_adjust();
             }
+
+            self.handle_child_overflow_hidden(child_size);
         }
 
         if self.size() != size {

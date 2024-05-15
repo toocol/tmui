@@ -163,7 +163,6 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool, use_prefix: &I
                         #run_after_clause
                         self.set_property("visible", false.to_value());
                         if !self.background().is_opaque() {
-                            println!("fuck");
                             self.set_background(#use_prefix::tlib::figure::Color::WHITE);
                         }
                     }

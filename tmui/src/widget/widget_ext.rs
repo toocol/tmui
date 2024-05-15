@@ -14,7 +14,7 @@ use std::ptr::NonNull;
 use tlib::{
     figure::{Color, CoordRect, FPoint, FRect, Point, Rect, Size},
     global::PrecisionOps,
-    namespace::{Align, BorderStyle, Coordinate, SystemCursorShape},
+    namespace::{Align, BorderStyle, Coordinate, Overflow, SystemCursorShape},
     object::ObjectId,
     prelude::*,
     ptr_mut,
@@ -459,7 +459,15 @@ pub trait WidgetExt {
     /// @see [`Widget::occupy_space`]
     fn set_occupy_space(&mut self, occupy_space: bool);
 
+    /// Iterate upwards through the widget and it's parent to obtain the background color, 
+    /// until it is opaque.
     fn opaque_background(&self) -> Color;
+
+    /// Get the overflow of the widget.
+    fn overflow(&self) -> Overflow;
+
+    /// Set the overflow of the widget.
+    fn set_overflow(&mut self, overflow: Overflow);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -1488,5 +1496,15 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         bk
+    }
+    
+    #[inline]
+    fn overflow(&self) -> Overflow {
+        self.widget_props().overflow
+    }
+    
+    #[inline]
+    fn set_overflow(&mut self, overflow: Overflow) {
+        self.widget_props_mut().overflow = overflow
     }
 }

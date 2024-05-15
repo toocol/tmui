@@ -1,4 +1,4 @@
-use tlib::events::MouseEvent;
+use tlib::{events::MouseEvent, namespace::Overflow};
 
 use crate::{
     label::Label,
@@ -27,6 +27,10 @@ impl ObjectImpl for Button {
         self.set_borders(1., 1., 1., 1.);
         self.set_border_color(DEFAULT_BORDER_COLOR);
         self.set_background(DEFAULT_BACKGROUND_NORMAL);
+
+        self.label.set_overflow(Overflow::Hidden);
+        self.label.set_halign(Align::Center);
+        self.label.set_valign(Align::Center);
     }
 }
 
