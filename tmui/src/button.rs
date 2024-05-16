@@ -24,9 +24,13 @@ impl ObjectSubclass for Button {
 
 impl ObjectImpl for Button {
     fn initialize(&mut self) {
+        self.set_border_radius(2.);
         self.set_borders(1., 1., 1., 1.);
         self.set_border_color(DEFAULT_BORDER_COLOR);
         self.set_background(DEFAULT_BACKGROUND_NORMAL);
+        self.enable_bubble(EventBubble::MOUSE_PRESSED);
+        self.enable_bubble(EventBubble::MOUSE_RELEASED);
+        self.enable_bubble(EventBubble::MOUSE_MOVE);
 
         self.label.set_overflow(Overflow::Hidden);
         self.label.set_halign(Align::Center);

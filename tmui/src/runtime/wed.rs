@@ -121,16 +121,20 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 handle.on_global_mouse_move(&evt);
             });
 
-            let modal_widget = window.modal_widget();
+            if !window.has_modal_widget() {
+                window.check_mouse_leave(&pos, &evt);
+            }
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
-                if let Some(ref modal) = modal_widget {
+                if let Some(ref modal) = window.modal_widget() {
                     if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
                         continue;
                     }
                 }
+
+                window.check_mouse_enter(widget, &pos, &evt);
 
                 let widget_position = widget.map_to_widget(&pos);
 
@@ -138,8 +142,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     // process the `mouse_enter`,`mouse_leave` events:
                     if window.mouse_over_widget().is_none() {
                         window.set_mouse_over_widget(NonNull::new(widget));
-                        let mouse_enter = MouseEvent::new(
-                            EventType::MouseEnter,
+                        let mouse_over = MouseEvent::new(
+                            EventType::MouseOver,
                             (widget_position.x(), widget_position.y()),
                             evt.mouse_button(),
                             evt.modifier(),
@@ -148,14 +152,14 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                             evt.delta_type(),
                         );
 
-                        widget.on_mouse_enter(&mouse_enter);
-                        widget.inner_mouse_enter(&mouse_enter);
+                        widget.on_mouse_over(&mouse_over);
+                        widget.inner_mouse_over(&mouse_over);
                     } else {
                         let mouse_over_widget = nonnull_mut!(window.mouse_over_widget());
                         if widget.id() != mouse_over_widget.id() {
                             window.set_mouse_over_widget(NonNull::new(widget));
 
-                            let mouse_leave = MouseEvent::new(
+                            let mouse_out = MouseEvent::new(
                                 EventType::MouseOut,
                                 (widget_position.x(), widget_position.y()),
                                 evt.mouse_button(),
@@ -164,11 +168,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                                 evt.delta(),
                                 evt.delta_type(),
                             );
+                            mouse_over_widget.inner_mouse_out(&mouse_out);
+                            mouse_over_widget.on_mouse_out(&mouse_out);
 
-                            mouse_over_widget.inner_mouse_out(&mouse_leave);
-                            mouse_over_widget.on_mouse_out(&mouse_leave);
-
-                            let mouse_enter = MouseEvent::new(
+                            let mouse_over = MouseEvent::new(
                                 EventType::MouseOver,
                                 (widget_position.x(), widget_position.y()),
                                 evt.mouse_button(),
@@ -177,13 +180,13 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                                 evt.delta(),
                                 evt.delta_type(),
                             );
-                            widget.inner_mouse_over(&mouse_enter);
-                            widget.on_mouse_over(&mouse_enter);
+                            widget.inner_mouse_over(&mouse_over);
+                            widget.on_mouse_over(&mouse_over);
                         }
                     }
 
                     if !widget.mouse_tracking() {
-                        break;
+                        continue;
                     }
 
                     evt.set_position((widget_position.x(), widget_position.y()));
@@ -342,12 +345,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
         EventType::FocusIn => {
             window.restore_focus();
             event = Some(evt);
-        },
+        }
 
-        EventType::FocusOut => { 
+        EventType::FocusOut => {
             window.temp_lose_focus();
             event = Some(evt);
-        },
+        }
 
         EventType::Moved => {}
         EventType::DroppedFile => {}

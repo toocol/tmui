@@ -211,28 +211,28 @@ pub trait WidgetSignals: ActionExt {
         mouse_wheel();
 
         /// Emit when widget's receive mouse enter event.
-        /// 
+        ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
         mouse_enter();
 
         /// Emit when widget's receive mouse leave event.
-        /// 
+        ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
         mouse_leave();
 
         /// Emit when widget's receive mouse over event.
-        /// 
+        ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
         mouse_over();
 
         /// Emit when widget's receive mouse out event.
-        /// 
+        ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
@@ -518,12 +518,16 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             self.clip_rect(&mut painter, ClipOp::Intersect);
 
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            // Draw the background color of the Widget.
-            let mut background = self.background();
+            let mut background = if self.first_rendered() {
+                self.opaque_background()
+            } else {
+                self.background()
+            };
             if background != Color::TRANSPARENT {
                 background.set_transparency(self.transparency());
             }
 
+            // Draw the background color of the Widget.
             if self.is_render_difference() && self.first_rendered() && !self.window().minimized() {
                 let mut border_rect: FRect = self.rect_record().into();
                 border_rect.set_point(&(0, 0).into());
@@ -742,30 +746,6 @@ impl<T: WidgetImpl> ChildRegionClip for T {
     }
 }
 
-/// `MouseEnter`/`MouseLeave`:
-/// - `MouseEnter` fires when the mouse pointer enters the bounds of an element,
-///   and does not bubble up from child elements. It is triggered less frequently,
-///   ideal for certain UI interactions where you only need to know if the mouse 
-///   has entered or left the boundary of an element, regardless of its children.
-///
-/// - `MouseLeave` fires when the mouse pointer leaves the bounds of an element,
-///   but, importantly, it does not fire when the mouse moves into child elements
-///   of the parent element. This makes it suitable for handling UI logic where
-///   you want an event to trigger only once when the mouse completely leaves the
-///   element including all its children.
-///
-/// `MouseOver`/`MouseOut`:
-/// - `MouseOver` occurs when the mouse pointer enters the element or any of its
-///   children. This event bubbles, meaning if the mouse moves over a child 
-///   element, the parent will also detect a `MouseOver` unless specifically
-///   handled to prevent event propagation (see [`WidgetExt::disable_bubble`]).
-///
-/// - `MouseOut` is similar in that it triggers both when the mouse leaves the
-///   element or moves into any of its child elements. Like `MouseOver`, this 
-///   event also bubbles, which can lead to it firing multiple times during 
-///   complex UI interactions involving multiple nested elements.
-pub struct MouseEnterLeaveOverOutDesc;
-
 ////////////////////////////////////// InnerEventProcess //////////////////////////////////////
 pub trait InnerEventProcess {
     /// Invoke when widget's receive mouse pressed event.
@@ -781,22 +761,22 @@ pub trait InnerEventProcess {
     fn inner_mouse_wheel(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse enter event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_enter(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse leave event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_leave(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse over event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_over(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse out event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_out(&mut self, event: &MouseEvent);
 
@@ -1091,25 +1071,25 @@ pub trait InnerCustomizeEventProcess {
     fn inner_customize_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse over event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_over(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse out event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_out(&mut self, event: &MouseEvent) {}
@@ -1190,25 +1170,25 @@ pub trait WidgetImpl:
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_leave(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse over event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_over(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse out event.
-    /// 
+    ///
     /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_out(&mut self, event: &MouseEvent) {}
@@ -1517,43 +1497,26 @@ pub trait RegionClear: WidgetImpl {
 impl<T: WidgetImpl> RegionClear for T {}
 impl RegionClear for dyn WidgetImpl {}
 
-#[cfg(test)]
-mod tests {
-    use super::WidgetImpl;
-    use crate::{prelude::*, skia_safe};
-    use tlib::{
-        object::{ObjectImpl, ObjectSubclass},
-        skia_safe::region::RegionOp,
-    };
-
-    #[extends(Widget)]
-    struct SubWidget {}
-
-    impl ObjectSubclass for SubWidget {
-        const NAME: &'static str = "SubWidget";
-    }
-
-    impl ObjectImpl for SubWidget {}
-
-    impl WidgetImpl for SubWidget {}
-
-    #[extends(Widget)]
-    struct ChildWidget {}
-
-    impl ObjectSubclass for ChildWidget {
-        const NAME: &'static str = "ChildWidget";
-    }
-
-    impl ObjectImpl for ChildWidget {}
-
-    impl WidgetImpl for ChildWidget {}
-
-    #[test]
-    fn test_skia_region() {
-        let mut region = skia_safe::Region::new();
-        let rect1 = skia_safe::IRect::new(0, 0, 100, 100);
-        let rect2 = skia_safe::IRect::new(0, 0, 400, 400);
-        region.op_rect(rect1, RegionOp::Union);
-        region.op_rect(rect2, RegionOp::Difference);
-    }
-}
+/// `MouseEnter`/`MouseLeave`:
+/// - `MouseEnter` fires when the mouse pointer enters the bounds of an element,
+///   and does not bubble up from child elements. It is triggered less frequently,
+///   ideal for certain UI interactions where you only need to know if the mouse
+///   has entered or left the boundary of an element, regardless of its children.
+///
+/// - `MouseLeave` fires when the mouse pointer leaves the bounds of an element,
+///   but, importantly, it does not fire when the mouse moves into child elements
+///   of the parent element. This makes it suitable for handling UI logic where
+///   you want an event to trigger only once when the mouse completely leaves the
+///   element including all its children.
+///
+/// `MouseOver`/`MouseOut`:
+/// - `MouseOver` occurs when the mouse pointer enters the element or any of its
+///   children. This event can bubbles, meaning if the mouse moves over a child
+///   element, the parent will also detect a `MouseOver` when
+///   enable event propagation (see [`WidgetExt::enable_bubble`], [`EventBubble`]).
+///
+/// - `MouseOut` is similar in that it triggers both when the mouse leaves the
+///   element or moves into any of its child elements. Like `MouseOver`, this
+///   event also can bubbles, which can lead to it firing multiple times during
+///   complex UI interactions involving multiple nested elements.
+pub struct MouseEnterLeaveOverOutDesc;

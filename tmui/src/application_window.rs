@@ -25,7 +25,7 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
-    events::Event,
+    events::{Event, EventType, MouseEvent},
     figure::Size,
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
@@ -60,6 +60,7 @@ pub struct ApplicationWindow {
     pressed_widget: ObjectId,
     modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
+    mouse_enter_widgets: Vec<WidgetHnd>,
     high_load_request: bool,
 
     run_after: Option<FnRunAfter>,
@@ -529,8 +530,68 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn has_modal_widget(&self) -> bool {
+        self.modal_widget.is_some()
+    }
+
+    #[inline]
     pub(crate) fn set_parent_window(&mut self, parent: WindowId) {
         self.parent_window = Some(parent)
+    }
+
+    #[inline]
+    pub(crate) fn check_mouse_enter(
+        &mut self,
+        widget: &mut dyn WidgetImpl,
+        point: &Point,
+        evt: &MouseEvent,
+    ) {
+        if !widget.rect().contains(point) {
+            return;
+        }
+
+        let hnd = NonNull::new(widget);
+        if !self.mouse_enter_widgets.contains(&hnd) {
+            self.mouse_enter_widgets.push(hnd);
+
+            let widget_position = widget.map_to_widget(point);
+            let mouse_enter = MouseEvent::new(
+                EventType::MouseEnter,
+                (widget_position.x(), widget_position.y()),
+                evt.mouse_button(),
+                evt.modifier(),
+                evt.n_press(),
+                evt.delta(),
+                evt.delta_type(),
+            );
+            widget.inner_mouse_enter(&mouse_enter);
+            widget.on_mouse_enter(&mouse_enter);
+        }
+    }
+
+    #[inline]
+    pub(crate) fn check_mouse_leave(&mut self, point: &Point, evt: &MouseEvent) {
+        self.mouse_enter_widgets.retain_mut(|w| {
+            let widget = nonnull_mut!(w);
+            let efct = widget.rect().contains(point);
+
+            if !efct {
+                let widget_position = widget.map_to_widget(point);
+                let mouse_leave = MouseEvent::new(
+                    EventType::MouseLeave,
+                    (widget_position.x(), widget_position.y()),
+                    evt.mouse_button(),
+                    evt.modifier(),
+                    evt.n_press(),
+                    evt.delta(),
+                    evt.delta_type(),
+                );
+                widget.inner_mouse_leave(&mouse_leave);
+                widget.on_mouse_leave(&mouse_leave);
+            }
+
+            efct
+        });
     }
 
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
