@@ -3,12 +3,12 @@ use crate::{application_window::ApplicationWindow, widget::WidgetImpl};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GlobalWatchEvent {
-    MousePress,
-    MouseRelease,
+    MousePressed,
+    MouseReleased,
     MouseMove,
     MouseWhell,
-    KeyPress,
-    KeyRelease,
+    KeyPressed,
+    KeyReleased,
 }
 
 #[reflect_trait]

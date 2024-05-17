@@ -598,7 +598,7 @@ impl ApplicationWindow {
     ///
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
-        for w in Self::widgets_of(self.id()).values_mut() {
+        for w in self.widgets.values_mut() {
             let widget = nonnull_mut!(w);
             if widget.id() == id || widget.descendant_of(id) {
                 continue;

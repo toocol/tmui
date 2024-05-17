@@ -296,9 +296,10 @@ impl Widget {
     fn notify_visible(&mut self, visible: bool) {
         if let Some(child) = self.get_child_mut() {
             if visible {
-                child.show()
+                child.set_property("visible", true.to_value());
+                child.set_render_styles(true);
             } else {
-                child.hide()
+                child.set_property("visible", false.to_value());
             }
         }
     }
@@ -518,7 +519,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             self.clip_rect(&mut painter, ClipOp::Intersect);
 
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            let mut background = if self.first_rendered() {
+            let mut background = if self.first_rendered() && !self.is_animation_progressing() {
                 self.opaque_background()
             } else {
                 self.background()

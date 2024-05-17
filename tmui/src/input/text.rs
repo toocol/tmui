@@ -7,7 +7,7 @@ use crate::{
     shortcut::ShortcutRegister,
     system::System,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{widget_inner::WidgetInnerExt, WidgetImpl, RegionClear},
+    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
 };
 use log::warn;
 use std::{
@@ -572,7 +572,7 @@ pub(crate) trait TextInnerExt:
     }
 
     fn draw_disable(&mut self, painter: &mut Painter) {
-        let rect = self.borderless_rect();
+        let rect = self.borderless_rect_f();
         painter.fill_rect_global(rect, TEXT_DEFAULT_DISABLE_BACKGROUND);
 
         self.draw_text(painter);

@@ -9,6 +9,7 @@ use crate::{
     graphics::{border::Border, element::ElementImpl},
     primitive::Message,
     widget::WidgetSignals,
+    popup::ReflectPopupImpl,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -151,10 +152,18 @@ pub trait WidgetExt {
     fn set_font_families(&mut self, families: &[&str]);
 
     /// Get the rect of widget without borders.
-    fn borderless_rect(&self) -> FRect;
+    fn borderless_rect(&self) -> Rect;
 
-    /// Get the size of widget. The size does not include the margins.
+    /// Get the rect of widget without borders.
+    fn borderless_rect_f(&self) -> FRect;
+
+    /// Get the size of widget. 
+    /// The size does not include the margins.
     fn size(&self) -> Size;
+
+    /// Get the size of widget. 
+    /// The size does not include the margins and borders.
+    fn borderless_size(&self) -> Size;
 
     /// Get the area of widget's total image Rect with the margins. <br>
     /// The [`Coordinate`] was `World`.
@@ -631,6 +640,15 @@ impl<T: WidgetImpl> WidgetExt for T {
             self.window()
                 .invalid_effected_widgets(self.image_rect(), self.id());
         }
+
+        if let Some(popup) = cast_mut!(self as PopupImpl) {
+            popup.remove_overlaid();
+
+            if popup.is_modal() {
+                popup.set_focus(false);
+                self.window().set_modal_widget(None);
+            }
+        }
     }
 
     #[inline]
@@ -642,6 +660,16 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.set_property("visible", true.to_value());
         self.set_render_styles(true);
         self.update();
+
+        if let Some(popup) = cast_mut!(self as PopupImpl) {
+            popup.register_overlaid();
+            if popup.is_modal() {
+                popup.set_focus(true);
+
+                let id = popup.id();
+                self.window().set_modal_widget(Some(id));
+            }
+        }
     }
 
     #[inline]
@@ -858,7 +886,21 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn borderless_rect(&self) -> FRect {
+    fn borderless_rect(&self) -> Rect {
+        let mut rect = self.rect();
+        let (top, right, bottom, left) = self.borders().ceil();
+        let (top, right, bottom, left) = (top as i32, right as i32, bottom as i32, left as i32);
+
+        rect.set_x(rect.x() + left);
+        rect.set_y(rect.y() + top);
+        rect.set_width(rect.width() - (left + right));
+        rect.set_height(rect.height() - (top + bottom));
+
+        rect
+    }
+
+    #[inline]
+    fn borderless_rect_f(&self) -> FRect {
         let mut rect: FRect = self.rect().into();
         let (top, right, bottom, left) = self.borders();
 
@@ -873,6 +915,12 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn size(&self) -> Size {
         let rect = self.rect();
+        Size::new(rect.width(), rect.height())
+    }
+
+    #[inline]
+    fn borderless_size(&self) -> Size {
+        let rect = self.borderless_rect();
         Size::new(rect.width(), rect.height())
     }
 

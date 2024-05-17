@@ -29,7 +29,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            window.handle_global_watch(GlobalWatchEvent::MousePress, |handle| {
+            window.handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
                 handle.on_global_mouse_pressed(&evt);
             });
 
@@ -65,7 +65,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            window.handle_global_watch(GlobalWatchEvent::MouseRelease, |handle| {
+            window.handle_global_watch(GlobalWatchEvent::MouseReleased, |handle| {
                 handle.on_global_mouse_released(&evt);
             });
 
@@ -245,7 +245,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let evt = downcast_event::<KeyEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
 
-            window.handle_global_watch(GlobalWatchEvent::KeyPress, |handle| {
+            window.handle_global_watch(GlobalWatchEvent::KeyPressed, |handle| {
                 handle.on_global_key_pressed(&evt);
             });
             let global_shorcut_triggered = ShortcutManager::with(|shortcut_manager| {
@@ -281,7 +281,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let evt = downcast_event::<KeyEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
 
-            window.handle_global_watch(GlobalWatchEvent::KeyRelease, |handle| {
+            window.handle_global_watch(GlobalWatchEvent::KeyReleased, |handle| {
                 handle.on_global_key_released(&evt)
             });
             ShortcutManager::with(|shortcut_manager| {

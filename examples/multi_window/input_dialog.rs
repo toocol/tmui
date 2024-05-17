@@ -40,7 +40,7 @@ impl ObjectImpl for InputDialog {
         self.password.set_spacing(8);
 
         self.submit.set_margin_top(15);
-        self.submit.width_request(30);
+        self.submit.width_request(50);
         self.submit.height_request(20);
         self.submit.set_halign(Align::Center);
         self.submit.callback_mouse_released(move |widget, _| {

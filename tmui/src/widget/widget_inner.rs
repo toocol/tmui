@@ -208,7 +208,7 @@ macro_rules! widget_inner_ext_impl {
         }
 
         fn handle_child_overflow_hidden(&mut self, child_size: Size) {
-            let size = self.size();
+            let size = self.borderless_size();
             if !self.super_type().is_a(Container::static_type()) {
                 if let Some(c) = self.get_child_mut() {
                     if c.overflow() != Overflow::Hidden {
