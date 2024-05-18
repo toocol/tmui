@@ -29,9 +29,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            window.handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
-                handle.on_global_mouse_pressed(&evt);
+            let prevent = window.handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
+                handle.on_global_mouse_pressed(&evt)
             });
+            if prevent {
+                return event;
+            }
 
             let modal_widget = window.modal_widget();
 
@@ -65,9 +68,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            window.handle_global_watch(GlobalWatchEvent::MouseReleased, |handle| {
-                handle.on_global_mouse_released(&evt);
+            let prevent = window.handle_global_watch(GlobalWatchEvent::MouseReleased, |handle| {
+                handle.on_global_mouse_released(&evt)
             });
+            if prevent {
+                return event;
+            }
 
             let pressed_widget = window.pressed_widget();
             let modal_widget = window.modal_widget();
@@ -117,9 +123,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            window.handle_global_watch(GlobalWatchEvent::MouseMove, |handle| {
-                handle.on_global_mouse_move(&evt);
+            let prevent = window.handle_global_watch(GlobalWatchEvent::MouseMove, |handle| {
+                handle.on_global_mouse_move(&evt)
             });
+            if prevent {
+                return event;
+            }
 
             if !window.has_modal_widget() {
                 window.check_mouse_leave(&pos, &evt);
@@ -207,9 +216,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            window.handle_global_watch(GlobalWatchEvent::MouseWhell, |handle| {
-                handle.on_global_mouse_whell(&evt);
+            let prevent = window.handle_global_watch(GlobalWatchEvent::MouseWhell, |handle| {
+                handle.on_global_mouse_whell(&evt)
             });
+            if prevent {
+                return event;
+            }
 
             let modal_widget = window.modal_widget();
 
@@ -245,9 +257,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let evt = downcast_event::<KeyEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
 
-            window.handle_global_watch(GlobalWatchEvent::KeyPressed, |handle| {
-                handle.on_global_key_pressed(&evt);
+            let prevent = window.handle_global_watch(GlobalWatchEvent::KeyPressed, |handle| {
+                handle.on_global_key_pressed(&evt)
             });
+            if prevent {
+                return event;
+            }
             let global_shorcut_triggered = ShortcutManager::with(|shortcut_manager| {
                 let mut shortcut_manager = shortcut_manager.borrow_mut();
                 shortcut_manager.receive_key_event(&evt);
@@ -281,9 +296,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let evt = downcast_event::<KeyEvent>(evt).unwrap();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
 
-            window.handle_global_watch(GlobalWatchEvent::KeyReleased, |handle| {
+            let prevent = window.handle_global_watch(GlobalWatchEvent::KeyReleased, |handle| {
                 handle.on_global_key_released(&evt)
             });
+            if prevent {
+                return event;
+            }
             ShortcutManager::with(|shortcut_manager| {
                 shortcut_manager.borrow_mut().receive_key_event(&evt)
             });

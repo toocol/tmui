@@ -1,6 +1,9 @@
 use tmui::{
     prelude::*,
-    tlib::{global_watch, object::{ObjectImpl, ObjectSubclass}},
+    tlib::{
+        global_watch,
+        object::{ObjectImpl, ObjectSubclass},
+    },
     tree_view::{
         cell::{cell_render::TextCellRender, Cell},
         node_render::NodeRender,
@@ -45,14 +48,16 @@ impl ObjectImpl for CtxMenu {
 impl WidgetImpl for CtxMenu {}
 
 impl GlobalWatchImpl for CtxMenu {
-    fn on_global_mouse_released(&mut self, evt: &tlib::events::MouseEvent) {
+    fn on_global_mouse_released(&mut self, evt: &tlib::events::MouseEvent) -> bool {
         if !self.visible() {
-            return
+            return false;
         }
         let pos: Point = evt.position().into();
         if !self.rect().contains(&pos) {
             self.hide();
         }
+
+        true
     }
 }
 

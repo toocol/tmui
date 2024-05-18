@@ -1,5 +1,8 @@
-use tlib::{events::{KeyEvent, MouseEvent}, prelude::*};
 use crate::{application_window::ApplicationWindow, widget::WidgetImpl};
+use tlib::{
+    events::{KeyEvent, MouseEvent},
+    prelude::*,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GlobalWatchEvent {
@@ -29,34 +32,61 @@ pub trait GlobalWatch: WidgetImpl + GlobalWatchImpl {
 #[allow(unused_variables)]
 pub trait GlobalWatchImpl: WidgetImpl {
     /// Handle global mouse pressed event.
-    /// 
+    ///
     /// The coordinate of postion in `MouseEvent` was `World`.
+    ///
+    /// @return prevent event propagate or not.
     #[inline]
-    fn on_global_mouse_pressed(&mut self, evt: &MouseEvent) {}
+    fn on_global_mouse_pressed(&mut self, evt: &MouseEvent) -> bool {
+        false
+    }
 
     /// Handle global mouse released event.
-    /// 
+    ///
     /// The coordinate of postion in `MouseEvent` was `World`.
+    ///
+    /// @return prevent event propagate or not.
     #[inline]
-    fn on_global_mouse_released(&mut self, evt: &MouseEvent) {}
+    fn on_global_mouse_released(&mut self, evt: &MouseEvent) -> bool {
+        false
+    }
 
     /// Handle global mouse move event.
-    /// 
+    ///
     /// The coordinate of postion in `MouseEvent` was `World`.
+    ///
+    /// @return prevent event propagate or not.
+    ///
+    /// ## Notice
+    /// if prevent the global mouse event, will not trigger widget's `MouseEnter`, `MouseLeave`... events.
     #[inline]
-    fn on_global_mouse_move(&mut self, evt: &MouseEvent) {}
+    fn on_global_mouse_move(&mut self, evt: &MouseEvent) -> bool {
+        false
+    }
 
     /// Handle global mouse whell event.
-    /// 
+    ///
     /// The coordinate of postion in `MouseEvent` was `World`.
+    ///
+    /// @return prevent event propagate or not.
     #[inline]
-    fn on_global_mouse_whell(&mut self, evt: &MouseEvent) {}
+    fn on_global_mouse_whell(&mut self, evt: &MouseEvent) -> bool {
+        false
+    }
 
     /// Handle global key pressed event.
+    ///
+    /// @return prevent event propagate or not.
     #[inline]
-    fn on_global_key_pressed(&mut self, evt: &KeyEvent) {}
+    fn on_global_key_pressed(&mut self, evt: &KeyEvent) -> bool {
+        false
+    }
 
     /// Handle global key released event.
+    ///
+    /// @return prevent event propagate or not.
     #[inline]
-    fn on_global_key_released(&mut self, evt: &KeyEvent) {}
+    fn on_global_key_released(&mut self, evt: &KeyEvent) -> bool {
+        false
+    }
 }

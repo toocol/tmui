@@ -449,22 +449,27 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn handle_global_watch<F: Fn(&mut dyn GlobalWatch)>(
+    pub(crate) fn handle_global_watch<F: Fn(&mut dyn GlobalWatch) -> bool>(
         &mut self,
         ty: GlobalWatchEvent,
         f: F,
-    ) {
+    ) -> bool {
+        let mut prevent = false;
         if let Some(ids) = self.watch_map.get(&ty) {
             for &id in ids.clone().iter() {
                 if let Some(widget) = self.find_id_mut(id) {
                     let type_name = widget.type_name();
 
-                    f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {
+                    let flag = f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {
                         panic!("Widget `{}` has not impl `GlobalWatchImpl`.", type_name)
                     }));
+                    if flag {
+                        prevent = true;
+                    }
                 }
             }
         }
+        prevent
     }
 
     #[inline]

@@ -199,12 +199,14 @@ impl WidgetImpl for Password {
 
 impl GlobalWatchImpl for Password {
     #[inline]
-    fn on_global_mouse_move(&mut self, evt: &MouseEvent) {
+    fn on_global_mouse_move(&mut self, evt: &MouseEvent) -> bool {
         if !self.is_enable() {
-            return;
+            return false;
         }
 
-        self.handle_mouse_move(evt)
+        self.handle_mouse_move(evt);
+
+        false
     }
 }
 

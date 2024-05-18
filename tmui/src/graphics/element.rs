@@ -25,7 +25,7 @@ impl ObjectImpl for Element {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_property("invalidate", true.to_value());
+        self.set_property("invalidate", (true, false).to_value());
         Board::notify_update();
 
         let try_window_id = current_window_id();
@@ -67,82 +67,69 @@ impl ElementPropsAcquire for Element {
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt {
     /// Set the application window id which the element belongs to.
-    ///
-    /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
     fn set_window_id(&mut self, id: ObjectId);
 
     /// Get the application window id which the element belongs to.
-    ///
-    /// Go to[`Function defination`](ElementExt::window_id) (Defined in [`ElementExt`])
     fn window_id(&self) -> ObjectId;
 
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     ///
-    /// Go to[`Function defination`](ElementExt::update) (Defined in [`ElementExt`])
+    /// This function will propagate to widget's children.
     fn update(&mut self);
 
-    /// Mark element's invalidate field to true, and element will be redrawed immediately.
+    /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     ///
-    /// Go to[`Function defination`](ElementExt::force_update) (Defined in [`ElementExt`])
+    /// @param `propagate`: propagate to widget's children or not.
+    fn update_with_propagate(&mut self, propagate: bool);
+
+    /// Mark element's invalidate field to true, and element will be redrawed immediately.
     fn force_update(&mut self);
 
     /// Specified the rects to redraw.
     /// This will result in clipping the drawing area of the widget.(after styles render)
-    ///
-    /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
     fn update_rect(&mut self, rect: CoordRect);
 
     /// Specified the styles rects to redraw.
     /// This will result in clipping the drawing area of the widget.(before styles render)
-    ///
-    /// Go to[`Function defination`](ElementExt::update_rect) (Defined in [`ElementExt`])
     fn update_styles_rect(&mut self, rect: CoordRect);
 
     /// Specified the region to redraw.
-    ///
-    /// Go to[`Function defination`](ElementExt::update_region) (Defined in [`ElementExt`])
     fn update_region(&mut self, region: &CoordRegion);
 
     /// Cleaer the redraw region.
-    ///
-    /// Go to[`Function defination`](ElementExt::clear_regions) (Defined in [`ElementExt`])
     fn clear_regions(&mut self);
 
     /// Get the redraw region. <br>
-    ///
-    /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn redraw_region(&self) -> &CoordRegion;
 
     /// Get the styles redraw region. <br>
-    ///
-    /// Go to[`Function defination`](ElementExt::redraw_region) (Defined in [`ElementExt`])
     fn styles_redraw_region(&self) -> &CoordRegion;
 
-    /// Go to[`Function defination`](ElementExt::rect) (Defined in [`ElementExt`])
+    /// Get the geometry rect of element which contains element's size and position.
     fn rect(&self) -> Rect;
 
-    /// Go to[`Function defination`](ElementExt::set_fixed_width) (Defined in [`ElementExt`])
+    /// Set the width of element.
     fn set_fixed_width(&mut self, width: i32);
 
-    /// Go to[`Function defination`](ElementExt::set_fixed_height) (Defined in [`ElementExt`])
+    /// Set the height of element.
     fn set_fixed_height(&mut self, height: i32);
 
-    /// Go to[`Function defination`](ElementExt::set_fixed_x) (Defined in [`ElementExt`])
+    /// Set the x position of element.
     fn set_fixed_x(&mut self, x: i32);
 
-    /// Go to[`Function defination`](ElementExt::set_fixed_y) (Defined in [`ElementExt`])
+    /// Set the y position of element.
     fn set_fixed_y(&mut self, y: i32);
 
-    /// Go to[`Function defination`](ElementExt::invalidate) (Defined in [`ElementExt`])
+    /// The element was invalidated or not.
     fn invalidate(&self) -> bool;
 
-    /// Go to[`Function defination`](ElementExt::validate) (Defined in [`ElementExt`])
+    /// Set the property `invalidate` of element to `false`.
     fn validate(&mut self);
 
-    /// Go to[`Function defination`](ElementExt::rect_record) (Defined in [`ElementExt`])
+    /// Get the rect record of element.
     fn rect_record(&self) -> Rect;
 
-    /// Go to[`Function defination`](ElementExt::set_rect_record) (Defined in [`ElementExt`])
+    /// Set the rect record of element.
     fn set_rect_record(&mut self, rect: Rect);
 }
 
@@ -161,7 +148,15 @@ impl<T: ElementImpl> ElementExt for T {
     fn update(&mut self) {
         if !self.invalidate() {
             emit!(self.invalidated());
-            self.set_property("invalidate", true.to_value());
+            self.set_property("invalidate", (true, true).to_value());
+            Board::notify_update()
+        }
+    }
+
+    fn update_with_propagate(&mut self, propagate: bool) {
+        if !self.invalidate() {
+            emit!(self.invalidated());
+            self.set_property("invalidate", (true, propagate).to_value());
             Board::notify_update()
         }
     }
@@ -174,13 +169,13 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
-        self.update();
+        self.update_with_propagate(false);
         self.element_props_mut().redraw_region.add_rect(rect)
     }
 
     #[inline]
     fn update_styles_rect(&mut self, rect: CoordRect) {
-        self.update();
+        self.update_with_propagate(false);
         self.element_props_mut().styles_redraw_region.add_rect(rect)
     }
 
@@ -189,7 +184,7 @@ impl<T: ElementImpl> ElementExt for T {
         if region.is_empty() {
             return;
         }
-        self.update();
+        self.update_with_propagate(false);
         self.element_props_mut().redraw_region.add_region(region)
     }
 
@@ -237,14 +232,14 @@ impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn invalidate(&self) -> bool {
         match self.get_property("invalidate") {
-            Some(val) => val.get(),
+            Some(val) => val.get::<(bool, bool)>().0,
             None => true,
         }
     }
 
     #[inline]
     fn validate(&mut self) {
-        self.set_property("invalidate", false.to_value());
+        self.set_property("invalidate", (false, false).to_value());
     }
 
     #[inline]

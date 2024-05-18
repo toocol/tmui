@@ -402,8 +402,8 @@ impl ObjectImpl for Widget {
 
         match name {
             "invalidate" => {
-                let invalidate = value.get::<bool>();
-                if invalidate {
+                let (_, propagate) = value.get::<(bool, bool)>();
+                if propagate {
                     // Notify all the child widget to invalidate, preparing rerenderer after.
                     self.notify_invalidate();
                 }
@@ -495,6 +495,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         // Clip difference the children region:
         painter.save();
+
         if self.id() != self.window_id() {
             self.clip_child_region(&mut painter);
         }
@@ -512,7 +513,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             }
         }
 
-        painter_clip(self, &mut painter, self.styles_redraw_region().iter());
+        let cliped = painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
         if !self.first_rendered() || self.render_styles() {
             painter.save();
@@ -529,7 +530,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             }
 
             // Draw the background color of the Widget.
-            if self.is_render_difference() && self.first_rendered() && !self.window().minimized() {
+            if self.is_render_difference()
+                && self.first_rendered()
+                && !self.window().minimized()
+                && !cliped
+            {
                 let mut border_rect: FRect = self.rect_record().into();
                 border_rect.set_point(&(0, 0).into());
                 self.border_ref()
@@ -581,7 +586,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 }
 
 #[inline]
-pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter, iter: Iter<CoordRect>) {
+pub(crate) fn painter_clip(
+    widget: &dyn WidgetImpl,
+    painter: &mut Painter,
+    iter: Iter<CoordRect>,
+) -> bool {
     let mut region = skia_safe::Region::new();
     let mut op = false;
     for r in iter {
@@ -598,6 +607,7 @@ pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter, iter:
     if op {
         painter.clip_region_global(region, ClipOp::Intersect);
     }
+    op
 }
 
 pub trait WidgetAcquire: WidgetImpl + Default {}
