@@ -25,10 +25,11 @@ use tlib::{
     emit,
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
     figure::Color,
-    namespace::{Align, BlendMode, Coordinate},
+    namespace::{Align, BlendMode, Coordinate, Overflow},
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
+    typedef::SkiaRect,
 };
 
 pub type Transparency = u8;
@@ -54,8 +55,9 @@ pub struct Widget {
     first_rendered: bool,
     #[derivative(Default(value = "false"))]
     rerender_difference: bool,
+    overflow: Overflow,
 
-    #[derivative(Default(value = "Color::WHITE"))]
+    #[derivative(Default(value = "Color::TRANSPARENT"))]
     background: Color,
     font: Font,
     margins: [i32; 4],
@@ -161,8 +163,10 @@ bitflags! {
         const MOUSE_RELEASED = 1 << 1;
         const MOUSE_MOVE = 1 << 2;
         const MOUSE_WHEEL = 1 << 3;
-        const KEY_PRESSED = 1 << 4;
-        const KEY_RELEASED = 1 << 5;
+        const MOUSE_OVER = 1 << 4;
+        const MOUSE_OUT = 1 << 5;
+        const KEY_PRESSED = 1 << 6;
+        const KEY_RELEASED = 1 << 7;
     }
 }
 
@@ -208,13 +212,31 @@ pub trait WidgetSignals: ActionExt {
 
         /// Emit when widget's receive mouse enter event.
         ///
+        /// @see [`MouseEnterLeaveOverOutDesc`]
+        ///
         /// @param [`MouseEvent`]
         mouse_enter();
 
         /// Emit when widget's receive mouse leave event.
         ///
+        /// @see [`MouseEnterLeaveOverOutDesc`]
+        ///
         /// @param [`MouseEvent`]
         mouse_leave();
+
+        /// Emit when widget's receive mouse over event.
+        ///
+        /// @see [`MouseEnterLeaveOverOutDesc`]
+        ///
+        /// @param [`MouseEvent`]
+        mouse_over();
+
+        /// Emit when widget's receive mouse out event.
+        ///
+        /// @see [`MouseEnterLeaveOverOutDesc`]
+        ///
+        /// @param [`MouseEvent`]
+        mouse_out();
 
         /// Emit when widget's receive key pressed event.
         ///
@@ -274,9 +296,10 @@ impl Widget {
     fn notify_visible(&mut self, visible: bool) {
         if let Some(child) = self.get_child_mut() {
             if visible {
-                child.show()
+                child.set_property("visible", true.to_value());
+                child.set_render_styles(true);
             } else {
-                child.hide()
+                child.set_property("visible", false.to_value());
             }
         }
     }
@@ -293,7 +316,7 @@ impl Widget {
     #[inline]
     fn notify_rerender_styles(&mut self) {
         if let Some(child) = self.get_child_mut() {
-            child.set_rerender_styles(true)
+            child.set_render_styles(true)
         }
     }
 
@@ -379,8 +402,8 @@ impl ObjectImpl for Widget {
 
         match name {
             "invalidate" => {
-                let invalidate = value.get::<bool>();
-                if invalidate {
+                let (_, propagate) = value.get::<(bool, bool)>();
+                if propagate {
                     // Notify all the child widget to invalidate, preparing rerenderer after.
                     self.notify_invalidate();
                 }
@@ -466,14 +489,15 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         // The default paint blend mode is set to `Src`,
         // it should be set to `SrcOver` when the widget is undergoing animation progress.
-        if self.is_animation_progressing() {
+        if self.is_animation_progressing() || self.background() == Color::TRANSPARENT {
             painter.set_blend_mode(BlendMode::SrcOver);
         }
 
         // Clip difference the children region:
         painter.save();
+
         if self.id() != self.window_id() {
-            painter.clip_region_global(self.child_region(), ClipOp::Difference);
+            self.clip_child_region(&mut painter);
         }
         if let Some(parent) = self.get_parent_ref() {
             if cast!(parent as ContainerImpl).is_some() {
@@ -482,22 +506,35 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
         }
 
         for (&id, &overlaid) in self.window().overlaid_rects().iter() {
-            if let Some(widget) = self.window().finds_by_id(id) {
+            if let Some(widget) = self.window().find_id(id) {
                 if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
                     painter.clip_rect_global(overlaid, ClipOp::Difference);
                 }
             }
         }
 
-        painter_clip(self, &mut painter, self.styles_redraw_region().iter());
+        let cliped = painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
-        if !self.first_rendered() || self.rerender_styles() {
+        if !self.first_rendered() || self.render_styles() {
+            painter.save();
+            self.clip_rect(&mut painter, ClipOp::Intersect);
+
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            // Draw the background color of the Widget.
-            let mut background = self.background();
-            background.set_transparency(self.transparency());
+            let mut background = if self.first_rendered() && !self.is_animation_progressing() {
+                self.opaque_background()
+            } else {
+                self.background()
+            };
+            if background != Color::TRANSPARENT {
+                background.set_transparency(self.transparency());
+            }
 
-            if self.rerender_difference() && self.first_rendered() && !self.window().minimized() {
+            // Draw the background color of the Widget.
+            if self.is_render_difference()
+                && self.first_rendered()
+                && !self.window().minimized()
+                && !cliped
+            {
                 let mut border_rect: FRect = self.rect_record().into();
                 border_rect.set_point(&(0, 0).into());
                 self.border_ref()
@@ -512,17 +549,16 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             self.border_ref().render(&mut painter, geometry.into());
 
             self.set_first_rendered();
-            self.set_rerender_styles(false);
+            self.set_render_styles(false);
+
+            painter.restore();
         }
 
         painter.reset();
         painter.set_font(self.font().clone());
 
         if self.is_strict_clip_widget() {
-            painter.clip_rect(
-                self.contents_rect(Some(Coordinate::Widget)),
-                ClipOp::Intersect,
-            );
+            self.clip_rect(&mut painter, ClipOp::Intersect);
         }
 
         if let Some(loading) = cast_mut!(self as Loadable) {
@@ -550,7 +586,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 }
 
 #[inline]
-pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter, iter: Iter<CoordRect>) {
+pub(crate) fn painter_clip(
+    widget: &dyn WidgetImpl,
+    painter: &mut Painter,
+    iter: Iter<CoordRect>,
+) -> bool {
     let mut region = skia_safe::Region::new();
     let mut op = false;
     for r in iter {
@@ -567,6 +607,7 @@ pub(crate) fn painter_clip(widget: &dyn WidgetImpl, painter: &mut Painter, iter:
     if op {
         painter.clip_region_global(region, ClipOp::Intersect);
     }
+    op
 }
 
 pub trait WidgetAcquire: WidgetImpl + Default {}
@@ -675,11 +716,11 @@ impl PointEffective for Widget {
     }
 }
 
-////////////////////////////////////// ChildRegionAcquirer //////////////////////////////////////
-pub trait ChildRegionAcquirer {
+////////////////////////////////////// ChildRegionAcquire //////////////////////////////////////
+pub trait ChildRegionAcquire {
     fn child_region(&self) -> tlib::skia_safe::Region;
 }
-impl ChildRegionAcquirer for Widget {
+impl ChildRegionAcquire for Widget {
     fn child_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
         if let Some(child) = self.get_child_ref() {
@@ -689,6 +730,30 @@ impl ChildRegionAcquirer for Widget {
             }
         }
         region
+    }
+}
+
+////////////////////////////////////// ChildRegionClip //////////////////////////////////////
+pub(crate) trait ChildRegionClip {
+    fn clip_child_region(&self, painter: &mut Painter);
+}
+impl<T: WidgetImpl> ChildRegionClip for T {
+    #[inline]
+    fn clip_child_region(&self, painter: &mut Painter) {
+        let widget = self;
+        if let Some(container) = cast!(widget as ContainerImpl) {
+            for c in container.children() {
+                if !c.visible() || !c.background().is_opaque() {
+                    continue;
+                }
+                c.clip_rect(painter, ClipOp::Difference)
+            }
+        } else if let Some(c) = widget.get_child_ref() {
+            if !c.visible() || !c.background().is_opaque() {
+                return;
+            }
+            c.clip_rect(painter, ClipOp::Difference)
+        }
     }
 }
 
@@ -707,10 +772,24 @@ pub trait InnerEventProcess {
     fn inner_mouse_wheel(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse enter event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_enter(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive mouse leave event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     fn inner_mouse_leave(&mut self, event: &MouseEvent);
+
+    /// Invoke when widget's receive mouse over event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    fn inner_mouse_over(&mut self, event: &MouseEvent);
+
+    /// Invoke when widget's receive mouse out event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    fn inner_mouse_out(&mut self, event: &MouseEvent);
 
     /// Invoke when widget's receive key pressed event.
     fn inner_key_pressed(&mut self, event: &KeyEvent);
@@ -880,6 +959,54 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     }
 
     #[inline]
+    fn inner_mouse_over(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_over(event)
+        }
+
+        emit!(Widget::inner_mouse_enter => self.mouse_over(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_OVER) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = *event;
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_over(&evt);
+            parent.inner_mouse_over(&evt);
+        }
+    }
+
+    #[inline]
+    fn inner_mouse_out(&mut self, event: &MouseEvent) {
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_out(event)
+        }
+
+        emit!(Widget::inner_mouse_enter => self.mouse_out(), event);
+
+        let mut pos: Point = event.position().into();
+        pos = self.map_to_global(&pos);
+        if let Some(parent) = self.get_parent_mut() {
+            if !parent.is_event_bubbled(EventBubble::MOUSE_OUT) {
+                return;
+            }
+
+            pos = parent.map_to_widget(&pos);
+            let mut evt = *event;
+            evt.set_position((pos.x(), pos.y()));
+
+            parent.on_mouse_out(&evt);
+            parent.inner_mouse_out(&evt);
+        }
+    }
+
+    #[inline]
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
             inner_customize_process.inner_customize_key_pressed(event)
@@ -955,12 +1082,28 @@ pub trait InnerCustomizeEventProcess {
     fn inner_customize_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn inner_customize_mouse_leave(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse over event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn inner_customize_mouse_over(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse out event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn inner_customize_mouse_out(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
     #[inline]
@@ -993,7 +1136,7 @@ pub trait WidgetImpl:
     + Layout
     + InnerEventProcess
     + PointEffective
-    + ChildRegionAcquirer
+    + ChildRegionAcquire
     + ActionExt
     + WindowAcquire
 {
@@ -1038,12 +1181,28 @@ pub trait WidgetImpl:
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse enter event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_enter(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive mouse leave event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
     #[inline]
     fn on_mouse_leave(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse over event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn on_mouse_over(&mut self, event: &MouseEvent) {}
+
+    /// Invoke when widget's receive mouse out event.
+    ///
+    /// @see [`MouseEnterLeaveOverOutDesc`]
+    #[inline]
+    fn on_mouse_out(&mut self, event: &MouseEvent) {}
 
     /// Invoke when widget's receive key pressed event.
     #[inline]
@@ -1143,16 +1302,16 @@ impl dyn WidgetImpl {
     }
 }
 
-pub trait WidgetImplExt: WidgetImpl {
+pub trait ChildOp: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
-    /// Go to[`Function defination`](WidgetImplExt::child) (Defined in [`WidgetImplExt`])
+    /// Go to[`Function defination`](ChildOp::child) (Defined in [`ChildOp`])
     fn child<T: WidgetImpl>(&mut self, child: Box<T>);
 
     /// # Safety
     /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
     ///
     /// @see [`Widget::child_ref_internal`](Widget) <br>
-    /// Go to[`Function defination`](WidgetImplExt::child_ref) (Defined in [`WidgetImplExt`])
+    /// Go to[`Function defination`](ChildOp::_child_ref) (Defined in [`ChildOp`])
     unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
 }
 
@@ -1251,10 +1410,10 @@ impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
 
 ////////////////////////////////////// WidgetPropsAcquire //////////////////////////////////////
 pub trait WidgetPropsAcquire {
-    /// Get the ref of widget model.
+    /// Get the ref of widget props.
     fn widget_props(&self) -> &Widget;
 
-    /// Get the mutable ref of widget model.
+    /// Get the mutable ref of widget props.
     fn widget_props_mut(&mut self) -> &mut Widget;
 }
 impl WidgetPropsAcquire for Widget {
@@ -1269,43 +1428,106 @@ impl WidgetPropsAcquire for Widget {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::WidgetImpl;
-    use crate::{prelude::*, skia_safe};
-    use tlib::{
-        object::{ObjectImpl, ObjectSubclass},
-        skia_safe::region::RegionOp,
-    };
-
-    #[extends(Widget)]
-    struct SubWidget {}
-
-    impl ObjectSubclass for SubWidget {
-        const NAME: &'static str = "SubWidget";
+////////////////////////////////////// WidgetFinder //////////////////////////////////////
+pub trait WidgetFinder: WidgetImpl {
+    #[inline]
+    fn finds<T: WidgetImpl + StaticType>(&self) -> Vec<&T> {
+        self.window().finds::<T>()
     }
 
-    impl ObjectImpl for SubWidget {}
-
-    impl WidgetImpl for SubWidget {}
-
-    #[extends(Widget)]
-    struct ChildWidget {}
-
-    impl ObjectSubclass for ChildWidget {
-        const NAME: &'static str = "ChildWidget";
+    #[inline]
+    fn finds_mut<T: WidgetImpl + StaticType>(&self) -> Vec<&mut T> {
+        self.window().finds_mut::<T>()
     }
 
-    impl ObjectImpl for ChildWidget {}
+    #[inline]
+    fn find_id<T: WidgetImpl + StaticType>(&self, id: ObjectId) -> Option<&T> {
+        self.window()
+            .find_id(id)
+            .and_then(|w| w.downcast_ref::<T>())
+    }
 
-    impl WidgetImpl for ChildWidget {}
+    #[inline]
+    fn find_id_mut<T: WidgetImpl + StaticType>(&self, id: ObjectId) -> Option<&mut T> {
+        self.window()
+            .find_id_mut(id)
+            .and_then(|w| w.downcast_mut::<T>())
+    }
 
-    #[test]
-    fn test_skia_region() {
-        let mut region = skia_safe::Region::new();
-        let rect1 = skia_safe::IRect::new(0, 0, 100, 100);
-        let rect2 = skia_safe::IRect::new(0, 0, 400, 400);
-        region.op_rect(rect1, RegionOp::Union);
-        region.op_rect(rect2, RegionOp::Difference);
+    /// Only affected when the parent is a container.
+    #[inline]
+    fn find_siblings<T: WidgetImpl + StaticType>(&self) -> Vec<&T> {
+        let mut siblings = vec![];
+        if let Some(parent) = self.get_parent_ref() {
+            if parent.super_type().is_a(Container::static_type()) {
+                let container = cast!(parent as ContainerImpl).unwrap();
+                for c in container.children() {
+                    if c.object_type().is_a(T::static_type()) {
+                        siblings.push(c.downcast_ref::<T>().unwrap())
+                    }
+                }
+            }
+        }
+        siblings
+    }
+
+    /// Only affected when the parent is a container.
+    #[inline]
+    fn find_siblings_mut<T: WidgetImpl + StaticType>(&mut self) -> Vec<&mut T> {
+        let mut siblings = vec![];
+        if let Some(parent) = self.get_parent_mut() {
+            if parent.super_type().is_a(Container::static_type()) {
+                let container = cast_mut!(parent as ContainerImpl).unwrap();
+                for c in container.children_mut() {
+                    if c.object_type().is_a(T::static_type()) {
+                        siblings.push(c.downcast_mut::<T>().unwrap())
+                    }
+                }
+            }
+        }
+        siblings
     }
 }
+impl<T: WidgetImpl> WidgetFinder for T {}
+impl WidgetFinder for dyn WidgetImpl {}
+
+////////////////////////////////////// RegionClear //////////////////////////////////////
+pub trait RegionClear: WidgetImpl {
+    /// The coordinate of given rect should be [`Coordinate::Widget`]
+    #[inline]
+    fn clear<T: Into<SkiaRect>>(&self, painter: &mut Painter, rect: T) {
+        painter.fill_rect(rect, self.opaque_background())
+    }
+
+    /// The coordinate of given rect should be [`Coordinate::Global`]
+    #[inline]
+    fn clear_global<T: Into<SkiaRect>>(&self, painter: &mut Painter, rect: T) {
+        painter.fill_rect_global(rect, self.opaque_background())
+    }
+}
+impl<T: WidgetImpl> RegionClear for T {}
+impl RegionClear for dyn WidgetImpl {}
+
+/// `MouseEnter`/`MouseLeave`:
+/// - `MouseEnter` fires when the mouse pointer enters the bounds of an element,
+///   and does not bubble up from child elements. It is triggered less frequently,
+///   ideal for certain UI interactions where you only need to know if the mouse
+///   has entered or left the boundary of an element, regardless of its children.
+///
+/// - `MouseLeave` fires when the mouse pointer leaves the bounds of an element,
+///   but, importantly, it does not fire when the mouse moves into child elements
+///   of the parent element. This makes it suitable for handling UI logic where
+///   you want an event to trigger only once when the mouse completely leaves the
+///   element including all its children.
+///
+/// `MouseOver`/`MouseOut`:
+/// - `MouseOver` occurs when the mouse pointer enters the element or any of its
+///   children. This event can bubbles, meaning if the mouse moves over a child
+///   element, the parent will also detect a `MouseOver` when
+///   enable event propagation (see [`WidgetExt::enable_bubble`], [`EventBubble`]).
+///
+/// - `MouseOut` is similar in that it triggers both when the mouse leaves the
+///   element or moves into any of its child elements. Like `MouseOver`, this
+///   event also can bubbles, which can lead to it firing multiple times during
+///   complex UI interactions involving multiple nested elements.
+pub struct MouseEnterLeaveOverOutDesc;

@@ -2,8 +2,7 @@ mod split_pane_layout;
 
 use split_pane_layout::SplitPaneLayout;
 use tmui::{
-    application::Application, application_window::ApplicationWindow, tlib::Object,
-    widget::WidgetImplExt,
+    application::Application, application_window::ApplicationWindow, tlib::Object, widget::ChildOp,
 };
 
 fn main() {

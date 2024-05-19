@@ -9,8 +9,11 @@ use tlib::{
 use tmui::{
     graphics::painter::Painter,
     prelude::*,
-    skia_safe::{self},
-    tlib::object::{ObjectImpl, ObjectSubclass},
+    skia_safe::{self, Path},
+    tlib::{
+        object::{ObjectImpl, ObjectSubclass},
+        typedef::{SkiaPaintStyle, SkiaRect},
+    },
     widget::WidgetImpl,
 };
 
@@ -32,7 +35,7 @@ impl ObjectImpl for SkiaPaint {
 
 impl WidgetImpl for SkiaPaint {
     fn on_mouse_pressed(&mut self, _event: &tlib::events::MouseEvent) {
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.update()
     }
 
@@ -50,6 +53,8 @@ impl WidgetImpl for SkiaPaint {
         self.draw_round_rect(painter);
 
         self.draw_with_clip_difference(painter);
+
+        self.draw_varying_width_line(painter);
 
         println!("cnt: {}", painter.save_count());
     }
@@ -218,7 +223,92 @@ impl SkiaPaint {
     }
 
     fn draw_round_rect(&mut self, painter: &mut Painter) {
-        painter.fill_round_rect(Rect::new(600, 0, 100, 40), 10., Color::CYAN);
+        let rect = Rect::new(600, 0, 100, 40);
+        painter.fill_round_rect(rect, 10., Color::CYAN);
+
+        let (lt, rt, rb, lb) = rect.arc_points(10);
+        let mut path = Path::new();
+        path.move_to(lt.0);
+        path.line_to(lt.1);
+        path.move_to(rt.0);
+        path.line_to(rt.1);
+        path.move_to(rb.0);
+        path.line_to(rb.1);
+        path.move_to(lb.0);
+        path.line_to(lb.1);
+
+        let lt: SkiaRect = Rect::new(
+            rect.left(),
+            rect.top(),
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(lt, 180., 90., true);
+
+        let rt: SkiaRect = Rect::new(
+            rect.right() - 2 * 10,
+            rect.top(),
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(rt, 270., 90., true);
+
+        let rb: SkiaRect = Rect::new(
+            rect.right() - 2 * 10,
+            rect.bottom() - 2 * 10,
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(rb, 0., 90., true);
+
+        let lb: SkiaRect = Rect::new(
+            rect.left(),
+            rect.bottom() - 2 * 10,
+            2 * 10,
+            2 * 10,
+        ).into();
+        path.arc_to(lb, 90., 90., true);
+
+        painter.set_antialiasing(true);
+        painter.set_style(SkiaPaintStyle::Stroke);
+        painter.set_color(Color::BLACK);
+        painter.draw_path(&path);
+        painter.draw_rect(rect);
+
+        let rect = Rect::new(600, 200, 100, 60);
+        let (lt, rt, _, lb) = rect.arc_points(20);
+        let oval: SkiaRect = Rect::new(
+            rect.left(),
+            rect.top(),
+            2 * 20,
+            2 * 20,
+        ).into();
+        painter.set_line_width(1.);
+        painter.set_color(Color::RED);
+        painter.draw_line(lb.1.x(), lb.1.y(), lt.0.x(), lt.0.y());
+        // painter.draw_varying_arc_global(oval, 180., 90., 1., 4., 16);
+        painter.draw_varying_arc_global(oval, 180., 45., 1., 2.5, 8);
+        painter.set_color(Color::BLACK);
+        painter.draw_varying_arc_global(oval, 225., 45., 2.5, 4., 8);
+        painter.draw_line(lt.1.x(), lt.1.y(), rt.0.x(), rt.0.y());
+
+        let rect = Rect::new(800, 200, 100, 100);
+        painter.fill_round_rect(rect, 40., Color::CYAN);
+        let (lt, rt, rb, lb) = rect.arc_points(40);
+        painter.set_color(Color::BLACK);
+        painter.set_line_width(1.);
+        if rt.0.x() > lt.1.x() {
+            painter.draw_line(lt.1.x(), lt.1.y(), rt.0.x(), rt.0.y());
+        }
+        if rb.0.y() > rt.1.y() {
+            painter.draw_line(rt.1.x(), rt.1.y(), rb.0.x(), rb.0.y());
+        }
+        if lb.0.x() < rb.1.x() {
+            painter.draw_line(rb.1.x(), rb.1.y(), lb.0.x(), lb.0.y());
+        }
+        if lt.0.y() < lb.1.y() {
+            painter.draw_line(lb.1.x(), lb.1.y(), lt.0.x(), lt.0.y());
+        }
     }
 
     fn draw_with_clip_difference(&mut self, painter: &mut Painter) {
@@ -238,5 +328,13 @@ impl SkiaPaint {
         painter.fill_rect(Rect::new(800, 0, 200, 80), Color::MAGENTA);
 
         painter.restore();
+    }
+
+    fn draw_varying_width_line(&mut self, painter: &mut Painter) {
+        painter.set_color(Color::BLACK);
+        painter.set_line_width(1.);
+        painter.draw_line(900, 200, 950, 200);
+        painter.set_line_width(10.);
+        painter.draw_line(950, 204, 1000, 204);
     }
 }

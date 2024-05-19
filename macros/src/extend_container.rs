@@ -339,7 +339,7 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
+                impl #impl_generics ChildRegionAcquire for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.children_region()

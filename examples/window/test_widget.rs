@@ -36,6 +36,14 @@ impl WidgetImpl for TestWidget {
     fn on_mouse_pressed(&mut self, event: &tlib::events::MouseEvent) {
         println!("Mouse pressed {:?}", event.position())
     }
+
+    fn on_mouse_enter(&mut self, _: &tlib::events::MouseEvent) {
+        println!("Mouse enter.")
+    }
+
+    fn on_mouse_leave(&mut self, _: &tlib::events::MouseEvent) {
+        println!("Mouse leave.")
+    }
 }
 
 impl TestWidget {

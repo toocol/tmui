@@ -11,6 +11,22 @@ use std::{
     sync::atomic::{AtomicI32, Ordering},
 };
 
+/// (left-top, right-top, right-bottom, left-bottom)
+pub type ArcPoints = (
+    (Point, Point),
+    (Point, Point),
+    (Point, Point),
+    (Point, Point),
+);
+
+/// (left-top, right-top, right-bottom, left-bottom)
+pub type ArcFPoints = (
+    (FPoint, FPoint),
+    (FPoint, FPoint),
+    (FPoint, FPoint),
+    (FPoint, FPoint),
+);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Rect
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -416,6 +432,31 @@ impl Rect {
         self.y = 0;
         self.width = 0;
         self.height = 0;
+    }
+
+    /// (left-top, right-top, right-bottom, left-bottom)
+    ///
+    /// Each points are ordered by clockwise.
+    #[inline]
+    pub fn arc_points(&self, radius: i32) -> ArcPoints {
+        (
+            (
+                Point::new(self.left(), self.top() + radius),
+                Point::new(self.left() + radius, self.top()),
+            ),
+            (
+                Point::new(self.right() - radius, self.top()),
+                Point::new(self.right(), self.top() + radius),
+            ),
+            (
+                Point::new(self.right(), self.bottom() - radius),
+                Point::new(self.right() - radius, self.bottom()),
+            ),
+            (
+                Point::new(self.left() + radius, self.bottom()),
+                Point::new(self.left(), self.bottom() - radius),
+            ),
+        )
     }
 }
 
@@ -992,6 +1033,31 @@ impl FRect {
             return;
         }
         *self = self.union(other);
+    }
+
+    /// (left-top, right-top, right-bottom, left-bottom)
+    ///
+    /// Each points are ordered by clockwise.
+    #[inline]
+    pub fn arc_points(&self, radius: f32) -> ArcFPoints {
+        (
+            (
+                FPoint::new(self.left(), self.top() + radius),
+                FPoint::new(self.left() + radius, self.top()),
+            ),
+            (
+                FPoint::new(self.right() - radius, self.top()),
+                FPoint::new(self.right(), self.top() + radius),
+            ),
+            (
+                FPoint::new(self.right(), self.bottom() - radius),
+                FPoint::new(self.right() - radius, self.bottom()),
+            ),
+            (
+                FPoint::new(self.left() + radius, self.bottom()),
+                FPoint::new(self.left(), self.bottom() - radius),
+            ),
+        )
     }
 }
 

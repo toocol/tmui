@@ -37,6 +37,8 @@ pub enum EventType {
     MouseWhell,
     MouseEnter,
     MouseLeave,
+    MouseOver,
+    MouseOut,
     KeyPress,
     KeyRelease,
     FocusIn,
@@ -62,17 +64,22 @@ impl From<u8> for EventType {
             4 => Self::MouseWhell,
             5 => Self::MouseEnter,
             6 => Self::MouseLeave,
-            7 => Self::KeyPress,
-            8 => Self::KeyRelease,
-            9 => Self::FocusIn,
-            10 => Self::FocusOut,
-            11 => Self::Resize,
-            12 => Self::Moved,
-            13 => Self::DroppedFile,
-            14 => Self::HoveredFile,
-            15 => Self::HoveredFileCancelled,
-            16 => Self::ReceivedCharacter,
-            17 => Self::InputMethod,
+            7 => Self::MouseOver,
+            8 => Self::MouseOut,
+            9 => Self::KeyPress,
+            10 => Self::KeyRelease,
+            11 => Self::FocusIn,
+            12 => Self::FocusOut,
+            13 => Self::Resize,
+            14 => Self::Moved,
+            15 => Self::DroppedFile,
+            16 => Self::HoveredFile,
+            17 => Self::HoveredFileCancelled,
+            18 => Self::ReceivedCharacter,
+            19 => Self::InputMethod,
+            20 => Self::WindowMaximized,
+            21 => Self::WindowMinimized,
+            22 => Self::WindowRestored,
             _ => unimplemented!(),
         }
     }
@@ -299,6 +306,8 @@ impl MouseEvent {
             EventType::MouseButtonRelease => type_,
             EventType::MouseEnter => type_,
             EventType::MouseLeave => type_,
+            EventType::MouseOver => type_,
+            EventType::MouseOut => type_,
             EventType::MouseMove => type_,
             EventType::MouseWhell => type_,
             _ => unimplemented!(),
@@ -1026,7 +1035,9 @@ impl Default for WindowMinimized {
 impl WindowMinimized {
     #[inline]
     pub fn new() -> Self {
-        Self { type_: EventType::WindowMinimized }
+        Self {
+            type_: EventType::WindowMinimized,
+        }
     }
 }
 impl EventTrait for WindowMinimized {
@@ -1059,7 +1070,9 @@ impl Default for WindowMaximized {
 impl WindowMaximized {
     #[inline]
     pub fn new() -> Self {
-        Self { type_: EventType::WindowMaximized }
+        Self {
+            type_: EventType::WindowMaximized,
+        }
     }
 }
 impl EventTrait for WindowMaximized {
@@ -1092,7 +1105,9 @@ impl Default for WindowRestored {
 impl WindowRestored {
     #[inline]
     pub fn new() -> Self {
-        Self { type_: EventType::WindowRestored }
+        Self {
+            type_: EventType::WindowRestored,
+        }
     }
 }
 impl EventTrait for WindowRestored {

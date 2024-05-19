@@ -60,7 +60,7 @@ trait RemainSize {
 impl RemainSize for dyn WidgetImpl {
     fn remain_size(&self) -> Size {
         if let Some(container) = cast!(self as ContainerImpl) {
-            let mut size = container.size();
+            let mut size = container.borderless_size();
             for c in container.children() {
                 let (mut cw, mut ch) = c.size().into();
 
@@ -88,7 +88,7 @@ impl RemainSize for dyn WidgetImpl {
 
             size
         } else {
-            self.size()
+            self.borderless_size()
         }
     }
 }
@@ -125,7 +125,7 @@ pub(crate) trait SizeCalculation: WidgetImpl {
 impl SizeCalculation for dyn WidgetImpl {
     fn pre_calc_size(&mut self, window_size: Size, mut parent_size: Size) -> (Size, Size) {
         if self.id() == self.window_id() || cast!(self as Overlaid).is_some() {
-            return (self.size(), self.remain_size());
+            return (self.borderless_size(), self.remain_size());
         }
         let size = self.size();
         let mut resized = false;
@@ -245,7 +245,7 @@ impl SizeCalculation for dyn WidgetImpl {
             emit!(SizeCalculation::pre_calc_size => self.size_changed(), self.size())
         }
 
-        (self.size(), self.remain_size())
+        (self.borderless_size(), self.remain_size())
     }
 
     fn calc_node_size(&mut self, child_size: Size) {
@@ -268,10 +268,13 @@ impl SizeCalculation for dyn WidgetImpl {
 
         self.check_size_hint();
 
-        if child_size.width() > self.size().width() || child_size.height() > self.size().height() {
+        let borderless_size = self.borderless_size();
+        if child_size.width() > borderless_size.width() || child_size.height() > borderless_size.height() {
             if let Some(unified) = cast_mut!(self as SizeUnifiedAdjust) {
                 unified.size_unified_adjust();
             }
+
+            self.handle_child_overflow_hidden(child_size);
         }
 
         if self.size() != size {
@@ -454,7 +457,7 @@ impl LayoutManager {
         if !is_animation {
             let parent_size = widget
                 .get_parent_ref()
-                .map(|p| p.size())
+                .map(|p| p.borderless_size())
                 .unwrap_or(self.window_size);
 
             Self::child_size_probe(self.window_size, parent_size, widget);
@@ -480,7 +483,7 @@ impl LayoutManager {
                 widget.set_resize_redraw(true)
             }
             widget.update();
-            widget.set_rerender_styles(true);
+            widget.set_render_styles(true);
         }
         widget.child_image_rect_union_mut().clear();
         widget.child_overflow_rect_mut().clear();
@@ -672,7 +675,7 @@ impl LayoutManager {
     ) {
         let parent = parent.unwrap();
         let widget_rect = widget.rect();
-        let parent_rect = parent.rect();
+        let parent_rect = parent.borderless_rect();
 
         let halign = widget.get_property("halign").unwrap().get::<Align>();
         let valign = widget.get_property("valign").unwrap().get::<Align>();

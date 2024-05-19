@@ -11,7 +11,7 @@ use tmui::{
 pub struct SplitPaneLayout {
     left: ObjectId,
     cnt: i32,
-    label: Option<NonNull<Label>>
+    label: Option<NonNull<Label>>,
 }
 
 impl ObjectSubclass for SplitPaneLayout {
@@ -39,7 +39,7 @@ impl ObjectImpl for SplitPaneLayout {
 
         self.set_hexpand(true);
         self.set_vexpand(true);
-        self.set_rerender_difference(true);
+        self.set_render_difference(true);
     }
 }
 
@@ -48,11 +48,17 @@ impl WidgetImpl for SplitPaneLayout {}
 impl SplitPaneLayout {
     fn split_off(&mut self, _event: tlib::events::MouseEvent) {
         if self.cnt != 0 {
-            return
+            return;
         }
         self.cnt += 1;
 
-        unsafe { self.label.as_mut().unwrap().as_mut().set_text("Split Left.") };
+        unsafe {
+            self.label
+                .as_mut()
+                .unwrap()
+                .as_mut()
+                .set_text("Split Left.")
+        };
 
         let mut label_2 = Label::new(Some("Split right Top"));
         label_2.set_size(20);

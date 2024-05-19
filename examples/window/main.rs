@@ -6,7 +6,7 @@ use tmui::{
     application_window::ApplicationWindow,
     label::Label,
     prelude::{Align, Color, ContentAlignment},
-    widget::{widget_ext::WidgetExt, WidgetImplExt},
+    widget::{widget_ext::WidgetExt, ChildOp},
 };
 
 fn main() {

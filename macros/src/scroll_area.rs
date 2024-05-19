@@ -32,7 +32,7 @@ pub(crate) fn generate_scroll_area_pre_construct(
     use_prefix: &Ident,
 ) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
-        self.set_rerender_difference(true);
+        self.set_render_difference(true);
         self.container
             .children
             .push(#use_prefix::scroll_bar::ScrollBar::new(Orientation::Vertical));

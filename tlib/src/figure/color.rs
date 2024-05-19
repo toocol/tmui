@@ -100,6 +100,11 @@ impl Color {
     }
 
     #[inline]
+    pub fn is_opaque(&self) -> bool {
+        self.a != 0
+    }
+
+    #[inline]
     pub fn r(&self) -> u8 {
         self.r as u8
     }
@@ -249,6 +254,13 @@ impl Color {
         r: 0,
         g: 0,
         b: 0,
+        a: 0,
+        valid: true,
+    };
+    pub const PURPLE: Color = Color {
+        r: 128,
+        g: 0,
+        b: 128,
         a: 0,
         valid: true,
     };

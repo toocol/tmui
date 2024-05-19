@@ -14,7 +14,7 @@ use tmui::{
         tree_view_object::TreeViewObject,
         TreeView,
     },
-    widget::{WidgetImpl, WidgetImplExt},
+    widget::{ChildOp, WidgetImpl},
 };
 
 use crate::ctx_menu::CtxMenu;

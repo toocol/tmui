@@ -7,7 +7,10 @@ use crate::{
 };
 use ::tlib::{
     namespace::BlendMode,
-    typedef::{SkiaBlendMode, SkiaFont, SkiaImage, SkiaPoint, SkiaRect},
+    typedef::{
+        SkiaBlendMode, SkiaClipOp, SkiaFont, SkiaImage, SkiaPaintStyle, SkiaPoint, SkiaRRect,
+        SkiaRect, SkiaRegion,
+    },
 };
 use log::{error, warn};
 use std::ffi::c_uint;
@@ -169,11 +172,7 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(
-        &self,
-        layer: T,
-        alpha: u8,
-    ) -> usize {
+    pub fn save_layer_alpha<T: Into<Option<skia_safe::Rect>>>(&self, layer: T, alpha: u8) -> usize {
         self.canvas.save_layer_alpha(layer, alpha as c_uint)
     }
 
@@ -645,6 +644,72 @@ impl<'a> Painter<'a> {
             .draw_arc(rect, angle, sweep_angle, use_center, &self.paint);
     }
 
+    /// Draw the varying width arc.
+    ///
+    /// the oval rect's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
+    #[inline]
+    pub fn draw_varying_arc<T: Into<SkiaRect>>(
+        &mut self,
+        oval: T,
+        start_angle: f32,
+        sweep_angle: f32,
+        start_width: f32,
+        end_width: f32,
+        steps: usize,
+    ) {
+        let mut oval: SkiaRect = oval.into();
+        oval.offset((self.x_offset, self.y_offset));
+        self.draw_varying_arc_global(
+            oval,
+            start_angle,
+            sweep_angle,
+            start_width,
+            end_width,
+            steps,
+        );
+    }
+
+    /// Draw the varying width arc with global coordinate.
+    ///
+    /// the oval rect's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
+    #[inline]
+    pub fn draw_varying_arc_global<T: Into<SkiaRect>>(
+        &mut self,
+        oval: T,
+        start_angle: f32,
+        sweep_angle: f32,
+        start_width: f32,
+        end_width: f32,
+        steps: usize,
+    ) {
+        let oval: SkiaRect = oval.into();
+        let mut path = Path::new();
+
+        if start_width == end_width {
+            path.arc_to(oval, start_angle, sweep_angle, true);
+
+            self.set_style(SkiaPaintStyle::Stroke);
+            self.set_line_width(start_width);
+            self.draw_path(&path);
+        } else {
+            let step_angle = sweep_angle / steps as f32;
+            let adjust_step_angle = step_angle + 1.;
+            let step_width_increase = (end_width - start_width) / steps as f32;
+
+            for i in 0..steps {
+                let angle = start_angle + i as f32 * step_angle;
+                let width = start_width + i as f32 * step_width_increase;
+
+                path.arc_to(oval, angle, adjust_step_angle, true);
+
+                self.set_style(SkiaPaintStyle::Stroke);
+                self.set_line_width(width);
+                self.draw_path(&path);
+                path.rewind();
+            }
+        }
+    }
+
     /// Draw a point at (x, y) with offset.
     ///
     /// the point's coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
@@ -665,21 +730,37 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn clip_rect<T: Into<skia_safe::Rect>>(&self, rect: T, op: skia_safe::ClipOp) {
-        let mut rect: skia_safe::Rect = rect.into();
+    pub fn clip_rect<T: Into<SkiaRect>>(&self, rect: T, op: SkiaClipOp) {
+        let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
-        self.canvas.clip_rect(rect, op, false);
+        self.canvas.clip_rect(rect, op, true);
     }
 
     #[inline]
-    pub fn clip_rect_global<T: Into<skia_safe::Rect>>(&self, rect: T, op: skia_safe::ClipOp) {
-        let rect: skia_safe::Rect = rect.into();
-        self.canvas.clip_rect(rect, op, false);
+    pub fn clip_rect_global<T: Into<SkiaRect>>(&self, rect: T, op: SkiaClipOp) {
+        let rect: SkiaRect = rect.into();
+        self.canvas.clip_rect(rect, op, true);
+    }
+
+    #[inline]
+    pub fn clip_round_rect<T: Into<SkiaRect>>(&self, rect: T, radius: f32, op: SkiaClipOp) {
+        let mut rect: SkiaRect = rect.into();
+        rect.offset((self.x_offset, self.y_offset));
+
+        let rrect = SkiaRRect::new_rect_xy(rect, radius, radius);
+        self.canvas.clip_rrect(rrect, op, true);
+    }
+
+    #[inline]
+    pub fn clip_round_rect_global<T: Into<SkiaRect>>(&self, rect: T, radius: f32, op: SkiaClipOp) {
+        let rect: SkiaRect = rect.into();
+        let rrect = SkiaRRect::new_rect_xy(rect, radius, radius);
+        self.canvas.clip_rrect(rrect, op, true);
     }
 
     /// Clip the region to draw.
     #[inline]
-    pub fn clip_region_global(&self, region: skia_safe::Region, op: skia_safe::ClipOp) {
+    pub fn clip_region_global(&self, region: SkiaRegion, op: SkiaClipOp) {
         self.canvas.clip_region(&region, Some(op));
     }
 

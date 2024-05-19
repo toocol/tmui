@@ -6,7 +6,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool, use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
@@ -162,6 +162,9 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                     fn inner_initialize(&mut self) {
                         #run_after_clause
                         self.set_property("visible", false.to_value());
+                        if !self.background().is_opaque() {
+                            self.set_background(#use_prefix::tlib::figure::Color::WHITE);
+                        }
                     }
 
                     #[inline]
@@ -177,7 +180,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                     }
                 }
 
-                impl #impl_generics ChildRegionAcquirer for #name #ty_generics #where_clause {
+                impl #impl_generics ChildRegionAcquire for #name #ty_generics #where_clause {
                     #[inline]
                     fn child_region(&self) -> tlib::skia_safe::Region {
                         self.popup.widget.child_region()

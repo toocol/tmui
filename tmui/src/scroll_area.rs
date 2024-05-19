@@ -202,7 +202,7 @@ impl ObjectSubclass for ScrollArea {
 impl ObjectImpl for ScrollArea {
     fn construct(&mut self) {
         self.parent_construct();
-        self.set_rerender_difference(true);
+        self.set_render_difference(true);
         self.container
             .children
             .push(ScrollBar::new(Orientation::Vertical));

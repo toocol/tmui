@@ -47,6 +47,10 @@ impl ObjectImpl for Container {
 
         match name {
             "invalidate" => {
+                let (_, propagate) = value.get::<(bool, bool)>();
+                if !propagate {
+                    return;
+                }
                 for child in self.children.iter_mut() {
                     child.update()
                 }
@@ -55,9 +59,10 @@ impl ObjectImpl for Container {
                 let visible = value.get::<bool>();
                 for child in self.children.iter_mut() {
                     if visible {
-                        child.show()
+                        child.set_property("visible", true.to_value());
+                        child.set_render_styles(true);
                     } else {
-                        child.hide()
+                        child.set_property("visible", false.to_value());
                     }
                 }
             }
@@ -74,7 +79,7 @@ impl ObjectImpl for Container {
                 let rerender = value.get::<bool>();
                 if rerender {
                     for child in self.children.iter_mut() {
-                        child.set_rerender_styles(true)
+                        child.set_render_styles(true)
                     }
                 }
             }

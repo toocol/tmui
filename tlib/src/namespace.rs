@@ -1247,6 +1247,33 @@ impl From<BlendMode> for SkiaBlendMode {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// [`Overflow`]
+////////////////////////////////////////////////////////////////////////////////////////////////
+#[repr(u8)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum Overflow {
+    #[default]
+    Auto = 0,
+    Hidden,
+}
+impl AsNumeric<u8> for Overflow {
+    #[inline]
+    fn as_numeric(&self) -> u8 {
+        *self as u8
+    }
+}
+impl From<u8> for Overflow {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Auto,
+            1 => Self::Hidden,
+            _ => unreachable!(),
+        }
+    }
+}
+implements_enum_value!(Overflow, u8);
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::ToValue;

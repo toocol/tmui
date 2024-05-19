@@ -20,7 +20,8 @@ pub use crate::graphics::board::Board;
 pub use crate::graphics::border::Border;
 pub use crate::graphics::drawing_context::DrawingContext;
 pub use crate::graphics::element::{
-    Element, ElementAcquire, ElementExt, ElementImpl, ReflectElementImpl, ElementSignals, ElementPropsAcquire
+    Element, ElementAcquire, ElementExt, ElementImpl, ElementPropsAcquire, ElementSignals,
+    ReflectElementImpl,
 };
 pub use crate::graphics::painter::Painter;
 pub use crate::graphics::render_difference::{
@@ -50,10 +51,10 @@ pub use crate::split_pane::{
 pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
-    callbacks::Callbacks, widget_ext::WidgetExt, ChildRegionAcquirer, EventBubble,
+    callbacks::Callbacks, widget_ext::WidgetExt, ChildOp, ChildRegionAcquire, EventBubble,
     InnerCustomizeEventProcess, PointEffective, ReflectInnerCustomizeEventProcess,
     ReflectIterExecutor, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd,
-    WidgetImpl, WidgetImplExt, WidgetSignals, WindowAcquire, WidgetPropsAcquire
+    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire,
 };
 pub use tlib::tokio;
 pub use tlib::{

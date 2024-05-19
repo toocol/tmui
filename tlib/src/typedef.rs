@@ -24,6 +24,8 @@ pub type SkiaSvgDom = skia_safe::svg::Dom;
 pub type SkiaImage = skia_safe::Image;
 pub type SkiaSize = skia_safe::Size;
 pub type SkiaISize = skia_safe::ISize;
+pub type SkiaClipOp = skia_safe::ClipOp;
+pub type SkiaPaintStyle = skia_safe::PaintStyle;
 
 pub type WinitWindow = winit::window::Window;
 pub type WinitWindowBuilder = winit::window::WindowBuilder;

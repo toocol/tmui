@@ -5,11 +5,7 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
-use tlib::{
-    connect,
-    skia_safe::FontMgr,
-    typedef::SkiaSvgDom,
-};
+use tlib::{connect, skia_safe::FontMgr, typedef::SkiaSvgDom};
 use usvg::{fontdb::Database, Options, Tree};
 
 #[extends(Widget)]
@@ -86,7 +82,7 @@ impl SvgToggleIcon {
         if self.index >= self.doms.len() {
             self.index = 0;
         }
-        self.set_rerender_styles(true);
+        self.set_render_styles(true);
         self.update();
     }
 

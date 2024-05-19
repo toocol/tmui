@@ -83,7 +83,7 @@ pub trait Loadable: WidgetImpl {
 
         self.loading_model()
             .loading
-            .render_loading(painter, rect, self.background())
+            .render_loading(painter, rect, self.opaque_background())
     }
 }
 

@@ -94,11 +94,6 @@ pub trait Popupable: WidgetImpl {
             }
 
             popup.show();
-            popup.register_overlaid();
-            if popup.is_modal() {
-                popup.set_focus(true);
-                window.set_modal_widget(Some(popup.id()));
-            }
         }
     }
 
@@ -107,11 +102,6 @@ pub trait Popupable: WidgetImpl {
     fn hide_popup(&mut self) {
         if let Some(popup) = self.get_popup_mut() {
             popup.hide();
-            popup.remove_overlaid();
-            if popup.is_modal() {
-                popup.set_focus(false);
-                self.window().set_modal_widget(None);
-            }
         }
     }
 

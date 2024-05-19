@@ -25,7 +25,7 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
-    events::Event,
+    events::{Event, EventType, MouseEvent},
     figure::Size,
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
@@ -38,6 +38,7 @@ thread_local! {
 }
 
 pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
+const DEFAULT_WINDOW_BACKGROUND: Color = Color::WHITE;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
@@ -59,6 +60,7 @@ pub struct ApplicationWindow {
     pressed_widget: ObjectId,
     modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
+    mouse_enter_widgets: Vec<WidgetHnd>,
     high_load_request: bool,
 
     run_after: Option<FnRunAfter>,
@@ -74,7 +76,8 @@ impl ObjectImpl for ApplicationWindow {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_rerender_difference(true)
+        self.set_background(DEFAULT_WINDOW_BACKGROUND);
+        self.set_render_difference(true)
     }
 
     fn initialize(&mut self) {
@@ -192,12 +195,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn finds_by_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
+    pub fn find_id(&self, id: ObjectId) -> Option<&dyn WidgetImpl> {
         self.widgets.get(&id).map(|w| nonnull_ref!(w))
     }
 
     #[inline]
-    pub fn finds_by_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
+    pub fn find_id_mut(&mut self, id: ObjectId) -> Option<&mut dyn WidgetImpl> {
         self.widgets.get_mut(&id).map(|w| nonnull_mut!(w))
     }
 
@@ -367,12 +370,12 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_focused_widget(&mut self, id: ObjectId) {
         if self.focused_widget != 0 && self.focused_widget != id {
-            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+            if let Some(widget) = self.find_id_mut(self.focused_widget) {
                 widget.on_lose_focus();
             }
         }
         if id != 0 {
-            if let Some(widget) = self.finds_by_id_mut(id) {
+            if let Some(widget) = self.find_id_mut(id) {
                 widget.on_get_focus();
             } else {
                 return;
@@ -384,7 +387,7 @@ impl ApplicationWindow {
     /// Let the focused widget lose focus temporarily.
     pub(crate) fn temp_lose_focus(&mut self) {
         if self.focused_widget != 0 {
-            if let Some(widget) = self.finds_by_id_mut(self.focused_widget) {
+            if let Some(widget) = self.find_id_mut(self.focused_widget) {
                 widget.on_lose_focus();
             }
 
@@ -396,7 +399,7 @@ impl ApplicationWindow {
     /// Restore the previous focused widget.
     pub(crate) fn restore_focus(&mut self) {
         if self.focused_widget_mem != 0 {
-            if let Some(widget) = self.finds_by_id_mut(self.focused_widget_mem) {
+            if let Some(widget) = self.find_id_mut(self.focused_widget_mem) {
                 widget.on_get_focus();
             }
 
@@ -446,22 +449,27 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn handle_global_watch<F: Fn(&mut dyn GlobalWatch)>(
+    pub(crate) fn handle_global_watch<F: Fn(&mut dyn GlobalWatch) -> bool>(
         &mut self,
         ty: GlobalWatchEvent,
         f: F,
-    ) {
+    ) -> bool {
+        let mut prevent = false;
         if let Some(ids) = self.watch_map.get(&ty) {
             for &id in ids.clone().iter() {
-                if let Some(widget) = self.finds_by_id_mut(id) {
+                if let Some(widget) = self.find_id_mut(id) {
                     let type_name = widget.type_name();
 
-                    f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {
+                    let flag = f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {
                         panic!("Widget `{}` has not impl `GlobalWatchImpl`.", type_name)
                     }));
+                    if flag {
+                        prevent = true;
+                    }
                 }
             }
         }
+        prevent
     }
 
     #[inline]
@@ -527,15 +535,75 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn has_modal_widget(&self) -> bool {
+        self.modal_widget.is_some()
+    }
+
+    #[inline]
     pub(crate) fn set_parent_window(&mut self, parent: WindowId) {
         self.parent_window = Some(parent)
+    }
+
+    #[inline]
+    pub(crate) fn check_mouse_enter(
+        &mut self,
+        widget: &mut dyn WidgetImpl,
+        point: &Point,
+        evt: &MouseEvent,
+    ) {
+        if !widget.rect().contains(point) {
+            return;
+        }
+
+        let hnd = NonNull::new(widget);
+        if !self.mouse_enter_widgets.contains(&hnd) {
+            self.mouse_enter_widgets.push(hnd);
+
+            let widget_position = widget.map_to_widget(point);
+            let mouse_enter = MouseEvent::new(
+                EventType::MouseEnter,
+                (widget_position.x(), widget_position.y()),
+                evt.mouse_button(),
+                evt.modifier(),
+                evt.n_press(),
+                evt.delta(),
+                evt.delta_type(),
+            );
+            widget.inner_mouse_enter(&mouse_enter);
+            widget.on_mouse_enter(&mouse_enter);
+        }
+    }
+
+    #[inline]
+    pub(crate) fn check_mouse_leave(&mut self, point: &Point, evt: &MouseEvent) {
+        self.mouse_enter_widgets.retain_mut(|w| {
+            let widget = nonnull_mut!(w);
+            let efct = widget.rect().contains(point);
+
+            if !efct {
+                let widget_position = widget.map_to_widget(point);
+                let mouse_leave = MouseEvent::new(
+                    EventType::MouseLeave,
+                    (widget_position.x(), widget_position.y()),
+                    evt.mouse_button(),
+                    evt.modifier(),
+                    evt.n_press(),
+                    evt.delta(),
+                    evt.delta_type(),
+                );
+                widget.inner_mouse_leave(&mouse_leave);
+                widget.on_mouse_leave(&mouse_leave);
+            }
+
+            efct
+        });
     }
 
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
     ///
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
-        for w in Self::widgets_of(self.id()).values_mut() {
+        for w in self.widgets.values_mut() {
             let widget = nonnull_mut!(w);
             if widget.id() == id || widget.descendant_of(id) {
                 continue;
@@ -551,7 +619,7 @@ impl ApplicationWindow {
 
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
             if region.intersects_rect(dirty_irect) {
-                widget.set_rerender_styles(true);
+                widget.set_render_styles(true);
                 widget.update_styles_rect(CoordRect::new(dirty_rect, Coordinate::World));
             }
         }
@@ -591,7 +659,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         if let Some(parent) = child_ref.get_parent_ref() {
             let is_passing_event_bubble = parent.is_propagate_event_bubble();
             let is_passing_mouse_tracking = parent.is_propagate_mouse_tracking();
-            let is_manage_by_container = parent.is_manage_by_container() || {
+            let is_manage_by_container = {
                 let container = cast!(parent as ContainerImpl);
                 match container {
                     Some(c) => c.container_layout() != ContainerLayoutEnum::Stack,
