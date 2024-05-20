@@ -13,6 +13,7 @@ use syn::{
     Path, Token,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     ignore_default: bool,
@@ -21,6 +22,7 @@ pub(crate) fn expand(
     has_size_unified_adjust: bool,
     layout: LayoutType,
     use_prefix: &Ident,
+    children_fields: Option<&Vec<Ident>>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -267,6 +269,17 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
+            let layout_prepare_children_ref = if children_fields.is_some() {
+                let children_fields = children_fields.unwrap();
+                quote!(
+                    #(
+                        self.container.children_ref.push(std::ptr::NonNull::new(self.#children_fields.as_mut()));
+                    )*
+                )
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
             Ok(quote!(
                 #default_clause
                 #ast
@@ -329,6 +342,7 @@ pub(crate) fn expand(
                     #[inline]
                     fn pretreat_construct(&mut self) {
                         #scroll_area_pre_construct
+                        #layout_prepare_children_ref
                     }
                 }
 

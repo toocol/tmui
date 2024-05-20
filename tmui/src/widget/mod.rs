@@ -328,13 +328,6 @@ impl Widget {
     }
 
     #[inline]
-    fn notify_propagate_update(&mut self) {
-        if let Some(child) = self.get_child_mut() {
-            child.propagate_update();
-        }
-    }
-
-    #[inline]
     fn notify_propagate_update_rect(&mut self, rect: CoordRect) {
         if let Some(child) = self.get_child_mut() {
             child.propagate_update_rect(rect);
@@ -429,12 +422,6 @@ impl ObjectImpl for Widget {
                 let minimized = value.get::<bool>();
                 if minimized {
                     self.notify_minimized();
-                }
-            }
-            "propagate_update" => {
-                let propagate_update = value.get::<bool>();
-                if propagate_update {
-                    self.notify_propagate_update();
                 }
             }
             "propagate_update_rect" => {

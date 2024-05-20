@@ -4,13 +4,13 @@ use tmui::{
     widget::WidgetImpl,
 };
 
-use super::WinCtrlBtns;
+use super::{app_icon::AppIcon, WinCtrlBtns};
 
 #[extends(Widget, Layout(HBox))]
 #[derive(Childrenable)]
 pub struct TitleBar {
     #[children]
-    widget1: Box<Widget>,
+    widget1: Box<AppIcon>,
 
     #[children]
     widget2: Box<Widget>,
@@ -32,11 +32,14 @@ impl ObjectImpl for TitleBar {
 
         self.widget1.width_request(30);
         self.widget1.set_vexpand(true);
+        self.widget1.set_background(Color::WHITE);
 
         self.widget2.set_hexpand(true);
         self.widget2.set_vexpand(true);
         self.widget2.set_hscale(0.7);
         self.widget2.set_background(Color::GREY_LIGHT);
+
+        self.win_ctrl_btns.set_background(Color::WHITE);
     }
 }
 

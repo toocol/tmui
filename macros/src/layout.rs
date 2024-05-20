@@ -79,7 +79,7 @@ pub(crate) fn expand(
 }
 
 /// Get the fileds' Ident which defined the attribute `#[children]` provided by the derive macro [`Childrenable`](crate::Childrenable)
-fn get_childrened_fields(ast: &DeriveInput) -> Vec<&Ident> {
+fn get_childrened_fields(ast: &DeriveInput) -> Vec<Ident> {
     let mut children_idents = vec![];
     match &ast.data {
         syn::Data::Struct(ref struct_data) => match &struct_data.fields {
@@ -88,7 +88,7 @@ fn get_childrened_fields(ast: &DeriveInput) -> Vec<&Ident> {
                     for attr in field.attrs.iter() {
                         if let Some(attr_ident) = attr.path.get_ident() {
                             if *attr_ident == "children" {
-                                children_idents.push(field.ident.as_ref().unwrap());
+                                children_idents.push(field.ident.clone().unwrap());
                                 break;
                             }
                         }
@@ -121,6 +121,8 @@ fn gen_layout_clause(
     let use_prefix = if internal { "crate" } else { "tmui" };
     let use_prefix = Ident::new(use_prefix, ast.ident.span());
 
+    let children_fields = get_childrened_fields(ast);
+
     let mut token = extend_container::expand(
         ast,
         ignore_default,
@@ -129,17 +131,16 @@ fn gen_layout_clause(
         has_size_unified_adjust,
         layout,
         &use_prefix,
+        Some(&children_fields),
     )?;
 
     let name = &ast.ident;
     let span = ast.span();
     let layout_ident = Ident::new(layout.as_str(), name.span());
 
-    let children_fields = get_childrened_fields(ast);
-
     if is_split_pane && !children_fields.is_empty() {
         return Err(syn::Error::new_spanned(
-            children_fields[0],
+            &children_fields[0],
             "`SplitPane` can not use `#[children]` attribute, please use `add_child`, `split` functions instead.",
         ));
     }

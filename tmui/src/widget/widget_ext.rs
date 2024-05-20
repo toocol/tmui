@@ -7,9 +7,9 @@ use crate::{
     application_window::ApplicationWindow,
     font::FontTypeface,
     graphics::{border::Border, element::ElementImpl},
+    popup::ReflectPopupImpl,
     primitive::Message,
     widget::WidgetSignals,
-    popup::ReflectPopupImpl,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -24,9 +24,6 @@ use tlib::{
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
-    /// Get the name of widget.
-    fn name(&self) -> String;
-
     /// The widget was initialized or not.
     fn initialized(&self) -> bool;
 
@@ -157,11 +154,11 @@ pub trait WidgetExt {
     /// Get the rect of widget without borders.
     fn borderless_rect_f(&self) -> FRect;
 
-    /// Get the size of widget. 
+    /// Get the size of widget.
     /// The size does not include the margins.
     fn size(&self) -> Size;
 
-    /// Get the size of widget. 
+    /// Get the size of widget.
     /// The size does not include the margins and borders.
     fn borderless_size(&self) -> Size;
 
@@ -380,9 +377,6 @@ pub trait WidgetExt {
     /// Is the widget under mouse pressed.
     fn is_pressed(&self) -> bool;
 
-    /// Invalidate this widget to update it, and also update the child widget..
-    fn propagate_update(&mut self);
-
     /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
     /// This will result in clipping the drawing area of the widget.(after styles render)
     fn propagate_update_rect(&mut self, rect: CoordRect);
@@ -468,7 +462,7 @@ pub trait WidgetExt {
     /// @see [`Widget::occupy_space`]
     fn set_occupy_space(&mut self, occupy_space: bool);
 
-    /// Iterate upwards through the widget and it's parent to obtain the background color, 
+    /// Iterate upwards through the widget and it's parent to obtain the background color,
     /// until it is opaque.
     fn opaque_background(&self) -> Color;
 
@@ -480,11 +474,6 @@ pub trait WidgetExt {
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
-    #[inline]
-    fn name(&self) -> String {
-        self.get_property("name").unwrap().get::<String>()
-    }
-
     #[inline]
     fn initialized(&self) -> bool {
         self.widget_props().initialized
@@ -1370,13 +1359,6 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn propagate_update(&mut self) {
-        self.update();
-
-        self.set_property("propagate_update", true.to_value());
-    }
-
-    #[inline]
     fn propagate_update_rect(&mut self, rect: CoordRect) {
         self.update_rect(rect);
 
@@ -1545,12 +1527,12 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         bk
     }
-    
+
     #[inline]
     fn overflow(&self) -> Overflow {
         self.widget_props().overflow
     }
-    
+
     #[inline]
     fn set_overflow(&mut self, overflow: Overflow) {
         self.widget_props_mut().overflow = overflow

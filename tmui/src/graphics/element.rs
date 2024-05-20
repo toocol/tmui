@@ -66,6 +66,9 @@ impl ElementPropsAcquire for Element {
 
 /// Elentment extend operation, impl this trait by proc-marcos `extends_element` automaticly.
 pub trait ElementExt {
+    /// Get the name of widget.
+    fn name(&self) -> String;
+
     /// Set the application window id which the element belongs to.
     fn set_window_id(&mut self, id: ObjectId);
 
@@ -134,6 +137,11 @@ pub trait ElementExt {
 }
 
 impl<T: ElementImpl> ElementExt for T {
+    #[inline]
+    fn name(&self) -> String {
+        self.get_property("name").unwrap().get::<String>()
+    }
+
     #[inline]
     fn set_window_id(&mut self, id: ObjectId) {
         self.element_props_mut().window_id = id

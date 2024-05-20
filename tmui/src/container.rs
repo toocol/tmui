@@ -5,6 +5,7 @@ use crate::{
 };
 use tlib::{
     namespace::Orientation,
+    nonnull_mut,
     object::{ObjectImpl, ObjectSubclass},
     skia_safe::region::RegionOp,
 };
@@ -23,6 +24,7 @@ pub enum ContainerLayoutEnum {
 #[extends(Widget)]
 pub struct Container {
     pub children: Vec<Box<dyn WidgetImpl>>,
+    pub children_ref: Vec<WidgetHnd>,
 
     /// The container will restrictly respect childrens' `size_hint` or not.
     ///
@@ -43,26 +45,43 @@ impl ObjectSubclass for Container {
 
 impl ObjectImpl for Container {
     fn on_property_set(&mut self, name: &str, value: &Value) {
-        self.parent_on_property_set(name, value);
-
         match name {
             "invalidate" => {
                 let (_, propagate) = value.get::<(bool, bool)>();
                 if !propagate {
                     return;
                 }
-                for child in self.children.iter_mut() {
-                    child.update()
+
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.update()
+                    }
+                } else if !self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        nonnull_mut!(c).update()
+                    }
                 }
             }
             "visible" => {
                 let visible = value.get::<bool>();
-                for child in self.children.iter_mut() {
-                    if visible {
-                        child.set_property("visible", true.to_value());
-                        child.set_render_styles(true);
-                    } else {
-                        child.set_property("visible", false.to_value());
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        if visible {
+                            child.set_property("visible", true.to_value());
+                            child.set_render_styles(true);
+                        } else {
+                            child.set_property("visible", false.to_value());
+                        }
+                    }
+                } else if self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        let child = nonnull_mut!(c);
+                        if visible {
+                            child.set_property("visible", true.to_value());
+                            child.set_render_styles(true);
+                        } else {
+                            child.set_property("visible", false.to_value());
+                        }
                     }
                 }
             }
@@ -71,56 +90,91 @@ impl ObjectImpl for Container {
                     return;
                 }
                 let offset = value.get::<u32>() - self.z_index();
-                for child in self.children.iter_mut() {
-                    child.set_z_index(child.z_index() + offset);
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.set_z_index(child.z_index() + offset);
+                    }
+                } else if !self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        let child = nonnull_mut!(c);
+                        child.set_z_index(child.z_index() + offset);
+                    }
                 }
             }
             "rerender_styles" => {
                 let rerender = value.get::<bool>();
                 if rerender {
-                    for child in self.children.iter_mut() {
-                        child.set_render_styles(true)
+                    if !self.children.is_empty() {
+                        for child in self.children.iter_mut() {
+                            child.set_render_styles(true)
+                        }
+                    } else if !self.children_ref.is_empty() {
+                        for c in self.children_ref.iter_mut() {
+                            nonnull_mut!(c).set_render_styles(true)
+                        }
                     }
                 }
             }
             "minimized" => {
                 let minimized = value.get::<bool>();
                 if minimized {
-                    for child in self.children.iter_mut() {
-                        child.set_minimized(true)
-                    }
-                }
-            }
-            "propagate_update" => {
-                let propagate_update = value.get::<bool>();
-                if propagate_update {
-                    for child in self.children.iter_mut() {
-                        child.propagate_update()
+                    if !self.children.is_empty() {
+                        for child in self.children.iter_mut() {
+                            child.set_minimized(true)
+                        }
+                    } else if !self.children_ref.is_empty() {
+                        for c in self.children_ref.iter_mut() {
+                            nonnull_mut!(c).set_minimized(true)
+                        }
                     }
                 }
             }
             "propagate_update_rect" => {
                 let rect = value.get::<CoordRect>();
-                for child in self.children.iter_mut() {
-                    child.propagate_update_rect(rect)
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.propagate_update_rect(rect)
+                    }
+                } else if !self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        nonnull_mut!(c).propagate_update_rect(rect)
+                    }
                 }
             }
             "propagate_update_styles_rect" => {
                 let rect = value.get::<CoordRect>();
-                for child in self.children.iter_mut() {
-                    child.propagate_update_styles_rect(rect)
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.propagate_update_styles_rect(rect)
+                    }
+                } else if !self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        nonnull_mut!(c).propagate_update_styles_rect(rect)
+                    }
                 }
             }
             "animation_progressing" => {
                 let is = value.get::<bool>();
-                for child in self.children.iter_mut() {
-                    child.propagate_animation_progressing(is)
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.propagate_animation_progressing(is)
+                    }
+                } else if !self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        nonnull_mut!(c).propagate_animation_progressing(is)
+                    }
                 }
             }
             "propagate_transparency" => {
                 let transparency = value.get::<Transparency>();
-                for child in self.children.iter_mut() {
-                    child.propagate_set_transparency(transparency)
+                if !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.propagate_set_transparency(transparency)
+                    }
+                } else if !self.children_ref.is_empty() {
+                    for c in self.children_ref.iter_mut() {
+                        nonnull_mut!(c).propagate_set_transparency(transparency)
+                    }
                 }
             }
             _ => {}

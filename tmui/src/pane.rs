@@ -245,7 +245,7 @@ impl StaticContainerScaleCalculate for Pane {
                 .children()
                 .iter()
                 .filter(|c| !c.fixed_width())
-                .map(|c| c.hscale())
+                .map(|c| if c.visible() { c.hscale() } else { 0. })
                 .sum(),
             Orientation::Vertical => SCALE_ADAPTION,
         }
@@ -260,7 +260,7 @@ impl StaticContainerScaleCalculate for Pane {
                 .children()
                 .iter()
                 .filter(|c| !c.fixed_height())
-                .map(|c| c.vscale())
+                .map(|c| if c.visible() { c.vscale() } else { 0. })
                 .sum(),
         }
     }
