@@ -387,7 +387,7 @@ impl ObjectImpl for Widget {
         self.set_halign(Align::default());
         self.set_valign(Align::default());
 
-        self.show();
+        self.set_property("visible", true.to_value());
     }
 
     fn on_property_set(&mut self, name: &str, value: &Value) {

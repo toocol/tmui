@@ -1,12 +1,10 @@
-use super::{Container, EventBubble, WidgetImpl, WidgetSignals};
+use super::{Container, EventBubble, WidgetImpl};
 use crate::graphics::painter::Painter;
 use std::collections::HashSet;
 use tlib::{
-    emit,
     figure::{Rect, Size},
     namespace::Overflow,
     object::ObjectId,
-    prelude::*,
     typedef::SkiaClipOp,
     types::StaticType,
 };
@@ -214,20 +212,13 @@ macro_rules! widget_inner_ext_impl {
                     if c.overflow() != Overflow::Hidden {
                         return
                     }
-                    let mut resized = false;
 
                     if child_size.width() > size.width() {
                         c.set_fixed_width(size.width());
-                        resized = true;
                     }
 
                     if child_size.height() > size.height() {
                         c.set_fixed_height(size.height());
-                        resized = true;
-                    }
-
-                    if resized {
-                        emit!(WidgetInnerExt::handle_child_overflow_hidden => c.size_changed(), c.size())
                     }
                 }
             }

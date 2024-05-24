@@ -637,6 +637,8 @@ impl<T: WidgetImpl> WidgetExt for T {
                 popup.set_focus(false);
                 self.window().set_modal_widget(None);
             }
+        } else if self.window_id() != 0 {
+            self.window().layout_change(self)
         }
     }
 
@@ -658,6 +660,8 @@ impl<T: WidgetImpl> WidgetExt for T {
                 let id = popup.id();
                 self.window().set_modal_widget(Some(id));
             }
+        } else if self.window_id() != 0 {
+            self.window().layout_change(self)
         }
     }
 

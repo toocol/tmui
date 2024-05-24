@@ -131,96 +131,104 @@ impl SizeCalculation for dyn WidgetImpl {
         let mut resized = false;
         let parent_spacing_size = self.parent_spacing_size();
 
-        if self.fixed_width() {
-            if self.hexpand() {
-                if let Some(ref spacing_size) = parent_spacing_size {
-                    spacing_size.remove_spacing_from(&mut parent_size)
-                }
-
-                if self.fixed_width_ration() == 0. {
-                    let ration = self.get_width_request() as f32 / parent_size.width() as f32;
-                    self.set_fixed_width_ration(ration);
-                }
-
-                self.set_fixed_width(
-                    (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
-                );
-            } else {
-                if self.get_width_request() != 0 {
-                    self.set_fixed_width(self.get_width_request())
-                }
-            }
-        } else {
-            if self.hexpand() {
-                // Use `hscale` to determine widget's width:
-                let parent = self.get_parent_ref().unwrap();
-                let parent_hscale = if parent.super_type().is_a(Container::static_type()) {
-                    cast!(parent as ContainerImpl).unwrap().hscale_calculate()
-                } else {
-                    parent.hscale_calculate()
-                };
-
-                if parent_hscale.is_adaption() {
-                    self.set_fixed_width(parent_size.width());
-                } else if !parent_hscale.is_dismiss() {
+        if self.visible() {
+            if self.fixed_width() {
+                if self.hexpand() {
                     if let Some(ref spacing_size) = parent_spacing_size {
                         spacing_size.remove_spacing_from(&mut parent_size)
                     }
 
-                    let ration = self.hscale() / parent_hscale;
-                    self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                    if self.fixed_width_ration() == 0. {
+                        let ration = self.get_width_request() as f32 / parent_size.width() as f32;
+                        self.set_fixed_width_ration(ration);
+                    }
+
+                    self.set_fixed_width(
+                        (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
+                    );
+                } else {
+                    if self.get_width_request() != 0 {
+                        self.set_fixed_width(self.get_width_request())
+                    }
                 }
             } else {
-                if self.detecting_width() != 0 {
-                    self.set_fixed_width(self.detecting_width())
+                if self.hexpand() {
+                    // Use `hscale` to determine widget's width:
+                    let parent = self.get_parent_ref().unwrap();
+                    let parent_hscale = if parent.super_type().is_a(Container::static_type()) {
+                        cast!(parent as ContainerImpl).unwrap().hscale_calculate()
+                    } else {
+                        parent.hscale_calculate()
+                    };
+
+                    if parent_hscale.is_adaption() {
+                        self.set_fixed_width(parent_size.width());
+                    } else if !parent_hscale.is_dismiss() {
+                        if let Some(ref spacing_size) = parent_spacing_size {
+                            spacing_size.remove_spacing_from(&mut parent_size)
+                        }
+
+                        let ration = self.hscale() / parent_hscale;
+                        self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                    }
+                } else {
+                    if self.detecting_width() != 0 {
+                        self.set_fixed_width(self.detecting_width())
+                    }
                 }
             }
+        } else if !self.is_animation_progressing() {
+            self.set_fixed_width(0)
         }
 
-        if self.fixed_height() {
-            if self.vexpand() {
-                if let Some(ref spacing_size) = parent_spacing_size {
-                    spacing_size.remove_spacing_from(&mut parent_size)
-                }
-
-                if self.fixed_height_ration() == 0. {
-                    let ration = self.get_height_request() as f32 / parent_size.height() as f32;
-                    self.set_fixed_height_ration(ration);
-                }
-
-                self.set_fixed_height(
-                    (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
-                );
-            } else {
-                if self.get_height_request() != 0 {
-                    self.set_fixed_height(self.get_height_request())
-                }
-            }
-        } else {
-            if self.vexpand() {
-                // Use `vscale` to determine widget's height:
-                let parent = self.get_parent_ref().unwrap();
-                let parent_vscale = if parent.super_type().is_a(Container::static_type()) {
-                    cast!(parent as ContainerImpl).unwrap().vscale_calculate()
-                } else {
-                    parent.vscale_calculate()
-                };
-
-                if parent_vscale.is_adaption() {
-                    self.set_fixed_height(parent_size.height());
-                } else if !parent_vscale.is_dismiss() {
+        if self.visible() {
+            if self.fixed_height() {
+                if self.vexpand() {
                     if let Some(ref spacing_size) = parent_spacing_size {
                         spacing_size.remove_spacing_from(&mut parent_size)
                     }
 
-                    let ration = self.vscale() / parent_vscale;
-                    self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                    if self.fixed_height_ration() == 0. {
+                        let ration = self.get_height_request() as f32 / parent_size.height() as f32;
+                        self.set_fixed_height_ration(ration);
+                    }
+
+                    self.set_fixed_height(
+                        (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
+                    );
+                } else {
+                    if self.get_height_request() != 0 {
+                        self.set_fixed_height(self.get_height_request())
+                    }
                 }
             } else {
-                if self.detecting_height() != 0 {
-                    self.set_fixed_height(self.detecting_height())
+                if self.vexpand() {
+                    // Use `vscale` to determine widget's height:
+                    let parent = self.get_parent_ref().unwrap();
+                    let parent_vscale = if parent.super_type().is_a(Container::static_type()) {
+                        cast!(parent as ContainerImpl).unwrap().vscale_calculate()
+                    } else {
+                        parent.vscale_calculate()
+                    };
+
+                    if parent_vscale.is_adaption() {
+                        self.set_fixed_height(parent_size.height());
+                    } else if !parent_vscale.is_dismiss() {
+                        if let Some(ref spacing_size) = parent_spacing_size {
+                            spacing_size.remove_spacing_from(&mut parent_size)
+                        }
+
+                        let ration = self.vscale() / parent_vscale;
+                        self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                    }
+                } else {
+                    if self.detecting_height() != 0 {
+                        self.set_fixed_height(self.detecting_height())
+                    }
                 }
             }
+        } else if !self.is_animation_progressing() {
+            self.set_fixed_height(0)
         }
 
         self.check_size_hint();
@@ -253,14 +261,15 @@ impl SizeCalculation for dyn WidgetImpl {
             return;
         }
         let size = self.size();
+        let visible = self.visible();
         let mut resized = false;
 
-        if (size.width() == 0 && child_size.width() != 0)
+        if (size.width() == 0 && child_size.width() != 0 && visible)
             || (!self.hexpand() && !self.fixed_width())
         {
             self.set_fixed_width(child_size.width());
         }
-        if (size.height() == 0 && child_size.height() != 0)
+        if (size.height() == 0 && child_size.height() != 0 && visible)
             || (!self.vexpand() && !self.fixed_height())
         {
             self.set_fixed_height(child_size.height());
@@ -269,7 +278,10 @@ impl SizeCalculation for dyn WidgetImpl {
         self.check_size_hint();
 
         let borderless_size = self.borderless_size();
-        if child_size.width() > borderless_size.width() || child_size.height() > borderless_size.height() {
+        if visible
+            && (child_size.width() > borderless_size.width()
+                || child_size.height() > borderless_size.height())
+        {
             if let Some(unified) = cast_mut!(self as SizeUnifiedAdjust) {
                 unified.size_unified_adjust();
             }
@@ -287,7 +299,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.name(),
                 self.size()
             );
-            emit!(SizeCalculation::calc_node_size => self.size_changed(), self.size())
+            // emit!(SizeCalculation::calc_node_size => self.size_changed(), self.size())
         }
     }
 
@@ -299,92 +311,100 @@ impl SizeCalculation for dyn WidgetImpl {
         let parent_spacing_size = self.parent_spacing_size();
         let mut resized = false;
 
-        if self.fixed_width() {
-            if self.hexpand() {
-                if let Some(ref spacing_size) = parent_spacing_size {
-                    spacing_size.remove_spacing_from(&mut parent_size)
-                }
-
-                if self.fixed_width_ration() == 0. {
-                    let ration = self.get_width_request() as f32 / parent_size.width() as f32;
-                    self.set_fixed_width_ration(ration);
-                }
-
-                self.set_fixed_width(
-                    (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
-                );
-            } else {
-                self.set_fixed_width(self.get_width_request());
-            }
-        } else {
-            if self.hexpand() {
-                // Use `hscale` to determine widget's width:
-                let parent = self.get_parent_ref().unwrap();
-                let parent_hscale = if parent.super_type().is_a(Container::static_type()) {
-                    cast!(parent as ContainerImpl).unwrap().hscale_calculate()
-                } else {
-                    parent.hscale_calculate()
-                };
-
-                if parent_hscale.is_adaption() {
-                    self.set_fixed_width(parent_size.width());
-                } else if !parent_hscale.is_dismiss() {
+        if self.visible() {
+            if self.fixed_width() {
+                if self.hexpand() {
                     if let Some(ref spacing_size) = parent_spacing_size {
                         spacing_size.remove_spacing_from(&mut parent_size)
                     }
 
-                    let ration = self.hscale() / parent_hscale;
-                    self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                    if self.fixed_width_ration() == 0. {
+                        let ration = self.get_width_request() as f32 / parent_size.width() as f32;
+                        self.set_fixed_width_ration(ration);
+                    }
+
+                    self.set_fixed_width(
+                        (parent_size.width() as f32 * self.fixed_width_ration()) as i32,
+                    );
+                } else {
+                    self.set_fixed_width(self.get_width_request());
                 }
             } else {
-                if self.detecting_width() != 0 {
-                    self.set_fixed_width(self.detecting_width())
+                if self.hexpand() {
+                    // Use `hscale` to determine widget's width:
+                    let parent = self.get_parent_ref().unwrap();
+                    let parent_hscale = if parent.super_type().is_a(Container::static_type()) {
+                        cast!(parent as ContainerImpl).unwrap().hscale_calculate()
+                    } else {
+                        parent.hscale_calculate()
+                    };
+
+                    if parent_hscale.is_adaption() {
+                        self.set_fixed_width(parent_size.width());
+                    } else if !parent_hscale.is_dismiss() {
+                        if let Some(ref spacing_size) = parent_spacing_size {
+                            spacing_size.remove_spacing_from(&mut parent_size)
+                        }
+
+                        let ration = self.hscale() / parent_hscale;
+                        self.set_fixed_width((parent_size.width() as f32 * ration) as i32);
+                    }
+                } else {
+                    if self.detecting_width() != 0 {
+                        self.set_fixed_width(self.detecting_width())
+                    }
                 }
             }
+        } else if !self.is_animation_progressing() {
+            self.set_fixed_width(0)
         }
 
-        if self.fixed_height() {
-            if self.vexpand() {
-                if let Some(ref spacing_size) = parent_spacing_size {
-                    spacing_size.remove_spacing_from(&mut parent_size)
-                }
-
-                if self.fixed_height_ration() == 0. {
-                    let ration = self.get_height_request() as f32 / parent_size.height() as f32;
-                    self.set_fixed_height_ration(ration);
-                }
-
-                self.set_fixed_height(
-                    (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
-                );
-            } else {
-                self.set_fixed_height(self.get_height_request())
-            }
-        } else {
-            if self.vexpand() {
-                // Use `vscale` to determine widget's height:
-                let parent = self.get_parent_ref().unwrap();
-                let parent_vscale = if parent.super_type().is_a(Container::static_type()) {
-                    cast!(parent as ContainerImpl).unwrap().vscale_calculate()
-                } else {
-                    parent.vscale_calculate()
-                };
-
-                if parent_vscale.is_adaption() {
-                    self.set_fixed_height(parent_size.height());
-                } else if !parent_vscale.is_dismiss() {
+        if self.visible() {
+            if self.fixed_height() {
+                if self.vexpand() {
                     if let Some(ref spacing_size) = parent_spacing_size {
                         spacing_size.remove_spacing_from(&mut parent_size)
                     }
 
-                    let ration = self.vscale() / parent_vscale;
-                    self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                    if self.fixed_height_ration() == 0. {
+                        let ration = self.get_height_request() as f32 / parent_size.height() as f32;
+                        self.set_fixed_height_ration(ration);
+                    }
+
+                    self.set_fixed_height(
+                        (parent_size.height() as f32 * self.fixed_height_ration()) as i32,
+                    );
+                } else {
+                    self.set_fixed_height(self.get_height_request())
                 }
             } else {
-                if self.detecting_height() != 0 {
-                    self.set_fixed_height(self.detecting_height())
+                if self.vexpand() {
+                    // Use `vscale` to determine widget's height:
+                    let parent = self.get_parent_ref().unwrap();
+                    let parent_vscale = if parent.super_type().is_a(Container::static_type()) {
+                        cast!(parent as ContainerImpl).unwrap().vscale_calculate()
+                    } else {
+                        parent.vscale_calculate()
+                    };
+
+                    if parent_vscale.is_adaption() {
+                        self.set_fixed_height(parent_size.height());
+                    } else if !parent_vscale.is_dismiss() {
+                        if let Some(ref spacing_size) = parent_spacing_size {
+                            spacing_size.remove_spacing_from(&mut parent_size)
+                        }
+
+                        let ration = self.vscale() / parent_vscale;
+                        self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
+                    }
+                } else {
+                    if self.detecting_height() != 0 {
+                        self.set_fixed_height(self.detecting_height())
+                    }
                 }
             }
+        } else if !self.is_animation_progressing() {
+            self.set_fixed_height(0)
         }
 
         self.check_size_hint();
@@ -406,11 +426,14 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.name(),
                 self.size()
             );
-            emit!(SizeCalculation::calc_leaf_size => self.size_changed(), self.size())
+            // emit!(SizeCalculation::calc_leaf_size => self.size_changed(), self.size())
         }
     }
 
     fn check_size_hint(&mut self) {
+        if !self.visible() {
+            return;
+        }
         let size_hint = self.size_hint();
 
         let size = self.size();
@@ -457,7 +480,7 @@ impl LayoutManager {
         if !is_animation {
             let parent_size = widget
                 .get_parent_ref()
-                .map(|p| p.borderless_size())
+                .map(|p| p.remain_size())
                 .unwrap_or(self.window_size);
 
             Self::child_size_probe(self.window_size, parent_size, widget);
@@ -488,6 +511,7 @@ impl LayoutManager {
         widget.child_image_rect_union_mut().clear();
         widget.child_overflow_rect_mut().clear();
 
+        let size = widget.size();
         let raw_child = widget.get_raw_child();
         let widget_ptr = widget.as_ptr_mut();
         let composition = widget.composition();
@@ -511,6 +535,9 @@ impl LayoutManager {
         if raw_child.is_none() && container_no_children {
             widget.calc_leaf_size(window_size, parent_size);
 
+            if widget.size() != size {
+                emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
+            }
             widget.image_rect().size()
         } else {
             let (actual_size, remain_size) =
@@ -590,6 +617,10 @@ impl LayoutManager {
             };
 
             widget.calc_node_size(child_size);
+
+            if widget.size() != size {
+                emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
+            }
             widget.image_rect().size()
         }
     }

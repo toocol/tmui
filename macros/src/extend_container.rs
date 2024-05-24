@@ -246,7 +246,9 @@ pub(crate) fn expand(
             };
 
             let reflect_scroll_area = if layout.is(LayoutType::ScrollArea) {
-                quote!(type_registry.register::<#name, ReflectScrollAreaExt>();)
+                quote!(
+                    type_registry.register::<#name, ReflectScrollAreaExt>();
+                )
             } else {
                 proc_macro2::TokenStream::new()
             };
