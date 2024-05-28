@@ -88,12 +88,12 @@ pub trait Popupable: WidgetImpl {
             popup.set_fixed_x(pos.x());
             popup.set_fixed_y(pos.y());
 
+            popup.show();
+
             let window = ApplicationWindow::window_of(popup.window_id());
             if window.initialized() {
                 window.layout_change(popup.as_widget_impl_mut());
             }
-
-            popup.show();
         }
     }
 

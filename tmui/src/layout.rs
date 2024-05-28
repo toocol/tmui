@@ -496,9 +496,10 @@ impl LayoutManager {
         widget: &mut dyn WidgetImpl,
     ) -> Size {
         debug!(
-            "Widget {} size probe, parent_size: {:?}",
+            "Widget {} size probe, parent_size: {:?}, visible: {}",
             widget.name(),
-            parent_size
+            parent_size,
+            widget.visible(),
         );
 
         if widget.repaint_when_resize() {
