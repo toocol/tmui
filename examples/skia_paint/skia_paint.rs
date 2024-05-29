@@ -344,19 +344,41 @@ impl SkiaPaint {
         let blur = MaskFilter::blur(skia_safe::BlurStyle::Normal, 2., None);
         let mut rect = FRect::new(1050., 200., 200., 80.);
 
-        painter.set_color(Color::GREY_MEDIUM);
-        painter.set_line_width(5.);
+        painter.set_color(Color::BLACK);
+        painter.set_line_width(2.);
         painter.paint_mut().set_mask_filter(blur);
         painter.draw_rect(rect);
 
-        painter.set_line_width(1.);
+        painter.draw_line(1050, 400, 1050, 600);
+
         painter.paint_mut().set_mask_filter(None);
         painter.fill_rect(rect, Color::WHITE);
+        
+        painter.set_line_width(5.);
+        painter.draw_line(1050, 400, 1050, 600);
 
+        painter.set_line_width(1.);
         painter.set_color(Color::BLACK);
         rect.offset(-2.5, -2.5);
         rect.set_width(rect.width() + 5.);
         rect.set_height(rect.height() + 5.);
+        // painter.draw_rect(rect);
+
+        let blur = MaskFilter::blur(skia_safe::BlurStyle::Normal, 2., None);
+        let mut rect = FRect::new(1050., 300., 200., 80.);
+        painter.set_color(Color::RED);
+        painter.set_line_width(1.);
+        painter.paint_mut().set_mask_filter(blur);
         painter.draw_rect(rect);
+
+        painter.paint_mut().set_mask_filter(None);
+        painter.fill_rect(rect, Color::WHITE);
+
+        painter.set_line_width(0.);
+        painter.set_color(Color::BLACK);
+        rect.offset(-2.5, -2.5);
+        rect.set_width(rect.width() + 5.);
+        rect.set_height(rect.height() + 5.);
+        // painter.draw_rect(rect);
     }
 }

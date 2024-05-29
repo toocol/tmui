@@ -6,7 +6,7 @@ use crate::{
     animation::snapshot::ReflectSnapshot,
     application_window::ApplicationWindow,
     font::FontTypeface,
-    graphics::{border::Border, element::ElementImpl},
+    graphics::{border::Border, box_shadow::BoxShadow, element::ElementImpl},
     popup::ReflectPopupImpl,
     primitive::Message,
     widget::WidgetSignals,
@@ -169,6 +169,14 @@ pub trait WidgetExt {
     /// Get the area of widget's total image Rect with the margins. <br>
     /// The [`Coordinate`] was `World`.
     fn image_rect_f(&self) -> FRect;
+
+    /// Get the area of widget's visual effected rect includes the box shadow. <br>
+    /// The [`Coordinate`] was `World`.
+    fn visual_rect(&self) -> FRect;
+
+    /// Get the area of widget's visual effected rect includes the box shadow. <br>
+    /// The [`Coordinate`] was `World`.
+    fn visual_image_rect(&self) -> FRect;
 
     /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
@@ -471,6 +479,12 @@ pub trait WidgetExt {
 
     /// Set the overflow of the widget.
     fn set_overflow(&mut self, overflow: Overflow);
+
+    /// Get the box shadow of widget.
+    fn box_shadow(&self) -> Option<&BoxShadow>;
+
+    /// Set the box shadow of widget.
+    fn set_box_shadow(&mut self, shadow: BoxShadow);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -943,6 +957,31 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn image_rect_f(&self) -> FRect {
         self.image_rect().into()
+    }
+
+    #[inline]
+    fn visual_rect(&self) -> FRect {
+        let mut rect: FRect = self.rect().into();
+        if let Some(shadow) = self.box_shadow() {
+            let blur = shadow.blur();
+            rect.offset(-blur, -blur);
+            rect.set_width(rect.width() + blur * 2.);
+            rect.set_height(rect.height() + blur * 2.);
+        }
+
+        rect
+    }
+
+    #[inline]
+    fn visual_image_rect(&self) -> FRect {
+        let mut image_rect = self.image_rect_f();
+        let visual_rect = self.visual_rect();
+        image_rect.set_x(image_rect.x().min(visual_rect.x()));
+        image_rect.set_y(image_rect.y().min(visual_rect.y()));
+        image_rect.set_width(image_rect.width().max(visual_rect.width()));
+        image_rect.set_height(image_rect.height().max(visual_rect.height()));
+
+        image_rect
     }
 
     #[inline]
@@ -1540,5 +1579,15 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_overflow(&mut self, overflow: Overflow) {
         self.widget_props_mut().overflow = overflow
+    }
+    
+    #[inline]
+    fn box_shadow(&self) -> Option<&BoxShadow> {
+        self.widget_props().box_shadow.as_ref()
+    }
+    
+    #[inline]
+    fn set_box_shadow(&mut self, shadow: BoxShadow) {
+        self.widget_props_mut().box_shadow = Some(shadow);
     }
 }

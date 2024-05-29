@@ -1164,9 +1164,9 @@ implements_enum_value!(ImageOption, u8);
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy, EnumIter)]
 pub enum BlendMode {
     Clear = 0,
+    #[default]
     Src,
     Dst,
-    #[default]
     SrcOver,
     DstOver,
     ScrIn,

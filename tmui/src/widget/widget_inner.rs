@@ -201,7 +201,7 @@ macro_rules! widget_inner_ext_impl {
             if self.border_ref().border_radius != 0. {
                 painter.clip_round_rect_global(self.rect(), self.border_ref().border_radius, op);
             } else {
-                painter.clip_rect_global(self.rect(), op);
+                painter.clip_rect_global(self.visual_rect(), op);
             }
         }
 

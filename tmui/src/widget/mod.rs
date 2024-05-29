@@ -6,11 +6,7 @@ use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
-        border::Border,
-        drawing_context::DrawingContext,
-        element::{ElementImpl, HierachyZ},
-        painter::Painter,
-        render_difference::RenderDiffence,
+        border::Border, box_shadow::{BoxShadow, ShadowRender}, drawing_context::DrawingContext, element::{ElementImpl, HierachyZ}, painter::Painter, render_difference::RenderDiffence
     },
     layout::LayoutManager,
     opti::tracker::Tracker,
@@ -63,6 +59,7 @@ pub struct Widget {
     margins: [i32; 4],
     paddings: [i32; 4],
     border: Border,
+    box_shadow: Option<BoxShadow>,
 
     width_request: i32,
     height_request: i32,
@@ -450,7 +447,7 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 /// Renderering function for Widget.
 /////////////////////////////////////////////////////////////////////////////////
-impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
+impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         if !self.visible() && !self.is_animation_progressing() {
             return;
@@ -507,7 +504,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             self.clip_rect(&mut painter, ClipOp::Intersect);
 
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            let mut background = if self.first_rendered() && !self.is_animation_progressing() {
+            let mut background = if self.first_rendered() && !self.is_animation_progressing() || self.box_shadow().is_some() {
                 self.opaque_background()
             } else {
                 self.background()
@@ -527,8 +524,10 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
                 self.border_ref()
                     .clear_border(&mut painter, border_rect, background);
 
+                self.render_shadow_diff(&mut painter, border_rect, background);
                 self.render_difference(&mut painter, background);
             } else {
+                self.render_shadow(&mut painter);
                 painter.fill_rect(geometry, background);
             }
 
@@ -568,7 +567,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
     #[inline]
     fn after_renderer(&mut self) {
         self.set_rect_record(self.rect());
-        self.set_image_rect_record(self.image_rect());
+        self.set_image_rect_record(self.visual_image_rect().into());
     }
 }
 

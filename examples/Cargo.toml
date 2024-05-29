@@ -30,6 +30,10 @@ name = "box_layout"
 path = "box_layout/main.rs"
 
 [[bin]]
+name = "box_shadow"
+path = "box_shadow/main.rs"
+
+[[bin]]
 name = "child_attr_widget"
 path = "child_attr_widget/main.rs"
 
