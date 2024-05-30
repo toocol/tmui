@@ -2,7 +2,7 @@ use super::{Container, EventBubble, WidgetImpl};
 use crate::graphics::painter::Painter;
 use std::collections::HashSet;
 use tlib::{
-    figure::{Rect, Size},
+    figure::{FRect, Size},
     namespace::Overflow,
     object::ObjectId,
     typedef::SkiaClipOp,
@@ -46,19 +46,19 @@ pub(crate) trait WidgetInnerExt {
 
     fn children_index_mut(&mut self) -> &mut HashSet<ObjectId>;
 
-    fn child_image_rect_union(&self) -> &Rect;
+    fn child_image_rect_union(&self) -> &FRect;
 
-    fn child_image_rect_union_mut(&mut self) -> &mut Rect;
+    fn child_image_rect_union_mut(&mut self) -> &mut FRect;
 
     fn need_update_geometry(&self) -> bool;
 
-    fn child_overflow_rect(&self) -> &Rect;
+    fn child_overflow_rect(&self) -> &FRect;
 
-    fn child_overflow_rect_mut(&mut self) -> &mut Rect;
+    fn child_overflow_rect_mut(&mut self) -> &mut FRect;
 
-    fn image_rect_record(&self) -> Rect;
+    fn image_rect_record(&self) -> FRect;
 
-    fn set_image_rect_record(&mut self, image_rect: Rect);
+    fn set_image_rect_record(&mut self, image_rect: FRect);
 
     fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp);
 
@@ -162,12 +162,12 @@ macro_rules! widget_inner_ext_impl {
         }
 
         #[inline]
-        fn child_image_rect_union(&self) -> &Rect {
+        fn child_image_rect_union(&self) -> &FRect {
             &self.widget_props().child_image_rect_union
         }
 
         #[inline]
-        fn child_image_rect_union_mut(&mut self) -> &mut Rect {
+        fn child_image_rect_union_mut(&mut self) -> &mut FRect {
             &mut self.widget_props_mut().child_image_rect_union
         }
 
@@ -177,22 +177,22 @@ macro_rules! widget_inner_ext_impl {
         }
 
         #[inline]
-        fn child_overflow_rect(&self) -> &Rect {
+        fn child_overflow_rect(&self) -> &FRect {
             &self.widget_props().child_overflow_rect
         }
 
         #[inline]
-        fn child_overflow_rect_mut(&mut self) -> &mut Rect {
+        fn child_overflow_rect_mut(&mut self) -> &mut FRect {
             &mut self.widget_props_mut().child_overflow_rect
         }
 
         #[inline]
-        fn image_rect_record(&self) -> Rect {
+        fn image_rect_record(&self) -> FRect {
             self.widget_props().old_image_rect
         }
 
         #[inline]
-        fn set_image_rect_record(&mut self, image_rect: Rect) {
+        fn set_image_rect_record(&mut self, image_rect: FRect) {
             self.widget_props_mut().old_image_rect = image_rect
         }
 

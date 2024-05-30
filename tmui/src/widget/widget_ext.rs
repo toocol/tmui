@@ -6,7 +6,11 @@ use crate::{
     animation::snapshot::ReflectSnapshot,
     application_window::ApplicationWindow,
     font::FontTypeface,
-    graphics::{border::Border, box_shadow::BoxShadow, element::ElementImpl},
+    graphics::{
+        border::Border,
+        box_shadow::{BoxShadow, ShadowPos, ShadowSide},
+        element::ElementImpl,
+    },
     popup::ReflectPopupImpl,
     primitive::Message,
     widget::WidgetSignals,
@@ -817,7 +821,9 @@ impl<T: WidgetImpl> WidgetExt for T {
         while let Some(parent_mut) = parent {
             let w = ptr_mut!(widget);
 
-            parent_mut.child_image_rect_union_mut().or(&w.image_rect());
+            parent_mut
+                .child_image_rect_union_mut()
+                .or(&w.image_rect_f());
 
             widget = parent_mut;
             parent = w.get_parent_mut();
@@ -933,19 +939,25 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn image_rect(&self) -> Rect {
-        let mut rect = self.rect();
+        self.image_rect_f().into()
+    }
 
-        let h_factor = if rect.width() == 0 { 0 } else { 1 };
-        let v_factor = if rect.height() == 0 { 0 } else { 1 };
+    #[inline]
+    fn image_rect_f(&self) -> FRect {
+        let mut rect = self.rect_f();
+
+        let h_factor = if rect.width() == 0. { 0. } else { 1. };
+        let v_factor = if rect.height() == 0. { 0. } else { 1. };
 
         // Rect add the margins.
         let (top, right, bottom, left) = self.margins();
+        let (top, right, bottom, left) = (top as f32, right as f32, bottom as f32, left as f32);
         rect.set_x(rect.x() - left);
         rect.set_y(rect.y() - top);
-        if rect.width() != 0 {
+        if rect.width() != 0. {
             rect.set_width((rect.width() + left + right) * h_factor);
         }
-        if rect.height() != 0 {
+        if rect.height() != 0. {
             rect.set_height((rect.height() + top + bottom) * v_factor);
         }
 
@@ -955,18 +967,36 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn image_rect_f(&self) -> FRect {
-        self.image_rect().into()
-    }
-
-    #[inline]
     fn visual_rect(&self) -> FRect {
-        let mut rect: FRect = self.rect().into();
+        let mut rect: FRect = self.rect_f();
+
         if let Some(shadow) = self.box_shadow() {
+            if shadow.pos() == ShadowPos::Inset {
+                return rect;
+            }
+
             let blur = shadow.blur();
-            rect.offset(-blur, -blur);
-            rect.set_width(rect.width() + blur * 2.);
-            rect.set_height(rect.height() + blur * 2.);
+            let side = shadow.side();
+            if side.is_all() {
+                rect.offset(-blur, -blur);
+                rect.set_width(rect.width() + blur * 2.);
+                rect.set_height(rect.height() + blur * 2.);
+            } else {
+                if side.contains(ShadowSide::TOP) {
+                    rect.offset(0., -blur);
+                    rect.set_height(rect.height() + blur);
+                } 
+                if side.contains(ShadowSide::RIGHT) {
+                    rect.set_width(rect.width() + blur);
+                } 
+                if side.contains(ShadowSide::BOTTOM) {
+                    rect.set_height(rect.height() + blur);
+                } 
+                if side.contains(ShadowSide::LEFT) {
+                    rect.offset(-blur, 0.);
+                    rect.set_width(rect.width() + blur);
+                }
+            }
         }
 
         rect
@@ -1580,12 +1610,12 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_overflow(&mut self, overflow: Overflow) {
         self.widget_props_mut().overflow = overflow
     }
-    
+
     #[inline]
     fn box_shadow(&self) -> Option<&BoxShadow> {
         self.widget_props().box_shadow.as_ref()
     }
-    
+
     #[inline]
     fn set_box_shadow(&mut self, shadow: BoxShadow) {
         self.widget_props_mut().box_shadow = Some(shadow);

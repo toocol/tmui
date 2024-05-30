@@ -72,7 +72,7 @@ pub trait CustomRenderChildDiff {
 fn handle_child_diff(child: &dyn WidgetImpl, painter: &mut Painter, background: Color) {
     // Handle child with margins:
     let rec_rect = child.image_rect_record();
-    let cur_rect = child.rect();
+    let cur_rect = child.rect_f();
 
     if rec_rect != cur_rect {
         let intersects: skia_safe::IRect = rec_rect

@@ -216,7 +216,7 @@ pub(crate) trait EffectedWidget: WidgetImpl {
                 let dirty_rect = self.rect_record();
 
                 if dirty_rect.is_valid() {
-                    ApplicationWindow::window_of(win_id).invalid_effected_widgets(dirty_rect, id);
+                    ApplicationWindow::window_of(win_id).invalid_effected_widgets(dirty_rect.into(), id);
                 }
             }
         }

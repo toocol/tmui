@@ -1,5 +1,6 @@
 use tmui::{
-    application::Application, application_window::ApplicationWindow, graphics::box_shadow::BoxShadow, prelude::*
+    application::Application, application_window::ApplicationWindow,
+    graphics::box_shadow::BoxShadow, prelude::*,
 };
 
 fn main() {
@@ -24,7 +25,18 @@ fn build_ui(window: &mut ApplicationWindow) {
     widget.set_vexpand(true);
     widget.set_halign(Align::Center);
     widget.set_valign(Align::Center);
-    widget.set_box_shadow(BoxShadow::new(6., Color::BLACK));
+
+    // use tmui::graphics::box_shadow::{ShadowPos, ShadowSide};
+    // widget.set_box_shadow(BoxShadow::new(
+    //     8.,
+    //     Color::BLACK,
+    //     Some(ShadowPos::Inset),
+    //     Some(ShadowSide::new(&[ShadowSide::RIGHT, ShadowSide::BOTTOM])),
+    //     None,
+    // ));
+
+    widget.set_box_shadow(BoxShadow::new(8., Color::BLACK, None, None, None));
 
     window.child(widget);
+    window.set_background(Color::GREY_LIGHT);
 }

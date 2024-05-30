@@ -248,6 +248,7 @@ impl IntoIterator for CoordRegion {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.regions.into_iter()
+
     }
 }
 

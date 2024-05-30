@@ -648,11 +648,11 @@ impl LayoutManager {
                 widget_ref.update_geometry()
             }
             if let Some(p) = parent {
-                ptr_mut!(p).child_overflow_rect_mut().or(&widget_ref.rect());
+                ptr_mut!(p).child_overflow_rect_mut().or(&widget_ref.rect_f());
             }
 
             // Emit `geometry_changed()` when widget's position or size has changed.
-            let new_rect = widget_ref.rect();
+            let new_rect = widget_ref.rect_f();
             if widget_ref.rect_record() != new_rect {
                 emit!(widget_ref.geometry_changed(), new_rect)
             }

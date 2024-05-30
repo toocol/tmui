@@ -1,7 +1,7 @@
 use super::{board::Board, drawing_context::DrawingContext};
 use crate::{application_window::current_window_id, widget::WidgetImpl};
 use tlib::{
-    figure::{CoordRect, CoordRegion, Rect},
+    figure::{CoordRect, CoordRegion, FRect, Rect},
     object::{ObjectImpl, ObjectSubclass},
     prelude::*,
     signal, signals,
@@ -11,8 +11,8 @@ use tlib::{
 #[extends(Object)]
 pub struct Element {
     window_id: ObjectId,
-    old_rect: Rect,
-    rect: Rect,
+    old_rect: FRect,
+    rect: FRect,
     redraw_region: CoordRegion,
     styles_redraw_region: CoordRegion,
 }
@@ -111,6 +111,9 @@ pub trait ElementExt {
     /// Get the geometry rect of element which contains element's size and position.
     fn rect(&self) -> Rect;
 
+    /// Get the geometry rect of element which contains element's size and position.
+    fn rect_f(&self) -> FRect;
+
     /// Set the width of element.
     fn set_fixed_width(&mut self, width: i32);
 
@@ -130,10 +133,10 @@ pub trait ElementExt {
     fn validate(&mut self);
 
     /// Get the rect record of element.
-    fn rect_record(&self) -> Rect;
+    fn rect_record(&self) -> FRect;
 
     /// Set the rect record of element.
-    fn set_rect_record(&mut self, rect: Rect);
+    fn set_rect_record(&mut self, rect: FRect);
 }
 
 impl<T: ElementImpl> ElementExt for T {
@@ -214,27 +217,32 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn rect(&self) -> Rect {
+        self.element_props().rect.into()
+    }
+
+    #[inline]
+    fn rect_f(&self) -> FRect {
         self.element_props().rect
     }
 
     #[inline]
     fn set_fixed_width(&mut self, width: i32) {
-        self.element_props_mut().rect.set_width(width)
+        self.element_props_mut().rect.set_width(width as f32)
     }
 
     #[inline]
     fn set_fixed_height(&mut self, height: i32) {
-        self.element_props_mut().rect.set_height(height)
+        self.element_props_mut().rect.set_height(height as f32)
     }
 
     #[inline]
     fn set_fixed_x(&mut self, x: i32) {
-        self.element_props_mut().rect.set_x(x)
+        self.element_props_mut().rect.set_x(x as f32)
     }
 
     #[inline]
     fn set_fixed_y(&mut self, y: i32) {
-        self.element_props_mut().rect.set_y(y)
+        self.element_props_mut().rect.set_y(y as f32)
     }
 
     #[inline]
@@ -251,12 +259,12 @@ impl<T: ElementImpl> ElementExt for T {
     }
 
     #[inline]
-    fn rect_record(&self) -> Rect {
+    fn rect_record(&self) -> FRect {
         self.element_props().old_rect
     }
 
     #[inline]
-    fn set_rect_record(&mut self, rect: Rect) {
+    fn set_rect_record(&mut self, rect: FRect) {
         self.element_props_mut().old_rect = rect
     }
 }
