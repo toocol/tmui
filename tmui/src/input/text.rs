@@ -161,7 +161,7 @@ impl ObjectImpl for Text {
             self,
             geometry_changed(),
             self,
-            handle_geometry_changed(Rect)
+            handle_geometry_changed(FRect)
         );
     }
 }
@@ -1125,8 +1125,8 @@ pub(crate) trait TextInnerExt:
     }
 
     #[inline]
-    fn handle_geometry_changed(&mut self, rect: Rect) {
-        if rect.width() == 0 || rect.height() == 0 {
+    fn handle_geometry_changed(&mut self, rect: FRect) {
+        if rect.width() == 0. || rect.height() == 0. {
             return;
         }
 

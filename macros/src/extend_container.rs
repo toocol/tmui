@@ -13,6 +13,7 @@ use syn::{
     Path, Token,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     ignore_default: bool,
@@ -21,6 +22,7 @@ pub(crate) fn expand(
     has_size_unified_adjust: bool,
     layout: LayoutType,
     use_prefix: &Ident,
+    children_fields: Option<&Vec<Ident>>,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -244,7 +246,9 @@ pub(crate) fn expand(
             };
 
             let reflect_scroll_area = if layout.is(LayoutType::ScrollArea) {
-                quote!(type_registry.register::<#name, ReflectScrollAreaExt>();)
+                quote!(
+                    type_registry.register::<#name, ReflectScrollAreaExt>();
+                )
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -263,6 +267,17 @@ pub(crate) fn expand(
 
             let pane_inner_init = if layout.is(LayoutType::Pane) {
                 generate_pane_inner_init()?
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let layout_prepare_children_ref = if children_fields.is_some() {
+                let children_fields = children_fields.unwrap();
+                quote!(
+                    #(
+                        self.container.children_ref.push(std::ptr::NonNull::new(self.#children_fields.as_mut()));
+                    )*
+                )
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -329,6 +344,7 @@ pub(crate) fn expand(
                     #[inline]
                     fn pretreat_construct(&mut self) {
                         #scroll_area_pre_construct
+                        #layout_prepare_children_ref
                     }
                 }
 

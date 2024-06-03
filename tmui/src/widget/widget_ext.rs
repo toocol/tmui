@@ -6,10 +6,14 @@ use crate::{
     animation::snapshot::ReflectSnapshot,
     application_window::ApplicationWindow,
     font::FontTypeface,
-    graphics::{border::Border, element::ElementImpl},
+    graphics::{
+        border::Border,
+        box_shadow::{BoxShadow, ShadowPos, ShadowSide},
+        element::ElementImpl,
+    },
+    popup::ReflectPopupImpl,
     primitive::Message,
     widget::WidgetSignals,
-    popup::ReflectPopupImpl,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -24,9 +28,6 @@ use tlib::{
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
 /// The extended actions of [`Widget`], impl by proc-macro [`extends_widget`] automaticly.
 pub trait WidgetExt {
-    /// Get the name of widget.
-    fn name(&self) -> String;
-
     /// The widget was initialized or not.
     fn initialized(&self) -> bool;
 
@@ -157,11 +158,11 @@ pub trait WidgetExt {
     /// Get the rect of widget without borders.
     fn borderless_rect_f(&self) -> FRect;
 
-    /// Get the size of widget. 
+    /// Get the size of widget.
     /// The size does not include the margins.
     fn size(&self) -> Size;
 
-    /// Get the size of widget. 
+    /// Get the size of widget.
     /// The size does not include the margins and borders.
     fn borderless_size(&self) -> Size;
 
@@ -172,6 +173,14 @@ pub trait WidgetExt {
     /// Get the area of widget's total image Rect with the margins. <br>
     /// The [`Coordinate`] was `World`.
     fn image_rect_f(&self) -> FRect;
+
+    /// Get the area of widget's visual effected rect includes the box shadow. <br>
+    /// The [`Coordinate`] was `World`.
+    fn visual_rect(&self) -> FRect;
+
+    /// Get the area of widget's visual effected rect includes the box shadow. <br>
+    /// The [`Coordinate`] was `World`.
+    fn visual_image_rect(&self) -> FRect;
 
     /// Get the area of widget's origin Rect. <br>
     /// The default [`Coordinate`] was `World`.
@@ -380,9 +389,6 @@ pub trait WidgetExt {
     /// Is the widget under mouse pressed.
     fn is_pressed(&self) -> bool;
 
-    /// Invalidate this widget to update it, and also update the child widget..
-    fn propagate_update(&mut self);
-
     /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
     /// This will result in clipping the drawing area of the widget.(after styles render)
     fn propagate_update_rect(&mut self, rect: CoordRect);
@@ -468,7 +474,7 @@ pub trait WidgetExt {
     /// @see [`Widget::occupy_space`]
     fn set_occupy_space(&mut self, occupy_space: bool);
 
-    /// Iterate upwards through the widget and it's parent to obtain the background color, 
+    /// Iterate upwards through the widget and it's parent to obtain the background color,
     /// until it is opaque.
     fn opaque_background(&self) -> Color;
 
@@ -477,14 +483,15 @@ pub trait WidgetExt {
 
     /// Set the overflow of the widget.
     fn set_overflow(&mut self, overflow: Overflow);
+
+    /// Get the box shadow of widget.
+    fn box_shadow(&self) -> Option<&BoxShadow>;
+
+    /// Set the box shadow of widget.
+    fn set_box_shadow(&mut self, shadow: BoxShadow);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
-    #[inline]
-    fn name(&self) -> String {
-        self.get_property("name").unwrap().get::<String>()
-    }
-
     #[inline]
     fn initialized(&self) -> bool {
         self.widget_props().initialized
@@ -648,6 +655,8 @@ impl<T: WidgetImpl> WidgetExt for T {
                 popup.set_focus(false);
                 self.window().set_modal_widget(None);
             }
+        } else if self.window_id() != 0 {
+            self.window().layout_change(self)
         }
     }
 
@@ -669,6 +678,8 @@ impl<T: WidgetImpl> WidgetExt for T {
                 let id = popup.id();
                 self.window().set_modal_widget(Some(id));
             }
+        } else if self.window_id() != 0 {
+            self.window().layout_change(self)
         }
     }
 
@@ -706,11 +717,19 @@ impl<T: WidgetImpl> WidgetExt for T {
         let mut resized = false;
 
         if let Some(width) = width {
-            self.set_fixed_width(width);
+            if self.get_width_request() > 0 {
+                self.width_request(width);
+            } else {
+                self.set_fixed_width(width);
+            }
             resized = true;
         }
         if let Some(height) = height {
-            self.set_fixed_height(height);
+            if self.get_height_request() > 0 {
+                self.height_request(height);
+            } else {
+                self.set_fixed_height(height);
+            }
             resized = true;
         }
 
@@ -810,7 +829,9 @@ impl<T: WidgetImpl> WidgetExt for T {
         while let Some(parent_mut) = parent {
             let w = ptr_mut!(widget);
 
-            parent_mut.child_image_rect_union_mut().or(&w.image_rect());
+            parent_mut
+                .child_image_rect_union_mut()
+                .or(&w.image_rect_f());
 
             widget = parent_mut;
             parent = w.get_parent_mut();
@@ -926,19 +947,25 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn image_rect(&self) -> Rect {
-        let mut rect = self.rect();
+        self.image_rect_f().into()
+    }
 
-        let h_factor = if rect.width() == 0 { 0 } else { 1 };
-        let v_factor = if rect.height() == 0 { 0 } else { 1 };
+    #[inline]
+    fn image_rect_f(&self) -> FRect {
+        let mut rect = self.rect_f();
+
+        let h_factor = if rect.width() == 0. { 0. } else { 1. };
+        let v_factor = if rect.height() == 0. { 0. } else { 1. };
 
         // Rect add the margins.
         let (top, right, bottom, left) = self.margins();
+        let (top, right, bottom, left) = (top as f32, right as f32, bottom as f32, left as f32);
         rect.set_x(rect.x() - left);
         rect.set_y(rect.y() - top);
-        if rect.width() != 0 {
+        if rect.width() != 0. {
             rect.set_width((rect.width() + left + right) * h_factor);
         }
-        if rect.height() != 0 {
+        if rect.height() != 0. {
             rect.set_height((rect.height() + top + bottom) * v_factor);
         }
 
@@ -948,8 +975,51 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn image_rect_f(&self) -> FRect {
-        self.image_rect().into()
+    fn visual_rect(&self) -> FRect {
+        let mut rect: FRect = self.rect_f();
+
+        if let Some(shadow) = self.box_shadow() {
+            if shadow.pos() == ShadowPos::Inset {
+                return rect;
+            }
+
+            let blur = shadow.blur();
+            let side = shadow.side();
+            if side.is_all() {
+                rect.offset(-blur, -blur);
+                rect.set_width(rect.width() + blur * 2.);
+                rect.set_height(rect.height() + blur * 2.);
+            } else {
+                if side.contains(ShadowSide::TOP) {
+                    rect.offset(0., -blur);
+                    rect.set_height(rect.height() + blur);
+                } 
+                if side.contains(ShadowSide::RIGHT) {
+                    rect.set_width(rect.width() + blur);
+                } 
+                if side.contains(ShadowSide::BOTTOM) {
+                    rect.set_height(rect.height() + blur);
+                } 
+                if side.contains(ShadowSide::LEFT) {
+                    rect.offset(-blur, 0.);
+                    rect.set_width(rect.width() + blur);
+                }
+            }
+        }
+
+        rect
+    }
+
+    #[inline]
+    fn visual_image_rect(&self) -> FRect {
+        let mut image_rect = self.image_rect_f();
+        let visual_rect = self.visual_rect();
+        image_rect.set_x(image_rect.x().min(visual_rect.x()));
+        image_rect.set_y(image_rect.y().min(visual_rect.y()));
+        image_rect.set_width(image_rect.width().max(visual_rect.width()));
+        image_rect.set_height(image_rect.height().max(visual_rect.height()));
+
+        image_rect
     }
 
     #[inline]
@@ -1370,13 +1440,6 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn propagate_update(&mut self) {
-        self.update();
-
-        self.set_property("propagate_update", true.to_value());
-    }
-
-    #[inline]
     fn propagate_update_rect(&mut self, rect: CoordRect) {
         self.update_rect(rect);
 
@@ -1545,14 +1608,24 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         bk
     }
-    
+
     #[inline]
     fn overflow(&self) -> Overflow {
         self.widget_props().overflow
     }
-    
+
     #[inline]
     fn set_overflow(&mut self, overflow: Overflow) {
         self.widget_props_mut().overflow = overflow
+    }
+
+    #[inline]
+    fn box_shadow(&self) -> Option<&BoxShadow> {
+        self.widget_props().box_shadow.as_ref()
+    }
+
+    #[inline]
+    fn set_box_shadow(&mut self, shadow: BoxShadow) {
+        self.widget_props_mut().box_shadow = Some(shadow);
     }
 }

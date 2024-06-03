@@ -9,7 +9,7 @@ use tlib::{
 use tmui::{
     graphics::painter::Painter,
     prelude::*,
-    skia_safe::{self, Path},
+    skia_safe::{self, MaskFilter, Path},
     tlib::{
         object::{ObjectImpl, ObjectSubclass},
         typedef::{SkiaPaintStyle, SkiaRect},
@@ -55,6 +55,8 @@ impl WidgetImpl for SkiaPaint {
         self.draw_with_clip_difference(painter);
 
         self.draw_varying_width_line(painter);
+
+        self.draw_blur_border(painter);
 
         println!("cnt: {}", painter.save_count());
     }
@@ -336,5 +338,47 @@ impl SkiaPaint {
         painter.draw_line(900, 200, 950, 200);
         painter.set_line_width(10.);
         painter.draw_line(950, 204, 1000, 204);
+    }
+
+    fn draw_blur_border(&mut self, painter: &mut Painter) {
+        let blur = MaskFilter::blur(skia_safe::BlurStyle::Normal, 2., None);
+        let mut rect = FRect::new(1050., 200., 200., 80.);
+
+        painter.set_color(Color::BLACK);
+        painter.set_line_width(2.);
+        painter.paint_mut().set_mask_filter(blur);
+        painter.draw_rect(rect);
+
+        painter.draw_line(1050, 400, 1050, 600);
+
+        painter.paint_mut().set_mask_filter(None);
+        painter.fill_rect(rect, Color::WHITE);
+        
+        painter.set_line_width(5.);
+        painter.draw_line(1050, 400, 1050, 600);
+
+        painter.set_line_width(1.);
+        painter.set_color(Color::BLACK);
+        rect.offset(-2.5, -2.5);
+        rect.set_width(rect.width() + 5.);
+        rect.set_height(rect.height() + 5.);
+        // painter.draw_rect(rect);
+
+        let blur = MaskFilter::blur(skia_safe::BlurStyle::Normal, 2., None);
+        let mut rect = FRect::new(1050., 300., 200., 80.);
+        painter.set_color(Color::RED);
+        painter.set_line_width(1.);
+        painter.paint_mut().set_mask_filter(blur);
+        painter.draw_rect(rect);
+
+        painter.paint_mut().set_mask_filter(None);
+        painter.fill_rect(rect, Color::WHITE);
+
+        painter.set_line_width(0.);
+        painter.set_color(Color::BLACK);
+        rect.offset(-2.5, -2.5);
+        rect.set_width(rect.width() + 5.);
+        rect.set_height(rect.height() + 5.);
+        // painter.draw_rect(rect);
     }
 }

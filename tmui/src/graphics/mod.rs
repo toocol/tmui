@@ -1,5 +1,6 @@
 pub mod board;
 pub mod border;
+pub mod box_shadow;
 pub mod drawing_context;
 pub mod element;
 pub mod icon;

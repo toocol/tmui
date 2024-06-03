@@ -277,7 +277,7 @@ impl StaticContainerScaleCalculate for HBox {
         c.children()
             .iter()
             .filter(|c| !c.fixed_width())
-            .map(|c| c.hscale())
+            .map(|c| if c.visible() { c.hscale() } else { 0. })
             .sum()
     }
 

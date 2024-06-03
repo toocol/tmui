@@ -1,4 +1,5 @@
 mod activity_bar;
+mod app_icon;
 mod central_panel;
 mod right_panel;
 mod left_panel;

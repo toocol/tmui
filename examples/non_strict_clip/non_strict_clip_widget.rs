@@ -42,9 +42,9 @@ impl CustomRenderChildDiff for NonStrictClipWidget {
         painter.save_pen();
         let rect = self.rect_record();
 
-        let y = rect.y() + rect.height() / 2;
+        let y = rect.y() + rect.height() / 2.;
         painter.set_color(parent_background);
-        painter.draw_line_global(rect.x() - 10, y, rect.x() + rect.width() + 10, y);
+        painter.draw_line_f_global(rect.x() - 10., y, rect.x() + rect.width() + 10., y);
         painter.restore_pen();
     }
 }

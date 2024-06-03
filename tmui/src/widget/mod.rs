@@ -7,6 +7,7 @@ use crate::{
     application_window::ApplicationWindow,
     graphics::{
         border::Border,
+        box_shadow::{BoxShadow, ShadowRender},
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
@@ -43,9 +44,9 @@ pub struct Widget {
     child_ref: WidgetHnd,
     children_index: HashSet<ObjectId>,
 
-    old_image_rect: Rect,
-    child_image_rect_union: Rect,
-    child_overflow_rect: Rect,
+    old_image_rect: FRect,
+    child_image_rect_union: FRect,
+    child_overflow_rect: FRect,
     need_update_geometry: bool,
 
     #[derivative(Default(value = "true"))]
@@ -63,6 +64,7 @@ pub struct Widget {
     margins: [i32; 4],
     paddings: [i32; 4],
     border: Border,
+    box_shadow: Option<BoxShadow>,
 
     width_request: i32,
     height_request: i32,
@@ -182,7 +184,7 @@ pub trait WidgetSignals: ActionExt {
 
         /// Emit when widget's geometry(size or position) changed.
         ///
-        /// @param [`Rect`]
+        /// @param [`FRect`]
         geometry_changed();
 
         /// Emit when widget's receive mouse pressed event.
@@ -328,13 +330,6 @@ impl Widget {
     }
 
     #[inline]
-    fn notify_propagate_update(&mut self) {
-        if let Some(child) = self.get_child_mut() {
-            child.propagate_update();
-        }
-    }
-
-    #[inline]
     fn notify_propagate_update_rect(&mut self, rect: CoordRect) {
         if let Some(child) = self.get_child_mut() {
             child.propagate_update_rect(rect);
@@ -394,7 +389,7 @@ impl ObjectImpl for Widget {
         self.set_halign(Align::default());
         self.set_valign(Align::default());
 
-        self.show();
+        self.set_property("visible", true.to_value());
     }
 
     fn on_property_set(&mut self, name: &str, value: &Value) {
@@ -431,12 +426,6 @@ impl ObjectImpl for Widget {
                     self.notify_minimized();
                 }
             }
-            "propagate_update" => {
-                let propagate_update = value.get::<bool>();
-                if propagate_update {
-                    self.notify_propagate_update();
-                }
-            }
             "propagate_update_rect" => {
                 let rect = value.get::<CoordRect>();
                 self.notify_propagate_update_rect(rect);
@@ -463,7 +452,7 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 /// Renderering function for Widget.
 /////////////////////////////////////////////////////////////////////////////////
-impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
+impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         if !self.visible() && !self.is_animation_progressing() {
             return;
@@ -471,7 +460,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
         let mut geometry = self.rect();
 
-        if geometry.width() == 0 || geometry.height() == 0 {
+        if !geometry.is_valid() {
             return;
         }
         geometry.set_point(&(0, 0).into());
@@ -520,7 +509,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
             self.clip_rect(&mut painter, ClipOp::Intersect);
 
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            let mut background = if self.first_rendered() && !self.is_animation_progressing() {
+            let mut background = if self.first_rendered() && !self.is_animation_progressing()
+            {
                 self.opaque_background()
             } else {
                 self.background()
@@ -535,14 +525,16 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
                 && !self.window().minimized()
                 && !cliped
             {
-                let mut border_rect: FRect = self.rect_record().into();
+                let mut border_rect: FRect = self.rect_record();
                 border_rect.set_point(&(0, 0).into());
                 self.border_ref()
                     .clear_border(&mut painter, border_rect, background);
 
+                self.render_shadow_diff(&mut painter, border_rect, background);
                 self.render_difference(&mut painter, background);
             } else {
                 painter.fill_rect(geometry, background);
+                self.render_shadow(&mut painter);
             }
 
             // Draw the border of the Widget.
@@ -580,8 +572,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt> ElementImpl for T {
 
     #[inline]
     fn after_renderer(&mut self) {
-        self.set_rect_record(self.rect());
-        self.set_image_rect_record(self.image_rect());
+        self.set_rect_record(self.rect_f());
+        self.set_image_rect_record(self.visual_image_rect());
     }
 }
 

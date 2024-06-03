@@ -116,6 +116,7 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 false,
                 LayoutType::Non,
                 &use_prefix,
+                None,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),

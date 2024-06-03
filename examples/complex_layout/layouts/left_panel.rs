@@ -28,3 +28,14 @@ impl ObjectImpl for LeftPanel {
 }
 
 impl WidgetImpl for LeftPanel {}
+
+impl LeftPanel {
+    #[inline]
+    pub fn toggle_visibility(&mut self) {
+        if self.visible() {
+            self.hide()
+        } else {
+            self.show()
+        }
+    }
+}

@@ -279,7 +279,7 @@ impl StaticContainerScaleCalculate for VBox {
         c.children()
             .iter()
             .filter(|c| !c.fixed_height())
-            .map(|c| c.vscale())
+            .map(|c| if c.visible() { c.vscale() } else { 0. })
             .sum()
     }
 }
