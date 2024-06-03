@@ -9,7 +9,7 @@ fn main() {
     let app = Application::builder()
         .width(1280)
         .height(800)
-        .title("")
+        .title("Box Shadow")
         .build();
 
     app.connect_activate(build_ui);

@@ -184,7 +184,7 @@ pub trait WidgetSignals: ActionExt {
 
         /// Emit when widget's geometry(size or position) changed.
         ///
-        /// @param [`Rect`]
+        /// @param [`FRect`]
         geometry_changed();
 
         /// Emit when widget's receive mouse pressed event.
@@ -510,7 +510,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
             let mut background = if self.first_rendered() && !self.is_animation_progressing()
-                || self.box_shadow().is_some()
             {
                 self.opaque_background()
             } else {

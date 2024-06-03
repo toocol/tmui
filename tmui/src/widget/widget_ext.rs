@@ -717,11 +717,19 @@ impl<T: WidgetImpl> WidgetExt for T {
         let mut resized = false;
 
         if let Some(width) = width {
-            self.set_fixed_width(width);
+            if self.get_width_request() > 0 {
+                self.width_request(width);
+            } else {
+                self.set_fixed_width(width);
+            }
             resized = true;
         }
         if let Some(height) = height {
-            self.set_fixed_height(height);
+            if self.get_height_request() > 0 {
+                self.height_request(height);
+            } else {
+                self.set_fixed_height(height);
+            }
             resized = true;
         }
 

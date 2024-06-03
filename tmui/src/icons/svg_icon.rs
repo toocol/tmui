@@ -29,7 +29,7 @@ impl ObjectImpl for SvgIcon {
             self,
             geometry_changed(),
             self,
-            handle_geometry_changed(Rect)
+            handle_geometry_changed(FRect)
         );
     }
 }
@@ -90,9 +90,9 @@ impl SvgIcon {
     }
 
     #[inline]
-    fn handle_geometry_changed(&mut self, rect: Rect) {
+    fn handle_geometry_changed(&mut self, rect: FRect) {
         let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
-        let (w2, h2) = (self.view_size.width(), self.view_size.height());
-        self.origin = FPoint::new((x1 + (w1 - w2) / 2) as f32, (y1 + (h1 - h2) / 2) as f32);
+        let (w2, h2) = (self.view_size.width() as f32, self.view_size.height() as f32);
+        self.origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
     }
 }

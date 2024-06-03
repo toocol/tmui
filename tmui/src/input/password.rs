@@ -76,7 +76,7 @@ impl ObjectImpl for Password {
             self,
             geometry_changed(),
             self,
-            handle_geometry_changed(Rect)
+            handle_geometry_changed(FRect)
         );
     }
 }

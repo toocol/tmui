@@ -250,7 +250,6 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.name(),
                 self.size()
             );
-            emit!(SizeCalculation::pre_calc_size => self.size_changed(), self.size())
         }
 
         (self.borderless_size(), self.remain_size())
@@ -299,7 +298,6 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.name(),
                 self.size()
             );
-            // emit!(SizeCalculation::calc_node_size => self.size_changed(), self.size())
         }
     }
 
@@ -426,7 +424,6 @@ impl SizeCalculation for dyn WidgetImpl {
                 self.name(),
                 self.size()
             );
-            // emit!(SizeCalculation::calc_leaf_size => self.size_changed(), self.size())
         }
     }
 

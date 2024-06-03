@@ -34,7 +34,7 @@ pub trait PaneExt: ContainerImpl {
     /// The default value was [`Orientation::Horizontal`](Orientation::Horizontal)
     fn set_orientation(&mut self, orientation: Orientation);
 
-    /// Those function should be f**king private, dont know how to do it:
+    /// Those function should be private, dont know how to do it:
     fn is_resize_zone(&self) -> bool;
 
     fn set_resize_zone(&mut self, resize_zone: bool);
@@ -100,6 +100,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                     if reset_expand {
                         first.set_hexpand(false);
                     }
+                    emit!(first.size_changed(), first.size());
 
                     self.window().layout_change(self);
 
@@ -134,6 +135,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                     if reset_expand {
                         first.set_vexpand(false);
                     }
+                    emit!(first.size_changed(), first.size());
 
                     self.window().layout_change(self);
 

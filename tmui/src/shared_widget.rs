@@ -52,7 +52,7 @@ impl ObjectImpl for SharedWidget {
 
         self.parent_construct();
 
-        connect!(self, geometry_changed(), self, on_geometry_changed(Rect));
+        connect!(self, geometry_changed(), self, on_geometry_changed(FRect));
     }
 }
 
@@ -144,7 +144,7 @@ impl SharedWidgetExt for SharedWidget {
 
 impl SharedWidget {
     #[inline]
-    fn on_geometry_changed(&mut self, _: Rect) {
+    fn on_geometry_changed(&mut self, _: FRect) {
         self.window()
             .ipc_bridge()
             .unwrap()
