@@ -4,7 +4,7 @@ pub(crate) mod wed;
 pub(crate) mod window_context;
 pub(crate) mod windows_process;
 
-use self::frame_manager::FrameManager;
+use self::frame_manager::FrameMgr;
 use crate::{
     application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
     application_window::ApplicationWindow,
@@ -115,7 +115,7 @@ where
     window.run_after();
 
     let mut cpu_balance = CpuBalance::new();
-    let mut frame_manager = FrameManager::new();
+    let mut frame_manager = FrameMgr::new();
     let mut resized = false;
     let size = window.size();
     let mut size_record = (size.width() as u32, size.height() as u32);

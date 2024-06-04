@@ -2,7 +2,7 @@ use crate::{
     container::{
         ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS,
     },
-    layout::LayoutManager,
+    layout::LayoutMgr,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
@@ -87,7 +87,7 @@ impl ContainerLayout for Overlay {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent)
+        LayoutMgr::base_widget_position_layout(widget, parent)
 
         // Do nothing, users need to manually specify the position coordinates of overlay subcomponents
     }

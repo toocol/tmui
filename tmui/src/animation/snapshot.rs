@@ -32,8 +32,8 @@ pub trait Snapshot: WidgetImpl + Animatable {
                 let rect = self.rect();
                 self.animation_model_mut().set_origin_rect(rect);
 
-                let mut start = self.rect();
-                let mut end = self.rect();
+                let mut start = self.rect_f();
+                let mut end = self.rect_f();
                 let modify_target = if show { &mut start } else { &mut end };
 
                 let is_appearance =
@@ -42,14 +42,14 @@ pub trait Snapshot: WidgetImpl + Animatable {
                 match self.animation_model().direction.unwrap() {
                     Direction::LeftToRight => {
                         if is_appearance {
-                            modify_target.set_width(0);
+                            modify_target.set_width(0.);
                         } else {
                             modify_target.set_x(modify_target.left() - modify_target.width());
                         }
                     }
                     Direction::TopToBottom => {
                         if is_appearance {
-                            modify_target.set_height(0);
+                            modify_target.set_height(0.);
                         } else {
                             modify_target.set_y(modify_target.top() - modify_target.height());
                         }
@@ -57,19 +57,19 @@ pub trait Snapshot: WidgetImpl + Animatable {
                     Direction::RightToLeft => {
                         modify_target.set_x(modify_target.right());
                         if is_appearance {
-                            modify_target.set_width(0);
+                            modify_target.set_width(0.);
                         }
                     }
                     Direction::BottomToTop => {
                         modify_target.set_y(modify_target.top() + modify_target.height());
                         if is_appearance {
-                            modify_target.set_height(0);
+                            modify_target.set_height(0.);
                         }
                     }
                     Direction::LeftTopToRightBottom => {
                         if is_appearance {
-                            modify_target.set_width(0);
-                            modify_target.set_height(0);
+                            modify_target.set_width(0.);
+                            modify_target.set_height(0.);
                         } else {
                             modify_target.set_x(modify_target.left() - modify_target.width());
                             modify_target.set_y(modify_target.top() - modify_target.height());
@@ -79,8 +79,8 @@ pub trait Snapshot: WidgetImpl + Animatable {
                         modify_target.set_y(modify_target.top() + modify_target.height());
 
                         if is_appearance {
-                            modify_target.set_width(0);
-                            modify_target.set_height(0);
+                            modify_target.set_width(0.);
+                            modify_target.set_height(0.);
                         } else {
                             modify_target.set_x(modify_target.left() - modify_target.width());
                         }
@@ -89,8 +89,8 @@ pub trait Snapshot: WidgetImpl + Animatable {
                         modify_target.set_x(modify_target.right());
 
                         if is_appearance {
-                            modify_target.set_width(0);
-                            modify_target.set_height(0);
+                            modify_target.set_width(0.);
+                            modify_target.set_height(0.);
                         } else {
                             modify_target.set_y(modify_target.top() - modify_target.height());
                         }
@@ -100,8 +100,8 @@ pub trait Snapshot: WidgetImpl + Animatable {
                         modify_target.set_y(modify_target.top() + modify_target.height());
 
                         if is_appearance {
-                            modify_target.set_width(0);
-                            modify_target.set_height(0);
+                            modify_target.set_width(0.);
+                            modify_target.set_height(0.);
                         }
                     }
                 };
@@ -150,10 +150,10 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
                 if let Some(rect_holder) = cast!(self as RectHolder) {
                     let rect = rect_holder.animated_rect();
-                    self.set_fixed_x(rect.x());
-                    self.set_fixed_y(rect.y());
-                    self.set_fixed_width(rect.width());
-                    self.set_fixed_height(rect.height());
+                    self.set_fixed_x(rect.x() as i32);
+                    self.set_fixed_y(rect.y() as i32);
+                    self.set_fixed_width(rect.width() as i32);
+                    self.set_fixed_height(rect.height() as i32);
                     if self.animation_model().mode() == AnimationMode::Flex {
                         ApplicationWindow::window_of(self.window_id())
                             .animation_layout_change(self.as_widget_mut());
@@ -213,7 +213,7 @@ pub(crate) trait EffectedWidget: WidgetImpl {
                     rect_holder.animated_rect_mut().clear()
                 }
             } else {
-                let dirty_rect = self.rect_record();
+                let dirty_rect = self.image_rect_record();
 
                 if dirty_rect.is_valid() {
                     ApplicationWindow::window_of(win_id).invalid_effected_widgets(dirty_rect.into(), id);

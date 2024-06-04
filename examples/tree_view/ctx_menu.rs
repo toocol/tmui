@@ -1,4 +1,5 @@
 use tmui::{
+    graphics::box_shadow::{BoxShadow, ShadowSide},
     prelude::*,
     tlib::{
         global_watch,
@@ -32,6 +33,13 @@ impl ObjectImpl for CtxMenu {
 
         self.set_borders(1., 1., 1., 1.);
         self.set_border_color(Color::GREY_LIGHT);
+        self.set_box_shadow(BoxShadow::new(
+            6.,
+            Color::BLACK,
+            None,
+            Some(ShadowSide::new(&[ShadowSide::RIGHT, ShadowSide::BOTTOM])),
+            None,
+        ));
 
         self.selection_list.set_vexpand(true);
         self.selection_list.set_hexpand(true);
@@ -55,7 +63,7 @@ impl GlobalWatchImpl for CtxMenu {
         let pos: Point = evt.position().into();
         if !self.rect().contains(&pos) {
             self.hide();
-        }
+        } 
 
         true
     }

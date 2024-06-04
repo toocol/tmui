@@ -4,7 +4,7 @@ use crate::{
         ContainerImpl, ContainerImplExt, ContainerLayoutEnum, ContainerScaleCalculate,
         StaticContainerScaleCalculate,
     },
-    layout::{ContainerLayout, LayoutManager},
+    layout::{ContainerLayout, LayoutMgr},
     prelude::*,
 };
 use tlib::{
@@ -91,13 +91,13 @@ impl ContainerLayout for Stack {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent);
+        LayoutMgr::base_widget_position_layout(widget, parent);
 
         // deal with the children's position
         let widget_ptr = widget as *const dyn WidgetImpl;
 
         widget.children_mut().iter_mut().for_each(|child| {
-            LayoutManager::base_widget_position_layout_inner(*child, Some(ptr_ref!(widget_ptr)));
+            LayoutMgr::base_widget_position_layout_inner(*child, Some(ptr_ref!(widget_ptr)));
         });
     }
 }

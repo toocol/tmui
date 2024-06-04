@@ -460,11 +460,11 @@ impl SizeCalculation for dyn WidgetImpl {
 }
 
 #[derive(Default)]
-pub(crate) struct LayoutManager {
+pub(crate) struct LayoutMgr {
     window_size: Size,
 }
 
-impl LayoutManager {
+impl LayoutMgr {
     pub(crate) fn set_window_size(&mut self, new_size: Size) {
         debug!("`LayoutManager` set window size: {:?}", new_size);
         self.window_size = new_size;

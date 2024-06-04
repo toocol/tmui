@@ -1,7 +1,7 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
-    layout::LayoutManager,
+    layout::LayoutMgr,
     overlay::OverlaidRegister,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition},
@@ -286,7 +286,7 @@ impl ContainerLayout for ScrollArea {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent);
+        LayoutMgr::base_widget_position_layout(widget, parent);
 
         let widget = cast_mut!(widget as ScrollAreaExt).unwrap();
 

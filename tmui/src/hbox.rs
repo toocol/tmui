@@ -1,10 +1,10 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{
-        ContainerScaleCalculate, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
-        SCALE_ADAPTION, ContainerLayoutEnum,
+        ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate,
+        StaticSizeUnifiedAdjust, SCALE_ADAPTION,
     },
-    layout::LayoutManager,
+    layout::LayoutMgr,
     prelude::*,
 };
 use tlib::{namespace::Orientation, object::ObjectSubclass};
@@ -67,10 +67,7 @@ impl Layout for HBox {
     }
 
     #[inline]
-    fn position_layout(
-        &mut self,
-        parent: Option<&dyn WidgetImpl>,
-    ) {
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         HBox::container_position_layout(self, parent)
     }
 }
@@ -85,7 +82,7 @@ impl ContainerLayout for HBox {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent);
+        LayoutMgr::base_widget_position_layout(widget, parent);
 
         let content_align = cast!(widget as ContentAlignment).unwrap();
         let homogeneous = content_align.homogeneous();
@@ -152,15 +149,17 @@ pub(crate) fn hbox_layout_homogeneous<T: WidgetImpl + ContainerImpl>(
             widget
                 .children()
                 .iter()
-                .map(|c| { 
+                .map(|c| {
                     spacing_cnt += 1;
-                    c.image_rect().width() 
+                    c.image_rect().width()
                 })
                 .sum()
         } else {
             0
         };
-    let spacing = cast!(widget as SpacingCapable).map(|spacing| spacing.get_spacing() as i32).unwrap_or(0);
+    let spacing = cast!(widget as SpacingCapable)
+        .map(|spacing| spacing.get_spacing() as i32)
+        .unwrap_or(0);
 
     let mut offset = match content_halign {
         Align::Start => parent_rect.x(),
@@ -194,7 +193,9 @@ fn hbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     let mut start_childs = vec![];
     let mut center_childs = vec![];
     let mut end_childs = vec![];
-    let spacing = cast!(widget as SpacingCapable).map(|spacing| spacing.get_spacing() as i32).unwrap_or(0);
+    let spacing = cast!(widget as SpacingCapable)
+        .map(|spacing| spacing.get_spacing() as i32)
+        .unwrap_or(0);
     let mut children = widget.children_mut();
 
     let mut center_childs_width = 0;
@@ -308,7 +309,7 @@ impl StaticSizeUnifiedAdjust for HBox {
 
         let width = container.size().width();
         if width >= children_width {
-            return
+            return;
         }
 
         let exceed_width = children_width - width;

@@ -68,32 +68,35 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
+            let pressed_widget = window.pressed_widget();
             let prevent = window.handle_global_watch(GlobalWatchEvent::MouseReleased, |handle| {
+                if pressed_widget != 0 {
+                    return false;
+                }
                 handle.on_global_mouse_released(&evt)
             });
             if prevent {
+                window.set_pressed_widget(0);
                 return event;
             }
 
-            let pressed_widget = window.pressed_widget();
             let modal_widget = window.modal_widget();
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
+                let visible = widget.visible();
 
-                if pressed_widget != 0 {
-                    if widget.id() == pressed_widget {
-                        let widget_point = widget.map_to_widget(&pos);
-                        evt.set_position((widget_point.x(), widget_point.y()));
+                if pressed_widget != 0 && widget.id() == pressed_widget && visible {
+                    let widget_point = widget.map_to_widget(&pos);
+                    evt.set_position((widget_point.x(), widget_point.y()));
 
-                        widget.on_mouse_released(evt.as_ref());
-                        widget.inner_mouse_released(evt.as_ref(), false);
+                    widget.on_mouse_released(evt.as_ref());
+                    widget.inner_mouse_released(evt.as_ref(), false);
 
-                        if widget.super_type().is_a(SharedWidget::static_type()) {
-                            event = Some(evt);
-                        }
-                        break;
+                    if widget.super_type().is_a(SharedWidget::static_type()) {
+                        event = Some(evt);
                     }
+                    break;
                 } else {
                     if let Some(ref modal) = modal_widget {
                         if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
@@ -101,7 +104,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                         }
                     }
 
-                    if widget.point_effective(&pos) {
+                    if widget.point_effective(&pos) && visible {
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
 

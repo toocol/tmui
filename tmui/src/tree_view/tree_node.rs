@@ -3,6 +3,7 @@ use super::{
     node_render::NodeRender,
     tree_store::TreeStore,
     tree_view_object::TreeViewObject,
+    TreeView,
 };
 use crate::{application::is_ui_thread, prelude::*};
 use crate::{graphics::painter::Painter, tree_view::tree_store::TreeStoreSignals};
@@ -46,6 +47,16 @@ impl TreeNode {
         node.level = level;
 
         Box::new(node)
+    }
+
+    #[inline]
+    pub fn children(&self) -> &[Box<TreeNode>] {
+        self.children.as_ref()
+    }
+
+    #[inline]
+    pub fn children_mut(&mut self) -> &mut [Box<TreeNode>] {
+        self.children.as_mut()
     }
 
     pub fn add_node(&mut self, obj: &dyn TreeViewObject) -> Option<&mut TreeNode> {
@@ -187,8 +198,12 @@ impl TreeNode {
     }
 
     #[inline]
-    pub fn get_view(&mut self) -> &mut dyn WidgetImpl {
-        TreeStore::store_mut(self.store).unwrap().get_view()
+    pub fn get_view(&mut self) -> &mut TreeView {
+        TreeStore::store_mut(self.store)
+            .unwrap()
+            .get_view()
+            .downcast_mut::<TreeView>()
+            .unwrap()
     }
 }
 
@@ -216,7 +231,10 @@ impl TreeNode {
     #[inline]
     pub(crate) fn create_from_obj(obj: &dyn TreeViewObject, store: ObjectId) -> Self {
         Self {
-            id: TreeStore::store_ref(store).unwrap().id_increment.fetch_add(1, Ordering::Acquire),
+            id: TreeStore::store_ref(store)
+                .unwrap()
+                .id_increment
+                .fetch_add(1, Ordering::Acquire),
             store,
             parent: None,
             is_root: false,
@@ -232,8 +250,6 @@ impl TreeNode {
             node_render: obj.node_render(),
         }
     }
-
-
 
     #[inline]
     pub(crate) fn render_node(

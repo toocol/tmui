@@ -4,7 +4,7 @@ use crate::{
         ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate,
         StaticSizeUnifiedAdjust, SCALE_ADAPTION,
     },
-    layout::LayoutManager,
+    layout::LayoutMgr,
     prelude::*,
 };
 use derivative::Derivative;
@@ -84,7 +84,7 @@ impl ContainerLayout for VBox {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent);
+        LayoutMgr::base_widget_position_layout(widget, parent);
 
         let content_align = cast!(widget as ContentAlignment).unwrap();
         let homogeneous = content_align.homogeneous();

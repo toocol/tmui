@@ -157,6 +157,28 @@ impl TreeView {
     pub fn register_node_leave<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(&mut self, f: T) {
         self.get_image_mut().register_node_leave(f)
     }
+
+    /// Function clousure will be executed when mouse pressed the free area.
+    /// 
+    /// The first parameter of callback function was the reference of root node of the TreeView.
+    #[inline]
+    pub fn register_free_area_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.get_image_mut().register_free_area_pressed(f)
+    }
+
+    /// Function clousure will be executed when mouse released the free area.
+    /// 
+    /// The first parameter of callback function was the reference of root node of the TreeView.
+    #[inline]
+    pub fn register_free_area_released<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.get_image_mut().register_free_area_released(f)
+    }
 }
 
 impl TreeView {

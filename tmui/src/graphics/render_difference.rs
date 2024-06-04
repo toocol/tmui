@@ -1,6 +1,5 @@
 use super::painter::Painter;
 use crate::prelude::*;
-use crate::widget::widget_inner::WidgetInnerExt;
 use tlib::skia_safe::region::RegionOp;
 use tlib::skia_safe::{self, ClipOp};
 
