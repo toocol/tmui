@@ -56,7 +56,7 @@ pub(crate) trait WidgetInnerExt {
 
     fn child_overflow_rect_mut(&mut self) -> &mut FRect;
 
-    fn image_rect_record(&self) -> FRect;
+    fn set_rect_record(&mut self, rect: FRect);
 
     fn set_image_rect_record(&mut self, image_rect: FRect);
 
@@ -187,8 +187,8 @@ macro_rules! widget_inner_ext_impl {
         }
 
         #[inline]
-        fn image_rect_record(&self) -> FRect {
-            self.widget_props().old_image_rect
+        fn set_rect_record(&mut self, rect: FRect) {
+            self.widget_props_mut().old_rect = rect
         }
 
         #[inline]
@@ -210,7 +210,7 @@ macro_rules! widget_inner_ext_impl {
             if !self.super_type().is_a(Container::static_type()) {
                 if let Some(c) = self.get_child_mut() {
                     if c.overflow() != Overflow::Hidden {
-                        return
+                        return;
                     }
 
                     if child_size.width() > size.width() {

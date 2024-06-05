@@ -260,17 +260,17 @@ fn rect_holder(
 ) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     Ok((
         quote!(
-            animated_rect: Box<Rect>
+            animated_rect: Box<FRect>
         ),
         quote!(
             impl #impl_generics RectHolder for #name #ty_generics #where_clause {
                 #[inline]
-                fn animated_rect(&self) -> Rect {
+                fn animated_rect(&self) -> FRect {
                     *self.animated_rect.as_ref()
                 }
 
                 #[inline]
-                fn animated_rect_mut(&mut self) -> &mut Rect {
+                fn animated_rect_mut(&mut self) -> &mut FRect {
                     self.animated_rect.as_mut()
                 }
             }

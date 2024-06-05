@@ -1,5 +1,6 @@
+pub mod frame_animator;
 pub mod inner;
-pub mod manager;
+pub mod mgr;
 pub mod snapshot;
 pub mod state_holder;
 
@@ -9,7 +10,7 @@ use crate::application_window::ApplicationWindow;
 
 use self::{inner::AnimationsHolder, progress::Progress};
 use std::{ptr::NonNull, time::Duration};
-use tlib::{figure::Rect, prelude::*, reflect_trait, utils::Timestamp};
+use tlib::{figure::{FRect, Rect}, prelude::*, reflect_trait, utils::Timestamp};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Animation {
@@ -24,9 +25,9 @@ impl Animation {
     #[inline]
     pub(crate) fn create_rect_holder(
         &self,
-        start: Rect,
-        end: Rect,
-        hold: Option<NonNull<Rect>>,
+        start: FRect,
+        end: FRect,
+        hold: Option<NonNull<FRect>>,
     ) -> AnimationsHolder {
         match self {
             Animation::Linear => AnimationsHolder::Linear { start, end, hold },

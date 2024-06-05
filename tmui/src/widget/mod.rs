@@ -13,7 +13,7 @@ use crate::{
         painter::Painter,
         render_difference::RenderDiffence,
     },
-    layout::LayoutManager,
+    layout::LayoutMgr,
     opti::tracker::Tracker,
     prelude::*,
     skia_safe,
@@ -44,6 +44,7 @@ pub struct Widget {
     child_ref: WidgetHnd,
     children_index: HashSet<ObjectId>,
 
+    old_rect: FRect,
     old_image_rect: FRect,
     child_image_rect_union: FRect,
     child_overflow_rect: FRect,
@@ -509,8 +510,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             self.clip_rect(&mut painter, ClipOp::Intersect);
 
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            let mut background = if self.first_rendered() && !self.is_animation_progressing()
-            {
+            let mut background = if self.first_rendered() && !self.is_animation_progressing() {
                 self.opaque_background()
             } else {
                 self.background()
@@ -1316,7 +1316,7 @@ impl<T: WidgetAcquire> Layout for T {
 
     #[inline]
     fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
-        LayoutManager::base_widget_position_layout(self, parent)
+        LayoutMgr::base_widget_position_layout(self, parent)
     }
 }
 
@@ -1328,7 +1328,7 @@ impl Layout for Widget {
 
     #[inline]
     fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
-        LayoutManager::base_widget_position_layout(self, parent)
+        LayoutMgr::base_widget_position_layout(self, parent)
     }
 }
 

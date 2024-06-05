@@ -4,7 +4,7 @@ use crate::{
         ContainerLayoutEnum, ContainerScaleCalculate, ReflectSizeUnifiedAdjust,
         StaticContainerScaleCalculate, SCALE_DISMISS,
     },
-    layout::LayoutManager,
+    layout::LayoutMgr,
     prelude::*,
     tlib::{
         object::{ObjectImpl, ObjectSubclass},
@@ -86,10 +86,7 @@ impl Layout for SplitPane {
     }
 
     #[inline]
-    fn position_layout(
-        &mut self,
-        parent: Option<&dyn WidgetImpl>,
-    ) {
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         SplitPane::container_position_layout(self, parent)
     }
 }
@@ -117,7 +114,7 @@ impl ContainerLayout for SplitPane {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent);
+        LayoutMgr::base_widget_position_layout(widget, parent);
 
         let parent_rect = widget.contents_rect(None);
         let split_infos_getter = cast_mut!(widget as SplitInfosGetter).unwrap();

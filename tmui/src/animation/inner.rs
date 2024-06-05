@@ -4,7 +4,7 @@ use std::{
     ptr::NonNull,
 };
 use tlib::{
-    figure::Rect,
+    figure::FRect,
     nonnull_mut,
 };
 
@@ -58,13 +58,13 @@ impl InnerAnimations {
 
 /// Should not be used directly, this structure will be processed by macros.
 #[rustfmt::skip]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AnimationsHolder {
-    Linear { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
+    Linear { start: FRect, end: FRect, hold: Option<NonNull<FRect>> },
 
-    EaseIn { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
+    EaseIn { start: FRect, end: FRect, hold: Option<NonNull<FRect>> },
 
-    EaseOut { start: Rect, end: Rect, hold: Option<NonNull<Rect>> },
+    EaseOut { start: FRect, end: FRect, hold: Option<NonNull<FRect>> },
 
     FadeLinear { start: i32, end: i32, hold: Option<NonNull<i32>> },
 

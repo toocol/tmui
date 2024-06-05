@@ -1,5 +1,5 @@
 use tlib::{
-    figure::Rect,
+    figure::FRect,
     prelude::*,
     reflect_trait,
 };
@@ -13,7 +13,7 @@ pub trait TransparencyHolder {
 
 #[reflect_trait]
 pub trait RectHolder {
-    fn animated_rect(&self) -> Rect;
+    fn animated_rect(&self) -> FRect;
 
-    fn animated_rect_mut(&mut self) -> &mut Rect;
+    fn animated_rect_mut(&mut self) -> &mut FRect;
 }

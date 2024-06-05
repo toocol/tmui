@@ -1,7 +1,7 @@
 use crate::{
     container::{ContainerLayoutEnum, SCALE_ADAPTION},
     hbox::hbox_layout_homogeneous,
-    layout::LayoutManager,
+    layout::LayoutMgr,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     vbox::vbox_layout_homogeneous,
@@ -316,7 +316,7 @@ impl ContainerLayout for Pane {
         widget: &mut T,
         parent: Option<&dyn WidgetImpl>,
     ) {
-        LayoutManager::base_widget_position_layout(widget, parent);
+        LayoutMgr::base_widget_position_layout(widget, parent);
 
         let pane = cast!(widget as PaneExt).unwrap();
 

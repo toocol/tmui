@@ -6,13 +6,14 @@ use tlib::{
     object::{ObjectImpl, ObjectSubclass},
     timer::Timer,
 };
-use tmui::{prelude::*, tlib::figure::Color, widget::WidgetImpl};
+use tmui::{animation::frame_animator::FrameAnimator, prelude::*, primitive::frame::Frame, tlib::{figure::Color, frame_animator}, widget::WidgetImpl};
 
 lazy_static! {
     static ref COLORS: [Color; 3] = [Color::RED, Color::GREEN, Color::BLUE];
 }
 
 #[extends(Widget)]
+#[frame_animator]
 pub struct TestWidget {
     idx: usize,
     timer: Timer,
@@ -62,5 +63,12 @@ impl TestWidget {
         self.update();
 
         async_do!({ debug!("timeout async") });
+    }
+}
+
+impl FrameAnimator for TestWidget {
+    #[inline]
+    fn on_frame(&mut self, frame: Frame){
+        println!("widget on frame: {:?}", frame)
     }
 }

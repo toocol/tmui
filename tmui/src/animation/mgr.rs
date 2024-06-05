@@ -4,14 +4,14 @@ use std::{cell::RefCell, ptr::NonNull};
 use tlib::nonnull_mut;
 
 thread_local! {
-    static INSTANCE: RefCell<AnimationManager> = RefCell::new(AnimationManager::new());
+    static INSTANCE: RefCell<AnimationMgr> = RefCell::new(AnimationMgr::new());
 }
 
-pub(crate) struct AnimationManager {
+pub(crate) struct AnimationMgr {
     snapshots: Vec<Option<NonNull<dyn Snapshot>>>,
 }
 
-impl AnimationManager {
+impl AnimationMgr {
     #[inline]
     fn new() -> Self {
         Self { snapshots: vec![] }
@@ -20,7 +20,7 @@ impl AnimationManager {
     #[inline]
     pub(crate) fn with<F, R>(f: F) -> R
     where
-        F: FnOnce(&RefCell<AnimationManager>) -> R,
+        F: FnOnce(&RefCell<AnimationMgr>) -> R,
     {
         INSTANCE.with(f)
     }

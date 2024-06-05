@@ -14,6 +14,8 @@ type FnNodePressed = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
 type FnNodeReleased = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
 type FnNodeEnter = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
 type FnNodeLeave = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnFreeAreaPressed = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
+type FnFreeAreaReleased = Box<dyn Fn(&mut TreeNode, &MouseEvent)>;
 
 #[extends(Widget)]
 #[run_after]
@@ -32,6 +34,8 @@ pub(crate) struct TreeViewImage {
     on_node_released: Option<FnNodeReleased>,
     on_node_enter: Option<FnNodeEnter>,
     on_node_leave: Option<FnNodeLeave>,
+    on_free_area_pressed: Option<FnFreeAreaPressed>,
+    on_free_area_released: Option<FnFreeAreaReleased>,
 }
 
 impl ObjectSubclass for TreeViewImage {
@@ -169,6 +173,8 @@ impl WidgetImpl for TreeViewImage {
             if let Some(ref on_node_pressed) = self.on_node_pressed {
                 on_node_pressed(node, event);
             }
+        } else if let Some(ref on_free_area_pressed) = self.on_free_area_pressed {
+            on_free_area_pressed(self.store.root_mut(), event)
         }
     }
 
@@ -180,6 +186,8 @@ impl WidgetImpl for TreeViewImage {
             if let Some(ref on_node_released) = self.on_node_released {
                 on_node_released(node, event);
             }
+        } else if let Some(ref on_free_area_released) = self.on_free_area_released {
+            on_free_area_released(self.store.root_mut(), event)
         }
     }
 
@@ -318,5 +326,21 @@ impl TreeViewImage {
         f: T,
     ) {
         self.on_node_leave = Some(Box::new(f))
+    }
+
+    #[inline]
+    pub(crate) fn register_free_area_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.on_free_area_pressed = Some(Box::new(f))
+    }
+
+    #[inline]
+    pub(crate) fn register_free_area_released<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
+        &mut self,
+        f: T,
+    ) {
+        self.on_free_area_released = Some(Box::new(f))
     }
 }

@@ -11,7 +11,6 @@ use tlib::{
 #[extends(Object)]
 pub struct Element {
     window_id: ObjectId,
-    old_rect: FRect,
     rect: FRect,
     redraw_region: CoordRegion,
     styles_redraw_region: CoordRegion,
@@ -131,12 +130,6 @@ pub trait ElementExt {
 
     /// Set the property `invalidate` of element to `false`.
     fn validate(&mut self);
-
-    /// Get the rect record of element.
-    fn rect_record(&self) -> FRect;
-
-    /// Set the rect record of element.
-    fn set_rect_record(&mut self, rect: FRect);
 }
 
 impl<T: ElementImpl> ElementExt for T {
@@ -256,16 +249,6 @@ impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn validate(&mut self) {
         self.set_property("invalidate", (false, false).to_value());
-    }
-
-    #[inline]
-    fn rect_record(&self) -> FRect {
-        self.element_props().old_rect
-    }
-
-    #[inline]
-    fn set_rect_record(&mut self, rect: FRect) {
-        self.element_props_mut().old_rect = rect
     }
 }
 

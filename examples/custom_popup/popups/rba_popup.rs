@@ -14,9 +14,9 @@ use tmui::{
 #[animatable(
     ty = "Linear",
     direction = "BottomToTop",
-    duration = 450,
+    duration = 150,
     mode = "Flex",
-    effect = "Slide"
+    effect = "Appearance"
 )]
 #[derive(Childable)]
 #[run_after]

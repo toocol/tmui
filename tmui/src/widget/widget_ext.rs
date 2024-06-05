@@ -489,6 +489,12 @@ pub trait WidgetExt {
 
     /// Set the box shadow of widget.
     fn set_box_shadow(&mut self, shadow: BoxShadow);
+
+    /// Get the rect record of element.
+    fn rect_record(&self) -> FRect;
+
+    /// Get the image rect record of widget.
+    fn image_rect_record(&self) -> FRect;
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -637,6 +643,9 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn hide(&mut self) {
+        if self.is_animation_progressing() {
+            return;
+        }
         if let Some(snapshot) = cast_mut!(self as Snapshot) {
             snapshot.start(false);
         }
@@ -645,7 +654,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         if !self.is_animation_progressing() && self.window().initialized() {
             self.window()
-                .invalid_effected_widgets(self.image_rect(), self.id());
+                .invalid_effected_widgets(self.visual_image_rect(), self.id());
         }
 
         if let Some(popup) = cast_mut!(self as PopupImpl) {
@@ -662,6 +671,9 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn show(&mut self) {
+        if self.is_animation_progressing() {
+            return;
+        }
         if let Some(snapshot) = cast_mut!(self as Snapshot) {
             snapshot.start(true);
         }
@@ -993,13 +1005,13 @@ impl<T: WidgetImpl> WidgetExt for T {
                 if side.contains(ShadowSide::TOP) {
                     rect.offset(0., -blur);
                     rect.set_height(rect.height() + blur);
-                } 
+                }
                 if side.contains(ShadowSide::RIGHT) {
                     rect.set_width(rect.width() + blur);
-                } 
+                }
                 if side.contains(ShadowSide::BOTTOM) {
                     rect.set_height(rect.height() + blur);
-                } 
+                }
                 if side.contains(ShadowSide::LEFT) {
                     rect.offset(-blur, 0.);
                     rect.set_width(rect.width() + blur);
@@ -1627,5 +1639,15 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_box_shadow(&mut self, shadow: BoxShadow) {
         self.widget_props_mut().box_shadow = Some(shadow);
+    }
+
+    #[inline]
+    fn rect_record(&self) -> FRect {
+        self.widget_props().old_rect
+    }
+
+    #[inline]
+    fn image_rect_record(&self) -> FRect {
+        self.widget_props().old_image_rect
     }
 }

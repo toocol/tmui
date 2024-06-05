@@ -11,7 +11,7 @@ use tmui::{
 /// Transparency based animation popup.
 #[extends(Popup)]
 #[async_task(name = "TestAsyncTask", value = "&'static str")]
-#[animatable(ty = "FadeLinear", duration = 350)]
+#[animatable(ty = "FadeLinear", duration = 150)]
 #[derive(Childable)]
 #[run_after]
 pub struct TbaPopup {

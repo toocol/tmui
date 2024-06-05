@@ -2,11 +2,11 @@ use std::time::Instant;
 use tlib::payload::PayloadWeight;
 
 use crate::{
-    animation::manager::AnimationManager,
+    animation::{frame_animator::FrameAnimatorMgr, mgr::AnimationMgr},
     application,
     application_window::ApplicationWindow,
     graphics::board::Board,
-    loading::LoadingManager,
+    loading::LoadingMgr,
     opti::tracker::Tracker,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
@@ -15,13 +15,13 @@ use crate::{
 
 pub const FRAME_INTERVAL: u128 = 16000;
 
-pub(crate) struct FrameManager {
+pub(crate) struct FrameMgr {
     frame: Frame,
     last_frame: Instant,
     frame_cnt: i32,
 }
 
-impl FrameManager {
+impl FrameMgr {
     pub(crate) fn new() -> Self {
         Self {
             frame: Frame::empty_frame(),
@@ -63,8 +63,9 @@ impl FrameManager {
             self.frame_cnt += 1;
 
             self.frame = self.frame.next();
-            AnimationManager::with(|m| m.borrow_mut().process(self.frame));
-            LoadingManager::with(|m| m.borrow_mut().process(self.frame));
+            AnimationMgr::with(|m| m.borrow_mut().process(self.frame));
+            LoadingMgr::with(|m| m.borrow_mut().process(self.frame));
+            FrameAnimatorMgr::with(|m| m.borrow_mut().process(self.frame));
 
             let update = board.invalidate_visual();
             if window.minimized() {

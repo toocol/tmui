@@ -19,7 +19,7 @@ use tmui::{
 
 use crate::ctx_menu::CtxMenu;
 
-const DATA_SIZE: i32 = 500000;
+const DATA_SIZE: i32 = 10000;
 
 #[extends(Widget)]
 #[derive(Childable)]
@@ -70,14 +70,19 @@ impl ObjectImpl for TreeViewHolder {
                 node.id(),
                 evt.position()
             );
-            let view = node.get_view().downcast_mut::<TreeView>().unwrap();
-            view.show_popup(view.map_to_global(&evt.position().into()));
         });
         self.tree_view.register_node_enter(|node, _| {
             println!("Node enter, id = {}", node.id());
         });
         self.tree_view.register_node_leave(|node, _| {
             println!("Node leave, id = {}", node.id());
+        });
+        self.tree_view.register_free_area_released(|node, evt| {
+            if evt.mouse_button() != MouseButton::RightButton {
+                return;
+            }
+            let view = node.get_view();
+            view.show_popup(view.map_to_global(&evt.position().into()));
         });
 
         self.set_hexpand(true);

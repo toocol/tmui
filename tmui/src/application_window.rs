@@ -1,12 +1,12 @@
 use crate::{
-    animation::manager::AnimationManager,
+    animation::mgr::AnimationMgr,
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
     },
-    layout::LayoutManager,
-    loading::LoadingManager,
+    layout::LayoutMgr,
+    loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
@@ -32,6 +32,8 @@ use tlib::{
     winit::window::WindowId,
 };
 
+use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
+
 thread_local! {
     pub(crate) static WINDOW_ID: RefCell<ObjectId> = RefCell::new(0);
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
@@ -50,7 +52,7 @@ pub struct ApplicationWindow {
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
-    layout_manager: LayoutManager,
+    layout_mgr: LayoutMgr,
     widgets: HashMap<ObjectId, WidgetHnd>,
     run_afters: Vec<WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
@@ -141,9 +143,9 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn layout_of(id: ObjectId) -> &'static mut LayoutManager {
+    pub(crate) fn layout_of(id: ObjectId) -> &'static mut LayoutMgr {
         let window = Self::window_of(id);
-        &mut window.layout_manager
+        &mut window.layout_mgr
     }
 
     #[inline]
@@ -602,7 +604,7 @@ impl ApplicationWindow {
     /// The coordinate of `dirty_rect` must be [`World`](tlib::namespace::Coordinate::World).
     ///
     /// @param id: the id of the widget that affected the others.
-    pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: Rect, id: ObjectId) {
+    pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: FRect, id: ObjectId) {
         for w in self.widgets.values_mut() {
             let widget = nonnull_mut!(w);
             if widget.id() == id || widget.descendant_of(id) {
@@ -689,10 +691,10 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         child_ref.initialize();
 
         if let Some(snapshot) = cast_mut!(child_ref as Snapshot) {
-            AnimationManager::with(|m| m.borrow_mut().add_snapshot(snapshot))
+            AnimationMgr::with(|m| m.borrow_mut().add_snapshot(snapshot))
         }
         if let Some(loading) = cast_mut!(child_ref as Loadable) {
-            LoadingManager::with(|m| m.borrow_mut().add_loading(loading))
+            LoadingMgr::with(|m| m.borrow_mut().add_loading(loading))
         }
         if let Some(watch) = cast_mut!(child_ref as GlobalWatch) {
             watch.register_global_watch();
@@ -701,6 +703,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             ApplicationWindow::window_of(window_id)
                 .iter_executors
                 .push(NonNull::new(executor))
+        }
+        if let Some(frame_animator) = cast_mut!(child_ref as FrameAnimator) {
+            FrameAnimatorMgr::with(|m| m.borrow_mut().add_frame_animator(frame_animator))
         }
 
         // Determine whether the widget is a container.

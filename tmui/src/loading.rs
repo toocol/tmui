@@ -10,7 +10,7 @@ use tlib::{
 pub const LOADING_SIZE: f32 = 14.;
 pub const LOADING_COLOR: Color = Color::GREY_MEDIUM.with_a(160);
 thread_local! {
-    static INSTANCE: RefCell<LoadingManager> = RefCell::new(LoadingManager::new());
+    static INSTANCE: RefCell<LoadingMgr> = RefCell::new(LoadingMgr::new());
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -126,11 +126,11 @@ impl Loading for DefaultLoading {
     }
 }
 
-pub struct LoadingManager {
+pub struct LoadingMgr {
     loadings: Vec<Option<NonNull<dyn Loadable>>>,
 }
 
-impl LoadingManager {
+impl LoadingMgr {
     #[inline]
     fn new() -> Self {
         Self { loadings: vec![] }
