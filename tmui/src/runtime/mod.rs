@@ -1,10 +1,10 @@
-pub(crate) mod frame_manager;
+pub(crate) mod frame_mgr;
 pub(crate) mod runtime_track;
 pub(crate) mod wed;
 pub(crate) mod window_context;
 pub(crate) mod windows_process;
 
-use self::frame_manager::FrameMgr;
+use self::frame_mgr::FrameMgr;
 use crate::{
     application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
     application_window::ApplicationWindow,

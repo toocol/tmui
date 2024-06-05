@@ -8,18 +8,12 @@ use tlib::{
 };
 
 thread_local! {
-    static INSTANCE: RefCell<ShortcutManager> = RefCell::new(ShortcutManager::new());
+    static INSTANCE: RefCell<ShortcutMgr> = RefCell::new(ShortcutMgr::new());
 }
 
-type ShortcutMap = HashMap<
-    Shortcut,
-    Vec<(
-        WidgetHnd,
-        Box<dyn Fn(&mut dyn WidgetImpl)>,
-    )>,
->;
+type ShortcutMap = HashMap<Shortcut, Vec<(WidgetHnd, Box<dyn Fn(&mut dyn WidgetImpl)>)>>;
 
-pub(crate) struct ShortcutManager {
+pub(crate) struct ShortcutMgr {
     shortcut: Shortcut,
 
     shortcuts: ShortcutMap,
@@ -27,7 +21,7 @@ pub(crate) struct ShortcutManager {
     global_shortcuts: ShortcutMap,
 }
 
-impl ShortcutManager {
+impl ShortcutMgr {
     #[inline]
     pub(crate) fn new() -> Self {
         Self {
@@ -40,7 +34,7 @@ impl ShortcutManager {
     #[inline]
     pub(crate) fn with<F, R>(f: F) -> R
     where
-        F: FnOnce(&RefCell<ShortcutManager>) -> R,
+        F: FnOnce(&RefCell<ShortcutMgr>) -> R,
     {
         INSTANCE.with(f)
     }

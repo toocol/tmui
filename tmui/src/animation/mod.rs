@@ -1,6 +1,6 @@
 pub mod frame_animator;
 pub mod inner;
-pub mod manager;
+pub mod mgr;
 pub mod snapshot;
 pub mod state_holder;
 

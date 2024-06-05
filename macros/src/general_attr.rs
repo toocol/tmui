@@ -42,6 +42,9 @@ pub(crate) struct GeneralAttr<'a> {
 
     // fields about `iter_executor`
     pub(crate) iter_executor_reflect_clause: TokenStream,
+
+    // fields about `frame_animator`
+    pub(crate) frame_animator_reflect_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -64,6 +67,8 @@ impl<'a> GeneralAttr<'a> {
         let mut global_watch = None;
 
         let mut iter_executor = false;
+
+        let mut frame_animator = false;
 
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
@@ -89,6 +94,7 @@ impl<'a> GeneralAttr<'a> {
                         global_watch = Some(gw);
                     },
                     "iter_executor" => iter_executor = true,
+                    "frame_animator" => frame_animator = true,
                     _ => {}
                 }
             }
@@ -234,6 +240,16 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // Frame animator
+        let frame_animator_reflect_clause = if frame_animator {
+            let (_, ty_generics, _) = generics;
+            quote!(
+                type_registry.register::<#name #ty_generics, ReflectFrameAnimator>();
+            )
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -259,6 +275,7 @@ impl<'a> GeneralAttr<'a> {
             global_watch_impl_clause,
             global_watch_reflect_clause,
             iter_executor_reflect_clause,
+            frame_animator_reflect_clause,
         })
     }
 }

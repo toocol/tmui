@@ -48,6 +48,8 @@ pub(crate) fn expand(
 
     let iter_executor_reflect_clause = &general_attr.iter_executor_reflect_clause;
 
+    let frame_animator_reflect_clause = &general_attr.frame_animator_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -333,6 +335,7 @@ pub(crate) fn expand(
                         #reflect_pane
                         #global_watch_reflect_clause
                         #iter_executor_reflect_clause
+                        #frame_animator_reflect_clause
                     }
 
                     #[inline]

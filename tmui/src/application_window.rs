@@ -1,5 +1,5 @@
 use crate::{
-    animation::manager::AnimationMgr,
+    animation::mgr::AnimationMgr,
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,

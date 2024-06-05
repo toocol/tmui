@@ -365,3 +365,8 @@ pub fn global_watch(_: TokenStream, input: TokenStream) -> TokenStream {
 pub fn iter_executor(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
+
+#[proc_macro_attribute]
+pub fn frame_animator(_: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}

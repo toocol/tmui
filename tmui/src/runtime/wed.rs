@@ -1,6 +1,6 @@
 use crate::{
     application_window::ApplicationWindow, prelude::SharedWidget,
-    primitive::global_watch::GlobalWatchEvent, shortcut::manager::ShortcutManager,
+    primitive::global_watch::GlobalWatchEvent, shortcut::mgr::ShortcutMgr,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -266,7 +266,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             if prevent {
                 return event;
             }
-            let global_shorcut_triggered = ShortcutManager::with(|shortcut_manager| {
+            let global_shorcut_triggered = ShortcutMgr::with(|shortcut_manager| {
                 let mut shortcut_manager = shortcut_manager.borrow_mut();
                 shortcut_manager.receive_key_event(&evt);
                 shortcut_manager.trigger_global()
@@ -279,7 +279,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 let widget = nonnull_mut!(widget_opt);
 
                 if widget.id() == window.focused_widget() {
-                    if !ShortcutManager::with(|shortcut_manager| {
+                    if !ShortcutMgr::with(|shortcut_manager| {
                         shortcut_manager.borrow_mut().trigger(widget.id())
                     }) {
                         widget.on_key_pressed(&evt);
@@ -305,7 +305,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             if prevent {
                 return event;
             }
-            ShortcutManager::with(|shortcut_manager| {
+            ShortcutMgr::with(|shortcut_manager| {
                 shortcut_manager.borrow_mut().receive_key_event(&evt)
             });
 

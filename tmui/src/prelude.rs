@@ -3,6 +3,7 @@ pub use tlib::prelude::*;
 pub use tlib::signal;
 
 pub use crate::animation::{
+    frame_animator::ReflectFrameAnimator,
     inner::AnimationsHolder,
     snapshot::{ReflectSnapshot, Snapshot},
     state_holder::{RectHolder, ReflectRectHolder, ReflectTransparencyHolder, TransparencyHolder},

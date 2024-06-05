@@ -1,6 +1,6 @@
-pub mod manager;
+pub mod mgr;
 
-use self::manager::ShortcutManager;
+use self::mgr::ShortcutMgr;
 use crate::widget::WidgetImpl;
 use tlib::{
     bitflags::bitflags,
@@ -94,7 +94,7 @@ pub trait ShortcutRegister: WidgetImpl + Sized {
         shortcut: Shortcut,
         f: F,
     ) {
-        ShortcutManager::with(|shortcut_manager| {
+        ShortcutMgr::with(|shortcut_manager| {
             shortcut_manager
                 .borrow_mut()
                 .register_shortcut(shortcut, self, f)
@@ -108,7 +108,7 @@ pub trait ShortcutRegister: WidgetImpl + Sized {
         shortcut: Shortcut,
         f: F,
     ) {
-        ShortcutManager::with(|shortcut_manager| {
+        ShortcutMgr::with(|shortcut_manager| {
             shortcut_manager
                 .borrow_mut()
                 .register_global_shortcut(shortcut, self, f)

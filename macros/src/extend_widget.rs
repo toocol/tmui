@@ -34,6 +34,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
 
     let iter_executor_reflect_clause = &general_attr.iter_executor_reflect_clause;
 
+    let frame_animator_reflect_clause = &general_attr.frame_animator_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -159,6 +161,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                         #loadable_reflect_clause
                         #global_watch_reflect_clause
                         #iter_executor_reflect_clause
+                        #frame_animator_reflect_clause
                     }
 
                     #[inline]

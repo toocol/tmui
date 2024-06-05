@@ -2,7 +2,7 @@ use std::time::Instant;
 use tlib::payload::PayloadWeight;
 
 use crate::{
-    animation::{frame_animator::FrameAnimatorMgr, manager::AnimationMgr},
+    animation::{frame_animator::FrameAnimatorMgr, mgr::AnimationMgr},
     application,
     application_window::ApplicationWindow,
     graphics::board::Board,
