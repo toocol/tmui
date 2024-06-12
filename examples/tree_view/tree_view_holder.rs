@@ -294,7 +294,12 @@ impl TreeViewObject for Content {
         vec![Cell::string()
             .value(self.val.clone())
             .cell_render(TextCellRender::builder().color(Color::BLACK).build())
-            .build()]
+            .build(),
+            Cell::string()
+            .value(self.val.clone())
+            .cell_render(TextCellRender::builder().color(Color::BLACK).build())
+            .build()
+            ]
     }
 
     #[inline]
