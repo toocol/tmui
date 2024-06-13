@@ -1,4 +1,3 @@
-pub mod cell;
 pub mod node_render;
 pub mod tree_node;
 pub mod tree_store;
@@ -19,8 +18,9 @@ use tlib::{connect, signals};
 ///
 /// Basic usage:
 /// ```
-/// use tmui::tree_view::{
-///     tree_view_object::TreeViewObject, cell::{Cell, cell_render::TextCellRender},
+/// use tmui::views::cell::{Cell, cell_render::TextCellRender};
+/// use tmui::views::tree_view::{
+///     tree_view_object::TreeViewObject,
 ///     node_render::NodeRender, TreeView,
 /// };
 /// use tmui::tlib::figure::color::Color;
@@ -159,7 +159,7 @@ impl TreeView {
     }
 
     /// Function clousure will be executed when mouse pressed the free area.
-    /// 
+    ///
     /// The first parameter of callback function was the reference of root node of the TreeView.
     #[inline]
     pub fn register_free_area_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
@@ -170,7 +170,7 @@ impl TreeView {
     }
 
     /// Function clousure will be executed when mouse released the free area.
-    /// 
+    ///
     /// The first parameter of callback function was the reference of root node of the TreeView.
     #[inline]
     pub fn register_free_area_released<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(

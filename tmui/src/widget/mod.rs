@@ -262,6 +262,11 @@ pub trait WidgetSignals: ActionExt {
         ///
         /// @param [`Color`]
         background_changed();
+
+        /// Emit when widget's visibility changed.
+        ///
+        /// @param [`bool`]
+        visibility_changed();
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}

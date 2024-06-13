@@ -12,7 +12,7 @@ use tlib::{
     events::{DeltaType, MouseEvent},
     global::bound,
     implements_enum_value,
-    namespace::{AsNumeric, KeyboardModifier, Orientation},
+    namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     signals,
     values::{FromBytes, FromValue, ToBytes},
@@ -50,6 +50,7 @@ pub struct ScrollBar {
     press_offset: i32,
     offset_accumulated: f32,
     scroll_bar_position: ScrollBarPosition,
+    overlaid: bool,
 }
 
 impl ObjectSubclass for ScrollBar {
@@ -79,6 +80,9 @@ impl WidgetImpl for ScrollBar {
     fn paint(&mut self, painter: &mut Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
+        if self.overlaid {
+            painter.set_blend_mode(BlendMode::SrcOver);
+        }
         painter.set_antialiasing(false);
         painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
 
@@ -392,6 +396,11 @@ impl ScrollBar {
     #[inline]
     pub fn slider_pressed(&self) -> bool {
         self.pressed
+    }
+
+    #[inline]
+    pub fn set_overlaid(&mut self, overlaid: bool) {
+        self.overlaid = overlaid;
     }
 
     #[inline]

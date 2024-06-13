@@ -37,9 +37,6 @@ pub enum LayoutMode {
 
 #[extends(Container)]
 pub struct ScrollArea {
-    // #[derivative(Default(value = "Object::new(&[])"))]
-    // scroll_bar: Box<ScrollBar>,
-    // area: Option<Box<dyn WidgetImpl>>,
     layout_mode: LayoutMode,
 }
 
@@ -141,6 +138,7 @@ impl ScrollAreaExt for ScrollArea {
         self.layout_mode = layout_mode;
         self.scroll_bar_mut()
             .set_occupy_space(layout_mode == LayoutMode::Normal);
+        self.scroll_bar_mut().set_overlaid(layout_mode == LayoutMode::Overlay);
         let layout_mode = self.layout_mode;
 
         if self.area().is_some() {
@@ -176,7 +174,6 @@ impl ScrollAreaGenericExt for ScrollArea {
         area.set_hexpand(true);
         if self.layout_mode == LayoutMode::Overlay {
             connect!(area, invalidated(), self.scroll_bar_mut(), update());
-            self.scroll_bar().register_overlaid();
         }
 
         ApplicationWindow::initialize_dynamic_component(area.as_mut());
@@ -381,8 +378,6 @@ fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
             }
         }
     }
-
-    scroll_bar.register_overlaid();
 }
 
 impl ContainerScaleCalculate for ScrollArea {

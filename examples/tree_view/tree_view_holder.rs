@@ -7,13 +7,12 @@ use tlib::{
 use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    tree_view::{
-        cell::{cell_render::TextCellRender, Cell},
+    views::{cell::{cell_render::TextCellRender, Cell}, tree_view::{
         node_render::NodeRender,
         tree_node::TreeNode,
         tree_view_object::TreeViewObject,
         TreeView,
-    },
+    }},
     widget::{ChildOp, WidgetImpl},
 };
 

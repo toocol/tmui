@@ -1,17 +1,12 @@
 use tmui::{
-    graphics::box_shadow::{BoxShadow, ShadowSide},
-    prelude::*,
-    tlib::{
+    graphics::box_shadow::{BoxShadow, ShadowSide}, prelude::*, scroll_area::LayoutMode, tlib::{
         global_watch,
         object::{ObjectImpl, ObjectSubclass},
-    },
-    tree_view::{
-        cell::{cell_render::TextCellRender, Cell},
+    }, views::{cell::{cell_render::TextCellRender, Cell}, tree_view::{
         node_render::NodeRender,
         tree_view_object::TreeViewObject,
         TreeView,
-    },
-    widget::WidgetImpl,
+    }}, widget::WidgetImpl
 };
 
 #[extends(Popup)]
@@ -44,6 +39,7 @@ impl ObjectImpl for CtxMenu {
         self.selection_list.set_vexpand(true);
         self.selection_list.set_hexpand(true);
         self.selection_list.set_mouse_tracking(true);
+        self.selection_list.set_layout_mode(LayoutMode::Overlay);
         self.selection_list
             .get_store_mut()
             .root_mut()

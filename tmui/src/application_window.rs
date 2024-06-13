@@ -621,6 +621,7 @@ impl ApplicationWindow {
 
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
             if region.intersects_rect(dirty_irect) {
+                println!("{} update dirty rect {:?}", widget.name(), dirty_rect);
                 widget.set_render_styles(true);
                 widget.update_styles_rect(CoordRect::new(dirty_rect, Coordinate::World));
             }
@@ -641,6 +642,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
 
     while let Some(child_ref) = child {
+        #[cfg(verbose_logging)]
+        log::info!("[child_initialize] Initialize the widget {}.", child_ref.name());
+
         board.add_element(child_ref.as_element());
         ApplicationWindow::widgets_of(window_id).insert(child_ref.id(), NonNull::new(child_ref));
         index_children(child_ref);

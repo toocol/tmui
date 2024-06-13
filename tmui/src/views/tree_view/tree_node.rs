@@ -1,12 +1,13 @@
 use super::{
-    cell::{cell_render::CellRender, Cell},
     node_render::NodeRender,
     tree_store::TreeStore,
     tree_view_object::TreeViewObject,
     TreeView,
 };
+use crate::views::cell::cell_render::CellRender;
+use crate::views::cell::Cell;
 use crate::{application::is_ui_thread, prelude::*};
-use crate::{graphics::painter::Painter, tree_view::tree_store::TreeStoreSignals};
+use crate::{graphics::painter::Painter, views::tree_view::tree_store::TreeStoreSignals};
 use log::warn;
 use std::{ptr::NonNull, sync::atomic::Ordering};
 use tlib::{

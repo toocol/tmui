@@ -4,7 +4,7 @@ use crate::{
     prelude::*,
     scroll_bar::ScrollBar,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    tree_view::tree_store::TreeStoreSignals,
+    views::tree_view::tree_store::TreeStoreSignals,
     widget::{RegionClear, WidgetImpl},
 };
 use std::ptr::NonNull;
