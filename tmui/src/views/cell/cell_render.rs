@@ -5,7 +5,8 @@ use std::fmt::Debug;
 use tlib::{
     figure::{Color, FRect},
     namespace::BorderStyle,
-    Value, skia_safe::ClipOp,
+    skia_safe::ClipOp,
+    Value,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -33,6 +34,14 @@ pub trait CellRender: Debug {
 
     fn set_background(&mut self, background: Color);
 
+    fn width(&self) -> Option<u32>;
+
+    fn set_width(&mut self, width: u32);
+
+    fn height(&self) -> Option<u32>;
+
+    fn set_height(&mut self, height: u32);
+
     fn ty(&self) -> CellRenderType;
 }
 
@@ -44,6 +53,8 @@ macro_rules! cell_render_struct {
             border_style: BorderStyle,
             border_radius: f32,
             background: Option<Color>,
+            width: Option<u32>,
+            height: Option<u32>,
             ty: CellRenderType,
             $($field: $ty),*
         }
@@ -54,6 +65,8 @@ macro_rules! cell_render_struct {
             border_style: BorderStyle,
             border_radius: f32,
             background: Option<Color>,
+            width: Option<u32>,
+            height: Option<u32>,
             $($field: $ty),*
         }
         impl $cell {
@@ -87,6 +100,18 @@ macro_rules! cell_render_struct {
                 self
             }
 
+            #[inline]
+            pub fn width(mut self, width: u32) -> Self {
+                self.width = Some(width);
+                self
+            }
+
+            #[inline]
+            pub fn height(mut self, height: u32) -> Self {
+                self.width = Some(height);
+                self
+            }
+
             $(
             #[inline]
             pub fn $field(mut self, $field: $ty) -> Self {
@@ -102,6 +127,8 @@ macro_rules! cell_render_struct {
                     border_style: self.border_style,
                     border_radius: self.border_radius,
                     background: self.background,
+                    width: self.width,
+                    height: self.height,
                     ty: CellRenderType::$render_type,
                     $(
                     $field: self.$field
@@ -155,6 +182,26 @@ macro_rules! impl_cell_render_common {
         }
 
         #[inline]
+        fn width(&self) -> Option<u32> {
+            self.width
+        }
+
+        #[inline]
+        fn set_width(&mut self, width: u32) {
+            self.width = Some(width)
+        }
+
+        #[inline]
+        fn height(&self) -> Option<u32> {
+            self.height
+        }
+
+        #[inline]
+        fn set_height(&mut self, height: u32) {
+            self.height = Some(height)
+        }
+
+        #[inline]
         fn ty(&self) -> CellRenderType {
             self.ty
         }
@@ -174,11 +221,18 @@ impl CellRender for TextCellRender {
 
         if let Some(background) = self.background {
             painter.fill_rect(geometry, background);
-        } 
+        }
 
         let text = val.get::<String>();
         let origin = geometry.top_left();
-        painter.draw_paragraph(&text, origin, self.letter_spacing, geometry.width(), Some(1), true);
+        painter.draw_paragraph(
+            &text,
+            origin,
+            self.letter_spacing,
+            geometry.width(),
+            Some(1),
+            true,
+        );
 
         painter.restore_pen();
         painter.restore();

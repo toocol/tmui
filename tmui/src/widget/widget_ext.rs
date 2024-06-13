@@ -651,6 +651,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", false.to_value());
+        emit!(self.visibility_changed(), false);
 
         if !self.is_animation_progressing() && self.window().initialized() {
             self.window()
@@ -679,6 +680,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", true.to_value());
+        emit!(self.visibility_changed(), true);
         self.set_render_styles(true);
         self.update();
 

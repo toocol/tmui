@@ -1,12 +1,13 @@
 use super::{
-    cell::{cell_render::CellRender, Cell},
     node_render::NodeRender,
     tree_store::TreeStore,
     tree_view_object::TreeViewObject,
     TreeView,
 };
+use crate::views::cell::cell_render::CellRender;
+use crate::views::cell::Cell;
 use crate::{application::is_ui_thread, prelude::*};
-use crate::{graphics::painter::Painter, tree_view::tree_store::TreeStoreSignals};
+use crate::{graphics::painter::Painter, views::tree_view::tree_store::TreeStoreSignals};
 use log::warn;
 use std::{ptr::NonNull, sync::atomic::Ordering};
 use tlib::{
@@ -269,14 +270,24 @@ impl TreeNode {
         geometry.set_width(geometry.width() - (ident_length * self.level) as f32);
 
         let gapping = geometry.width() / self.cells.len() as f32;
+        let mut offset = geometry.x();
 
-        for (i, cell) in self.cells.iter().enumerate() {
+        for cell in self.cells.iter() {
             let mut cell_rect = geometry;
 
-            cell_rect.set_x(gapping * i as f32);
-            cell_rect.set_width(gapping);
+            cell_rect.set_x(offset);
+            if let Some(width) = cell.get_render().width() {
+                cell_rect.set_width(width as f32);
+            } else {
+                cell_rect.set_width(gapping);
+            }
+            if let Some(height) = cell.get_render().height() {
+                cell_rect.set_height(height as f32);
+            }
 
-            cell.render_cell(painter, geometry);
+            offset += cell_rect.width();
+
+            cell.render_cell(painter, cell_rect);
         }
     }
 

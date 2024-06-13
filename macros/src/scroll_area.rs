@@ -123,6 +123,7 @@ pub(crate) fn generate_scroll_area_impl(
             fn set_layout_mode(&mut self, layout_mode: #use_prefix::scroll_area::LayoutMode) {
                 self.layout_mode = layout_mode;
                 self.scroll_bar_mut().set_occupy_space(layout_mode == #use_prefix::scroll_area::LayoutMode::Normal);
+                self.scroll_bar_mut().set_overlaid(layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay);
 
                 if self.area().is_some() {
                     if layout_mode == #use_prefix::scroll_area::LayoutMode::Normal {
@@ -142,14 +143,12 @@ pub(crate) fn generate_scroll_area_impl(
             #[inline]
             fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
                 use #use_prefix::application_window::ApplicationWindow;
-                use #use_prefix::overlay::OverlaidRegister;
 
                 area.set_parent(self);
                 area.set_vexpand(true);
                 area.set_hexpand(true);
                 if self.layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay {
                     #use_prefix::tlib::connect!(area, invalidated(), self.scroll_bar_mut(), update());
-                    self.scroll_bar().register_overlaid();
                 }
 
                 ApplicationWindow::initialize_dynamic_component(area.as_mut());
