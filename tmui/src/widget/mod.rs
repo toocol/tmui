@@ -20,6 +20,8 @@ use crate::{
 };
 use derivative::Derivative;
 use log::error;
+#[cfg(verbose_logging)]
+use log::info;
 use std::{collections::HashSet, ptr::NonNull, slice::Iter};
 use tlib::{
     bitflags::bitflags,
@@ -456,15 +458,31 @@ impl WidgetImpl for Widget {}
 impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
         if !self.visible() && !self.is_animation_progressing() {
+            #[cfg(verbose_logging)]
+            info!(
+                "[on_renderer] {} check return, visible={}, is_animation_progressing={}",
+                self.name(),
+                self.visible(),
+                self.is_animation_progressing()
+            );
             return;
         }
 
         let mut geometry = self.rect();
 
         if !geometry.is_valid() {
+            #[cfg(verbose_logging)]
+            info!(
+                "[on_renderer] {} check return, geometry is not valid, rect={:?}",
+                self.name(),
+                geometry,
+            );
             return;
         }
         geometry.set_point(&(0, 0).into());
+
+        #[cfg(verbose_logging)]
+        info!("[on_renderer] {}, z_index={}", self.name(), self.z_index());
 
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 
