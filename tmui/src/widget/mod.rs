@@ -462,13 +462,14 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
+        #[cfg(verbose_logging)]
+        let frame = cr.frame();
+
         if !self.visible() && !self.is_animation_progressing() {
             #[cfg(verbose_logging)]
+            #[rustfmt::skip]
             info!(
-                "[on_renderer] {} check return, visible={}, is_animation_progressing={}",
-                self.name(),
-                self.visible(),
-                self.is_animation_progressing()
+                "[on_renderer({}:{})] {} check return, visible={}, is_animation_progressing={}", frame.id(), frame.nth(), self.name(), self.visible(), self.is_animation_progressing()
             );
             return;
         }
@@ -477,17 +478,19 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
         if !geometry.is_valid() {
             #[cfg(verbose_logging)]
+            #[rustfmt::skip]
             info!(
-                "[on_renderer] {} check return, geometry is not valid, rect={:?}",
-                self.name(),
-                geometry,
+                "[on_renderer({}:{})] {} check return, geometry is not valid, rect={:?}", frame.id(), frame.nth(), self.name(), geometry,
             );
             return;
         }
         geometry.set_point(&(0, 0).into());
 
         #[cfg(verbose_logging)]
-        info!("[on_renderer] {}, z_index={}", self.name(), self.z_index());
+        #[rustfmt::skip]
+        info!(
+            "[on_renderer({}:{})] {}, z_index={}", frame.id(), frame.nth(), self.name(), self.z_index()
+        );
 
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 

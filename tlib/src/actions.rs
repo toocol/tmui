@@ -58,7 +58,7 @@ type ActionsMap = Box<
 
 thread_local! {
     static INSTANCE: RefCell<Box<ActionHub>> = RefCell::new(ActionHub::new());
-    static INSTANCE_PTR: AtomicPtr<ActionHub> = AtomicPtr::new(null_mut());
+    static INSTANCE_PTR: AtomicPtr<ActionHub> = const { AtomicPtr::new(null_mut()) };
 }
 
 /// ActionHub hold all of the registered actions

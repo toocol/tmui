@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread::{ThreadId, self}};
+use std::{collections::HashMap, ptr::addr_of_mut, thread::{self, ThreadId}};
 
 use crate::Value;
 use once_cell::sync::Lazy;
@@ -23,7 +23,7 @@ pub fn tokio_runtime() -> &'static Runtime {
 pub fn async_tasks<'a>() -> &'static mut HashMap<ThreadId, Vec<AsyncTask<'a>>> {
     static mut ASYNC_TASK: Lazy<HashMap<ThreadId, Vec<AsyncTask>>> =
         Lazy::new(HashMap::new);
-    unsafe { &mut ASYNC_TASK }
+    unsafe { addr_of_mut!(ASYNC_TASK).as_mut().unwrap() }
 }
 
 #[inline]

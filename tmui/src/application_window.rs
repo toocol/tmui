@@ -21,7 +21,7 @@ use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
-    ptr::NonNull,
+    ptr::{addr_of_mut, NonNull},
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -35,8 +35,8 @@ use tlib::{
 use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
 
 thread_local! {
-    pub(crate) static WINDOW_ID: RefCell<ObjectId> = RefCell::new(0);
-    pub(crate) static INTIALIZE_PHASE: RefCell<bool> = RefCell::new(false);
+    pub(crate) static WINDOW_ID: RefCell<ObjectId> = const { RefCell::new(0) };
+    pub(crate) static INTIALIZE_PHASE: RefCell<bool> = const { RefCell::new(false) };
 }
 
 pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
@@ -133,7 +133,7 @@ impl ApplicationWindow {
     pub(crate) fn windows() -> &'static mut HashMap<ObjectId, ApplicationWindowContext> {
         static mut WINDOWS: Lazy<HashMap<ObjectId, ApplicationWindowContext>> =
             Lazy::new(HashMap::new);
-        unsafe { &mut WINDOWS }
+        unsafe { addr_of_mut!(WINDOWS).as_mut().unwrap() }
     }
 
     #[inline]
@@ -621,7 +621,6 @@ impl ApplicationWindow {
 
             let dirty_irect: tlib::skia_safe::IRect = dirty_rect.into();
             if region.intersects_rect(dirty_irect) {
-                println!("{} update dirty rect {:?}", widget.name(), dirty_rect);
                 widget.set_render_styles(true);
                 widget.update_styles_rect(CoordRect::new(dirty_rect, Coordinate::World));
             }
@@ -643,7 +642,10 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
 
     while let Some(child_ref) = child {
         #[cfg(verbose_logging)]
-        log::info!("[child_initialize] Initialize the widget {}.", child_ref.name());
+        log::info!(
+            "[child_initialize] Initialize the widget {}.",
+            child_ref.name()
+        );
 
         board.add_element(child_ref.as_element());
         ApplicationWindow::widgets_of(window_id).insert(child_ref.id(), NonNull::new(child_ref));

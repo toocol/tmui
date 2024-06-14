@@ -14,6 +14,7 @@ const TEXT_SIZE: usize = 4096;
 const OS_ID: &'static str = "/mem_queue_04";
 const TEXT: &'static str = "Text from slave.";
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 enum Event {
     Foo(i32, [u8; TEXT_SIZE], u128),

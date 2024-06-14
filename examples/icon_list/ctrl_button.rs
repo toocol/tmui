@@ -58,14 +58,3 @@ impl ObjectImpl for CtrlButtons {
 }
 
 impl WidgetImpl for CtrlButtons {}
-
-trait HandleHover: WidgetImpl {
-    fn handle_hover_in(&mut self) {
-        self.set_background(Color::grey_with(223));
-    }
-
-    fn handle_hover_out(&mut self) {
-        self.set_background(Color::GREY_LIGHT);
-    }
-}
-impl HandleHover for SvgIcon {}

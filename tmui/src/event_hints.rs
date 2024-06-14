@@ -1,3 +1,5 @@
+use std::ptr::addr_of_mut;
+
 use derivative::Derivative;
 use once_cell::sync::Lazy;
 
@@ -27,7 +29,7 @@ pub struct EventHints {
 #[inline]
 pub(crate) fn event_hints() -> &'static mut EventHints {
     static mut EVENT_HINTS: Lazy<EventHints> = Lazy::new(EventHints::default);
-    unsafe { &mut EVENT_HINTS }
+    unsafe { addr_of_mut!(EVENT_HINTS).as_mut().unwrap() }
 }
 
 impl EventHints {

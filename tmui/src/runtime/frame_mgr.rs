@@ -67,7 +67,7 @@ impl FrameMgr {
             LoadingMgr::with(|m| m.borrow_mut().process(self.frame));
             FrameAnimatorMgr::with(|m| m.borrow_mut().process(self.frame));
 
-            let update = board.invalidate_visual();
+            let update = board.invalidate_visual(self.frame);
             if window.minimized() {
                 window.set_minimized(false);
             }

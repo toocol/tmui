@@ -7,7 +7,7 @@ use log::warn;
 use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
-    ptr::NonNull,
+    ptr::{addr_of_mut, NonNull},
     sync::atomic::{AtomicPtr, Ordering},
 };
 use tlib::{
@@ -63,7 +63,7 @@ impl TreeStore {
     pub(crate) fn store_map() -> &'static mut HashMap<ObjectId, AtomicPtr<TreeStore>> {
         static mut STORE_MAP: Lazy<HashMap<ObjectId, AtomicPtr<TreeStore>>> =
             Lazy::new(HashMap::new);
-        unsafe { &mut STORE_MAP }
+        unsafe { addr_of_mut!(STORE_MAP).as_mut().unwrap() }
     }
 
     #[inline]

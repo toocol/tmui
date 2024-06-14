@@ -2,6 +2,8 @@
 extern crate beep;
 #[cfg(free_unix)]
 extern crate dimensioned;
+use std::ptr::addr_of_mut;
+
 #[cfg(windows_platform)]
 use winapi::um::winuser::MessageBeep;
 #[cfg(macos_platform)]
@@ -12,7 +14,7 @@ use once_cell::sync::Lazy;
 
 pub(crate) fn system() -> &'static mut System {
     static mut SYSTEM: Lazy<Box<System>> = Lazy::new(System::new);
-    unsafe { &mut SYSTEM }
+    unsafe { addr_of_mut!(SYSTEM).as_mut().unwrap().as_mut() }
 }
 
 pub struct System {

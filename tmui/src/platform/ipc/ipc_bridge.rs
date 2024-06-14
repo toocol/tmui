@@ -8,10 +8,13 @@ use tipc::{
 use tlib::{figure::Rect, global::SemanticExt};
 
 pub(crate) trait IpcBridge {
+    #[allow(dead_code)]
     fn region(&self) -> Rect;
 
+    #[allow(dead_code)]
     fn wait(&self, timeout: Timeout);
 
+    #[allow(dead_code)]
     fn signal(&self);
 
     fn add_shared_region(&self, id: &'static str, rect: Rect);
@@ -22,6 +25,7 @@ pub(crate) trait IpcBridge {
 
     fn buffer(&self) -> (&'static [u8], MemRwLockGuard);
 
+    #[allow(dead_code)]
     fn buffer_mut(&self) -> (&'static mut [u8], MemRwLockGuard);
 
     fn pretreat_resize(&self, width: i32, height: i32);
@@ -34,6 +38,7 @@ pub(crate) trait IpcBridge {
 }
 
 pub struct IpcBridgeModel<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
+    #[allow(dead_code)]
     shared_widget_id: Option<&'static str>,
     master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,

@@ -23,6 +23,7 @@ pub struct Value {
 }
 
 impl Value {
+    #[inline]
     pub fn new<T: StaticType + ToBytes>(data: &T) -> Self {
         Value {
             data: data.to_bytes(),
@@ -36,6 +37,7 @@ impl Value {
         }
     }
 
+    #[inline]
     pub fn new_with_seg_len<T: StaticType + ToBytes>(data: &T, seg_len: Vec<usize>) -> Self {
         Value {
             data: data.to_bytes(),
@@ -45,6 +47,7 @@ impl Value {
         }
     }
 
+    #[inline]
     pub fn empty() -> Self {
         Value {
             data: vec![],
@@ -54,6 +57,7 @@ impl Value {
         }
     }
 
+    #[inline]
     pub fn tuple_count(&self) -> usize {
         match self.seg_len.as_ref() {
             Some(seg_len) => seg_len.len(),
@@ -61,10 +65,17 @@ impl Value {
         }
     }
 
+    #[inline]
     pub fn data(&self) -> &[u8] {
         &self.data
     }
 
+    #[inline]
+    pub fn ty(&self) -> Type {
+        self.value_type
+    }
+
+    #[inline]
     pub fn get<T>(&self) -> T
     where
         T: FromValue + StaticType,

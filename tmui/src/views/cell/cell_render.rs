@@ -15,7 +15,7 @@ pub enum CellRenderType {
     Image,
 }
 
-pub trait CellRender: Debug {
+pub trait CellRender: Debug + 'static {
     fn render(&self, painter: &mut Painter, geometry: FRect, val: &Value);
 
     fn border(&self) -> (f32, f32, f32, f32);
@@ -47,7 +47,7 @@ pub trait CellRender: Debug {
 
 macro_rules! cell_render_struct {
     ( $cell:ident, $builder:ident, $render_type:ident $(, $field:ident:$ty:tt)* ) => {
-        #[derive(Debug)]
+        #[derive(Debug, Clone, Copy)]
         pub struct $cell {
             border: (f32, f32, f32, f32),
             border_style: BorderStyle,

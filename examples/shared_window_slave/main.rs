@@ -9,6 +9,7 @@ mod test_widget;
 
 pub const IPC_NAME: &str = "shmem_ipc140";
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
     TestEvent(i32, Instant),

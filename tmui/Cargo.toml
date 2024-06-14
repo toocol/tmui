@@ -61,3 +61,19 @@ beep = "0.3.0"
 
 [dev-dependencies]
 log4rs = "1.1.1"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(macos_platform)',
+    'cfg(ios_platform)',
+    'cfg(windows_platform)',
+    'cfg(apple)',
+    'cfg(free_unix)',
+    'cfg(redox)',
+    'cfg(x11_platform)',
+    'cfg(wayland_platform)',
+    'cfg(orbital_platform)',
+    'cfg(font_awesome)',
+    'cfg(svg)',
+    'cfg(verbose_logging)',
+] }
