@@ -70,6 +70,7 @@ impl ContainerScaleCalculate for TestContainer {
 
 #[test]
 fn main() {
+    ActionHub::initialize();
     let r = TypeRegistry::instance();
     let mut c = Object::new::<TestContainer>(&[]);
     c.inner_type_register(r);

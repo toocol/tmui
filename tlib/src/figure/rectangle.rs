@@ -980,6 +980,17 @@ impl FRect {
     }
 
     #[inline]
+    pub fn contains_point(&self, point: &Point) -> bool {
+        if !self.is_valid() {
+            return false;
+        }
+        point.x() as f32 >= self.x()
+            && point.y() as f32 >= self.y()
+            && point.x() as f32 <= self.width()
+            && point.y() as f32 <= self.height()
+    }
+
+    #[inline]
     pub fn adjusted(&self, xp1: f32, yp1: f32, xp2: f32, yp2: f32) -> Self {
         Self {
             x: self.x + xp1,

@@ -1,7 +1,5 @@
 use crate::{
-    graphics::element::HierachyZ,
-    prelude::*,
-    widget::{ScaleCalculate, WidgetImpl},
+    graphics::element::HierachyZ, prelude::*, widget::{ScaleCalculate, WidgetImpl}
 };
 use tlib::{
     namespace::Orientation,
@@ -64,8 +62,15 @@ impl ObjectImpl for Container {
             }
             "visible" => {
                 let visible = value.get::<bool>();
+                emit!(self.visibility_changed(), visible);
                 if !self.children.is_empty() {
                     for child in self.children.iter_mut() {
+                        if let Some(iv) = cast!(child as IsolatedVisibility) {
+                            if iv.auto_hide() {
+                                continue;
+                            }
+                        }
+
                         if visible {
                             child.set_property("visible", true.to_value());
                             child.set_render_styles(true);

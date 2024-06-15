@@ -1,21 +1,13 @@
 use crate::{
     application::wheel_scroll_lines,
     graphics::painter::Painter,
-    overlay::OverlaidRegister,
     prelude::*,
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use derivative::Derivative;
 use std::mem::size_of;
 use tlib::{
-    emit,
-    events::{DeltaType, MouseEvent},
-    global::bound,
-    implements_enum_value,
-    namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation},
-    object::{ObjectImpl, ObjectSubclass},
-    signals,
-    values::{FromBytes, FromValue, ToBytes},
+    emit, events::{DeltaType, MouseEvent}, global::bound, implements_enum_value, isolated_visibility, namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation}, object::{ObjectImpl, ObjectSubclass}, run_after, signals, values::{FromBytes, FromValue, ToBytes}
 };
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
@@ -25,6 +17,8 @@ pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::from_rgb(100, 100, 100);
 pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
 
 #[extends(Widget)]
+#[run_after]
+#[isolated_visibility]
 pub struct ScrollBar {
     #[derivative(Default(value = "Orientation::Vertical"))]
     orientation: Orientation,
@@ -34,7 +28,7 @@ pub struct ScrollBar {
     #[derivative(Default(value = "0"))]
     minimum: i32,
     /// The maximum value of field `value`.
-    #[derivative(Default(value = "99"))]
+    #[derivative(Default(value = "0"))]
     maximum: i32,
     /// The distance the slider moves after a single click on the scroll arrow or pressing the move cursor key.
     #[derivative(Default(value = "1"))]
@@ -77,6 +71,13 @@ impl ObjectImpl for ScrollBar {
 }
 
 impl WidgetImpl for ScrollBar {
+    #[inline]
+    fn run_after(&mut self) {
+        if self.auto_hide {
+            self.hide()
+        }
+    }
+
     fn paint(&mut self, painter: &mut Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
@@ -299,6 +300,10 @@ impl ScrollBar {
             });
         }
     }
+    #[inline]
+    pub fn get_range(&self) -> (i32, i32) {
+        (self.minimum, self.maximum)
+    }
 
     /// Setter of property `page_step`.
     #[inline]
@@ -477,9 +482,10 @@ impl ScrollBar {
 
     #[inline]
     fn slider_len(&self) -> i32 {
+        let factor = if self.maximum == self.minimum { 1. } else { 0.2 };
         match self.orientation {
-            Orientation::Vertical => (self.size().height() as f32 * 0.2) as i32,
-            Orientation::Horizontal => (self.size().width() as f32 * 0.2) as i32,
+            Orientation::Vertical => (self.size().height() as f32 * factor) as i32,
+            Orientation::Horizontal => (self.size().width() as f32 * factor) as i32,
         }
     }
 
@@ -487,10 +493,8 @@ impl ScrollBar {
         let size = self.size();
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
-        let val = self.value();
         let slider_len = self.slider_len();
-        let maximum = self.maximum();
-        let percentage = val as f32 / maximum as f32;
+        let percentage = self.value as f32 / self.maximum as f32;
 
         match self.orientation {
             Orientation::Vertical => {
@@ -527,8 +531,6 @@ impl ScrollBar {
         new_value
     }
 }
-
-impl OverlaidRegister for ScrollBar {}
 
 #[repr(C)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]

@@ -495,6 +495,10 @@ pub trait WidgetExt {
 
     /// Get the image rect record of widget.
     fn image_rect_record(&self) -> FRect;
+
+    fn invalid_area(&self) -> FRect;
+
+    fn set_invalid_area(&mut self, rect: FRect);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -651,7 +655,6 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", false.to_value());
-        emit!(self.visibility_changed(), false);
 
         if !self.is_animation_progressing() && self.window().initialized() {
             self.window()
@@ -680,7 +683,6 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", true.to_value());
-        emit!(self.visibility_changed(), true);
         self.set_render_styles(true);
         self.update();
 
@@ -1651,5 +1653,15 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn image_rect_record(&self) -> FRect {
         self.widget_props().old_image_rect
+    }
+
+    #[inline]
+    fn invalid_area(&self) -> FRect {
+        self.widget_props().invalid_area
+    }
+
+    #[inline]
+    fn set_invalid_area(&mut self, rect: FRect) {
+        self.widget_props_mut().invalid_area = rect
     }
 }

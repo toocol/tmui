@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, global_watch::GlobalWatch, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
+use crate::{animation::Animation, async_task::AsyncTask, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
 
 pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
@@ -45,6 +45,12 @@ pub(crate) struct GeneralAttr<'a> {
 
     // fields about `frame_animator`
     pub(crate) frame_animator_reflect_clause: TokenStream,
+
+    // fields about `isolated_visibility`
+    pub(crate) is_isolated_visibility: bool,
+    pub(crate) isolated_visibility_field_clause: TokenStream,
+    pub(crate) isolated_visibility_impl_clause: TokenStream,
+    pub(crate) isolated_visibility_reflect_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -69,6 +75,8 @@ impl<'a> GeneralAttr<'a> {
         let mut iter_executor = false;
 
         let mut frame_animator = false;
+
+        let mut isolated_visibility = None;
 
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
@@ -95,6 +103,7 @@ impl<'a> GeneralAttr<'a> {
                     },
                     "iter_executor" => iter_executor = true,
                     "frame_animator" => frame_animator = true,
+                    "isolated_visibility" => isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?),
                     _ => {}
                 }
             }
@@ -250,6 +259,26 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // IsolatedVisibility
+        let isolated_visibility_field_clause = if let Some(iv) = isolated_visibility.as_ref() {
+            iv.isolated_visibility_field()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let isolated_visibility_impl_clause = if let Some(iv) = isolated_visibility.as_ref() {
+            iv.isolated_visibility_impl()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let isolated_visibility_reflect_clause = if let Some(iv) = isolated_visibility.as_ref() {
+            iv.isolated_visibility_reflect()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -276,6 +305,10 @@ impl<'a> GeneralAttr<'a> {
             global_watch_reflect_clause,
             iter_executor_reflect_clause,
             frame_animator_reflect_clause,
+            is_isolated_visibility: isolated_visibility.is_some(),
+            isolated_visibility_field_clause,
+            isolated_visibility_impl_clause,
+            isolated_visibility_reflect_clause,
         })
     }
 }

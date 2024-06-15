@@ -4,19 +4,14 @@ pub mod widget_inner;
 
 use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
-    application_window::ApplicationWindow,
-    graphics::{
+    application_window::ApplicationWindow, graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowRender},
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
         render_difference::RenderDiffence,
-    },
-    layout::LayoutMgr,
-    opti::tracker::Tracker,
-    prelude::*,
-    skia_safe,
+    }, layout::LayoutMgr, opti::tracker::Tracker, prelude::*, skia_safe
 };
 use derivative::Derivative;
 use log::error;
@@ -50,6 +45,7 @@ pub struct Widget {
     old_image_rect: FRect,
     child_image_rect_union: FRect,
     child_overflow_rect: FRect,
+    invalid_area: FRect,
     need_update_geometry: bool,
 
     #[derivative(Default(value = "true"))]
@@ -306,6 +302,12 @@ impl Widget {
     fn notify_visible(&mut self, visible: bool) {
         if let Some(child) = self.get_child_mut() {
             if visible {
+                if let Some(iv) = cast!(child as IsolatedVisibility) {
+                    if iv.auto_hide() {
+                        return;
+                    }
+                }
+
                 child.set_property("visible", true.to_value());
                 child.set_render_styles(true);
             } else {
@@ -413,6 +415,7 @@ impl ObjectImpl for Widget {
             }
             "visible" => {
                 let visible = value.get::<bool>();
+                emit!(self.visibility_changed(), visible);
                 self.notify_visible(visible)
             }
             "z_index" => {
@@ -713,6 +716,9 @@ impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
         let self_rect = self.rect();
         if !self_rect.contains(point) {
+            return false;
+        }
+        if self.invalid_area().contains_point(point) {
             return false;
         }
         for (&id, overlaid) in self.window().overlaid_rects().iter() {
@@ -1319,6 +1325,7 @@ impl dyn WidgetImpl {
         }
     }
 }
+impl AsMutPtr for dyn WidgetImpl {}
 
 pub trait ChildOp: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
@@ -1525,6 +1532,14 @@ pub trait RegionClear: WidgetImpl {
 }
 impl<T: WidgetImpl> RegionClear for T {}
 impl RegionClear for dyn WidgetImpl {}
+
+////////////////////////////////////// IsolatedVisibility //////////////////////////////////////
+#[reflect_trait]
+pub trait IsolatedVisibility: WidgetImpl {
+    fn auto_hide(&self) -> bool;
+
+    fn set_auto_hide(&mut self, auto_hide: bool);
+}
 
 /// `MouseEnter`/`MouseLeave`:
 /// - `MouseEnter` fires when the mouse pointer enters the bounds of an element,

@@ -36,6 +36,9 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
 
     let frame_animator_reflect_clause = &general_attr.frame_animator_reflect_clause;
 
+    let isolated_visibility_impl_clause = &general_attr.isolated_visibility_impl_clause;
+    let isolated_visibility_reflect_clause = &general_attr.isolated_visibility_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -75,6 +78,13 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
 
                     if general_attr.is_loadable {
                         let field = &general_attr.loadable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
+                    }
+
+                    if general_attr.is_isolated_visibility {
+                        let field = &general_attr.isolated_visibility_field_clause;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
@@ -142,6 +152,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
 
                 #global_watch_impl_clause
 
+                #isolated_visibility_impl_clause
+
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -162,6 +174,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                         #global_watch_reflect_clause
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
+                        #isolated_visibility_reflect_clause
                     }
 
                     #[inline]

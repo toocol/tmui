@@ -53,9 +53,10 @@ pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
     callbacks::Callbacks, widget_ext::WidgetExt, ChildOp, ChildRegionAcquire, EventBubble,
-    InnerCustomizeEventProcess, PointEffective, ReflectInnerCustomizeEventProcess,
-    ReflectIterExecutor, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd,
-    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire,
+    InnerCustomizeEventProcess, IsolatedVisibility, PointEffective,
+    ReflectInnerCustomizeEventProcess, ReflectIsolatedVisibility, ReflectIterExecutor,
+    ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd, WidgetImpl,
+    WidgetPropsAcquire, WidgetSignals, WindowAcquire,
 };
 pub use tlib::tokio;
 pub use tlib::{

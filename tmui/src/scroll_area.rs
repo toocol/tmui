@@ -2,7 +2,6 @@ use crate::{
     application_window::ApplicationWindow,
     container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutMgr,
-    overlay::OverlaidRegister,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition},
 };
@@ -138,7 +137,8 @@ impl ScrollAreaExt for ScrollArea {
         self.layout_mode = layout_mode;
         self.scroll_bar_mut()
             .set_occupy_space(layout_mode == LayoutMode::Normal);
-        self.scroll_bar_mut().set_overlaid(layout_mode == LayoutMode::Overlay);
+        self.scroll_bar_mut()
+            .set_overlaid(layout_mode == LayoutMode::Overlay);
         let layout_mode = self.layout_mode;
 
         if self.area().is_some() {
@@ -149,12 +149,25 @@ impl ScrollAreaExt for ScrollArea {
                     self.scroll_bar_mut(),
                     null
                 );
+                disconnect!(
+                    self.scroll_bar_mut(),
+                    geometry_changed(),
+                    self.area_mut().unwrap(),
+                    null
+                );
+                self.area_mut().unwrap().set_invalid_area(FRect::default());
             } else {
                 connect!(
                     self.area_mut().unwrap(),
                     invalidated(),
                     self.scroll_bar_mut(),
                     update()
+                );
+                connect!(
+                    self.scroll_bar_mut(),
+                    geometry_changed(),
+                    self.area_mut().unwrap(),
+                    set_invalid_area(FRect)
                 );
             }
         }
@@ -174,6 +187,7 @@ impl ScrollAreaGenericExt for ScrollArea {
         area.set_hexpand(true);
         if self.layout_mode == LayoutMode::Overlay {
             connect!(area, invalidated(), self.scroll_bar_mut(), update());
+            connect!(self.scroll_bar_mut(), geometry_changed(), area, set_invalid_area(FRect));
         }
 
         ApplicationWindow::initialize_dynamic_component(area.as_mut());
@@ -337,8 +351,6 @@ fn layout_normal(widget: &mut dyn ScrollAreaExt) {
             }
         }
     }
-
-    scroll_bar.remove_overlaid();
 }
 
 fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
