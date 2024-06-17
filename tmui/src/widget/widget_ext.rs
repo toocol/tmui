@@ -1096,7 +1096,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.widget_props_mut().background = color;
         emit!(Widget::set_background => self.background_changed(), color);
 
-        self.update();
+        self.notify_update();
     }
 
     #[inline]
@@ -1662,6 +1662,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_invalid_area(&mut self, rect: FRect) {
-        self.widget_props_mut().invalid_area = rect
+        self.widget_props_mut().invalid_area = rect;
+        emit!(self.invalid_area_changed(), rect);
     }
 }

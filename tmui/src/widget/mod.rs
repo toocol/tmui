@@ -4,14 +4,19 @@ pub mod widget_inner;
 
 use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
-    application_window::ApplicationWindow, graphics::{
+    application_window::ApplicationWindow,
+    graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowRender},
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
         render_difference::RenderDiffence,
-    }, layout::LayoutMgr, opti::tracker::Tracker, prelude::*, skia_safe
+    },
+    layout::LayoutMgr,
+    opti::tracker::Tracker,
+    prelude::*,
+    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
@@ -263,6 +268,11 @@ pub trait WidgetSignals: ActionExt {
         ///
         /// @param [`bool`]
         visibility_changed();
+
+        /// Emit when widget's invalid area has changed.
+        ///
+        /// @param [`FRect`]
+        invalid_area_changed();
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
@@ -508,7 +518,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
         // The default paint blend mode is set to `Src`,
         // it should be set to `SrcOver` when the widget is undergoing animation progress.
-        if self.is_animation_progressing() || self.background() == Color::TRANSPARENT {
+        painter.set_blend_mode(self.blend_mode());
+        if self.is_animation_progressing() || self.background().a() != 255 {
             painter.set_blend_mode(BlendMode::SrcOver);
         }
 
@@ -582,14 +593,20 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             self.clip_rect(&mut painter, ClipOp::Intersect);
         }
 
-        if let Some(loading) = cast_mut!(self as Loadable) {
-            if loading.is_loading() {
+        let should_paint = match cast_mut!(self as Loadable) {
+            Some(loading) if loading.is_loading() => {
                 loading.render_loading(&mut painter);
-            } else {
-                let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
-                self.paint(&mut painter);
+                false
             }
-        } else {
+            _ => true,
+        };
+
+        if should_paint {
+            let invalid_area = self.invalid_area();
+            if invalid_area.is_valid() {
+                self.clear_global(&mut painter, invalid_area);
+            }
+
             let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
             self.paint(&mut painter);
         }
@@ -1170,6 +1187,20 @@ pub trait WidgetImpl:
         false
     }
 
+    #[inline]
+    fn blend_mode(&self) -> BlendMode {
+        BlendMode::default()
+    }
+
+    #[inline]
+    fn notify_update(&mut self) {
+        if !self.initialized() {
+            return;
+        }
+
+        self.update()
+    }
+
     /// Invoke this function when renderering.
     #[inline]
     fn paint(&mut self, painter: &mut Painter) {}
@@ -1521,7 +1552,7 @@ pub trait RegionClear: WidgetImpl {
     /// The coordinate of given rect should be [`Coordinate::Widget`]
     #[inline]
     fn clear<T: Into<SkiaRect>>(&self, painter: &mut Painter, rect: T) {
-        painter.fill_rect(rect, self.opaque_background())
+        painter.fill_rect(rect, self.opaque_background());
     }
 
     /// The coordinate of given rect should be [`Coordinate::Global`]

@@ -241,6 +241,9 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
         if !self_rect.contains(point) {
             return false;
         }
+        if self.invalid_area().contains_point(point) {
+            return false;
+        }
 
         for (&id, overlaid) in self.window().overlaid_rects().iter() {
             if self.descendant_of(id) || self.id() == id {

@@ -80,13 +80,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 return event;
             }
 
-            let modal_widget = window.modal_widget();
-
-            for (_name, widget_opt) in widgets_map.iter_mut() {
-                let widget = nonnull_mut!(widget_opt);
-                let visible = widget.visible();
-
-                if pressed_widget != 0 && widget.id() == pressed_widget && visible {
+            if pressed_widget != 0 {
+                let widget = nonnull_mut!(widgets_map.get_mut(&pressed_widget).unwrap());
+                if widget.visible() {
                     let widget_point = widget.map_to_widget(&pos);
                     evt.set_position((widget_point.x(), widget_point.y()));
 
@@ -96,8 +92,13 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);
                     }
-                    break;
-                } else {
+                }
+            } else {
+                let modal_widget = window.modal_widget();
+                for (_name, widget_opt) in widgets_map.iter_mut() {
+                    let widget = nonnull_mut!(widget_opt);
+                    let visible = widget.visible();
+
                     if let Some(ref modal) = modal_widget {
                         if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
                             continue;

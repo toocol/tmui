@@ -7,13 +7,20 @@ use crate::{
 use derivative::Derivative;
 use std::mem::size_of;
 use tlib::{
-    emit, events::{DeltaType, MouseEvent}, global::bound, implements_enum_value, isolated_visibility, namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation}, object::{ObjectImpl, ObjectSubclass}, run_after, signals, values::{FromBytes, FromValue, ToBytes}
+    emit,
+    events::{DeltaType, MouseEvent},
+    global::bound,
+    implements_enum_value, isolated_visibility,
+    namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation},
+    object::{ObjectImpl, ObjectSubclass},
+    run_after, signals,
+    values::{FromBytes, FromValue, ToBytes},
 };
 
 pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
 pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 10;
 
-pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::from_rgb(100, 100, 100);
+pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::GREY_LIGHT;
 pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
 
 #[extends(Widget)]
@@ -30,6 +37,15 @@ pub struct ScrollBar {
     /// The maximum value of field `value`.
     #[derivative(Default(value = "0"))]
     maximum: i32,
+    /// The value represent the visible area.
+    /// To determine the slider length with maximum;
+    /// 
+    /// ### Default:
+    /// slider_len = 0.15 * scroll_bar_size;
+    /// 
+    /// ### The `visible_area` was specified:
+    /// slider_len = (visible_area / maximum + visible_area) * scroll_bar_size;
+    visible_area: Option<i32>,
     /// The distance the slider moves after a single click on the scroll arrow or pressing the move cursor key.
     #[derivative(Default(value = "1"))]
     single_step: i32,
@@ -45,7 +61,23 @@ pub struct ScrollBar {
     offset_accumulated: f32,
     scroll_bar_position: ScrollBarPosition,
     overlaid: bool,
+
+    slider_radius: f32,
+    color: Color,
+
+    active_background: Option<Color>,
+    active_color: Option<Color>,
+    mouse_in: bool,
 }
+
+pub trait ScrollBarSignals: ActionExt {
+    signals!(
+        ScrollBarSignals:
+
+        need_update();
+    );
+}
+impl ScrollBarSignals for ScrollBar {}
 
 impl ObjectSubclass for ScrollBar {
     const NAME: &'static str = "ScrollBar";
@@ -67,6 +99,8 @@ impl ObjectImpl for ScrollBar {
         }
 
         self.set_mouse_tracking(true);
+        self.set_background(DEFAULT_SCROLL_BAR_BACKGROUND);
+        self.color = DEFAULT_SLIDER_BACKGROUND;
     }
 }
 
@@ -78,17 +112,61 @@ impl WidgetImpl for ScrollBar {
         }
     }
 
+    #[inline]
+    fn blend_mode(&self) -> BlendMode {
+        if self.overlaid && self.background().a() != 255 {
+            BlendMode::SrcOver
+        } else {
+            BlendMode::default()
+        }
+    }
+
+    #[inline]
+    fn notify_update(&mut self) {
+        if !self.initialized() {
+            return;
+        }
+
+        if self.overlaid {
+            emit!(self.need_update());
+        } else {
+            self.update();
+        }
+    }
+
     fn paint(&mut self, painter: &mut Painter) {
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
 
-        if self.overlaid {
+        painter.set_antialiasing(true);
+        let transparency = self.transparency();
+        let background = if self.is_active() && self.active_background.is_some() {
+            self.active_background.unwrap()
+        } else {
+            self.background()
+        };
+        if background.a() != 255 || transparency != 255 {
             painter.set_blend_mode(BlendMode::SrcOver);
+        } else {
+            painter.set_blend_mode(BlendMode::default());
         }
-        painter.set_antialiasing(false);
-        painter.fill_rect(content_rect, DEFAULT_SCROLL_BAR_BACKGROUND);
+        painter.fill_rect(content_rect, background);
 
         // Draw the slider.
-        painter.fill_rect(self.calculate_slider(), DEFAULT_SLIDER_BACKGROUND);
+        let color = if self.is_active() && self.active_color.is_some() {
+            self.active_color.unwrap()
+        } else {
+            self.color
+        };
+        if color.a() != 255 || transparency != 255 {
+            painter.set_blend_mode(BlendMode::SrcOver);
+        } else {
+            painter.set_blend_mode(BlendMode::default());
+        }
+        if self.slider_radius > 0. {
+            painter.fill_round_rect(self.calculate_slider(), self.slider_radius, color);
+        } else {
+            painter.fill_rect(self.calculate_slider(), color);
+        }
     }
 
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
@@ -108,7 +186,7 @@ impl WidgetImpl for ScrollBar {
         };
 
         if self.scroll_by_delta(event.modifier(), delta, event.delta_type()) {
-            self.update()
+            self.notify_update()
         }
     }
 
@@ -121,7 +199,10 @@ impl WidgetImpl for ScrollBar {
                 Orientation::Horizontal => self.press_offset = x - slider.x(),
                 Orientation::Vertical => self.press_offset = y - slider.y(),
             }
-            self.pressed = true
+            self.pressed = true;
+            if self.repaint_when_active() {
+                self.notify_update();
+            }
         } else {
             let size = self.size();
             let slider_len = self.slider_len();
@@ -146,10 +227,16 @@ impl WidgetImpl for ScrollBar {
     fn on_mouse_released(&mut self, _: &MouseEvent) {
         self.pressed = false;
         self.window().high_load_request(false);
+        if self.repaint_when_active() {
+            self.notify_update();
+        }
     }
 
     fn on_mouse_move(&mut self, event: &MouseEvent) {
         if self.pressed {
+            if self.minimum == self.maximum {
+                return;
+            }
             match self.orientation {
                 Orientation::Horizontal => {
                     let size = self.size();
@@ -159,8 +246,8 @@ impl WidgetImpl for ScrollBar {
 
                     let slider_len = self.slider_len();
                     let maximum = self.maximum();
-                    let value = (start_x * maximum) / (size.width() - slider_len);
-                    self.set_value(value.min(maximum).max(0));
+                    let value = (start_x as i64 * maximum as i64) / (size.width() as i64 - slider_len as i64);
+                    self.set_value((value as i32).min(maximum).max(0));
                 }
                 Orientation::Vertical => {
                     let size = self.size();
@@ -170,10 +257,26 @@ impl WidgetImpl for ScrollBar {
 
                     let slider_len = self.slider_len();
                     let maximum = self.maximum();
-                    let value = (start_y * maximum) / (size.height() - slider_len);
-                    self.set_value(value.min(maximum).max(0));
+                    let value = (start_y as i64 * maximum as i64) / (size.height() as i64 - slider_len as i64);
+                    self.set_value((value as i32).min(maximum).max(0));
                 }
             }
+        }
+    }
+
+    #[inline]
+    fn on_mouse_enter(&mut self, _: &MouseEvent) {
+        self.mouse_in = true;
+        if self.repaint_when_active() {
+            self.notify_update();
+        }
+    }
+
+    #[inline]
+    fn on_mouse_leave(&mut self, _: &MouseEvent) {
+        self.mouse_in = false;
+        if self.repaint_when_active() {
+            self.notify_update();
         }
     }
 }
@@ -242,6 +345,31 @@ impl ScrollBar {
         }
     }
 
+    #[inline]
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
+    #[inline]
+    pub fn set_color(&mut self, color: Color) {
+        self.color = color;
+        self.notify_update();
+    }
+
+    /// See [`ScrollBar::visible_area`]
+    #[inline]
+    pub fn get_visible_area(&self) -> Option<i32> {
+        self.visible_area
+    }
+    /// See [`ScrollBar::visible_area`]
+    #[inline]
+    pub fn set_visible_area(&mut self, visible_area: i32) {
+        if visible_area <= 0 {
+            return
+        }
+        self.visible_area = Some(visible_area);
+    }
+
     /// Setter of property `value`.
     pub fn set_value(&mut self, value: i32) {
         self.value = value;
@@ -253,7 +381,7 @@ impl ScrollBar {
             emit!(ScrollBar::set_value => self.slider_moved(), self.position)
         }
         emit!(ScrollBar::set_value => self.value_changed(), value);
-        self.update();
+        self.notify_update();
     }
     /// Getter of property `value`.
     #[inline]
@@ -291,13 +419,13 @@ impl ScrollBar {
         self.maximum = max.max(min);
 
         if old_min != self.minimum || old_max != self.maximum {
-            self.update();
-            emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
             self.set_value(if self.value > self.maximum {
                 self.maximum
             } else {
                 self.value
             });
+            emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
+            self.notify_update();
         }
     }
     #[inline]
@@ -345,7 +473,7 @@ impl ScrollBar {
     #[inline]
     pub fn set_scroll_bar_position(&mut self, scroll_bar_position: ScrollBarPosition) {
         self.scroll_bar_position = scroll_bar_position;
-        self.update()
+        self.notify_update();
     }
 
     /// Setter of property `slider_position`.
@@ -355,7 +483,7 @@ impl ScrollBar {
             return;
         }
         self.position = position;
-        self.update();
+        self.notify_update();
         if self.pressed {
             emit!(ScrollBar::set_slider_position => self.slider_moved(), self.position)
         }
@@ -409,10 +537,39 @@ impl ScrollBar {
     }
 
     #[inline]
+    pub fn is_active(&self) -> bool {
+        self.mouse_in || self.pressed
+    }
+
+    #[inline]
+    pub fn set_active_color(&mut self, color: Option<Color>) {
+        self.active_color = color;
+    }
+
+    #[inline]
+    pub fn set_active_background(&mut self, background: Option<Color>) {
+        self.active_background = background;
+    }
+
+    #[inline]
+    pub fn repaint_when_active(&self) -> bool {
+        self.active_color.is_some() || self.active_background.is_some()
+    }
+
+    #[inline]
+    pub fn set_slider_radius(&mut self, radius: f32) {
+        self.slider_radius = radius;
+    }
+    #[inline]
+    pub fn slider_radius(&self) -> f32 {
+        self.slider_radius
+    }
+
+    #[inline]
     fn set_steps(&mut self, single: i32, page: i32) {
         self.single_step = single.abs();
         self.page_step = page.abs();
-        self.update();
+        self.notify_update();
     }
 
     pub fn scroll_by_delta(
@@ -482,7 +639,14 @@ impl ScrollBar {
 
     #[inline]
     fn slider_len(&self) -> i32 {
-        let factor = if self.maximum == self.minimum { 1. } else { 0.2 };
+        let factor = if self.maximum == self.minimum {
+            1.
+        } else if let Some(visible_area) = self.visible_area {
+            (visible_area as f32 / (self.maximum + visible_area) as f32).clamp(0.02, 1.)
+        } else {
+            0.15
+        };
+
         match self.orientation {
             Orientation::Vertical => (self.size().height() as f32 * factor) as i32,
             Orientation::Horizontal => (self.size().width() as f32 * factor) as i32,
@@ -490,8 +654,8 @@ impl ScrollBar {
     }
 
     fn calculate_slider(&mut self) -> Rect {
-        let size = self.size();
         let content_rect = self.contents_rect(Some(Coordinate::Widget));
+        let size = content_rect.size();
 
         let slider_len = self.slider_len();
         let percentage = self.value as f32 / self.maximum as f32;

@@ -91,7 +91,7 @@ impl WidgetImpl for TreeViewImage {
 
     fn paint(&mut self, painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
-            self.clear(painter, redraw_rect.rect())
+            self.clear(painter, redraw_rect.rect());
         }
 
         let rect = self.contents_rect(Some(Coordinate::Widget));
@@ -240,6 +240,7 @@ impl TreeViewImage {
         let scroll_bar = nonnull_mut!(self.scroll_bar);
         scroll_bar.set_single_step(1);
         scroll_bar.set_page_step(window_lines);
+        scroll_bar.set_visible_area(window_lines);
     }
 
     #[inline]

@@ -170,7 +170,7 @@ pub trait ShadowRender: WidgetImpl {
         }
 
         painter.paint_mut().set_mask_filter(None);
-        painter.set_blend_mode(BlendMode::default());
+        painter.set_blend_mode(self.blend_mode());
         painter.restore_pen();
         painter.restore();
     }

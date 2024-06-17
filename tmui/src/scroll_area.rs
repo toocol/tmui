@@ -3,7 +3,7 @@ use crate::{
     container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutMgr,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition},
+    scroll_bar::{ScrollBar, ScrollBarPosition, ScrollBarSignals},
 };
 use derivative::Derivative;
 use tlib::{
@@ -169,6 +169,7 @@ impl ScrollAreaExt for ScrollArea {
                     self.area_mut().unwrap(),
                     set_invalid_area(FRect)
                 );
+                connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
             }
         }
 

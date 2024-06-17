@@ -5,20 +5,17 @@ use tlib::{
     tokio::task::JoinHandle,
 };
 use tmui::{
-    prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    views::{cell::{cell_render::TextCellRender, Cell}, tree_view::{
+    prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, views::{cell::{cell_render::TextCellRender, Cell}, tree_view::{
         node_render::NodeRender,
         tree_node::TreeNode,
         tree_view_object::TreeViewObject,
         TreeView,
-    }},
-    widget::{ChildOp, WidgetImpl},
+    }}, widget::{ChildOp, WidgetImpl}
 };
 
 use crate::ctx_menu::CtxMenu;
 
-const DATA_SIZE: i32 = 10000;
+const DATA_SIZE: i32 = 300000;
 
 #[extends(Widget)]
 #[derive(Childable)]
@@ -37,14 +34,20 @@ impl ObjectImpl for TreeViewHolder {
     fn construct(&mut self) {
         self.parent_construct();
 
-        // self.tree_view
-        //     .set_layout_mode(tmui::scroll_area::LayoutMode::Overlay);
+        self.tree_view
+            .set_layout_mode(tmui::scroll_area::LayoutMode::Overlay);
         self.tree_view.add_popup(CtxMenu::new());
         self.tree_view.start_loading();
         self.tree_view.set_hexpand(true);
         self.tree_view.set_vexpand(true);
         self.tree_view.set_mouse_tracking(true);
         self.tree_view.set_line_spacing(10);
+
+        self.tree_view.scroll_bar_mut().set_background(Color::TRANSPARENT);
+        self.tree_view.scroll_bar_mut().set_color(Color::GREY_LIGHT.with_a(155));
+        self.tree_view.scroll_bar_mut().set_active_color(Some(Color::GREY_MEDIUM.with_a(155)));
+        self.tree_view.scroll_bar_mut().set_slider_radius(5.);
+
         self.tree_view.register_node_pressed(|node, evt| {
             println!(
                 "Node has pressed, id = {}, mouse position = {:?}, value = {:?}",

@@ -122,6 +122,7 @@ pub(crate) fn generate_scroll_area_impl(
             #[inline]
             fn set_layout_mode(&mut self, layout_mode: #use_prefix::scroll_area::LayoutMode) {
                 use #use_prefix::tlib::figure::rectangle::FRect;
+                use #use_prefix::scroll_bar::ScrollBarSignals;
                 self.layout_mode = layout_mode;
                 self.scroll_bar_mut().set_occupy_space(layout_mode == #use_prefix::scroll_area::LayoutMode::Normal);
                 self.scroll_bar_mut().set_overlaid(layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay);
@@ -134,6 +135,7 @@ pub(crate) fn generate_scroll_area_impl(
                     } else {
                         #use_prefix::tlib::connect!(self.area_mut().unwrap(), invalidated(), self.scroll_bar_mut(), update());
                         #use_prefix::tlib::connect!(self.scroll_bar_mut(), geometry_changed(), self.area_mut().unwrap(), set_invalid_area(FRect));
+                        #use_prefix::tlib::connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
                     }
                 }
 
@@ -148,6 +150,7 @@ pub(crate) fn generate_scroll_area_impl(
             fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
                 use #use_prefix::application_window::ApplicationWindow;
                 use #use_prefix::tlib::figure::rectangle::FRect;
+                use #use_prefix::scroll_bar::ScrollBarSignals;
 
                 area.set_parent(self);
                 area.set_vexpand(true);
@@ -155,6 +158,7 @@ pub(crate) fn generate_scroll_area_impl(
                 if self.layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay {
                     #use_prefix::tlib::connect!(area, invalidated(), self.scroll_bar_mut(), update());
                     #use_prefix::tlib::connect!(self.scroll_bar_mut(), geometry_changed(), area, set_invalid_area(FRect));
+                    #use_prefix::tlib::connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
                 }
 
                 ApplicationWindow::initialize_dynamic_component(area.as_mut());

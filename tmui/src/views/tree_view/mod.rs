@@ -71,6 +71,7 @@ impl ObjectImpl for TreeView {
         let mut image = TreeViewImage::new(self.scroll_bar_mut());
 
         connect!(self, background_changed(), image, set_background(Color));
+        connect!(self, invalid_area_changed(), image, set_invalid_area(FRect));
 
         self.set_area(image);
 
