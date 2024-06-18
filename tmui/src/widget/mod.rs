@@ -731,13 +731,16 @@ pub trait PointEffective {
 }
 impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
-        let self_rect = self.rect();
-        if !self_rect.contains(point) {
+        if !self.visible() {
+            return false;
+        }
+        if !self.rect().contains(point) {
             return false;
         }
         if self.invalid_area().contains_point(point) {
             return false;
         }
+
         for (&id, overlaid) in self.window().overlaid_rects().iter() {
             if self.descendant_of(id) || self.id() == id {
                 continue;
@@ -1570,6 +1573,10 @@ pub trait IsolatedVisibility: WidgetImpl {
     fn auto_hide(&self) -> bool;
 
     fn set_auto_hide(&mut self, auto_hide: bool);
+
+    fn shadow_rect(&self) -> FRect;
+
+    fn set_shadow_rect(&mut self, rect: FRect);
 }
 
 /// `MouseEnter`/`MouseLeave`:

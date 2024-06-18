@@ -93,6 +93,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                         event = Some(evt);
                     }
                 }
+                window.set_pressed_widget(0);
             } else {
                 let modal_widget = window.modal_widget();
                 for (_name, widget_opt) in widgets_map.iter_mut() {
@@ -124,7 +125,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
         // Mouse moved.
         EventType::MouseMove => {
             let mut evt = downcast_event::<MouseEvent>(evt).unwrap();
+            let evt_bak = evt.clone();
             let widgets_map = ApplicationWindow::widgets_of(window.id());
+            let shadow_mouse_watch = ApplicationWindow::window_of(window.id()).shadow_mouse_watch();
             let pos = evt.position().into();
 
             let prevent = window.handle_global_watch(GlobalWatchEvent::MouseMove, |handle| {
@@ -147,6 +150,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     }
                 }
 
+                if !widget.visible() {
+                    continue;
+                }
                 window.check_mouse_enter(widget, &pos, &evt);
 
                 let widget_position = widget.map_to_widget(&pos);
@@ -211,6 +217,11 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     }
                     break;
                 }
+            }
+
+            for hnd in shadow_mouse_watch.iter_mut() {
+                let widget = nonnull_mut!(hnd);
+                window.check_mouse_enter(widget, &pos, &evt_bak);
             }
         }
 

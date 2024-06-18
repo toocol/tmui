@@ -6,7 +6,10 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Meta};
 
-pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    ignore_default: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
@@ -84,10 +87,12 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                     }
 
                     if general_attr.is_isolated_visibility {
-                        let field = &general_attr.isolated_visibility_field_clause;
-                        fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            #field
-                        })?);
+                        let iv_fields = &general_attr.isolated_visibility_field_clause;
+                        for field in iv_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #field
+                            })?);
+                        }
                     }
 
                     childable.parse_childable(fields)?;
@@ -219,7 +224,7 @@ pub(crate) fn expand_with_layout(
     layout_meta: &Meta,
     layout: &str,
     internal: bool,
-    ignore_default: bool
+    ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     layout::expand(ast, layout_meta, layout, internal, ignore_default)
 }

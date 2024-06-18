@@ -48,7 +48,7 @@ pub(crate) struct GeneralAttr<'a> {
 
     // fields about `isolated_visibility`
     pub(crate) is_isolated_visibility: bool,
-    pub(crate) isolated_visibility_field_clause: TokenStream,
+    pub(crate) isolated_visibility_field_clause: Vec<TokenStream>,
     pub(crate) isolated_visibility_impl_clause: TokenStream,
     pub(crate) isolated_visibility_reflect_clause: TokenStream,
 }
@@ -263,7 +263,7 @@ impl<'a> GeneralAttr<'a> {
         let isolated_visibility_field_clause = if let Some(iv) = isolated_visibility.as_ref() {
             iv.isolated_visibility_field()
         } else {
-            proc_macro2::TokenStream::new()
+           vec![] 
         };
 
         let isolated_visibility_impl_clause = if let Some(iv) = isolated_visibility.as_ref() {

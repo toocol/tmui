@@ -236,9 +236,10 @@ pub trait ContainerPointEffective {
 }
 impl<T: ContainerImpl> ContainerPointEffective for T {
     fn container_point_effective(&self, point: &Point) -> bool {
-        let self_rect = self.rect();
-
-        if !self_rect.contains(point) {
+        if !self.visible() {
+            return false;
+        }
+        if !self.rect().contains(point) {
             return false;
         }
         if self.invalid_area().contains_point(point) {

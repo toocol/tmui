@@ -96,7 +96,12 @@ pub trait ElementExt {
     fn update_styles_rect(&mut self, rect: CoordRect);
 
     /// Specified the region to redraw.
-    fn update_region(&mut self, region: &CoordRegion);
+    /// @return false if region is empty.
+    fn update_region(&mut self, region: &CoordRegion) -> bool;
+
+    /// Specified the styles region to redraw;
+    /// @return false if region is empty.
+    fn update_styles_region(&mut self, region: &CoordRegion) -> bool;
 
     /// Cleaer the redraw region.
     fn clear_regions(&mut self);
@@ -151,17 +156,17 @@ impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn update(&mut self) {
         if !self.invalidate() {
-            emit!(self.invalidated());
             self.set_property("invalidate", (true, true).to_value());
-            Board::notify_update()
+            Board::notify_update();
+            emit!(self.invalidated());
         }
     }
 
     fn update_with_propagate(&mut self, propagate: bool) {
         if !self.invalidate() {
-            emit!(self.invalidated());
             self.set_property("invalidate", (true, propagate).to_value());
-            Board::notify_update()
+            Board::notify_update();
+            emit!(self.invalidated());
         }
     }
 
@@ -173,23 +178,34 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
+        self.element_props_mut().redraw_region.add_rect(rect);
         self.update_with_propagate(false);
-        self.element_props_mut().redraw_region.add_rect(rect)
     }
 
     #[inline]
     fn update_styles_rect(&mut self, rect: CoordRect) {
+        self.element_props_mut().styles_redraw_region.add_rect(rect);
         self.update_with_propagate(false);
-        self.element_props_mut().styles_redraw_region.add_rect(rect)
     }
 
     #[inline]
-    fn update_region(&mut self, region: &CoordRegion) {
+    fn update_region(&mut self, region: &CoordRegion) -> bool {
         if region.is_empty() {
-            return;
+            return false;
         }
+        self.element_props_mut().redraw_region.add_region(region);
         self.update_with_propagate(false);
-        self.element_props_mut().redraw_region.add_region(region)
+        true
+    }
+
+    #[inline]
+    fn update_styles_region(&mut self, region: &CoordRegion) -> bool {
+        if region.is_empty() {
+            return false;
+        }
+        self.element_props_mut().styles_redraw_region.add_region(region);
+        self.update_with_propagate(false);
+        true
     }
 
     #[inline]

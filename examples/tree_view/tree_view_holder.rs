@@ -47,6 +47,7 @@ impl ObjectImpl for TreeViewHolder {
         self.tree_view.scroll_bar_mut().set_color(Color::GREY_LIGHT.with_a(155));
         self.tree_view.scroll_bar_mut().set_active_color(Some(Color::GREY_MEDIUM.with_a(155)));
         self.tree_view.scroll_bar_mut().set_slider_radius(5.);
+        self.tree_view.scroll_bar_mut().set_auto_hide(true);
 
         self.tree_view.register_node_pressed(|node, evt| {
             println!(

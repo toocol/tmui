@@ -2,7 +2,7 @@ use crate::{
     application::wheel_scroll_lines,
     graphics::painter::Painter,
     prelude::*,
-    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
+    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
 };
 use derivative::Derivative;
 use std::mem::size_of;
@@ -39,10 +39,10 @@ pub struct ScrollBar {
     maximum: i32,
     /// The value represent the visible area.
     /// To determine the slider length with maximum;
-    /// 
+    ///
     /// ### Default:
     /// slider_len = 0.15 * scroll_bar_size;
-    /// 
+    ///
     /// ### The `visible_area` was specified:
     /// slider_len = (visible_area / maximum + visible_area) * scroll_bar_size;
     visible_area: Option<i32>,
@@ -108,6 +108,8 @@ impl WidgetImpl for ScrollBar {
     #[inline]
     fn run_after(&mut self) {
         if self.auto_hide {
+            self.window().add_shadow_mouse_watch(self);
+            self.set_shadow_rect(self.rect_f());
             self.hide()
         }
     }
@@ -146,6 +148,10 @@ impl WidgetImpl for ScrollBar {
         };
         if background.a() != 255 || transparency != 255 {
             painter.set_blend_mode(BlendMode::SrcOver);
+
+            if !self.overlaid {
+                self.clear(painter, content_rect);
+            }
         } else {
             painter.set_blend_mode(BlendMode::default());
         }
@@ -246,7 +252,8 @@ impl WidgetImpl for ScrollBar {
 
                     let slider_len = self.slider_len();
                     let maximum = self.maximum();
-                    let value = (start_x as i64 * maximum as i64) / (size.width() as i64 - slider_len as i64);
+                    let value = (start_x as i64 * maximum as i64)
+                        / (size.width() as i64 - slider_len as i64);
                     self.set_value((value as i32).min(maximum).max(0));
                 }
                 Orientation::Vertical => {
@@ -257,7 +264,8 @@ impl WidgetImpl for ScrollBar {
 
                     let slider_len = self.slider_len();
                     let maximum = self.maximum();
-                    let value = (start_y as i64 * maximum as i64) / (size.height() as i64 - slider_len as i64);
+                    let value = (start_y as i64 * maximum as i64)
+                        / (size.height() as i64 - slider_len as i64);
                     self.set_value((value as i32).min(maximum).max(0));
                 }
             }
@@ -267,16 +275,26 @@ impl WidgetImpl for ScrollBar {
     #[inline]
     fn on_mouse_enter(&mut self, _: &MouseEvent) {
         self.mouse_in = true;
-        if self.repaint_when_active() {
+        if !self.visible() && self.auto_hide {
+            self.show();
             self.notify_update();
+        } else {
+            if self.repaint_when_active() {
+                self.notify_update();
+            }
         }
     }
 
     #[inline]
     fn on_mouse_leave(&mut self, _: &MouseEvent) {
         self.mouse_in = false;
-        if self.repaint_when_active() {
+        if self.visible() && !self.is_active() && self.auto_hide {
+            self.hide();
             self.notify_update();
+        } else {
+            if self.repaint_when_active() {
+                self.notify_update();
+            }
         }
     }
 }
@@ -365,7 +383,7 @@ impl ScrollBar {
     #[inline]
     pub fn set_visible_area(&mut self, visible_area: i32) {
         if visible_area <= 0 {
-            return
+            return;
         }
         self.visible_area = Some(visible_area);
     }

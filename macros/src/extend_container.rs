@@ -130,10 +130,12 @@ pub(crate) fn expand(
                     }
 
                     if general_attr.is_isolated_visibility {
-                        let field = &general_attr.isolated_visibility_field_clause;
-                        fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            #field
-                        })?);
+                        let iv_fields = &general_attr.isolated_visibility_field_clause;
+                        for field in iv_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #field
+                            })?);
+                        }
                     }
 
                     // If field with attribute `#[children]`,

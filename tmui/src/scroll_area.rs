@@ -69,6 +69,62 @@ pub trait ScrollAreaGenericExt {
     fn get_area_cast_mut<T: WidgetImpl + ObjectSubclass>(&mut self) -> Option<&mut T>;
 }
 
+pub trait ScrollAreaSlots: ScrollAreaExt {
+    fn update_scroll_bar(&mut self) {
+        let scroll_bar_rect = self.scroll_bar().rect_f();
+
+        let area = self.area().unwrap();
+        let mut need_update =
+            area.redraw_region().len() == 0 && area.styles_redraw_region().len() == 0;
+
+        let mut region = CoordRegion::new();
+        for coord in area.redraw_region().iter() {
+            let rect = if coord.coord() == Coordinate::Widget {
+                let mut rect = coord.rect();
+                rect.set_point(&self.map_to_global_f(&rect.point()));
+                CoordRect::new(rect, Coordinate::World)
+            } else {
+                *coord
+            };
+
+            if !rect.rect().is_intersects(&scroll_bar_rect) {
+                continue;
+            }
+
+            need_update = true;
+            region.add_rect(rect);
+        }
+
+        let mut styles_region = CoordRegion::new();
+        for coord in area.styles_redraw_region().iter() {
+            let rect = if coord.coord() == Coordinate::Widget {
+                let mut rect = coord.rect();
+                rect.set_point(&self.map_to_global_f(&rect.point()));
+                CoordRect::new(rect, Coordinate::World)
+            } else {
+                *coord
+            };
+
+            if !rect.rect().is_intersects(&scroll_bar_rect) {
+                continue;
+            }
+
+            need_update = true;
+            styles_region.add_rect(rect);
+        }
+
+        if !need_update {
+            return;
+        }
+
+        let scroll_bar = self.scroll_bar_mut();
+        if !(scroll_bar.update_region(&region) || scroll_bar.update_styles_region(&styles_region)) {
+            scroll_bar.update()
+        }
+    }
+}
+impl<T: ScrollAreaExt> ScrollAreaSlots for T {}
+
 impl ScrollAreaExt for ScrollArea {
     #[inline]
     fn area(&self) -> Option<&dyn WidgetImpl> {
@@ -143,15 +199,16 @@ impl ScrollAreaExt for ScrollArea {
 
         if self.area().is_some() {
             if layout_mode == LayoutMode::Normal {
+                disconnect!(self.area_mut().unwrap(), invalidated(), self, null);
                 disconnect!(
-                    self.area_mut().unwrap(),
-                    invalidated(),
                     self.scroll_bar_mut(),
+                    geometry_changed(),
+                    self.area_mut().unwrap(),
                     null
                 );
                 disconnect!(
                     self.scroll_bar_mut(),
-                    geometry_changed(),
+                    need_update(),
                     self.area_mut().unwrap(),
                     null
                 );
@@ -160,8 +217,8 @@ impl ScrollAreaExt for ScrollArea {
                 connect!(
                     self.area_mut().unwrap(),
                     invalidated(),
-                    self.scroll_bar_mut(),
-                    update()
+                    self,
+                    update_scroll_bar()
                 );
                 connect!(
                     self.scroll_bar_mut(),
@@ -169,7 +226,12 @@ impl ScrollAreaExt for ScrollArea {
                     self.area_mut().unwrap(),
                     set_invalid_area(FRect)
                 );
-                connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
+                connect!(
+                    self.scroll_bar_mut(),
+                    need_update(),
+                    self.area_mut().unwrap(),
+                    update()
+                );
             }
         }
 
@@ -187,8 +249,13 @@ impl ScrollAreaGenericExt for ScrollArea {
         area.set_vexpand(true);
         area.set_hexpand(true);
         if self.layout_mode == LayoutMode::Overlay {
-            connect!(area, invalidated(), self.scroll_bar_mut(), update());
-            connect!(self.scroll_bar_mut(), geometry_changed(), area, set_invalid_area(FRect));
+            connect!(area, invalidated(), self, update_scroll_bar());
+            connect!(
+                self.scroll_bar_mut(),
+                geometry_changed(),
+                area,
+                set_invalid_area(FRect)
+            );
         }
 
         ApplicationWindow::initialize_dynamic_component(area.as_mut());

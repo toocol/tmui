@@ -16,8 +16,11 @@ impl<'a> IsolatedVisibility<'a> {
         })
     }
 
-    pub(crate) fn isolated_visibility_field(&self) -> TokenStream {
-        quote!(auto_hide: bool)
+    pub(crate) fn isolated_visibility_field(&self) -> Vec<TokenStream> {
+        vec![
+            quote!(auto_hide: bool),
+            quote!(shadow_rect: FRect),
+        ]
     }
 
     pub(crate) fn isolated_visibility_reflect(&self) -> TokenStream {
@@ -43,6 +46,16 @@ impl<'a> IsolatedVisibility<'a> {
                 #[inline]
                 fn set_auto_hide(&mut self, auto_hide: bool) {
                     self.auto_hide = auto_hide;
+                }
+
+                #[inline]
+                fn shadow_rect(&self) -> FRect {
+                    self.shadow_rect
+                }
+
+                #[inline]
+                fn set_shadow_rect(&mut self, rect: FRect) {
+                    self.shadow_rect = rect
                 }
             }
         )

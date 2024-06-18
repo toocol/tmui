@@ -56,6 +56,7 @@ pub struct ApplicationWindow {
     widgets: HashMap<ObjectId, WidgetHnd>,
     run_afters: Vec<WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
+    shadow_mouse_watch: Vec<WidgetHnd>,
 
     focused_widget: ObjectId,
     focused_widget_mem: ObjectId,
@@ -460,6 +461,9 @@ impl ApplicationWindow {
         if let Some(ids) = self.watch_map.get(&ty) {
             for &id in ids.clone().iter() {
                 if let Some(widget) = self.find_id_mut(id) {
+                    if !widget.visible() {
+                        continue;
+                    }
                     let type_name = widget.type_name();
 
                     let flag = f(cast_mut!(widget as GlobalWatch).unwrap_or_else(|| {
@@ -554,7 +558,13 @@ impl ApplicationWindow {
         evt: &MouseEvent,
     ) {
         if !widget.rect().contains(point) {
-            return;
+            if let Some(iv) = cast!(widget as IsolatedVisibility) {
+                if !iv.shadow_rect().contains_point(point) {
+                    return;
+                }
+            } else {
+                return;
+            }
         }
 
         let hnd = NonNull::new(widget);
@@ -625,6 +635,16 @@ impl ApplicationWindow {
                 widget.update_styles_rect(CoordRect::new(dirty_rect, Coordinate::World));
             }
         }
+    }
+
+    #[inline]
+    pub(crate) fn shadow_mouse_watch(&mut self) -> &mut Vec<WidgetHnd> {
+        &mut self.shadow_mouse_watch
+    }
+
+    #[inline]
+    pub(crate) fn add_shadow_mouse_watch(&mut self, widget: &mut dyn WidgetImpl) {
+        self.shadow_mouse_watch.push(NonNull::new(widget))
     }
 }
 
