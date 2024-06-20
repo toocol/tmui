@@ -277,11 +277,8 @@ impl WidgetImpl for ScrollBar {
         self.mouse_in = true;
         if !self.visible() && self.auto_hide {
             self.show();
+        } else if self.repaint_when_active() {
             self.notify_update();
-        } else {
-            if self.repaint_when_active() {
-                self.notify_update();
-            }
         }
     }
 
@@ -290,11 +287,8 @@ impl WidgetImpl for ScrollBar {
         self.mouse_in = false;
         if self.visible() && !self.is_active() && self.auto_hide {
             self.hide();
+        } else if self.repaint_when_active() {
             self.notify_update();
-        } else {
-            if self.repaint_when_active() {
-                self.notify_update();
-            }
         }
     }
 }

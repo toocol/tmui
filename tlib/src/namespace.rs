@@ -1169,7 +1169,7 @@ pub enum BlendMode {
     Dst,
     SrcOver,
     DstOver,
-    ScrIn,
+    SrcIn,
     DstIn,
     SrcOut,
     DstOut,
@@ -1219,7 +1219,7 @@ impl From<BlendMode> for SkiaBlendMode {
             BlendMode::Dst => SkiaBlendMode::Dst,
             BlendMode::SrcOver => SkiaBlendMode::SrcOver,
             BlendMode::DstOver => SkiaBlendMode::DstOver,
-            BlendMode::ScrIn => SkiaBlendMode::SrcIn,
+            BlendMode::SrcIn => SkiaBlendMode::SrcIn,
             BlendMode::DstIn => SkiaBlendMode::DstIn,
             BlendMode::SrcOut => SkiaBlendMode::SrcOut,
             BlendMode::DstOut => SkiaBlendMode::DstOut,
@@ -1243,6 +1243,41 @@ impl From<BlendMode> for SkiaBlendMode {
             BlendMode::Saturation => SkiaBlendMode::Saturation,
             BlendMode::Color => SkiaBlendMode::Color,
             BlendMode::Luminosity => SkiaBlendMode::Luminosity,
+        }
+    }
+}
+impl From<SkiaBlendMode> for BlendMode {
+    fn from(val: SkiaBlendMode) -> Self {
+        match val {
+            SkiaBlendMode::Clear => BlendMode::Clear,
+            SkiaBlendMode::Src => BlendMode::Src,
+            SkiaBlendMode::Dst => BlendMode::Dst,
+            SkiaBlendMode::SrcOver => BlendMode::SrcOver,
+            SkiaBlendMode::DstOver => BlendMode::DstOver,
+            SkiaBlendMode::SrcIn => BlendMode::SrcIn,
+            SkiaBlendMode::DstIn => BlendMode::DstIn,
+            SkiaBlendMode::SrcOut => BlendMode::SrcOut,
+            SkiaBlendMode::DstOut => BlendMode::DstOut,
+            SkiaBlendMode::SrcATop => BlendMode::SrcATop,
+            SkiaBlendMode::DstATop => BlendMode::DstATop,
+            SkiaBlendMode::Xor => BlendMode::Xor,
+            SkiaBlendMode::Plus => BlendMode::Plus,
+            SkiaBlendMode::Modulate => BlendMode::Modulate,
+            SkiaBlendMode::Screen => BlendMode::Screen,
+            SkiaBlendMode::Overlay => BlendMode::Overlay,
+            SkiaBlendMode::Darken => BlendMode::Darken,
+            SkiaBlendMode::Lighten => BlendMode::Lighten,
+            SkiaBlendMode::ColorDodge => BlendMode::ColorDodge,
+            SkiaBlendMode::ColorBurn => BlendMode::ColorBurn,
+            SkiaBlendMode::HardLight => BlendMode::HardLight,
+            SkiaBlendMode::SoftLight => BlendMode::SoftLight,
+            SkiaBlendMode::Difference => BlendMode::Difference,
+            SkiaBlendMode::Exclusion => BlendMode::Exclusion,
+            SkiaBlendMode::Multiply => BlendMode::Multiply,
+            SkiaBlendMode::Hue => BlendMode::Hue,
+            SkiaBlendMode::Saturation => BlendMode::Saturation,
+            SkiaBlendMode::Color => BlendMode::Color,
+            SkiaBlendMode::Luminosity => BlendMode::Luminosity,
         }
     }
 }

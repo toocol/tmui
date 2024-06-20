@@ -75,7 +75,7 @@ pub trait ScrollAreaSlots: ScrollAreaExt {
 
         let area = self.area().unwrap();
         let mut need_update =
-            area.redraw_region().len() == 0 && area.styles_redraw_region().len() == 0;
+            area.redraw_region().is_empty() && area.styles_redraw_region().is_empty();
 
         let mut region = CoordRegion::new();
         for coord in area.redraw_region().iter() {

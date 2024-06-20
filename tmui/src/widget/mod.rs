@@ -580,7 +580,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             // Draw the border of the Widget.
             self.border_ref().render(&mut painter, geometry.into());
 
-            self.set_first_rendered();
+            self.set_first_rendered(true);
             self.set_render_styles(false);
 
             painter.restore();

@@ -14,7 +14,7 @@ pub(crate) trait WidgetInnerExt {
 
     fn first_rendered(&self) -> bool;
 
-    fn set_first_rendered(&mut self);
+    fn set_first_rendered(&mut self, frist_rendered: bool);
 
     fn set_fixed_width_ration(&mut self, ration: f32);
 
@@ -78,8 +78,8 @@ macro_rules! widget_inner_ext_impl {
         }
 
         #[inline]
-        fn set_first_rendered(&mut self) {
-            self.widget_props_mut().first_rendered = true
+        fn set_first_rendered(&mut self, first_rendered: bool) {
+            self.widget_props_mut().first_rendered = first_rendered
         }
 
         #[inline]

@@ -137,6 +137,11 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
+    pub fn blend_mode(&self) -> BlendMode {
+        self.paint.as_blend_mode().unwrap().into()
+    }
+
+    #[inline]
     pub fn set_follow_transparency(&mut self, follow_transparency: bool) {
         self.follow_transparency = follow_transparency;
     }
