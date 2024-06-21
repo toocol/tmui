@@ -89,7 +89,7 @@ pub trait WidgetExt {
     /// Getter of property `focus`.
     fn is_focus(&self) -> bool;
 
-    /// Temporarily take over focus(`take_over_focus(FocusStrat::TakeOver)``); 
+    /// Temporarily take over focus(`take_over_focus(FocusStrat::TakeOver)`), <br>
     /// after the widget loses focus(`take_over_focus(FocusStrat::Restore)`), 
     /// the focus will return to the original widget.
     fn take_over_focus(&mut self, strat: FocusStrat);
