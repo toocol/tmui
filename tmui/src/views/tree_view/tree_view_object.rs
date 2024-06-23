@@ -1,5 +1,4 @@
-use crate::views::cell::Cell;
-use super::node_render::NodeRender;
+use crate::views::{cell::Cell, node::node_render::NodeRender};
 
 pub trait TreeViewObject {
     /// The data cell of [`TreeNode`](super::tree_node::TreeNode) represented by the struct which implemented TreeViewObject. 

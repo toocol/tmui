@@ -1,21 +1,21 @@
 use super::{
-    node_render::NodeRender, tree_store::TreeStore, tree_view_object::TreeViewObject, TreeView,
+    tree_store::TreeStore, tree_view_object::TreeViewObject, TreeView,
 };
 use crate::views::cell::cell_render::CellRender;
 use crate::views::cell::Cell;
+use crate::views::node::node_render::NodeRender;
+use crate::views::node::Status;
 use crate::{application::is_ui_thread, prelude::*};
 use crate::{graphics::painter::Painter, views::tree_view::tree_store::TreeStoreSignals};
 use log::warn;
 use std::{ptr::NonNull, sync::atomic::Ordering};
 use tlib::{
     figure::Rect,
-    global::SemanticExt,
     nonnull_mut,
     types::StaticType,
     values::{FromValue, ToValue},
 };
 
-#[allow(clippy::vec_box)]
 pub struct TreeNode {
     pub(crate) store: ObjectId,
     id: ObjectId,
@@ -25,7 +25,7 @@ pub struct TreeNode {
     extensible: bool,
     expanded: bool,
     removed: bool,
-    children: Vec<Box<TreeNode>>,
+    children: Vec<TreeNode>,
     children_id_holder: Vec<ObjectId>,
     idx: usize,
     level: i32,
@@ -39,21 +39,21 @@ pub struct TreeNode {
 unsafe impl Send for TreeNode {}
 
 impl TreeNode {
-    pub fn create(store_id: ObjectId, level: i32, obj: &dyn TreeViewObject) -> Box<TreeNode> {
+    pub fn create(store_id: ObjectId, level: i32, obj: &dyn TreeViewObject) -> TreeNode {
         let mut node = Self::create_from_obj(obj, store_id);
 
         node.level = level;
 
-        Box::new(node)
+        node
     }
 
     #[inline]
-    pub fn children(&self) -> &[Box<TreeNode>] {
+    pub fn children(&self) -> &[TreeNode] {
         self.children.as_ref()
     }
 
     #[inline]
-    pub fn children_mut(&mut self) -> &mut [Box<TreeNode>] {
+    pub fn children_mut(&mut self) -> &mut [TreeNode] {
         self.children.as_mut()
     }
 
@@ -66,10 +66,10 @@ impl TreeNode {
         }
         let node = Self::create_from_obj(obj, self.store);
 
-        self.add_node_inner(node.boxed())
+        self.add_node_inner(node)
     }
 
-    pub fn add_node_directly(&mut self, mut node: Box<TreeNode>) -> Option<&mut TreeNode> {
+    pub fn add_node_directly(&mut self, mut node: TreeNode) -> Option<&mut TreeNode> {
         if self.removed {
             return None;
         }
@@ -311,7 +311,7 @@ impl TreeNode {
         size
     }
 
-    pub(crate) fn add_node_inner(&mut self, mut node: Box<TreeNode>) -> Option<&mut TreeNode> {
+    pub(crate) fn add_node_inner(&mut self, mut node: TreeNode) -> Option<&mut TreeNode> {
         if !self.extensible {
             return None;
         }
@@ -363,7 +363,7 @@ impl TreeNode {
 
     pub(crate) fn add_node_directly_inner(
         &mut self,
-        mut node: Box<TreeNode>,
+        mut node: TreeNode,
     ) -> Option<&mut TreeNode> {
         if !self.extensible {
             return None;
@@ -486,7 +486,7 @@ impl TreeNode {
         parent.notify_grand_child_expand(expand, id, ids);
     }
 
-    pub(crate) fn remove_node_inner(&mut self) -> Option<Box<TreeNode>> {
+    pub(crate) fn remove_node_inner(&mut self) -> Option<TreeNode> {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
 
@@ -535,13 +535,4 @@ impl TreeNode {
     pub(crate) fn set_status(&mut self, status: Status) {
         self.status = status
     }
-}
-
-#[repr(u8)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Status {
-    #[default]
-    Default = 0,
-    Selected = 1,
-    Hovered = 2,
 }

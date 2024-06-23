@@ -155,37 +155,31 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn update(&mut self) {
-        if !self.invalidate() {
-            self.set_property("invalidate", (true, true).to_value());
-            Board::notify_update();
-            emit!(self.invalidated());
-        }
+        element_update(self, true);
+        self.clear_regions();
     }
 
+    #[inline]
     fn update_with_propagate(&mut self, propagate: bool) {
-        if !self.invalidate() {
-            self.set_property("invalidate", (true, propagate).to_value());
-            Board::notify_update();
-            emit!(self.invalidated());
-        }
+        element_update(self, propagate);
     }
 
     #[inline]
     fn force_update(&mut self) {
-        self.update();
+        element_update(self, true);
         Board::force_update();
     }
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
         self.element_props_mut().redraw_region.add_rect(rect);
-        self.update_with_propagate(false);
+        element_update(self, false);
     }
 
     #[inline]
     fn update_styles_rect(&mut self, rect: CoordRect) {
         self.element_props_mut().styles_redraw_region.add_rect(rect);
-        self.update_with_propagate(false);
+        element_update(self, false);
     }
 
     #[inline]
@@ -194,7 +188,7 @@ impl<T: ElementImpl> ElementExt for T {
             return false;
         }
         self.element_props_mut().redraw_region.add_region(region);
-        self.update_with_propagate(false);
+        element_update(self, false);
         true
     }
 
@@ -203,8 +197,10 @@ impl<T: ElementImpl> ElementExt for T {
         if region.is_empty() {
             return false;
         }
-        self.element_props_mut().styles_redraw_region.add_region(region);
-        self.update_with_propagate(false);
+        self.element_props_mut()
+            .styles_redraw_region
+            .add_region(region);
+        element_update(self, false);
         true
     }
 
@@ -265,6 +261,15 @@ impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn validate(&mut self) {
         self.set_property("invalidate", (false, false).to_value());
+    }
+}
+
+#[inline]
+fn element_update(el: &mut impl ElementImpl, propagate: bool) {
+    if !el.invalidate() {
+        el.set_property("invalidate", (true, propagate).to_value());
+        Board::notify_update();
+        emit!(el.invalidated());
     }
 }
 

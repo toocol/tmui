@@ -1,8 +1,8 @@
 use super::{
-    tree_node::{Status, TreeNode},
+    tree_node::TreeNode,
     tree_view_object::TreeViewObject,
 };
-use crate::prelude::*;
+use crate::{prelude::*, views::node::Status};
 use log::warn;
 use once_cell::sync::Lazy;
 use std::{
@@ -11,7 +11,6 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 use tlib::{
-    global::SemanticExt,
     namespace::MouseButton,
     nonnull_mut, nonnull_ref,
     object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass},
@@ -93,7 +92,7 @@ impl TreeStore {
             let tree_node = TreeNode::create_from_obj(obj, self.id());
 
             nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap())
-                .add_node_inner(tree_node.boxed())
+                .add_node_inner(tree_node)
         } else {
             warn!(
                 "`TreeView` add node failed, can not find the parent node, id = {}",

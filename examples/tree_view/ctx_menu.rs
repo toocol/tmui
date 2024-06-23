@@ -7,8 +7,7 @@ use tmui::{
         object::{ObjectImpl, ObjectSubclass},
     },
     views::{
-        cell::{cell_render::TextCellRender, Cell},
-        tree_view::{node_render::NodeRender, tree_view_object::TreeViewObject, TreeView},
+        cell::{cell_render::TextCellRender, Cell}, node::node_render::NodeRender, tree_view::{tree_view_object::TreeViewObject, TreeView}
     },
     widget::WidgetImpl,
 };

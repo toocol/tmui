@@ -1,4 +1,3 @@
-pub mod node_render;
 pub mod tree_node;
 pub mod tree_store;
 pub mod tree_view_image;
@@ -19,9 +18,10 @@ use tlib::{connect, signals};
 /// Basic usage:
 /// ```
 /// use tmui::views::cell::{Cell, cell_render::TextCellRender};
+/// use tmui::views::node::node_render::NodeRender;
 /// use tmui::views::tree_view::{
 ///     tree_view_object::TreeViewObject,
-///     node_render::NodeRender, TreeView,
+///     TreeView,
 /// };
 /// use tmui::tlib::figure::color::Color;
 ///

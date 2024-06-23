@@ -5,8 +5,7 @@ use tlib::{
     tokio::task::JoinHandle,
 };
 use tmui::{
-    prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, views::{cell::{cell_render::TextCellRender, Cell}, tree_view::{
-        node_render::NodeRender,
+    prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, views::{cell::{cell_render::TextCellRender, Cell}, node::node_render::NodeRender, tree_view::{
         tree_node::TreeNode,
         tree_view_object::TreeViewObject,
         TreeView,
@@ -19,7 +18,7 @@ const DATA_SIZE: i32 = 300000;
 
 #[extends(Widget)]
 #[derive(Childable)]
-#[async_task(name = "BuildTreeTask", value = "Box<TreeNode>")]
+#[async_task(name = "BuildTreeTask", value = "TreeNode")]
 pub struct TreeViewHolder {
     #[child]
     tree_view: Box<TreeView>,
