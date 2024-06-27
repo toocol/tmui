@@ -1,12 +1,11 @@
 use std::sync::atomic::Ordering;
 use tlib::{
-    figure::Rect,
     global::AsAny,
     object::{IdGenerator, ObjectId},
 };
 
 use super::{
-    list_item::{ItemType, ListItem},
+    list_item::{ItemType, ListItem, RenderCtx},
     list_node::ListNode,
     list_view_object::ListViewObject,
     Painter,
@@ -27,6 +26,11 @@ impl ListGroup {
     #[inline]
     pub fn add_node(&mut self, obj: &dyn ListViewObject) {
         self.nodes.push(ListNode::create_from_obj(obj))
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.nodes.len()
     }
 }
 
@@ -52,10 +56,16 @@ impl ListItem for ListGroup {
         ItemType::Group
     }
 
-    fn render(&mut self, painter: &mut Painter, geometry: Rect) {
-        // TODO: Clac the geometry of each node.
-        for node in self.nodes.iter_mut() {
-            node.render(painter, geometry)
+    fn render(&self, painter: &mut Painter, mut render_ctx: RenderCtx) {
+        let mut geometry = render_ctx.geometry;
+        let mut offset = geometry.y();
+
+        for node in self.nodes.iter() {
+            geometry.set_y(offset);
+            render_ctx.geometry = geometry;
+            offset += render_ctx.line_height + render_ctx.line_spacing;
+
+            node.render(painter, render_ctx);
         }
     }
 }

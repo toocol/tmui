@@ -21,6 +21,8 @@ pub struct ListStore {
     view: WidgetHnd,
     items: Vec<Box<dyn ListItem>>,
 
+    window_lines: i32,
+
     pub(crate) id_increment: IdGenerator,
 }
 
@@ -67,6 +69,7 @@ impl ListStore {
             id: STORE_ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
             view: None,
             items: vec![],
+            window_lines: 0,
             id_increment: IdGenerator::new(0),
         };
         Self::store_map().insert(store.id, NonNull::new(&mut store));
@@ -92,6 +95,11 @@ impl ListStore {
     #[inline]
     pub(crate) fn get_view(&mut self) -> &mut dyn WidgetImpl {
         nonnull_mut!(self.view)
+    }
+
+    #[inline]
+    pub(crate) fn set_window_lines(&mut self, window_lines: i32) {
+        self.window_lines = window_lines
     }
 }
 

@@ -1,13 +1,16 @@
-use tlib::{figure::Rect, global::AsAny, object::ObjectId};
-
 use super::Painter;
+use tlib::{
+    figure::{Color, FRect},
+    global::AsAny,
+    object::ObjectId,
+};
 
 pub trait ListItem: AsAny {
     fn id(&self) -> ObjectId;
 
     fn item_type(&self) -> ItemType;
 
-    fn render(&mut self, painter: &mut Painter, geometry: Rect);
+    fn render(&self, painter: &mut Painter, render_ctx: RenderCtx);
 }
 pub trait ListItemCast: AsAny {
     #[inline]
@@ -27,4 +30,28 @@ impl ListItemCast for dyn ListItem {}
 pub enum ItemType {
     Group,
     Node,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RenderCtx {
+    pub(crate) geometry: FRect,
+    pub(crate) background: Color,
+    pub(crate) line_height: f32,
+    pub(crate) line_spacing: f32,
+}
+impl RenderCtx {
+    #[inline]
+    pub(crate) fn new(
+        geometry: FRect,
+        background: Color,
+        line_height: f32,
+        line_spacing: f32,
+    ) -> Self {
+        Self {
+            geometry,
+            background,
+            line_height,
+            line_spacing,
+        }
+    }
 }

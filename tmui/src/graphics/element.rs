@@ -1,5 +1,6 @@
 use super::{board::Board, drawing_context::DrawingContext};
 use crate::{application_window::current_window_id, widget::WidgetImpl};
+use log::error;
 use tlib::{
     figure::{CoordRect, CoordRegion, FRect, Rect},
     object::{ObjectImpl, ObjectSubclass},
@@ -150,7 +151,12 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn window_id(&self) -> ObjectId {
-        self.element_props().window_id
+        let id = self.element_props().window_id;
+        if id == 0 {
+            error!("Window id of element was `0`. Please call `self.parent_construct()` in function `construct()`.")
+        }
+
+        id
     }
 
     #[inline]

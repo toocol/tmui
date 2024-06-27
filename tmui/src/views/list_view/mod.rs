@@ -24,9 +24,12 @@ impl ObjectSubclass for ListView {
 }
 
 impl ObjectImpl for ListView {
-    fn initialize(&mut self) {
+    fn construct(&mut self) {
+        self.parent_construct();
+        
         let mut img = ListViewImage::new(self.scroll_bar_mut());
         img.store_mut().set_view(self.as_hnd());
+        img.set_scroll_bar(self.scroll_bar_mut());
 
         self.set_area(img);
     }
@@ -35,6 +38,11 @@ impl ObjectImpl for ListView {
 impl WidgetImpl for ListView {}
 
 impl ListView {
+    #[inline]
+    pub fn new() -> Box<Self> {
+        Object::new(&[])
+    }
+
     #[inline]
     pub fn add_node(&mut self, obj: &dyn ListViewObject) {
         self.get_store_mut().add_node(obj)
