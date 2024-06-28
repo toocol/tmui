@@ -11,33 +11,68 @@ use std::{
     sync::atomic::Ordering,
 };
 use tlib::{
-    global::SemanticExt, nonnull_mut, object::{IdGenerator, ObjectId}
+    extends,
+    global::SemanticExt,
+    nonnull_mut,
+    object::{IdGenerator, ObjectId, ObjectSubclass},
+    prelude::*,
+    signal, signals,
 };
 
-static STORE_ID_INCREMENT: IdGenerator = IdGenerator::new(0);
-
+#[extends(Object, ignore_default = true)]
 pub struct ListStore {
-    id: ObjectId,
     view: WidgetHnd,
     items: Vec<Box<dyn ListItem>>,
 
     window_lines: i32,
+    current_line: i32,
+    y_offset: i32,
 
     pub(crate) id_increment: IdGenerator,
 }
+
+pub trait ListStoreSignals: ActionExt {
+    signals!(
+        ListStore:
+
+        /// @param [`i32`]
+        internal_scroll_value_changed();
+
+        /// @param [`usize`]
+        items_len_changed();
+    );
+}
+impl ListStoreSignals for ListStore {}
+
+impl ObjectSubclass for ListStore {
+    const NAME: &'static str = "ListStore";
+}
+impl ObjectImpl for ListStore {}
 
 impl ListStore {
     #[inline]
     pub fn add_node(&mut self, obj: &dyn ListViewObject) {
         let mut node = ListNode::create_from_obj(obj).boxed();
         node.set_id(self.next_id());
-        self.items.push(node)
+        self.items.push(node);
+
+        emit!(self.items_len_changed(), self.items.len());
     }
 
     #[inline]
     pub fn add_group(&mut self, mut group: ListGroup) {
-        group.set_id(&self.id_increment);
-        self.items.push(group.boxed())
+        if !self.items.is_empty() {
+            let separator = group.take_separator().boxed();
+            self.items.push(separator.as_list_item());
+        }
+
+        let nodes = group.take_nodes();
+        for mut node in nodes.into_iter() {
+            node.set_id(self.next_id());
+            self.items.push(node.boxed())
+        }
+
+        emit!(self.items_len_changed(), self.items.len());
     }
 }
 
@@ -53,33 +88,43 @@ impl ListStore {
     pub(crate) fn store_ref(id: ObjectId) -> Option<&'static ListStore> {
         Self::store_map()
             .get(&id)
-            .and_then(|hnd| unsafe { Some(hnd.as_ref().unwrap().as_ref()) })
+            .map(|hnd| unsafe { hnd.as_ref().unwrap().as_ref() })
     }
 
     #[inline]
     pub(crate) fn store_mut(id: ObjectId) -> Option<&'static mut ListStore> {
         Self::store_map()
             .get_mut(&id)
-            .and_then(|hnd| unsafe { Some(hnd.as_mut().unwrap().as_mut()) })
+            .map(|hnd| unsafe { hnd.as_mut().unwrap().as_mut() })
     }
 
     #[inline]
     pub(crate) fn new() -> Self {
         let mut store = ListStore {
-            id: STORE_ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
+            object: Object::default(),
             view: None,
             items: vec![],
             window_lines: 0,
+            current_line: 0,
+            y_offset: 0,
             id_increment: IdGenerator::new(0),
         };
-        Self::store_map().insert(store.id, NonNull::new(&mut store));
+        Self::store_map().insert(store.id(), NonNull::new(&mut store));
 
         store
     }
 
     #[inline]
-    pub(crate) fn get_image(&mut self) -> &mut [Box<dyn ListItem>] {
-        &mut self.items
+    pub(crate) fn get_image(&mut self) -> (&[Box<dyn ListItem>], i32) {
+        let start = if self.y_offset == 0 {
+            self.current_line
+        } else {
+            (self.current_line - 1).max(0)
+        } as usize;
+
+        let end = (start + self.window_lines as usize).min(self.items.len());
+
+        (&self.items[start..end], self.y_offset)
     }
 
     #[inline]
@@ -100,6 +145,44 @@ impl ListStore {
     #[inline]
     pub(crate) fn set_window_lines(&mut self, window_lines: i32) {
         self.window_lines = window_lines
+    }
+
+    #[inline]
+    pub(crate) fn get_window_lines(&self) -> i32 {
+        self.window_lines
+    }
+
+    #[inline]
+    pub(crate) fn get_items_len(&self) -> usize {
+        self.items.len()
+    }
+
+    /// @param `internal`
+    /// - true: The view scrolling triggered internally in ListView
+    ///         requires notifying the scroll bar to change the value.
+    ///
+    /// @return `true` if scroll value has updated, should update the image.
+    #[inline]
+    pub(crate) fn scroll_to(&mut self, mut value: i32, internal: bool) -> bool {
+        if internal {
+            value *= 10;
+        }
+
+        let move_to = value / 10;
+        if move_to < 0 || move_to > self.items.len() as i32 {
+            return false;
+        }
+        self.y_offset = value % 10;
+        if self.current_line == move_to {
+            return true;
+        }
+        self.current_line = move_to;
+
+        if internal {
+            emit!(self.internal_scroll_value_changed())
+        }
+
+        true
     }
 }
 

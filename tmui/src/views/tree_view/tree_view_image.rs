@@ -87,6 +87,8 @@ impl WidgetImpl for TreeViewImage {
             scroll_bar_value_changed(i32)
         );
         connect!(self, size_changed(), self, when_size_changed(Size));
+
+        self.when_nodes_buffer_changed(self.store.get_nodes_buffer_len());
     }
 
     fn paint(&mut self, painter: &mut Painter) {

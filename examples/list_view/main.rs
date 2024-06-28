@@ -33,7 +33,7 @@ fn build_ui(window: &mut ApplicationWindow) {
     list_view.set_vexpand(true);
     list_view.set_hscale(0.3);
 
-    for i in 0..10 {
+    for i in 0..1000000 {
         list_view.add_node(&Node {
             name: format!("Node_{}", i),
         })

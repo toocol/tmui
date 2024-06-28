@@ -4,11 +4,13 @@ pub mod list_node;
 pub mod list_store;
 pub mod list_view_image;
 pub mod list_view_object;
+pub mod list_separator;
 
 use list_group::ListGroup;
 use list_store::ListStore;
 use list_view_image::ListViewImage;
 use list_view_object::ListViewObject;
+use tlib::connect;
 
 use crate::{
     prelude::*,
@@ -30,6 +32,9 @@ impl ObjectImpl for ListView {
         let mut img = ListViewImage::new(self.scroll_bar_mut());
         img.store_mut().set_view(self.as_hnd());
         img.set_scroll_bar(self.scroll_bar_mut());
+
+        connect!(self, background_changed(), img, set_background(Color));
+        connect!(self, invalid_area_changed(), img, set_invalid_area(FRect));
 
         self.set_area(img);
     }
@@ -61,6 +66,11 @@ impl ListView {
     #[inline]
     pub fn get_store_mut(&mut self) -> &mut ListStore {
         self.get_image_mut().store_mut()
+    }
+
+    #[inline]
+    pub fn set_line_spacint(&mut self, line_spacing: i32) {
+        self.get_image_mut().set_line_spacing(line_spacing)
     }
 }
 

@@ -15,6 +15,13 @@ pub struct ListNode {
 
 impl ListNode {
     #[inline]
+    pub fn id(&self) -> ObjectId {
+        self.id
+    }
+}
+
+impl ListNode {
+    #[inline]
     pub(crate) fn create_from_obj(obj: &dyn ListViewObject) -> Self {
         Self {
             id: 0,
@@ -42,11 +49,6 @@ impl ListNode {
 }
 
 impl ListItem for ListNode {
-    #[inline]
-    fn id(&self) -> ObjectId {
-        self.id
-    }
-
     #[inline]
     fn item_type(&self) -> ItemType {
         ItemType::Node

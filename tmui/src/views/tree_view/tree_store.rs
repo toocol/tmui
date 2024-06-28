@@ -41,10 +41,13 @@ pub trait TreeStoreSignals: ActionExt {
 
         notify_update();
 
+        /// @param [`usize`]
         notify_update_rect();
 
+        /// @param [`usize`]
         buffer_len_changed();
 
+        /// @param [`i32`]
         internal_scroll_value_changed();
     );
 }
@@ -477,6 +480,8 @@ impl TreeStore {
     /// @param `internal`
     /// - true: The view scrolling triggered internally in TreeView
     ///         requires notifying the scroll bar to change the value.
+    /// 
+    /// @return `true` if scroll value has updated, should update the image.
     #[inline]
     pub(crate) fn scroll_to(&mut self, value: i32, internal: bool) -> bool {
         if self.current_line == value || value > self.nodes_buffer.len() as i32 {
@@ -501,6 +506,11 @@ impl TreeStore {
     #[inline]
     pub(crate) fn set_entered_node(&mut self, node: &mut TreeNode) {
         self.enterd_node = NonNull::new(node)
+    }
+
+    #[inline]
+    pub(crate) fn get_nodes_buffer_len(&self) -> usize {
+        self.nodes_buffer.len()
     }
 }
 
