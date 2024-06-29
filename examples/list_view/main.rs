@@ -7,7 +7,7 @@ use tmui::{
             cell_render::TextCellRender,
             Cell,
         },
-        list_view::{list_view_object::ListViewObject, ListView},
+        list_view::{list_group::ListGroup, list_view_object::ListViewObject, ListView},
         node::node_render::NodeRender,
     },
 };
@@ -33,11 +33,19 @@ fn build_ui(window: &mut ApplicationWindow) {
     list_view.set_vexpand(true);
     list_view.set_hscale(0.3);
 
-    for i in 0..1000000 {
+    for i in 0..5 {
         list_view.add_node(&Node {
             name: format!("Node_{}", i),
         })
     }
+
+    let mut group = ListGroup::new();
+    for i in 5..10 {
+        group.add_node(&Node {
+            name: format!("Node_{}", i),
+        })
+    }
+    list_view.add_group(group);
 
     window.child(list_view)
 }

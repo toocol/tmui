@@ -3,15 +3,15 @@ use super::{
     Painter,
 };
 use derivative::Derivative;
-use tlib::global::AsAny;
+use tlib::{figure::Color, global::AsAny};
 
 pub type ListSeparatorRenderFn = Box<dyn Fn(&mut Painter, RenderCtx)>;
 
 #[derive(Derivative)]
 #[derivative(Default)]
 pub struct GroupSeparator {
-    #[derivative(Default(value = "1."))]
-    height: f32,
+    #[derivative(Default(value = "3"))]
+    height: i32,
     #[derivative(Default(value = "Box::new(default_separator_render)"))]
     render_fn: ListSeparatorRenderFn,
 }
@@ -23,12 +23,12 @@ impl GroupSeparator {
     }
 
     #[inline]
-    pub fn separator_height(&self) -> f32 {
+    pub fn separator_height(&self) -> i32 {
         self.height
     }
 
     #[inline]
-    pub fn set_separator_height(&mut self, height: f32) {
+    pub fn set_separator_height(&mut self, height: i32) {
         self.height = height
     }
 
@@ -72,4 +72,16 @@ impl AsAny for GroupSeparator {
     }
 }
 
-fn default_separator_render(painter: &mut Painter, render_ctx: RenderCtx) {}
+fn default_separator_render(painter: &mut Painter, render_ctx: RenderCtx) {
+    painter.save_pen();
+    let r = render_ctx.geometry;
+    let (x1, y1, x2, y2) = (
+        r.x(),
+        r.y() + r.height() / 2.,
+        r.x() + r.width(),
+        r.y() + r.height() / 2.,
+    );
+    painter.set_color(Color::GREY_LIGHT);
+    painter.draw_line_f(x1, y1, x2, y2);
+    painter.restore_pen();
+}

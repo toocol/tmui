@@ -120,7 +120,7 @@ impl ListViewImage {
                     rect.set_height(self.line_height as f32);
                 }
                 ItemType::Separator => {
-                    let separator_height = item.downcast_ref::<GroupSeparator>().unwrap().separator_height();
+                    let separator_height = item.downcast_ref::<GroupSeparator>().unwrap().separator_height() as f32;
                     offset += separator_height;
                     rect.set_height(separator_height);
                 }
