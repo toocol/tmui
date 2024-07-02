@@ -37,9 +37,9 @@ impl ObjectImpl for TbaPopup {
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 "This is a popup."
             },
-            Some(|p: &mut TbaPopup, text| {
+            |p: &mut TbaPopup, text| {
                 p.label.set_text(text);
-            }),
+            },
         );
     }
 }

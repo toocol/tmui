@@ -26,10 +26,10 @@ impl ObjectImpl for AsyncTaskWidget {
                 println!("{} => async do", thread::current().name().unwrap());
                 12
             },
-            Some(|_, val| {
+            |_, val| {
                 println!("{} => then", thread::current().name().unwrap());
                 assert_eq!(val, 12)
-            }),
+            },
         );
 
         self.async_task2(
@@ -37,13 +37,13 @@ impl ObjectImpl for AsyncTaskWidget {
                 println!("{} => async do 2", thread::current().name().unwrap());
                 3.1
             },
-            Some(|_, val| {
+            |_, val| {
                 println!("{} => then 2", thread::current().name().unwrap());
                 assert_eq!(val, 3.1)
-            }),
+            },
         );
 
-        self.async_task3(async {}, Some(|_, _val| {}));
+        self.async_task3(async {}, |_, _val| {});
     }
 }
 

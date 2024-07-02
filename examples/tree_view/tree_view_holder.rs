@@ -18,7 +18,7 @@ const DATA_SIZE: i32 = 300000;
 
 #[extends(Widget)]
 #[derive(Childable)]
-#[async_task(name = "BuildTreeTask", value = "TreeNode")]
+#[async_task(name = "BuildTreeTask", value = "Box<TreeNode>")]
 pub struct TreeViewHolder {
     #[child]
     tree_view: Box<TreeView>,
@@ -127,14 +127,14 @@ impl ObjectImpl for TreeViewHolder {
 
                 group1
             },
-            Some(|w: &mut TreeViewHolder, node| {
+            |w: &mut TreeViewHolder, node| {
                 let root_mut = w.tree_view.get_store_mut().root_mut();
 
                 root_mut.add_node_directly(node);
                 root_mut.notify_update();
 
                 w.tree_view.stop_loading();
-            }),
+            },
         );
 
         // let mut root_mut = NonNull::new(store.root_mut());

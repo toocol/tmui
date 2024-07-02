@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use super::{
     list_item::{ItemType, ListItem, RenderCtx},
     Painter,
@@ -7,14 +8,16 @@ use tlib::{figure::Color, global::AsAny};
 
 pub type ListSeparatorRenderFn = Box<dyn Fn(&mut Painter, RenderCtx)>;
 
-#[derive(Derivative)]
+#[derive(Derivative, Clone)]
 #[derivative(Default)]
 pub struct GroupSeparator {
     #[derivative(Default(value = "3"))]
     height: i32,
-    #[derivative(Default(value = "Box::new(default_separator_render)"))]
-    render_fn: ListSeparatorRenderFn,
+    #[derivative(Default(value = "Rc::new(Box::new(default_separator_render))"))]
+    render_fn: Rc<ListSeparatorRenderFn>,
 }
+unsafe impl Send for GroupSeparator {}
+unsafe impl Sync for GroupSeparator {}
 
 impl GroupSeparator {
     #[inline]
@@ -34,7 +37,7 @@ impl GroupSeparator {
 
     #[inline]
     pub fn set_render_fn<F: Fn(&mut Painter, RenderCtx) + 'static>(&mut self, f: F) {
-        self.render_fn = Box::new(f)
+        self.render_fn = Rc::new(Box::new(f))
     }
 
     #[inline]

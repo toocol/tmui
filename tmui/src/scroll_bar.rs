@@ -216,13 +216,13 @@ impl WidgetImpl for ScrollBar {
             let value = match self.orientation {
                 Orientation::Horizontal => {
                     let start_x = x - slider_len / 2;
-                    (start_x * self.maximum) / (size.height() - slider_len)
+                    (start_x as i64 * self.maximum as i64) / (size.height() - slider_len) as i64
                 }
                 Orientation::Vertical => {
                     let start_y = y - slider_len / 2;
-                    (start_y * self.maximum) / (size.height() - slider_len)
+                    (start_y as i64 * self.maximum as i64) / (size.height() - slider_len) as i64
                 }
-            };
+            } as i32;
 
             self.set_value(value.min(self.maximum).max(0));
         }

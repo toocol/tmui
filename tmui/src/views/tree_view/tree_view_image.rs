@@ -45,6 +45,7 @@ impl ObjectSubclass for TreeViewImage {
 impl ObjectImpl for TreeViewImage {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_mouse_tracking(true);
 
         self.store.prepare_store();
     }
@@ -138,7 +139,7 @@ impl WidgetImpl for TreeViewImage {
 
         // Handle the mouse enter/leave event:
         let mut entered_node = self.store.get_entered_node();
-        let mut node_ptr = self.store.get_image_node_ptr(self.index_node(y));
+        let mut node_ptr = self.store.get_image_node_ptr(idx);
         if node_ptr.is_some() && (self.on_node_enter.is_some() || self.on_node_leave.is_some()) {
             let node = nonnull_mut!(node_ptr);
 

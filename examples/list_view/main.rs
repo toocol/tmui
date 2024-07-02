@@ -1,3 +1,6 @@
+pub mod list_view_holder;
+
+use list_view_holder::ListViewHolder;
 use tmui::{
     application::Application,
     application_window::ApplicationWindow,
@@ -7,7 +10,7 @@ use tmui::{
             cell_render::TextCellRender,
             Cell,
         },
-        list_view::{list_group::ListGroup, list_view_object::ListViewObject, ListView},
+        list_view::list_view_object::ListViewObject,
         node::node_render::NodeRender,
     },
 };
@@ -27,27 +30,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut list_view = ListView::new();
-
-    list_view.set_hexpand(true);
-    list_view.set_vexpand(true);
-    list_view.set_hscale(0.3);
-
-    for i in 0..5 {
-        list_view.add_node(&Node {
-            name: format!("Node_{}", i),
-        })
-    }
-
-    let mut group = ListGroup::new();
-    for i in 5..10 {
-        group.add_node(&Node {
-            name: format!("Node_{}", i),
-        })
-    }
-    list_view.add_group(group);
-
-    window.child(list_view)
+    window.child(ListViewHolder::new())
 }
 
 struct Node {

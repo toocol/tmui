@@ -15,7 +15,7 @@ pub enum CellRenderType {
     Image,
 }
 
-pub trait CellRender: Debug + 'static {
+pub trait CellRender: Debug + 'static + Send + Sync {
     fn render(&self, painter: &mut Painter, geometry: FRect, val: &Value);
 
     fn border(&self) -> (f32, f32, f32, f32);
