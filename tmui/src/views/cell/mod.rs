@@ -6,77 +6,91 @@ use tlib::{figure::FRect, types::StaticType, values::ToValue, Type, Value};
 
 /// The data cell of a TreeNode, one TreeNode represents one row of an image, 
 /// and one Cell corresponds to one column of the image.
+/// 
+/// If the cell render is None, the Cell is just a value cell, not participating in rendering.
 #[rustfmt::skip]
 pub enum Cell {
-    String { expand: bool, val: Value, render: Box<dyn CellRender> },
-    Bool { expand: bool, val: Value, render: Box<dyn CellRender> },
-    U8 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    I8 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    U16 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    I16 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    U32 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    I32 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    U64 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    I64 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    U128 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    I128 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    F32 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    F64 { expand: bool, val: Value, render: Box<dyn CellRender> },
-    Image { expand: bool, image_address: Value, render: Box<dyn CellRender> },
+    String { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    Bool { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    U8 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    I8 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    U16 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    I16 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    U32 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    I32 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    U64 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    I64 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    U128 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    I128 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    F32 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    F64 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
+    Image { expand: bool, image_address: Value, render: Option<Box<dyn CellRender>> },
+    Value { val: Value },
+}
+
+macro_rules! common_cell_render_clause {
+    ($render:ident, $painter:ident, $geometry:ident, $val:ident) => {
+        if let Some(render) = $render {
+            render.render($painter, $geometry, $val);
+        }
+    };
 }
 
 impl Cell {
     pub(crate) fn render_cell(&self, painter: &mut Painter, geometry: FRect) {
         match self {
             Self::String { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::Bool { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::U8 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::I8 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::U16 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::I16 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::U32 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::I32 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::U64 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::I64 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::U128 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::I128 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::F32 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::F64 { val, render, .. } => {
-                render.render(painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val);
             }
             Self::Image {
                 image_address,
                 render,
                 ..
             } => {
-                render.render(painter, geometry, image_address);
+                if let Some(render) = render {
+                    render.render(painter, geometry, image_address);
+                }
             }
+            Self::Value { .. } => {}
         }
     }
 
@@ -97,6 +111,7 @@ impl Cell {
             Self::F32 { .. } => f32::static_type(),
             Self::F64 { .. } => f64::static_type(),
             Self::Image { .. } => String::static_type(),
+            Self::Value { val } => val.ty(),
         }
     }
 
@@ -117,6 +132,7 @@ impl Cell {
             Self::F32 { val, .. } => val,
             Self::F64 { val, .. } => val,
             Self::Image { image_address, .. } => image_address,
+            Self::Value { val } => val,
         }
     }
 
@@ -137,46 +153,49 @@ impl Cell {
             Self::F32 { val, .. } => *val = value,
             Self::F64 { val, .. } => *val = value,
             Self::Image { image_address, .. } => *image_address = value,
+            Self::Value { val } => *val = value,
         }
     }
 
-    pub(crate) fn get_render(&self) -> &dyn CellRender {
+    pub(crate) fn get_render(&self) -> Option<&dyn CellRender> {
         match self {
-            Self::String { render, .. } => render.as_ref(),
-            Self::Bool { render, .. } => render.as_ref(),
-            Self::U8 { render, .. } => render.as_ref(),
-            Self::I8 { render, .. } => render.as_ref(),
-            Self::U16 { render, .. } => render.as_ref(),
-            Self::I16 { render, .. } => render.as_ref(),
-            Self::U32 { render, .. } => render.as_ref(),
-            Self::I32 { render, .. } => render.as_ref(),
-            Self::U64 { render, .. } => render.as_ref(),
-            Self::I64 { render, .. } => render.as_ref(),
-            Self::U128 { render, .. } => render.as_ref(),
-            Self::I128 { render, .. } => render.as_ref(),
-            Self::F32 { render, .. } => render.as_ref(),
-            Self::F64 { render, .. } => render.as_ref(),
-            Self::Image { render, .. } => render.as_ref(),
+            Self::String { render, .. } => render.as_deref(),
+            Self::Bool { render, .. } => render.as_deref(),
+            Self::U8 { render, .. } => render.as_deref(),
+            Self::I8 { render, .. } => render.as_deref(),
+            Self::U16 { render, .. } => render.as_deref(),
+            Self::I16 { render, .. } => render.as_deref(),
+            Self::U32 { render, .. } => render.as_deref(),
+            Self::I32 { render, .. } => render.as_deref(),
+            Self::U64 { render, .. } => render.as_deref(),
+            Self::I64 { render, .. } => render.as_deref(),
+            Self::U128 { render, .. } => render.as_deref(),
+            Self::I128 { render, .. } => render.as_deref(),
+            Self::F32 { render, .. } => render.as_deref(),
+            Self::F64 { render, .. } => render.as_deref(),
+            Self::Image { render, .. } => render.as_deref(),
+            Self::Value { .. } => None,
         }
     }
 
-    pub(crate) fn get_render_mut(&mut self) -> &mut dyn CellRender {
+    pub(crate) fn get_render_mut(&mut self) -> Option<&mut dyn CellRender> {
         match self {
-            Self::String { render, .. } => render.as_mut(),
-            Self::Bool { render, .. } => render.as_mut(),
-            Self::U8 { render, .. } => render.as_mut(),
-            Self::I8 { render, .. } => render.as_mut(),
-            Self::U16 { render, .. } => render.as_mut(),
-            Self::I16 { render, .. } => render.as_mut(),
-            Self::U32 { render, .. } => render.as_mut(),
-            Self::I32 { render, .. } => render.as_mut(),
-            Self::U64 { render, .. } => render.as_mut(),
-            Self::I64 { render, .. } => render.as_mut(),
-            Self::U128 { render, .. } => render.as_mut(),
-            Self::I128 { render, .. } => render.as_mut(),
-            Self::F32 { render, .. } => render.as_mut(),
-            Self::F64 { render, .. } => render.as_mut(),
-            Self::Image { render, .. } => render.as_mut(),
+            Self::String { render, .. } => render.as_deref_mut(),
+            Self::Bool { render, .. } => render.as_deref_mut(),
+            Self::U8 { render, .. } => render.as_deref_mut(),
+            Self::I8 { render, .. } => render.as_deref_mut(),
+            Self::U16 { render, .. } => render.as_deref_mut(),
+            Self::I16 { render, .. } => render.as_deref_mut(),
+            Self::U32 { render, .. } => render.as_deref_mut(),
+            Self::I32 { render, .. } => render.as_deref_mut(),
+            Self::U64 { render, .. } => render.as_deref_mut(),
+            Self::I64 { render, .. } => render.as_deref_mut(),
+            Self::U128 { render, .. } => render.as_deref_mut(),
+            Self::I128 { render, .. } => render.as_deref_mut(),
+            Self::F32 { render, .. } => render.as_deref_mut(),
+            Self::F64 { render, .. } => render.as_deref_mut(),
+            Self::Image { render, .. } => render.as_deref_mut(),
+            Self::Value { .. } => None,
         }
     }
 
@@ -197,6 +216,7 @@ impl Cell {
             Self::F32 { .. } => vec![Text],
             Self::F64 { .. } => vec![Text],
             Self::Image { .. } => vec![Image],
+            Self::Value { .. } => vec![],
         }
     }
 }
@@ -230,18 +250,16 @@ macro_rules! cell_builder {
 
             #[inline]
             pub fn build(self) -> Cell {
-                if self.cell_render.is_none() {
-                    panic!("`cell_render` of Cell can not be None.");
-                }
-                let cell_render = self.cell_render.unwrap();
-                let render_ty = cell_render.ty();
                 let cell = Cell::$cty {
                     expand: self.expand,
                     val: self.val.to_value(),
-                    render: cell_render,
+                    render: self.cell_render,
                 };
-                if !cell.support_render_types().contains(&render_ty) {
-                    panic!("Unsupported cell render type.");
+
+                if let Some(ref cell_render) = cell.get_render() {
+                    if !cell.support_render_types().contains(&cell_render.ty()) {
+                        panic!("Unsupported cell render type.");
+                    }
                 }
                 cell
             }
@@ -291,20 +309,39 @@ impl CellImageBuilder {
 
     #[inline]
     pub fn build(self) -> Cell {
-        if self.cell_render.is_none() {
-            panic!("`cell_render` of Cell can not be None.");
-        }
-        let cell_render = self.cell_render.unwrap();
-        let render_ty = cell_render.ty();
         let cell = Cell::Image {
             expand: self.expand,
             image_address: self.image_address.to_value(),
-            render: cell_render,
+            render: self.cell_render,
         };
-        if !cell.support_render_types().contains(&render_ty) {
-            panic!("Unsupported cell render type.");
+
+        if let Some(cell_render) = cell.get_render() {
+            if !cell.support_render_types().contains(&cell_render.ty()) {
+                panic!("Unsupported cell render type.");
+            }
         }
         cell
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct CellValueBuilder {
+    value: Option<Value>,
+}
+impl CellValueBuilder {
+    #[inline]
+    pub fn value(mut self, value: impl ToValue) -> Self {
+        self.value = Some(value.to_value());
+        self
+    }
+
+    #[inline]
+    pub fn build(self) -> Cell {
+        Cell::Value {
+            val: self
+                .value
+                .expect("The value of `CellValueBuilder` can not be `None`."),
+        }
     }
 }
 
@@ -333,4 +370,5 @@ impl Cell {
     cell_builder_func!(f32, CellF32Builder);
     cell_builder_func!(f64, CellF64Builder);
     cell_builder_func!(image, CellImageBuilder);
+    cell_builder_func!(value_cell, CellValueBuilder);
 }

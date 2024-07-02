@@ -1,17 +1,16 @@
 use super::{
-    tree_node::{Status, TreeNode},
+    tree_node::TreeNode,
     tree_view_object::TreeViewObject,
 };
-use crate::prelude::*;
+use crate::{prelude::*, views::node::Status};
 use log::warn;
 use once_cell::sync::Lazy;
 use std::{
     collections::HashMap,
-    ptr::NonNull,
+    ptr::{addr_of_mut, NonNull},
     sync::atomic::{AtomicPtr, Ordering},
 };
 use tlib::{
-    global::SemanticExt,
     namespace::MouseButton,
     nonnull_mut, nonnull_ref,
     object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass},
@@ -42,10 +41,13 @@ pub trait TreeStoreSignals: ActionExt {
 
         notify_update();
 
+        /// @param [`usize`]
         notify_update_rect();
 
+        /// @param [`usize`]
         buffer_len_changed();
 
+        /// @param [`i32`]
         internal_scroll_value_changed();
     );
 }
@@ -63,7 +65,7 @@ impl TreeStore {
     pub(crate) fn store_map() -> &'static mut HashMap<ObjectId, AtomicPtr<TreeStore>> {
         static mut STORE_MAP: Lazy<HashMap<ObjectId, AtomicPtr<TreeStore>>> =
             Lazy::new(HashMap::new);
-        unsafe { &mut STORE_MAP }
+        unsafe { addr_of_mut!(STORE_MAP).as_mut().unwrap() }
     }
 
     #[inline]
@@ -93,7 +95,7 @@ impl TreeStore {
             let tree_node = TreeNode::create_from_obj(obj, self.id());
 
             nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap())
-                .add_node_inner(tree_node.boxed())
+                .add_node_inner(tree_node)
         } else {
             warn!(
                 "`TreeView` add node failed, can not find the parent node, id = {}",
@@ -478,6 +480,8 @@ impl TreeStore {
     /// @param `internal`
     /// - true: The view scrolling triggered internally in TreeView
     ///         requires notifying the scroll bar to change the value.
+    /// 
+    /// @return `true` if scroll value has updated, should update the image.
     #[inline]
     pub(crate) fn scroll_to(&mut self, value: i32, internal: bool) -> bool {
         if self.current_line == value || value > self.nodes_buffer.len() as i32 {
@@ -502,6 +506,11 @@ impl TreeStore {
     #[inline]
     pub(crate) fn set_entered_node(&mut self, node: &mut TreeNode) {
         self.enterd_node = NonNull::new(node)
+    }
+
+    #[inline]
+    pub(crate) fn get_nodes_buffer_len(&self) -> usize {
+        self.nodes_buffer.len()
     }
 }
 

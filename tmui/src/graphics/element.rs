@@ -1,5 +1,6 @@
 use super::{board::Board, drawing_context::DrawingContext};
 use crate::{application_window::current_window_id, widget::WidgetImpl};
+use log::error;
 use tlib::{
     figure::{CoordRect, CoordRegion, FRect, Rect},
     object::{ObjectImpl, ObjectSubclass},
@@ -96,7 +97,12 @@ pub trait ElementExt {
     fn update_styles_rect(&mut self, rect: CoordRect);
 
     /// Specified the region to redraw.
-    fn update_region(&mut self, region: &CoordRegion);
+    /// @return false if region is empty.
+    fn update_region(&mut self, region: &CoordRegion) -> bool;
+
+    /// Specified the styles region to redraw;
+    /// @return false if region is empty.
+    fn update_styles_region(&mut self, region: &CoordRegion) -> bool;
 
     /// Cleaer the redraw region.
     fn clear_regions(&mut self);
@@ -145,51 +151,63 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn window_id(&self) -> ObjectId {
-        self.element_props().window_id
+        let id = self.element_props().window_id;
+        if id == 0 {
+            error!("Window id of element was `0`. Please call `self.parent_construct()` in function `construct()`.")
+        }
+
+        id
     }
 
     #[inline]
     fn update(&mut self) {
-        if !self.invalidate() {
-            emit!(self.invalidated());
-            self.set_property("invalidate", (true, true).to_value());
-            Board::notify_update()
-        }
+        element_update(self, true);
+        self.clear_regions();
     }
 
+    #[inline]
     fn update_with_propagate(&mut self, propagate: bool) {
-        if !self.invalidate() {
-            emit!(self.invalidated());
-            self.set_property("invalidate", (true, propagate).to_value());
-            Board::notify_update()
-        }
+        element_update(self, propagate);
     }
 
     #[inline]
     fn force_update(&mut self) {
-        self.update();
+        element_update(self, true);
         Board::force_update();
     }
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
-        self.update_with_propagate(false);
-        self.element_props_mut().redraw_region.add_rect(rect)
+        self.element_props_mut().redraw_region.add_rect(rect);
+        element_update(self, false);
     }
 
     #[inline]
     fn update_styles_rect(&mut self, rect: CoordRect) {
-        self.update_with_propagate(false);
-        self.element_props_mut().styles_redraw_region.add_rect(rect)
+        self.element_props_mut().styles_redraw_region.add_rect(rect);
+        element_update(self, false);
     }
 
     #[inline]
-    fn update_region(&mut self, region: &CoordRegion) {
+    fn update_region(&mut self, region: &CoordRegion) -> bool {
         if region.is_empty() {
-            return;
+            return false;
         }
-        self.update_with_propagate(false);
-        self.element_props_mut().redraw_region.add_region(region)
+        self.element_props_mut().redraw_region.add_region(region);
+        element_update(self, false);
+        true
+    }
+
+    #[inline]
+    fn update_styles_region(&mut self, region: &CoordRegion) -> bool {
+        if region.is_empty() {
+            return false;
+        }
+        self.element_props_mut()
+            .styles_redraw_region
+            .add_region(region);
+        element_update(self, false);
+        true
     }
 
     #[inline]
@@ -249,6 +267,15 @@ impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn validate(&mut self) {
         self.set_property("invalidate", (false, false).to_value());
+    }
+}
+
+#[inline]
+fn element_update(el: &mut impl ElementImpl, propagate: bool) {
+    if !el.invalidate() {
+        el.set_property("invalidate", (true, propagate).to_value());
+        Board::notify_update();
+        emit!(el.invalidated());
     }
 }
 

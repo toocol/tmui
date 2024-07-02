@@ -1,12 +1,15 @@
 use tmui::{
-    graphics::box_shadow::{BoxShadow, ShadowSide}, prelude::*, scroll_area::LayoutMode, tlib::{
+    graphics::box_shadow::{BoxShadow, ShadowSide},
+    prelude::*,
+    scroll_area::LayoutMode,
+    tlib::{
         global_watch,
         object::{ObjectImpl, ObjectSubclass},
-    }, views::{cell::{cell_render::TextCellRender, Cell}, tree_view::{
-        node_render::NodeRender,
-        tree_view_object::TreeViewObject,
-        TreeView,
-    }}, widget::WidgetImpl
+    },
+    views::{
+        cell::{cell_render::TextCellRender, Cell}, node::node_render::NodeRender, tree_view::{tree_view_object::TreeViewObject, TreeView}
+    },
+    widget::WidgetImpl,
 };
 
 #[extends(Popup)]
@@ -45,7 +48,12 @@ impl ObjectImpl for CtxMenu {
             .root_mut()
             .add_node(&Selection {
                 name: "New seesion",
+                value: 1,
             });
+        self.selection_list.register_node_pressed(|node, _| {
+            println!("Selection pressed.");
+            assert_eq!(node.get_value::<i32>(1).unwrap(), 1);
+        })
     }
 }
 
@@ -59,7 +67,7 @@ impl GlobalWatchImpl for CtxMenu {
         let pos: Point = evt.position().into();
         if !self.rect().contains(&pos) {
             self.hide();
-        } 
+        }
 
         true
     }
@@ -84,14 +92,18 @@ impl CtxMenu {
 
 struct Selection {
     name: &'static str,
+    value: i32,
 }
 impl TreeViewObject for Selection {
     #[inline]
     fn cells(&self) -> Vec<Cell> {
-        vec![Cell::string()
-            .value(self.name.to_string())
-            .cell_render(TextCellRender::builder().color(Color::BLACK).build())
-            .build()]
+        vec![
+            Cell::string()
+                .value(self.name.to_string())
+                .cell_render(TextCellRender::builder().color(Color::BLACK).build())
+                .build(),
+            Cell::value_cell().value(self.value).build(),
+        ]
     }
 
     #[inline]

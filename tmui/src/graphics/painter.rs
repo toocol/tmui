@@ -3,7 +3,7 @@ use crate::{
     font::Font,
     skia_safe::{self, Canvas, Matrix, Paint, Path, Point},
     tlib,
-    widget::WidgetImpl,
+    widget::{Transparency, WidgetImpl},
 };
 use ::tlib::{
     namespace::BlendMode,
@@ -50,6 +50,9 @@ pub struct Painter<'a> {
     paragraph: Option<Paragraph>,
     text_style: TextStyle,
     paragraph_style: ParagraphStyle,
+
+    transparency: Transparency,
+    follow_transparency: bool,
 }
 
 impl<'a> Painter<'a> {
@@ -79,6 +82,8 @@ impl<'a> Painter<'a> {
             paragraph: None,
             text_style: TextStyle::new(),
             paragraph_style: ParagraphStyle::new(),
+            transparency: widget.transparency(),
+            follow_transparency: true,
         }
     }
 
@@ -129,6 +134,16 @@ impl<'a> Painter<'a> {
     #[inline]
     pub fn set_blend_mode(&mut self, blend_mode: BlendMode) {
         self.paint.set_blend_mode(blend_mode.into());
+    }
+
+    #[inline]
+    pub fn blend_mode(&self) -> BlendMode {
+        self.paint.as_blend_mode().unwrap().into()
+    }
+
+    #[inline]
+    pub fn set_follow_transparency(&mut self, follow_transparency: bool) {
+        self.follow_transparency = follow_transparency;
     }
 
     /// Save the pen status: Color, Font, line width etc...
@@ -222,7 +237,10 @@ impl<'a> Painter<'a> {
 
     /// Set the color of painter.
     #[inline]
-    pub fn set_color(&mut self, color: Color) {
+    pub fn set_color(&mut self, mut color: Color) {
+        if self.follow_transparency && color.a() == 255 {
+            color.set_transparency(self.transparency)
+        }
         self.color = Some(color);
         self.paint.set_color(color);
         self.text_style.set_color(color);
@@ -273,7 +291,10 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
-    pub fn fill_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, color: Color) {
+    pub fn fill_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, mut color: Color) {
+        if self.follow_transparency && color.a() == 255 {
+            color.set_transparency(self.transparency);
+        }
         self.paint.set_color(color);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
@@ -309,8 +330,11 @@ impl<'a> Painter<'a> {
         &mut self,
         rect: T,
         border_radius: f32,
-        color: Color,
+        mut color: Color,
     ) {
+        if self.follow_transparency && color.a() == 255 {
+            color.set_transparency(self.transparency)
+        }
         self.paint.set_color(color);
         self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
 
@@ -374,7 +398,10 @@ impl<'a> Painter<'a> {
     ///
     /// the point of region's coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
-    pub fn fill_region(&mut self, region: &skia_safe::Region, color: Color) {
+    pub fn fill_region(&mut self, region: &skia_safe::Region, mut color: Color) {
+        if self.follow_transparency && color.a() == 255 {
+            color.set_transparency(self.transparency)
+        }
         self.paint.set_color(color);
         self.paint
             .set_style(crate::skia_safe::PaintStyle::StrokeAndFill);

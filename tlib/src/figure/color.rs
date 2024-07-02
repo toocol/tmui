@@ -173,6 +173,9 @@ impl Color {
         self
     }
 
+    pub const TRANS: u8 = 0;
+    pub const SOLID: u8 = 255;
+
     pub const RED: Color = Color {
         r: 255,
         g: 0,

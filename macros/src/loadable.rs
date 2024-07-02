@@ -36,10 +36,12 @@ impl<'a> Loadable<'a> {
 
         quote!(
             impl #impl_generics Loadable for #name #ty_generics #where_clause {
+                #[inline]
                 fn loading_model(&self) -> &LoadingModel {
                     &self.loading_model
                 }
 
+                #[inline]
                 fn loading_model_mut(&mut self) -> &mut LoadingModel {
                     &mut self.loading_model
                 }

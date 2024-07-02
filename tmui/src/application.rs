@@ -31,7 +31,7 @@ use tipc::{WithIpcMaster, WithIpcSlave};
 use tlib::{events::Event, figure::Size, winit::window::WindowButtons};
 
 thread_local! {
-    pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = RefCell::new(false);
+    pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = const { RefCell::new(false) };
     pub(crate) static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
 }
 

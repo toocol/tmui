@@ -166,16 +166,17 @@ impl<'a> AsyncTask<'a> {
         let (_, ty_generics, _) = self.generics;
 
         Ok(quote!(
-            fn #name_snake<_F, _T>(&mut self, future: _F, then: Option<_T>)
+            fn #name_snake<_F, _T>(&mut self, future: _F, then: _T)
             where
                 _F: std::future::Future<Output = #value> + Send + 'static,
                 _T: FnOnce(&'static mut #widget #ty_generics, #value) + 'static,
             {
                 let join = tlib::tokio::spawn(future);
                 let mut task = #name::new(self, join);
-                if let Some(then) = then {
-                    task = task.then(then);
-                }
+                // if let Some(then) = then {
+                //     task = task.then(then);
+                // }
+                task = task.then(then);
                 self.#field = Some(task);
             }
         ))

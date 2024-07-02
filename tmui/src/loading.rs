@@ -58,6 +58,7 @@ pub trait Loadable: WidgetImpl {
     #[inline]
     fn stop_loading(&mut self) {
         self.loading_model_mut().state = State::Stopped;
+        self.set_render_styles(true);
         self.update();
     }
 

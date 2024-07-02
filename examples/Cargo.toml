@@ -78,6 +78,10 @@ name = "layout_widget"
 path = "layout_widget/main.rs"
 
 [[bin]]
+name = "list_view"
+path = "list_view/main.rs"
+
+[[bin]]
 name = "multi_window"
 path = "multi_window/main.rs"
 

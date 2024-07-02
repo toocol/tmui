@@ -1,7 +1,5 @@
 use crate::{
-    graphics::element::HierachyZ,
-    prelude::*,
-    widget::{ScaleCalculate, WidgetImpl},
+    graphics::element::HierachyZ, prelude::*, widget::{ScaleCalculate, WidgetImpl}
 };
 use tlib::{
     namespace::Orientation,
@@ -64,8 +62,15 @@ impl ObjectImpl for Container {
             }
             "visible" => {
                 let visible = value.get::<bool>();
+                emit!(self.visibility_changed(), visible);
                 if !self.children.is_empty() {
                     for child in self.children.iter_mut() {
+                        if let Some(iv) = cast!(child as IsolatedVisibility) {
+                            if iv.auto_hide() {
+                                continue;
+                            }
+                        }
+
                         if visible {
                             child.set_property("visible", true.to_value());
                             child.set_render_styles(true);
@@ -231,9 +236,13 @@ pub trait ContainerPointEffective {
 }
 impl<T: ContainerImpl> ContainerPointEffective for T {
     fn container_point_effective(&self, point: &Point) -> bool {
-        let self_rect = self.rect();
-
-        if !self_rect.contains(point) {
+        if !self.visible() {
+            return false;
+        }
+        if !self.rect().contains(point) {
+            return false;
+        }
+        if self.invalid_area().contains_point(point) {
             return false;
         }
 

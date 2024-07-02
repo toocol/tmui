@@ -2,7 +2,7 @@ use crate::prelude::AsAny;
 use once_cell::sync::Lazy;
 use std::{
     any::{Any, TypeId},
-    collections::HashMap,
+    collections::HashMap, ptr::addr_of_mut,
 };
 
 /// User register the type reflect info by override the function [`type_register()`](crate::object::ObjectImpl::type_register).<br>
@@ -65,7 +65,7 @@ impl TypeRegistry {
     /// Get the single instance of Registry.
     pub fn instance() -> &'static mut TypeRegistry {
         static mut TYPE_REGISTRY: Lazy<Box<TypeRegistry>> = Lazy::new(TypeRegistry::new);
-        unsafe { &mut TYPE_REGISTRY }
+        unsafe { addr_of_mut!(TYPE_REGISTRY).as_mut().unwrap().as_mut() }
     }
 
     pub fn register<T: Reflect, RT: FromType<T> + ReflectTrait>(&mut self) {

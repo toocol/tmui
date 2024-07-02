@@ -89,6 +89,11 @@ pub trait WidgetExt {
     /// Getter of property `focus`.
     fn is_focus(&self) -> bool;
 
+    /// Temporarily take over focus(`take_over_focus(FocusStrat::TakeOver)`), <br>
+    /// after the widget loses focus(`take_over_focus(FocusStrat::Restore)`), 
+    /// the focus will return to the original widget.
+    fn take_over_focus(&mut self, strat: FocusStrat);
+
     /// Resize the widget. <br>
     /// `resize() will set fixed_width and fixed_height to false`, make widget flexible.
     fn resize(&mut self, width: Option<i32>, height: Option<i32>);
@@ -495,6 +500,10 @@ pub trait WidgetExt {
 
     /// Get the image rect record of widget.
     fn image_rect_record(&self) -> FRect;
+
+    fn invalid_area(&self) -> FRect;
+
+    fn set_invalid_area(&mut self, rect: FRect);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -651,9 +660,9 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", false.to_value());
-        emit!(self.visibility_changed(), false);
+        self.set_first_rendered(false);
 
-        if !self.is_animation_progressing() && self.window().initialized() {
+        if self.window().initialized() {
             self.window()
                 .invalid_effected_widgets(self.visual_image_rect(), self.id());
         }
@@ -662,7 +671,7 @@ impl<T: WidgetImpl> WidgetExt for T {
             popup.remove_overlaid();
 
             if popup.is_modal() {
-                popup.set_focus(false);
+                popup.take_over_focus(FocusStrat::Restore);
                 self.window().set_modal_widget(None);
             }
         } else if self.window_id() != 0 {
@@ -680,14 +689,13 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.set_property("visible", true.to_value());
-        emit!(self.visibility_changed(), true);
         self.set_render_styles(true);
         self.update();
 
         if let Some(popup) = cast_mut!(self as PopupImpl) {
             popup.register_overlaid();
             if popup.is_modal() {
-                popup.set_focus(true);
+                popup.take_over_focus(FocusStrat::TakeOver);
 
                 let id = popup.id();
                 self.window().set_modal_widget(Some(id));
@@ -724,6 +732,20 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn is_focus(&self) -> bool {
         ApplicationWindow::window_of(self.window_id()).focused_widget() == self.id()
+    }
+
+    #[inline]
+    fn take_over_focus(&mut self, strat: FocusStrat) {
+        match strat {
+            FocusStrat::TakeOver => {
+                self.window().temp_lose_focus();
+                self.set_focus(true);
+            }
+            FocusStrat::Restore => {
+                self.set_focus(false);
+                self.window().restore_focus();
+            }
+        }
     }
 
     #[inline]
@@ -1094,7 +1116,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.widget_props_mut().background = color;
         emit!(Widget::set_background => self.background_changed(), color);
 
-        self.update();
+        self.notify_update();
     }
 
     #[inline]
@@ -1652,4 +1674,23 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn image_rect_record(&self) -> FRect {
         self.widget_props().old_image_rect
     }
+
+    #[inline]
+    fn invalid_area(&self) -> FRect {
+        self.widget_props().invalid_area
+    }
+
+    #[inline]
+    fn set_invalid_area(&mut self, rect: FRect) {
+        self.widget_props_mut().invalid_area = rect;
+        emit!(self.invalid_area_changed(), rect);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum FocusStrat {
+    /// Widget gain focused temporarily, and save the orgin focused widget.
+    TakeOver,
+    /// Widget lose focus, and the focus will return to the origin widget.
+    Restore,
 }

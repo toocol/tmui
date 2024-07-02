@@ -45,6 +45,7 @@ impl ObjectSubclass for TreeViewImage {
 impl ObjectImpl for TreeViewImage {
     fn construct(&mut self) {
         self.parent_construct();
+        self.set_mouse_tracking(true);
 
         self.store.prepare_store();
     }
@@ -87,11 +88,13 @@ impl WidgetImpl for TreeViewImage {
             scroll_bar_value_changed(i32)
         );
         connect!(self, size_changed(), self, when_size_changed(Size));
+
+        self.when_nodes_buffer_changed(self.store.get_nodes_buffer_len());
     }
 
     fn paint(&mut self, painter: &mut Painter) {
         for redraw_rect in self.redraw_region().iter() {
-            self.clear(painter, redraw_rect.rect())
+            self.clear(painter, redraw_rect.rect());
         }
 
         let rect = self.contents_rect(Some(Coordinate::Widget));
@@ -136,7 +139,7 @@ impl WidgetImpl for TreeViewImage {
 
         // Handle the mouse enter/leave event:
         let mut entered_node = self.store.get_entered_node();
-        let mut node_ptr = self.store.get_image_node_ptr(self.index_node(y));
+        let mut node_ptr = self.store.get_image_node_ptr(idx);
         if node_ptr.is_some() && (self.on_node_enter.is_some() || self.on_node_leave.is_some()) {
             let node = nonnull_mut!(node_ptr);
 
@@ -240,6 +243,7 @@ impl TreeViewImage {
         let scroll_bar = nonnull_mut!(self.scroll_bar);
         scroll_bar.set_single_step(1);
         scroll_bar.set_page_step(window_lines);
+        scroll_bar.set_visible_area(window_lines);
     }
 
     #[inline]

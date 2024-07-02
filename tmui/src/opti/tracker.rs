@@ -1,11 +1,6 @@
 use once_cell::sync::Lazy;
 use std::{
-    collections::{BTreeMap, HashMap},
-    fs::File,
-    io::Write,
-    sync::atomic::{AtomicBool, Ordering},
-    thread::ThreadId,
-    time::Instant,
+    collections::{BTreeMap, HashMap}, fs::File, io::Write, ptr::addr_of_mut, sync::atomic::{AtomicBool, Ordering}, thread::ThreadId, time::Instant
 };
 
 const TRACK_FILE_NAME: &str = "track_file";
@@ -28,7 +23,7 @@ impl Tracker {
             tracks: HashMap::new(),
             instant: Instant::now(),
         });
-        unsafe { &mut INSTANCE }
+        unsafe { addr_of_mut!(INSTANCE).as_mut().unwrap() }
     }
 
     #[inline]

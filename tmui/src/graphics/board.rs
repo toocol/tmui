@@ -1,6 +1,6 @@
 use super::{drawing_context::DrawingContext, element::ElementImpl};
 use crate::{
-    backend::Backend, opti::tracker::Tracker, primitive::bitmap::Bitmap,
+    backend::Backend, opti::tracker::Tracker, primitive::{bitmap::Bitmap, frame::Frame},
     shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
 };
 use std::{cell::RefCell, ptr::NonNull, sync::Arc};
@@ -11,8 +11,8 @@ use tipc::{
 use tlib::{nonnull_mut, prelude::*, ptr_ref};
 
 thread_local! {
-    static NOTIFY_UPDATE: RefCell<bool> = RefCell::new(true);
-    static FORCE_UPDATE: RefCell<bool> = RefCell::new(false);
+    static NOTIFY_UPDATE: RefCell<bool> = const { RefCell::new(true) };
+    static FORCE_UPDATE: RefCell<bool> = const { RefCell::new(false) };
 }
 
 /// Basic drawing Board with Skia surface.
@@ -80,7 +80,7 @@ impl Board {
     }
 
     #[inline]
-    pub(crate) fn invalidate_visual(&mut self) -> bool {
+    pub(crate) fn invalidate_visual(&mut self, frame: Frame) -> bool {
         NOTIFY_UPDATE.with(|notify_update| {
             let mut update = false;
 
@@ -110,7 +110,7 @@ impl Board {
                             && shared_widget.as_ref().unwrap().is_shared_invalidate());
 
                     if need_render {
-                        let cr = DrawingContext::new(self.surface.canvas());
+                        let cr = DrawingContext::new(self.surface.canvas(), frame);
 
                         if let Some(shared_widget) = shared_widget {
                             shared_widget.shared_validate();

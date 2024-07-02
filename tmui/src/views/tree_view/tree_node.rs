@@ -1,18 +1,17 @@
 use super::{
-    node_render::NodeRender,
-    tree_store::TreeStore,
-    tree_view_object::TreeViewObject,
-    TreeView,
+    tree_store::TreeStore, tree_view_object::TreeViewObject, TreeView,
 };
 use crate::views::cell::cell_render::CellRender;
 use crate::views::cell::Cell;
+use crate::views::node::node_render::NodeRender;
+use crate::views::node::Status;
 use crate::{application::is_ui_thread, prelude::*};
 use crate::{graphics::painter::Painter, views::tree_view::tree_store::TreeStoreSignals};
 use log::warn;
+use tlib::global::SemanticExt;
 use std::{ptr::NonNull, sync::atomic::Ordering};
 use tlib::{
     figure::Rect,
-    global::SemanticExt,
     nonnull_mut,
     types::StaticType,
     values::{FromValue, ToValue},
@@ -47,7 +46,7 @@ impl TreeNode {
 
         node.level = level;
 
-        Box::new(node)
+        node
     }
 
     #[inline]
@@ -69,7 +68,7 @@ impl TreeNode {
         }
         let node = Self::create_from_obj(obj, self.store);
 
-        self.add_node_inner(node.boxed())
+        self.add_node_inner(node)
     }
 
     pub fn add_node_directly(&mut self, mut node: Box<TreeNode>) -> Option<&mut TreeNode> {
@@ -126,7 +125,7 @@ impl TreeNode {
                 warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
                 None
             })
-            .map(|cell| cell.get_render())
+            .and_then(|cell| cell.get_render())
     }
 
     pub fn get_cell_render_mut(&mut self, cell_idx: usize) -> Option<&mut dyn CellRender> {
@@ -136,7 +135,7 @@ impl TreeNode {
                 warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
                 None
             })
-            .map(|cell| cell.get_render_mut())
+            .and_then(|cell| cell.get_render_mut())
     }
 
     #[inline]
@@ -230,7 +229,7 @@ impl TreeNode {
     }
 
     #[inline]
-    pub(crate) fn create_from_obj(obj: &dyn TreeViewObject, store: ObjectId) -> Self {
+    pub(crate) fn create_from_obj(obj: &dyn TreeViewObject, store: ObjectId) -> Box<Self> {
         Self {
             id: TreeStore::store_ref(store)
                 .unwrap()
@@ -249,7 +248,7 @@ impl TreeNode {
             status: Status::Default,
             cells: obj.cells(),
             node_render: obj.node_render(),
-        }
+        }.boxed()
     }
 
     #[inline]
@@ -269,25 +268,27 @@ impl TreeNode {
         geometry.set_x(tl.x() + (ident_length * self.level) as f32);
         geometry.set_width(geometry.width() - (ident_length * self.level) as f32);
 
-        let gapping = geometry.width() / self.cells.len() as f32;
+        let gapping = geometry.width() / self.render_cell_size() as f32;
         let mut offset = geometry.x();
 
         for cell in self.cells.iter() {
-            let mut cell_rect = geometry;
+            if let Some(cell_render) = cell.get_render() {
+                let mut cell_rect = geometry;
 
-            cell_rect.set_x(offset);
-            if let Some(width) = cell.get_render().width() {
-                cell_rect.set_width(width as f32);
-            } else {
-                cell_rect.set_width(gapping);
+                cell_rect.set_x(offset);
+                if let Some(width) = cell_render.width() {
+                    cell_rect.set_width(width as f32);
+                } else {
+                    cell_rect.set_width(gapping);
+                }
+                if let Some(height) = cell_render.height() {
+                    cell_rect.set_height(height as f32);
+                }
+
+                offset += cell_rect.width();
+
+                cell.render_cell(painter, cell_rect);
             }
-            if let Some(height) = cell.get_render().height() {
-                cell_rect.set_height(height as f32);
-            }
-
-            offset += cell_rect.width();
-
-            cell.render_cell(painter, cell_rect);
         }
     }
 
@@ -299,6 +300,17 @@ impl TreeNode {
     #[inline]
     pub(crate) fn get_children_ids(&self) -> &Vec<ObjectId> {
         &self.children_id_holder
+    }
+
+    #[inline]
+    pub(crate) fn render_cell_size(&self) -> usize {
+        let mut size = 0;
+        self.cells.iter().for_each(|cell| {
+            if cell.get_render().is_some() {
+                size += 1;
+            }
+        });
+        size
     }
 
     pub(crate) fn add_node_inner(&mut self, mut node: Box<TreeNode>) -> Option<&mut TreeNode> {
@@ -525,13 +537,4 @@ impl TreeNode {
     pub(crate) fn set_status(&mut self, status: Status) {
         self.status = status
     }
-}
-
-#[repr(u8)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Status {
-    #[default]
-    Default = 0,
-    Selected = 1,
-    Hovered = 2,
 }

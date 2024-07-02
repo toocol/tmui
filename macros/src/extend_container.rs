@@ -50,6 +50,9 @@ pub(crate) fn expand(
 
     let frame_animator_reflect_clause = &general_attr.frame_animator_reflect_clause;
 
+    let isolated_visibility_impl_clause = &general_attr.isolated_visibility_impl_clause;
+    let isolated_visibility_reflect_clause = &general_attr.isolated_visibility_reflect_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -124,6 +127,15 @@ pub(crate) fn expand(
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
+                    }
+
+                    if general_attr.is_isolated_visibility {
+                        let iv_fields = &general_attr.isolated_visibility_field_clause;
+                        for field in iv_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #field
+                            })?);
+                        }
                     }
 
                     // If field with attribute `#[children]`,
@@ -307,6 +319,8 @@ pub(crate) fn expand(
 
                 #global_watch_impl_clause
 
+                #isolated_visibility_impl_clause
+
                 impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -336,6 +350,7 @@ pub(crate) fn expand(
                         #global_watch_reflect_clause
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
+                        #isolated_visibility_reflect_clause
                     }
 
                     #[inline]

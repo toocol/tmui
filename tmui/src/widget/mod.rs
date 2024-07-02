@@ -50,6 +50,7 @@ pub struct Widget {
     old_image_rect: FRect,
     child_image_rect_union: FRect,
     child_overflow_rect: FRect,
+    invalid_area: FRect,
     need_update_geometry: bool,
 
     #[derivative(Default(value = "true"))]
@@ -267,6 +268,11 @@ pub trait WidgetSignals: ActionExt {
         ///
         /// @param [`bool`]
         visibility_changed();
+
+        /// Emit when widget's invalid area has changed.
+        ///
+        /// @param [`FRect`]
+        invalid_area_changed();
     }
 }
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
@@ -306,6 +312,12 @@ impl Widget {
     fn notify_visible(&mut self, visible: bool) {
         if let Some(child) = self.get_child_mut() {
             if visible {
+                if let Some(iv) = cast!(child as IsolatedVisibility) {
+                    if iv.auto_hide() {
+                        return;
+                    }
+                }
+
                 child.set_property("visible", true.to_value());
                 child.set_render_styles(true);
             } else {
@@ -413,6 +425,7 @@ impl ObjectImpl for Widget {
             }
             "visible" => {
                 let visible = value.get::<bool>();
+                emit!(self.visibility_changed(), visible);
                 self.notify_visible(visible)
             }
             "z_index" => {
@@ -462,13 +475,14 @@ impl WidgetImpl for Widget {}
 /////////////////////////////////////////////////////////////////////////////////
 impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for T {
     fn on_renderer(&mut self, cr: &DrawingContext) {
+        #[cfg(verbose_logging)]
+        let frame = cr.frame();
+
         if !self.visible() && !self.is_animation_progressing() {
             #[cfg(verbose_logging)]
+            #[rustfmt::skip]
             info!(
-                "[on_renderer] {} check return, visible={}, is_animation_progressing={}",
-                self.name(),
-                self.visible(),
-                self.is_animation_progressing()
+                "[on_renderer({}:{})] {} check return, visible={}, is_animation_progressing={}", frame.id(), frame.nth(), self.name(), self.visible(), self.is_animation_progressing()
             );
             return;
         }
@@ -477,17 +491,19 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
         if !geometry.is_valid() {
             #[cfg(verbose_logging)]
+            #[rustfmt::skip]
             info!(
-                "[on_renderer] {} check return, geometry is not valid, rect={:?}",
-                self.name(),
-                geometry,
+                "[on_renderer({}:{})] {} check return, geometry is not valid, rect={:?}", frame.id(), frame.nth(), self.name(), geometry,
             );
             return;
         }
         geometry.set_point(&(0, 0).into());
 
         #[cfg(verbose_logging)]
-        info!("[on_renderer] {}, z_index={}", self.name(), self.z_index());
+        #[rustfmt::skip]
+        info!(
+            "[on_renderer({}:{})] {}, z_index={}", frame.id(), frame.nth(), self.name(), self.z_index()
+        );
 
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 
@@ -502,7 +518,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
         // The default paint blend mode is set to `Src`,
         // it should be set to `SrcOver` when the widget is undergoing animation progress.
-        if self.is_animation_progressing() || self.background() == Color::TRANSPARENT {
+        painter.set_blend_mode(self.blend_mode());
+        if self.is_animation_progressing() || self.background().a() != 255 {
             painter.set_blend_mode(BlendMode::SrcOver);
         }
 
@@ -563,7 +580,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             // Draw the border of the Widget.
             self.border_ref().render(&mut painter, geometry.into());
 
-            self.set_first_rendered();
+            self.set_first_rendered(true);
             self.set_render_styles(false);
 
             painter.restore();
@@ -576,14 +593,20 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             self.clip_rect(&mut painter, ClipOp::Intersect);
         }
 
-        if let Some(loading) = cast_mut!(self as Loadable) {
-            if loading.is_loading() {
+        let should_paint = match cast_mut!(self as Loadable) {
+            Some(loading) if loading.is_loading() => {
                 loading.render_loading(&mut painter);
-            } else {
-                let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
-                self.paint(&mut painter);
+                false
             }
-        } else {
+            _ => true,
+        };
+
+        if should_paint {
+            let invalid_area = self.invalid_area();
+            if invalid_area.is_valid() {
+                self.clear_global(&mut painter, invalid_area);
+            }
+
             let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
             self.paint(&mut painter);
         }
@@ -708,10 +731,16 @@ pub trait PointEffective {
 }
 impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
-        let self_rect = self.rect();
-        if !self_rect.contains(point) {
+        if !self.visible() {
             return false;
         }
+        if !self.rect().contains(point) {
+            return false;
+        }
+        if self.invalid_area().contains_point(point) {
+            return false;
+        }
+
         for (&id, overlaid) in self.window().overlaid_rects().iter() {
             if self.descendant_of(id) || self.id() == id {
                 continue;
@@ -1161,6 +1190,20 @@ pub trait WidgetImpl:
         false
     }
 
+    #[inline]
+    fn blend_mode(&self) -> BlendMode {
+        BlendMode::default()
+    }
+
+    #[inline]
+    fn notify_update(&mut self) {
+        if !self.initialized() {
+            return;
+        }
+
+        self.update()
+    }
+
     /// Invoke this function when renderering.
     #[inline]
     fn paint(&mut self, painter: &mut Painter) {}
@@ -1316,6 +1359,7 @@ impl dyn WidgetImpl {
         }
     }
 }
+impl AsMutPtr for dyn WidgetImpl {}
 
 pub trait ChildOp: WidgetImpl {
     /// @see [`Widget::child_internal`](Widget) <br>
@@ -1511,7 +1555,7 @@ pub trait RegionClear: WidgetImpl {
     /// The coordinate of given rect should be [`Coordinate::Widget`]
     #[inline]
     fn clear<T: Into<SkiaRect>>(&self, painter: &mut Painter, rect: T) {
-        painter.fill_rect(rect, self.opaque_background())
+        painter.fill_rect(rect, self.opaque_background());
     }
 
     /// The coordinate of given rect should be [`Coordinate::Global`]
@@ -1522,6 +1566,18 @@ pub trait RegionClear: WidgetImpl {
 }
 impl<T: WidgetImpl> RegionClear for T {}
 impl RegionClear for dyn WidgetImpl {}
+
+////////////////////////////////////// IsolatedVisibility //////////////////////////////////////
+#[reflect_trait]
+pub trait IsolatedVisibility: WidgetImpl {
+    fn auto_hide(&self) -> bool;
+
+    fn set_auto_hide(&mut self, auto_hide: bool);
+
+    fn shadow_rect(&self) -> FRect;
+
+    fn set_shadow_rect(&mut self, rect: FRect);
+}
 
 /// `MouseEnter`/`MouseLeave`:
 /// - `MouseEnter` fires when the mouse pointer enters the bounds of an element,

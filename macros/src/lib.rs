@@ -14,6 +14,7 @@ mod extend_shared_widget;
 mod extend_widget;
 mod general_attr;
 mod global_watch;
+mod isolated_visibility;
 mod layout;
 mod loadable;
 mod pane;
@@ -368,5 +369,10 @@ pub fn iter_executor(_: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn frame_animator(_: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn isolated_visibility(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

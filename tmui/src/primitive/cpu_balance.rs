@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use std::time::{Duration, Instant};
+use std::{ptr::addr_of_mut, time::{Duration, Instant}};
 
 const DEFAULT_PAYLOAD_THRESHOLD: usize = 40;
 const PAYLOAD_INTERVAL: usize = 1;
@@ -38,7 +38,7 @@ impl CpuBalance {
     /// SAFETY: When application start running, PAYLOAD_THRESHOLD will not change anymore.
     pub(crate) fn payload_threshold() -> &'static mut usize {
         static mut PAYLOAD_THRESHOLD: Lazy<usize> = Lazy::new(|| DEFAULT_PAYLOAD_THRESHOLD);
-        unsafe { &mut PAYLOAD_THRESHOLD }
+        unsafe { addr_of_mut!(PAYLOAD_THRESHOLD).as_mut().unwrap() }
     }
 
     /// Add payload to CpuBalance

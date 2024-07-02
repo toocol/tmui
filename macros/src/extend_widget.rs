@@ -6,7 +6,10 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput, Meta};
 
-pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    ignore_default: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
@@ -35,6 +38,9 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
     let iter_executor_reflect_clause = &general_attr.iter_executor_reflect_clause;
 
     let frame_animator_reflect_clause = &general_attr.frame_animator_reflect_clause;
+
+    let isolated_visibility_impl_clause = &general_attr.isolated_visibility_impl_clause;
+    let isolated_visibility_reflect_clause = &general_attr.isolated_visibility_reflect_clause;
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -78,6 +84,15 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
+                    }
+
+                    if general_attr.is_isolated_visibility {
+                        let iv_fields = &general_attr.isolated_visibility_field_clause;
+                        for field in iv_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #field
+                            })?);
+                        }
                     }
 
                     childable.parse_childable(fields)?;
@@ -142,6 +157,8 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
 
                 #global_watch_impl_clause
 
+                #isolated_visibility_impl_clause
+
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -162,6 +179,7 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool) -> syn::Result
                         #global_watch_reflect_clause
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
+                        #isolated_visibility_reflect_clause
                     }
 
                     #[inline]
@@ -206,7 +224,7 @@ pub(crate) fn expand_with_layout(
     layout_meta: &Meta,
     layout: &str,
     internal: bool,
-    ignore_default: bool
+    ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     layout::expand(ast, layout_meta, layout, internal, ignore_default)
 }

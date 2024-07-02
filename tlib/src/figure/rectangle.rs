@@ -975,8 +975,19 @@ impl FRect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.width()
-            && point.y() <= self.height()
+            && point.x() <= self.x() + self.width()
+            && point.y() <= self.y() + self.height()
+    }
+
+    #[inline]
+    pub fn contains_point(&self, point: &Point) -> bool {
+        if !self.is_valid() {
+            return false;
+        }
+        point.x() as f32 >= self.x()
+            && point.y() as f32 >= self.y()
+            && point.x() as f32 <= self.x() + self.width()
+            && point.y() as f32 <= self.y() + self.height()
     }
 
     #[inline]

@@ -117,6 +117,13 @@ impl From<Point> for (i32, i32) {
     }
 }
 
+impl From<FPoint> for Point {
+    #[inline]
+    fn from(value: FPoint) -> Self {
+        Self { x: value.x() as i32, y: value.y() as i32 }
+    }
+}
+
 impl From<Point> for SkiaPoint {
     #[inline]
     fn from(value: Point) -> Self {
@@ -343,16 +350,6 @@ impl From<FPoint> for (f32, f32) {
     #[inline]
     fn from(value: FPoint) -> Self {
         (value.x, value.y)
-    }
-}
-
-impl From<FPoint> for Point {
-    #[inline]
-    fn from(value: FPoint) -> Self {
-        Point {
-            x: value.x as i32,
-            y: value.y as i32,
-        }
     }
 }
 
