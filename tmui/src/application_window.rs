@@ -106,7 +106,10 @@ impl WidgetImpl for ApplicationWindow {
             run_after(self)
         }
         for widget in self.run_afters.iter_mut() {
-            nonnull_mut!(widget).run_after()
+            let widget = nonnull_mut!(widget);
+            widget.run_after();
+            #[cfg(verbose_logging)]
+            log::info!("[run_after] `{}` executed run after.", widget.name());
         }
         self.run_afters.clear();
     }

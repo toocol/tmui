@@ -122,7 +122,6 @@ pub(crate) fn generate_scroll_area_impl(
             #[inline]
             fn set_layout_mode(&mut self, layout_mode: #use_prefix::scroll_area::LayoutMode) {
                 use #use_prefix::tlib::figure::rectangle::FRect;
-                use #use_prefix::scroll_bar::ScrollBarSignals;
                 use #use_prefix::scroll_area::ScrollAreaSlots;
                 self.layout_mode = layout_mode;
                 self.scroll_bar_mut().set_occupy_space(layout_mode == #use_prefix::scroll_area::LayoutMode::Normal);
@@ -152,7 +151,6 @@ pub(crate) fn generate_scroll_area_impl(
             fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
                 use #use_prefix::application_window::ApplicationWindow;
                 use #use_prefix::tlib::figure::rectangle::FRect;
-                use #use_prefix::scroll_bar::ScrollBarSignals;
                 use #use_prefix::scroll_area::ScrollAreaSlots;
 
                 area.set_parent(self);

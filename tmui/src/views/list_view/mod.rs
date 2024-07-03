@@ -65,6 +65,7 @@ use crate::{
 /// }
 /// ```
 #[extends(Widget, Layout(ScrollArea), internal = true)]
+#[popupable]
 pub struct ListView {}
 
 impl ObjectSubclass for ListView {

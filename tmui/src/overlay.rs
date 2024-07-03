@@ -133,3 +133,8 @@ pub trait OverlaidRegister: WidgetImpl {
     }
 }
 impl<T: Overlaid> OverlaidRegister for T {}
+
+#[reflect_trait]
+pub trait PartCovered {
+    fn is_covered(&self) -> bool;
+}

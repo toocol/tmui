@@ -35,6 +35,8 @@ pub struct Container {
     /// - Container layout will strictly respect the `size_hint` of each subcomponent,
     ///   the parts beyond the size range will be hidden.
     strict_children_layout: bool,
+
+    scale_strat: ScaleStrat,
 }
 
 impl ObjectSubclass for Container {
@@ -195,22 +197,53 @@ pub trait ContainerExt {
     fn is_strict_children_layout(&self) -> bool;
 
     fn set_strict_children_layout(&mut self, strict_children_layout: bool);
+
+    fn scale_strat(&self) -> ScaleStrat;
+
+    fn set_scale_strat(&mut self, strat: ScaleStrat);
 }
-impl ContainerExt for Container {
+impl<T: ContainerImpl> ContainerExt for T {
     #[inline]
     fn is_strict_children_layout(&self) -> bool {
-        self.strict_children_layout
+        self.container_props().strict_children_layout
     }
 
     #[inline]
     fn set_strict_children_layout(&mut self, strict_children_layout: bool) {
-        self.strict_children_layout = strict_children_layout
+        self.container_props_mut().strict_children_layout = strict_children_layout
+    }
+    
+    #[inline]
+    fn scale_strat(&self) -> ScaleStrat {
+        self.container_props().scale_strat
+    }
+    
+    #[inline]
+    fn set_scale_strat(&mut self, strat: ScaleStrat) {
+        self.container_props_mut().scale_strat = strat
+    }
+}
+
+pub trait ContainerPropsAcquire {
+    fn container_props(&self) -> &Container;
+
+    fn container_props_mut(&mut self) -> &mut Container;
+}
+impl ContainerPropsAcquire for Container {
+    #[inline]
+    fn container_props(&self) -> &Container {
+        self
+    }
+
+    #[inline]
+    fn container_props_mut(&mut self) -> &mut Container {
+        self
     }
 }
 
 #[reflect_trait]
 pub trait ContainerImpl:
-    WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt
+    WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt + ContainerPropsAcquire
 {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`.
@@ -383,4 +416,26 @@ pub trait SpacingCapable: ContainerImpl {
             orientation: self.orientation(),
         }
     }
+}
+
+/// Enum representing the different states of a container that affect how the sizes
+/// of its child components are calculated based on their scale values.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub enum ScaleStrat {
+    /// In this state, the sum of the scale values of all child components is computed
+    /// to determine the total sum. Each child's size is then calculated as its scale
+    /// value divided by this total sum, resulting in proportions relative to the whole.
+    /// 
+    /// For example, if the scales are [2.0, 3.0], the total sum is 5.0. The sizes
+    /// will be [2.0 / 5.0, 3.0 / 5.0], which are [0.4, 0.6].
+    #[default]
+    Sum,
+    
+    /// In this state, the total sum is not influenced by the child components' scale
+    /// values. Instead, each child's size is calculated as its scale value divided
+    /// by 1, effectively meaning the size directly corresponds to the scale value.
+    /// 
+    /// For example, if the scales are [0.2, 0.3], the sizes will be [0.2 / 1.0, 0.3 / 1.0],
+    /// which are [0.2, 0.3].
+    Direct,
 }

@@ -4,19 +4,14 @@ pub mod widget_inner;
 
 use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
-    application_window::ApplicationWindow,
-    graphics::{
+    application_window::ApplicationWindow, graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowRender},
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
         render_difference::RenderDiffence,
-    },
-    layout::LayoutMgr,
-    opti::tracker::Tracker,
-    prelude::*,
-    skia_safe,
+    }, layout::LayoutMgr, opti::tracker::Tracker, overlay::ReflectPartCovered, prelude::*, skia_safe
 };
 use derivative::Derivative;
 use log::error;
@@ -557,6 +552,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             };
             if background != Color::TRANSPARENT {
                 background.set_transparency(self.transparency());
+            }
+            if let Some(pc) = cast!(self as PartCovered) {
+                if pc.is_covered() {
+                    background = self.background();
+                }
             }
 
             // Draw the background color of the Widget.
@@ -1577,6 +1577,8 @@ pub trait IsolatedVisibility: WidgetImpl {
     fn shadow_rect(&self) -> FRect;
 
     fn set_shadow_rect(&mut self, rect: FRect);
+
+    fn shadow_rect_mut(&mut self) -> &mut FRect;
 }
 
 /// `MouseEnter`/`MouseLeave`:

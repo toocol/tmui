@@ -93,11 +93,15 @@ impl WidgetImpl for TreeViewImage {
     }
 
     fn paint(&mut self, painter: &mut Painter) {
-        for redraw_rect in self.redraw_region().iter() {
-            self.clear(painter, redraw_rect.rect());
-        }
-
         let rect = self.contents_rect(Some(Coordinate::Widget));
+
+        if self.redraw_region().is_empty() {
+            self.clear(painter, rect);
+        } else {
+            for redraw_rect in self.redraw_region().iter() {
+                self.clear(painter, redraw_rect.rect());
+            }
+        }
 
         for (idx, node) in self.store.get_image().iter().enumerate() {
             let i = idx as i32;
@@ -231,7 +235,9 @@ impl TreeViewImage {
 impl TreeViewImage {
     #[inline]
     pub(crate) fn when_size_changed(&mut self, _size: Size) {
-        self.calculate_window_lines()
+        self.calculate_window_lines();
+
+        self.when_nodes_buffer_changed(self.store.buffer_len());
     }
 
     #[inline]

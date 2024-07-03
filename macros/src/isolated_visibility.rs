@@ -57,6 +57,11 @@ impl<'a> IsolatedVisibility<'a> {
                 fn set_shadow_rect(&mut self, rect: FRect) {
                     self.shadow_rect = rect
                 }
+
+                #[inline]
+                fn shadow_rect_mut(&mut self) -> &mut FRect {
+                    &mut self.shadow_rect
+                }
             }
         )
     }

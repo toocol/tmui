@@ -1,7 +1,7 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{
-        ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate,
+        ContainerLayoutEnum, ContainerScaleCalculate, ScaleStrat, StaticContainerScaleCalculate,
         StaticSizeUnifiedAdjust, SCALE_ADAPTION,
     },
     layout::LayoutMgr,
@@ -276,11 +276,15 @@ impl StaticContainerScaleCalculate for VBox {
 
     #[inline]
     fn static_container_vscale_calculate(c: &dyn ContainerImpl) -> f32 {
-        c.children()
-            .iter()
-            .filter(|c| !c.fixed_height())
-            .map(|c| if c.visible() { c.vscale() } else { 0. })
-            .sum()
+        match c.scale_strat() {
+            ScaleStrat::Sum => c
+                .children()
+                .iter()
+                .filter(|c| !c.fixed_height())
+                .map(|c| if c.visible() { c.vscale() } else { 0. })
+                .sum(),
+            ScaleStrat::Direct => 1.,
+        }
     }
 }
 

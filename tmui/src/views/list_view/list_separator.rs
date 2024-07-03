@@ -7,11 +7,12 @@ use derivative::Derivative;
 use tlib::{figure::Color, global::AsAny};
 
 pub type ListSeparatorRenderFn = Box<dyn Fn(&mut Painter, RenderCtx)>;
+pub(crate) const DEFAULT_SEPARATOR_HEIGHT: i32 = 3;
 
 #[derive(Derivative, Clone)]
 #[derivative(Default)]
 pub struct GroupSeparator {
-    #[derivative(Default(value = "3"))]
+    #[derivative(Default(value = "DEFAULT_SEPARATOR_HEIGHT"))]
     height: i32,
     #[derivative(Default(value = "Rc::new(Box::new(default_separator_render))"))]
     render_fn: Rc<ListSeparatorRenderFn>,
@@ -20,11 +21,6 @@ unsafe impl Send for GroupSeparator {}
 unsafe impl Sync for GroupSeparator {}
 
 impl GroupSeparator {
-    #[inline]
-    pub fn draw_separator(&self, painter: &mut Painter, render_ctx: RenderCtx) {
-        self.render(painter, render_ctx)
-    }
-
     #[inline]
     pub fn separator_height(&self) -> i32 {
         self.height

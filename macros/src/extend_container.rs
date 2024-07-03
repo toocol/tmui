@@ -403,15 +403,15 @@ pub(crate) fn gen_container_trait_impl_clause(
         .collect();
 
     Ok(quote!(
-        impl #impl_generics ContainerExt for #name #ty_generics #where_clause {
+        impl #impl_generics ContainerPropsAcquire for #name #ty_generics #where_clause {
             #[inline]
-            fn is_strict_children_layout(&self) -> bool {
-                self.#(#container_path).*.is_strict_children_layout()
+            fn container_props(&self) -> &Container {
+                self.#(#container_path).*.container_props()
             }
 
             #[inline]
-            fn set_strict_children_layout(&mut self, strict_children_layout: bool) {
-                self.#(#container_path).*.set_strict_children_layout(strict_children_layout)
+            fn container_props_mut(&mut self) -> &mut Container {
+                self.#(#container_path).*.container_props_mut()
             }
         }
     ))
