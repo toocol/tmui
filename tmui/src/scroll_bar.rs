@@ -1,8 +1,5 @@
 use crate::{
-    application::wheel_scroll_lines,
-    graphics::painter::Painter,
-    prelude::*,
-    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
+    application::wheel_scroll_lines, graphics::painter::Painter, overlay::{PartCovered, ReflectPartCovered}, prelude::*, widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl}
 };
 use derivative::Derivative;
 use std::mem::size_of;
@@ -70,15 +67,6 @@ pub struct ScrollBar {
     mouse_in: bool,
 }
 
-pub trait ScrollBarSignals: ActionExt {
-    signals!(
-        ScrollBarSignals:
-
-        need_update();
-    );
-}
-impl ScrollBarSignals for ScrollBar {}
-
 impl ObjectSubclass for ScrollBar {
     const NAME: &'static str = "ScrollBar";
 }
@@ -101,6 +89,11 @@ impl ObjectImpl for ScrollBar {
         self.set_mouse_tracking(true);
         self.set_background(DEFAULT_SCROLL_BAR_BACKGROUND);
         self.color = DEFAULT_SLIDER_BACKGROUND;
+    }
+
+    #[inline]
+    fn type_register(&self,type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectPartCovered>()
     }
 }
 
@@ -319,6 +312,9 @@ pub trait ScrollBarSignal: ActionExt {
         /// Emitted when ScrollBar triggered action.
         /// @param action(SliderAction)
         action_triggered();
+
+        /// Emitted when ScrollBar need update when under overlaid mode.
+        need_update();
     }
 }
 impl ScrollBarSignal for ScrollBar {}
@@ -764,3 +760,10 @@ impl AsNumeric<u8> for SliderAction {
     }
 }
 implements_enum_value!(SliderAction, u8);
+
+impl PartCovered for ScrollBar {
+    #[inline]
+    fn is_covered(&self) -> bool {
+        self.overlaid
+    }
+}

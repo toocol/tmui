@@ -100,6 +100,11 @@ impl Color {
     }
 
     #[inline]
+    pub fn is_solid(&self) -> bool {
+        self.a == Self::SOLID as i16
+    }
+
+    #[inline]
     pub fn is_opaque(&self) -> bool {
         self.a != 0
     }

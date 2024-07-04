@@ -47,13 +47,6 @@ impl ObjectSubclass for ListViewImage {
 impl ObjectImpl for ListViewImage {
     fn initialize(&mut self) {
         self.set_mouse_tracking(true);
-    }
-}
-
-impl WidgetImpl for ListViewImage {
-    #[inline]
-    fn run_after(&mut self) {
-        self.font_changed();
 
         connect!(
             self.store,
@@ -74,6 +67,13 @@ impl WidgetImpl for ListViewImage {
             scroll_bar_value_changed(i32)
         );
         connect!(self, size_changed(), self, on_size_changed(Size));
+    }
+}
+
+impl WidgetImpl for ListViewImage {
+    #[inline]
+    fn run_after(&mut self) {
+        self.font_changed();
 
         self.on_items_changed(self.store.get_items_len());
     }
@@ -192,6 +192,8 @@ impl ListViewImage {
     #[inline]
     fn on_size_changed(&mut self, _: Size) {
         self.calc_window_lines();
+
+        self.on_items_changed(self.store.get_items_len());
     }
 
     fn calc_window_lines(&mut self) {
@@ -258,8 +260,16 @@ impl ListViewImage {
 
                 if let Some(item) = item {
                     if item.item_type() == ItemType::Separator {
+                        if hovered_node.is_some() {
+                            let node = nonnull_mut!(hovered_node.take());
+                            if !node.is_selected() {
+                                node.set_status(Status::Default);
+                            }
+                            return true;
+                        }
                         return false;
                     }
+
                     let mut update = false;
                     let node = item.downcast_mut::<ListNode>().unwrap();
 
@@ -358,7 +368,7 @@ impl ListViewImage {
                         on_node_pressed(node, event);
                     }
                     return true;
-                } else if let Some(ref on_frea_area_pressed) = self.on_free_area_pressed {
+                } else {
                     let mut update = false;
                     let mut old_select = selected_node.take();
                     if old_select.is_some() {
@@ -367,11 +377,12 @@ impl ListViewImage {
                         update = true;
                     }
 
-                    on_frea_area_pressed(parent, event);
+                    if let Some(ref on_frea_area_pressed) = self.on_free_area_pressed {
+                        on_frea_area_pressed(parent, event);
+                    }
+
                     return update;
                 };
-
-                false
             });
 
         if update {
@@ -386,14 +397,13 @@ impl ListViewImage {
             if let Some(ref on_free_area_released) = self.on_free_area_released {
                 on_free_area_released(parent, event);
             }
-            return
+            return;
         }
 
         if let Some(ref on_node_released) = self.on_node_released {
             let node = nonnull_mut!(selected_node);
             on_node_released(node, event)
         }
-
     }
 }
 

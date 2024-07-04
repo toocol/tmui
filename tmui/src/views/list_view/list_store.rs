@@ -1,6 +1,6 @@
 use super::{
     list_group::ListGroup, list_item::ListItem, list_node::ListNode,
-    list_separator::GroupSeparator, list_view_object::ListViewObject, WidgetHnd,
+    list_separator::{GroupSeparator, DEFAULT_SEPARATOR_HEIGHT}, list_view_object::ListViewObject, WidgetHnd,
 };
 use crate::{views::list_view::list_item::ListItemCast, widget::WidgetImpl};
 use once_cell::sync::Lazy;
@@ -195,7 +195,7 @@ impl ListStore {
             current_line: 0,
             y_offset: 0,
             len_rec: 0,
-            separator_height: 0,
+            separator_height: DEFAULT_SEPARATOR_HEIGHT,
             entered_node: None,
             hovered_node: None,
             selected_node: None,

@@ -1,5 +1,5 @@
 use crate::{
-    container::{ContainerLayoutEnum, SCALE_ADAPTION},
+    container::{ContainerLayoutEnum, ScaleStrat, SCALE_ADAPTION},
     hbox::hbox_layout_homogeneous,
     layout::LayoutMgr,
     prelude::*,
@@ -243,12 +243,15 @@ impl StaticContainerScaleCalculate for Pane {
         let pane = cast!(c as PaneExt).unwrap();
 
         match pane.orientation() {
-            Orientation::Horizontal => c
-                .children()
-                .iter()
-                .filter(|c| !c.fixed_width())
-                .map(|c| if c.visible() { c.hscale() } else { 0. })
-                .sum(),
+            Orientation::Horizontal => match c.scale_strat() {
+                ScaleStrat::Sum => c
+                    .children()
+                    .iter()
+                    .filter(|c| !c.fixed_width())
+                    .map(|c| if c.visible() { c.hscale() } else { 0. })
+                    .sum(),
+                ScaleStrat::Direct => 1.,
+            },
             Orientation::Vertical => SCALE_ADAPTION,
         }
     }
@@ -258,12 +261,15 @@ impl StaticContainerScaleCalculate for Pane {
 
         match pane.orientation() {
             Orientation::Horizontal => SCALE_ADAPTION,
-            Orientation::Vertical => c
-                .children()
-                .iter()
-                .filter(|c| !c.fixed_height())
-                .map(|c| if c.visible() { c.vscale() } else { 0. })
-                .sum(),
+            Orientation::Vertical => match c.scale_strat() {
+                ScaleStrat::Sum => c
+                    .children()
+                    .iter()
+                    .filter(|c| !c.fixed_height())
+                    .map(|c| if c.visible() { c.vscale() } else { 0. })
+                    .sum(),
+                ScaleStrat::Direct => 1.,
+            },
         }
     }
 }
@@ -293,10 +299,7 @@ impl Layout for Pane {
     }
 
     #[inline]
-    fn position_layout(
-        &mut self,
-        parent: Option<&dyn WidgetImpl>,
-    ) {
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         Self::container_position_layout(self, parent);
     }
 }

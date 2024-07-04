@@ -3,7 +3,7 @@ use crate::{
     container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
     layout::LayoutMgr,
     prelude::*,
-    scroll_bar::{ScrollBar, ScrollBarPosition, ScrollBarSignals},
+    scroll_bar::{ScrollBar, ScrollBarPosition},
 };
 use derivative::Derivative;
 use tlib::{

@@ -14,7 +14,7 @@ pub use crate::container::{
     ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerExt, ContainerImpl,
     ContainerImplExt, ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
     ReflectSizeUnifiedAdjust, ReflectSpacingCapable, SizeUnifiedAdjust, SpacingCapable,
-    StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
+    StaticContainerScaleCalculate, StaticSizeUnifiedAdjust, ContainerPropsAcquire
 };
 pub use crate::font::Font;
 pub use crate::graphics::board::Board;
