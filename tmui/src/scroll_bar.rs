@@ -1,5 +1,9 @@
 use crate::{
-    application::wheel_scroll_lines, graphics::painter::Painter, overlay::{PartCovered, ReflectPartCovered}, prelude::*, widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl}
+    application::wheel_scroll_lines,
+    graphics::painter::Painter,
+    overlay::{PartCovered, ReflectPartCovered},
+    prelude::*,
+    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
 };
 use derivative::Derivative;
 use std::mem::size_of;
@@ -65,6 +69,7 @@ pub struct ScrollBar {
     active_background: Option<Color>,
     active_color: Option<Color>,
     mouse_in: bool,
+    visible_in_valid: bool,
 }
 
 impl ObjectSubclass for ScrollBar {
@@ -92,7 +97,7 @@ impl ObjectImpl for ScrollBar {
     }
 
     #[inline]
-    fn type_register(&self,type_registry: &mut TypeRegistry) {
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<Self, ReflectPartCovered>()
     }
 }
@@ -102,7 +107,9 @@ impl WidgetImpl for ScrollBar {
     fn run_after(&mut self) {
         if self.auto_hide {
             self.window().add_shadow_mouse_watch(self);
-            self.set_shadow_rect(self.rect_f());
+            self.hide()
+        }
+        if self.visible_in_valid && self.minimum == self.maximum {
             self.hide()
         }
     }
@@ -223,9 +230,16 @@ impl WidgetImpl for ScrollBar {
         self.window().high_load_request(true);
     }
 
-    fn on_mouse_released(&mut self, _: &MouseEvent) {
+    fn on_mouse_released(&mut self, event: &MouseEvent) {
         self.pressed = false;
         self.window().high_load_request(false);
+
+        let rect = self.origin_rect(Some(Coordinate::Widget));
+        if !rect.contains(&event.position().into()) && self.auto_hide {
+            self.hide();
+            return;
+        }
+
         if self.repaint_when_active() {
             self.notify_update();
         }
@@ -268,6 +282,9 @@ impl WidgetImpl for ScrollBar {
     #[inline]
     fn on_mouse_enter(&mut self, _: &MouseEvent) {
         self.mouse_in = true;
+        if self.visible_in_valid && self.minimum == self.maximum {
+            return;
+        }
         if !self.visible() && self.auto_hide {
             self.show();
         } else if self.repaint_when_active() {
@@ -433,7 +450,14 @@ impl ScrollBar {
                 self.value
             });
             emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
-            self.notify_update();
+
+            if self.minimum != self.maximum && self.visible_in_valid && !self.auto_hide {
+                self.show()
+            }
+
+            if self.visible() {
+                self.notify_update();
+            }
         }
     }
     #[inline]
@@ -571,6 +595,15 @@ impl ScrollBar {
     #[inline]
     pub fn slider_radius(&self) -> f32 {
         self.slider_radius
+    }
+
+    #[inline]
+    pub fn set_visible_in_valid(&mut self, visible_in_valid: bool) {
+        self.visible_in_valid = visible_in_valid;
+    }
+    #[inline]
+    pub fn visible_in_valid(&self) -> bool {
+        self.visible_in_valid
     }
 
     #[inline]

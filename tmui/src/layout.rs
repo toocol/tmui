@@ -176,11 +176,11 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
             }
         }
+        let width = self.rect_f().width();
+        if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
+            iv.shadow_rect_mut().set_width(width);
+        }
         if !self.visible() {
-            let width = self.rect_f().width();
-            if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
-                iv.shadow_rect_mut().set_width(width);
-            }
             self.set_fixed_width(0)
         }
 
@@ -229,11 +229,11 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
             }
         }
+        let height = self.rect_f().height();
+        if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
+            iv.shadow_rect_mut().set_height(height);
+        }
         if !self.visible() {
-            let height = self.rect_f().height();
-            if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
-                iv.shadow_rect_mut().set_height(height);
-            }
             self.set_fixed_height(0)
         }
 
@@ -358,11 +358,11 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
             }
         }
+        let width = self.rect_f().width();
+        if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
+            iv.shadow_rect_mut().set_width(width);
+        }
         if !self.visible() {
-            let width = self.rect_f().width();
-            if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
-                iv.shadow_rect_mut().set_width(width);
-            }
             self.set_fixed_width(0)
         }
 
@@ -409,11 +409,11 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
             }
         }
+        let height = self.rect_f().height();
+        if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
+            iv.shadow_rect_mut().set_height(height);
+        }
         if !self.visible() {
-            let height = self.rect_f().height();
-            if let Some(iv) = cast_mut!(self as IsolatedVisibility) {
-                iv.shadow_rect_mut().set_height(height);
-            }
             self.set_fixed_height(0)
         }
 
@@ -649,8 +649,9 @@ impl LayoutMgr {
 
             let r = widget_ref.rect_f();
             if let Some(iv) = cast_mut!(widget_ref as IsolatedVisibility) {
-                iv.shadow_rect_mut().set_x(r.x());
-                iv.shadow_rect_mut().set_y(r.y());
+                let shadow_rect = iv.shadow_rect_mut();
+                shadow_rect.set_x(r.x());
+                shadow_rect.set_y(r.y());
             }
 
             debug!(

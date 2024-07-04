@@ -196,13 +196,13 @@ pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// If there is no return value, `()` was needed.
 /// ### without callback:
 /// ```ignore
-/// tasync!({
+/// async_do!({
 ///     ...
 /// });
 /// ```
 /// ### with callback:
 /// ```ignore
-/// tasync!({
+/// async_do!({
 ///     ...  
 /// } => {
 ///     ...
@@ -210,7 +210,7 @@ pub fn async_task(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 /// ### callback with return value:
 /// ```ignore
-/// tasync!({
+/// async_do!({
 ///     ...  
 ///    "result"
 /// } => |result| {

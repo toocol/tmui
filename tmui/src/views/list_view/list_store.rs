@@ -154,7 +154,9 @@ impl ListStore {
     #[inline]
     pub fn concurrent_store(&mut self) -> Arc<Mutex<ConcurrentStore>> {
         self.arc_count += 1;
-        self.len_rec = self.concurrent_store.lock().len();
+        if let Some(mutex) = self.concurrent_store.try_lock() {
+            self.len_rec = mutex.len();
+        }
         self.concurrent_store.clone()
     }
 }
@@ -241,6 +243,7 @@ impl ListStore {
 
         if let Some(mut mutex) = self.concurrent_store.try_lock() {
             let end = (start + self.window_lines as usize + mutex.separator_cnt).min(mutex.len());
+            self.len_rec = mutex.len();
 
             f(
                 &mut mutex.items[start..end],
@@ -339,7 +342,7 @@ impl ListStore {
         }
 
         let sc = Arc::strong_count(&self.concurrent_store);
-        if sc != self.arc_count {
+        if sc < self.arc_count {
             self.arc_count = sc;
             let new_len = self.concurrent_store.lock().len();
 
@@ -348,6 +351,11 @@ impl ListStore {
                 emit!(self.items_len_changed(), new_len);
             }
         }
+    }
+
+    #[inline]
+    pub(crate) fn occupied(&self) -> bool {
+        self.concurrent_store.is_locked()
     }
 }
 
