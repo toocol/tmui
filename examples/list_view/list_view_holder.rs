@@ -15,12 +15,16 @@ use crate::Node;
 #[derive(Childrenable)]
 #[async_task(name = "BuildListTaskI", value = "()")]
 #[async_task(name = "BuildListTaskII", value = "()")]
+#[async_task(name = "BuildListTaskIII", value = "()")]
 pub struct ListViewHolder {
     #[children]
     list_view_1: Box<ListView>,
 
     #[children]
     list_view_2: Box<ListView>,
+
+    #[children]
+    list_view_3: Box<ListView>,
 }
 
 impl ObjectSubclass for ListViewHolder {
@@ -52,6 +56,13 @@ impl ObjectImpl for ListViewHolder {
             .scroll_bar_mut()
             .set_active_color(Some(Color::GREY_MEDIUM.with_a(155)));
         self.list_view_2.scroll_bar_mut().set_slider_radius(5.);
+        self.list_view_2.scroll_bar_mut().set_auto_hide(true);
+        self.list_view_2.scroll_bar_mut().set_visible_in_valid(true);
+
+        self.list_view_3.set_hexpand(true);
+        self.list_view_3.set_vexpand(true);
+        self.list_view_3.set_hscale(0.3);
+        self.list_view_3.scroll_bar_mut().set_auto_hide(true);
 
         self.list_view_1.register_node_enter(|node, _| {
             println!("Node enter, {}", node.id());
@@ -66,12 +77,25 @@ impl ObjectImpl for ListViewHolder {
             println!("Node released, {}", node.id());
         });
 
-        // self.list_view_2.register_free_area_pressed(|w, _| {
-        //     println!("Free area pressed, {}", w.name());
-        // });
-        // self.list_view_2.register_free_area_released(|w, _| {
-        //     println!("Free area released, {}", w.name());
-        // });
+        self.list_view_2.register_free_area_pressed(|w, _| {
+            println!("Free area pressed, {}", w.name());
+            let view = w.downcast_mut::<ListView>().unwrap();
+            let arc = view.concurrent_store();
+            println!("List view prepare async add node.");
+            async_do!(move {
+                let mut list = arc.lock();
+                for i in 10..1000000 {
+                    list.add_node(&Node {
+                        name: format!("Node_{}", i),
+                    })
+                }
+                println!("List view async add node complete.");
+                ()
+            });
+        });
+        self.list_view_2.register_free_area_released(|w, _| {
+            println!("Free area released, {}", w.name());
+        });
 
         self.list_view_1.start_loading();
         let arc = self.list_view_1.concurrent_store();
@@ -104,16 +128,45 @@ impl ObjectImpl for ListViewHolder {
             },
         );
 
+        self.list_view_2.start_loading();
         let arc = self.list_view_2.concurrent_store();
         self.build_list_task_i_i(
             async move {
                 println!("Build list 2 in thread {:?}", thread::current().id());
                 let mut list = arc.lock();
-                list.add_node(&Node {
-                    name: "New session".to_string(),
-                })
+
+                for i in 0..10 {
+                    list.add_node(&Node {
+                        name: format!("Node_{}", i),
+                    })
+                }
+
+                drop(list);
             },
-            |_: &mut ListViewHolder, _| {},
+            |w: &mut ListViewHolder, _| {
+                println!("list view 2 stop loading");
+                w.list_view_2.stop_loading();
+            },
+        );
+
+        self.list_view_3.start_loading();
+        let arc = self.list_view_3.concurrent_store();
+        self.build_list_task_i_i_i(
+            async move {
+                println!("Build list 3 in thread {:?}", thread::current().id());
+                let mut list = arc.lock();
+
+                for i in 0..1000 {
+                    list.add_node(&Node {
+                        name: format!("Node_{}", i),
+                    })
+                }
+
+                drop(list);
+            },
+            |w: &mut ListViewHolder, _| {
+                w.list_view_3.stop_loading();
+            },
         )
     }
 }

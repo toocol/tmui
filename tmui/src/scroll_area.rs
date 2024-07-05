@@ -386,7 +386,7 @@ fn layout_normal(widget: &mut dyn ScrollAreaExt) {
             scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
 
             if let Some(area) = widget.area_mut() {
-                let scroll_bar_rect = scroll_bar.rect();
+                let scroll_bar_rect: Rect = scroll_bar.shadow_rect().into();
                 area.set_fixed_x(
                     scroll_bar_rect.x() + scroll_bar_rect.width() + area.margin_left(),
                 );
@@ -401,19 +401,32 @@ fn layout_normal(widget: &mut dyn ScrollAreaExt) {
                 let area_rect = area.rect();
                 match scroll_bar.orientation() {
                     Orientation::Vertical => {
-                        scroll_bar
-                            .set_fixed_x(rect.x() + area_rect.width() + scroll_bar.margin_left());
+                        let offset = if scroll_bar.auto_hide() && !scroll_bar.visible() {
+                            scroll_bar.shadow_rect().width() as i32
+                        } else {
+                            0
+                        };
+                        scroll_bar.set_fixed_x(
+                            rect.x() + area_rect.width() + scroll_bar.margin_left() - offset,
+                        );
                         scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
                     }
                     Orientation::Horizontal => {
+                        let offset = if scroll_bar.auto_hide() && !scroll_bar.visible() {
+                            scroll_bar.shadow_rect().height() as i32
+                        } else {
+                            0
+                        };
                         scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
-                        scroll_bar
-                            .set_fixed_y(rect.y() + area_rect.height() + scroll_bar.margin_top());
+                        scroll_bar.set_fixed_y(
+                            rect.y() + area_rect.height() + scroll_bar.margin_top() - offset,
+                        );
                     }
                 }
             } else {
+                let scroll_bar_rect: Rect = scroll_bar.shadow_rect().into();
                 widget.scroll_bar_mut().set_fixed_x(
-                    rect.x() + rect.width() + scroll_bar.margin_left() - scroll_bar.size().width(),
+                    rect.x() + rect.width() + scroll_bar.margin_left() - scroll_bar_rect.width(),
                 );
                 scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
             }
@@ -440,11 +453,12 @@ fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
                 area.set_fixed_y(rect.y() + area.margin_top());
             }
 
+            let scroll_bar_rect: Rect = scroll_bar.shadow_rect().into();
             match scroll_bar.orientation() {
                 Orientation::Vertical => {
                     scroll_bar.set_fixed_x(
                         rect.x() + rect.width() + scroll_bar.margin_left()
-                            - scroll_bar.size().width(),
+                            - scroll_bar_rect.width(),
                     );
                     scroll_bar.set_fixed_y(rect.y() + scroll_bar.margin_top());
                 }
@@ -452,7 +466,7 @@ fn layout_overlay(widget: &mut dyn ScrollAreaExt) {
                     scroll_bar.set_fixed_x(rect.x() + scroll_bar.margin_left());
                     scroll_bar.set_fixed_y(
                         rect.y() + rect.height() + scroll_bar.margin_top()
-                            - scroll_bar.size().height(),
+                            - scroll_bar_rect.height(),
                     );
                 }
             }

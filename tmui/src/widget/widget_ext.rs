@@ -652,6 +652,9 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn hide(&mut self) {
+        if !self.visible() {
+            return;
+        }
         if self.is_animation_progressing() {
             return;
         }
@@ -681,6 +684,9 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn show(&mut self) {
+        if self.visible() {
+            return;
+        }
         if self.is_animation_progressing() {
             return;
         }

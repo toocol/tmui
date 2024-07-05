@@ -103,16 +103,13 @@ impl WidgetImpl for TreeViewImage {
             }
         }
 
-        for (idx, node) in self.store.get_image().iter().enumerate() {
-            let i = idx as i32;
-            let y_offset = i * self.line_height + i * self.line_spacing;
+        let (image, y_offset) = self.store.get_image();
+        let mut offset = rect.y()
+            - (y_offset as f32 / 10. * (self.line_height + self.line_spacing) as f32) as i32;
 
-            let geometry = Rect::new(
-                rect.x(),
-                rect.y() + y_offset,
-                rect.width(),
-                self.line_height,
-            );
+        for node in image.iter() {
+            let geometry = Rect::new(rect.x(), offset, rect.width(), self.line_height);
+            offset += self.line_height + self.line_spacing;
 
             nonnull_ref!(node).render_node(
                 painter,
@@ -247,14 +244,16 @@ impl TreeViewImage {
         self.store.set_window_lines(window_lines);
 
         let scroll_bar = nonnull_mut!(self.scroll_bar);
-        scroll_bar.set_single_step(1);
-        scroll_bar.set_page_step(window_lines);
-        scroll_bar.set_visible_area(window_lines);
+        scroll_bar.set_single_step(4);
+        scroll_bar.set_page_step(window_lines * 10);
+        scroll_bar.set_visible_area(window_lines * 10);
     }
 
     #[inline]
     pub(crate) fn index_node(&self, y: i32) -> usize {
-        (y / (self.line_height + self.line_spacing)) as usize
+        let y_offset = (self.store.y_offset() as f32 / 10.
+            * (self.line_height + self.line_spacing) as f32) as i32;
+        ((y + y_offset) / (self.line_height + self.line_spacing)) as usize
     }
 
     #[inline]
@@ -281,7 +280,7 @@ impl TreeViewImage {
     pub(crate) fn when_nodes_buffer_changed(&mut self, buffer_len: usize) {
         let scroll_bar = nonnull_mut!(self.scroll_bar);
 
-        scroll_bar.set_range(0, buffer_len as i32 - self.store.get_window_lines());
+        scroll_bar.set_range(0, (buffer_len as i32 - self.store.get_window_lines()) * 10);
     }
 
     #[inline]

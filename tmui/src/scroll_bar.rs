@@ -1,16 +1,21 @@
 use crate::{
-    application::wheel_scroll_lines, graphics::painter::Painter, overlay::{PartCovered, ReflectPartCovered}, prelude::*, widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl}
+    application::wheel_scroll_lines,
+    graphics::painter::Painter,
+    overlay::{PartCovered, ReflectPartCovered},
+    prelude::*,
+    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
 };
 use derivative::Derivative;
-use std::mem::size_of;
+use std::{mem::size_of, time::Duration};
 use tlib::{
-    emit,
+    connect, emit,
     events::{DeltaType, MouseEvent},
     global::bound,
     implements_enum_value, isolated_visibility,
     namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     run_after, signals,
+    timer::Timer,
     values::{FromBytes, FromValue, ToBytes},
 };
 
@@ -65,6 +70,8 @@ pub struct ScrollBar {
     active_background: Option<Color>,
     active_color: Option<Color>,
     mouse_in: bool,
+    visible_in_valid: bool,
+    wheel_timer: Box<Timer>,
 }
 
 impl ObjectSubclass for ScrollBar {
@@ -89,10 +96,12 @@ impl ObjectImpl for ScrollBar {
         self.set_mouse_tracking(true);
         self.set_background(DEFAULT_SCROLL_BAR_BACKGROUND);
         self.color = DEFAULT_SLIDER_BACKGROUND;
+
+        connect!(self.wheel_timer, timeout(), self, wheel_timer_timeout());
     }
 
     #[inline]
-    fn type_register(&self,type_registry: &mut TypeRegistry) {
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<Self, ReflectPartCovered>()
     }
 }
@@ -102,7 +111,9 @@ impl WidgetImpl for ScrollBar {
     fn run_after(&mut self) {
         if self.auto_hide {
             self.window().add_shadow_mouse_watch(self);
-            self.set_shadow_rect(self.rect_f());
+            self.hide()
+        }
+        if self.visible_in_valid && self.minimum == self.maximum {
             self.hide()
         }
     }
@@ -187,6 +198,11 @@ impl WidgetImpl for ScrollBar {
         if self.scroll_by_delta(event.modifier(), delta, event.delta_type()) {
             self.notify_update()
         }
+
+        if self.auto_hide {
+            self.show();
+        }
+        self.reset_wheel_timer();
     }
 
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
@@ -223,44 +239,52 @@ impl WidgetImpl for ScrollBar {
         self.window().high_load_request(true);
     }
 
-    fn on_mouse_released(&mut self, _: &MouseEvent) {
+    fn on_mouse_released(&mut self, event: &MouseEvent) {
         self.pressed = false;
         self.window().high_load_request(false);
+
+        let rect = self.origin_rect(Some(Coordinate::Widget));
+        if !rect.contains(&event.position().into()) && self.auto_hide {
+            self.hide();
+            return;
+        }
+
         if self.repaint_when_active() {
             self.notify_update();
         }
     }
 
     fn on_mouse_move(&mut self, event: &MouseEvent) {
-        if self.pressed {
-            if self.minimum == self.maximum {
-                return;
+        if !self.pressed {
+            return;
+        }
+        if self.minimum == self.maximum {
+            return;
+        }
+        match self.orientation {
+            Orientation::Horizontal => {
+                let size = self.size();
+                let (x, _) = event.position();
+
+                let start_x = x - self.press_offset;
+
+                let slider_len = self.slider_len();
+                let maximum = self.maximum();
+                let value =
+                    (start_x as i64 * maximum as i64) / (size.width() as i64 - slider_len as i64);
+                self.set_value((value as i32).min(maximum).max(0));
             }
-            match self.orientation {
-                Orientation::Horizontal => {
-                    let size = self.size();
-                    let (x, _) = event.position();
+            Orientation::Vertical => {
+                let size = self.size();
+                let (_, y) = event.position();
 
-                    let start_x = x - self.press_offset;
+                let start_y = y - self.press_offset;
 
-                    let slider_len = self.slider_len();
-                    let maximum = self.maximum();
-                    let value = (start_x as i64 * maximum as i64)
-                        / (size.width() as i64 - slider_len as i64);
-                    self.set_value((value as i32).min(maximum).max(0));
-                }
-                Orientation::Vertical => {
-                    let size = self.size();
-                    let (_, y) = event.position();
-
-                    let start_y = y - self.press_offset;
-
-                    let slider_len = self.slider_len();
-                    let maximum = self.maximum();
-                    let value = (start_y as i64 * maximum as i64)
-                        / (size.height() as i64 - slider_len as i64);
-                    self.set_value((value as i32).min(maximum).max(0));
-                }
+                let slider_len = self.slider_len();
+                let maximum = self.maximum();
+                let value =
+                    (start_y as i64 * maximum as i64) / (size.height() as i64 - slider_len as i64);
+                self.set_value((value as i32).min(maximum).max(0));
             }
         }
     }
@@ -268,6 +292,9 @@ impl WidgetImpl for ScrollBar {
     #[inline]
     fn on_mouse_enter(&mut self, _: &MouseEvent) {
         self.mouse_in = true;
+        if self.visible_in_valid && self.minimum == self.maximum {
+            return;
+        }
         if !self.visible() && self.auto_hide {
             self.show();
         } else if self.repaint_when_active() {
@@ -279,6 +306,7 @@ impl WidgetImpl for ScrollBar {
     fn on_mouse_leave(&mut self, _: &MouseEvent) {
         self.mouse_in = false;
         if self.visible() && !self.is_active() && self.auto_hide {
+            self.wheel_timer.stop();
             self.hide();
         } else if self.repaint_when_active() {
             self.notify_update();
@@ -433,7 +461,14 @@ impl ScrollBar {
                 self.value
             });
             emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
-            self.notify_update();
+
+            if self.minimum != self.maximum && self.visible_in_valid && !self.auto_hide {
+                self.show()
+            }
+
+            if self.visible() {
+                self.notify_update();
+            }
         }
     }
     #[inline]
@@ -574,6 +609,15 @@ impl ScrollBar {
     }
 
     #[inline]
+    pub fn set_visible_in_valid(&mut self, visible_in_valid: bool) {
+        self.visible_in_valid = visible_in_valid;
+    }
+    #[inline]
+    pub fn visible_in_valid(&self) -> bool {
+        self.visible_in_valid
+    }
+
+    #[inline]
     fn set_steps(&mut self, single: i32, page: i32) {
         self.single_step = single.abs();
         self.page_step = page.abs();
@@ -701,6 +745,20 @@ impl ScrollBar {
             new_value = self.minimum;
         }
         new_value
+    }
+
+    #[inline]
+    fn wheel_timer_timeout(&mut self) {
+        if !self.pressed && !self.mouse_in && self.auto_hide {
+            self.wheel_timer.stop();
+            self.hide()
+        }
+    }
+
+    #[inline]
+    fn reset_wheel_timer(&mut self) {
+        self.wheel_timer.stop();
+        self.wheel_timer.start(Duration::from_millis(1000));
     }
 }
 

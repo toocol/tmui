@@ -1,7 +1,4 @@
-use super::{
-    tree_node::TreeNode,
-    tree_view_object::TreeViewObject,
-};
+use super::{tree_node::TreeNode, tree_view_object::TreeViewObject};
 use crate::{prelude::*, views::node::Status};
 use log::warn;
 use once_cell::sync::Lazy;
@@ -27,6 +24,7 @@ pub struct TreeStore {
 
     window_lines: i32,
     current_line: i32,
+    y_offset: i32,
 
     enterd_node: Option<NonNull<TreeNode>>,
     hovered_node: Option<NonNull<TreeNode>>,
@@ -94,8 +92,7 @@ impl TreeStore {
         if self.nodes_cache.contains_key(&parent_id) {
             let tree_node = TreeNode::create_from_obj(obj, self.id());
 
-            nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap())
-                .add_node_inner(tree_node)
+            nonnull_mut!(self.nodes_cache.get_mut(&parent_id).unwrap()).add_node_inner(tree_node)
         } else {
             warn!(
                 "`TreeView` add node failed, can not find the parent node, id = {}",
@@ -128,16 +125,12 @@ impl TreeStore {
 
     #[inline]
     pub fn get_node(&self, id: ObjectId) -> Option<&TreeNode> {
-        self.nodes_cache
-            .get(&id)
-            .map(|n| nonnull_ref!(n))
+        self.nodes_cache.get(&id).map(|n| nonnull_ref!(n))
     }
 
     #[inline]
     pub fn get_node_mut(&mut self, id: ObjectId) -> Option<&mut TreeNode> {
-        self.nodes_cache
-            .get_mut(&id)
-            .map(|n| nonnull_mut!(n))
+        self.nodes_cache.get_mut(&id).map(|n| nonnull_mut!(n))
     }
 }
 
@@ -157,6 +150,7 @@ impl TreeStore {
             nodes_cache: nodes_map,
             window_lines: 0,
             current_line: 0,
+            y_offset: 0,
             enterd_node: None,
             hovered_node: None,
             selected_node: None,
@@ -206,11 +200,16 @@ impl TreeStore {
     }
 
     #[inline]
-    pub(crate) fn get_image(&self) -> &[Option<NonNull<TreeNode>>] {
-        let start = self.current_line as usize;
+    pub(crate) fn get_image(&self) -> (&[Option<NonNull<TreeNode>>], i32) {
+        let start = if self.y_offset == 0 {
+            self.current_line
+        } else {
+            (self.current_line - 1).max(0)
+        } as usize;
+
         let end = (start + self.window_lines as usize).min(self.nodes_buffer.len());
 
-        &self.nodes_buffer[start..end]
+        (&self.nodes_buffer[start..end], self.y_offset)
     }
 
     #[inline]
@@ -251,6 +250,11 @@ impl TreeStore {
     #[inline]
     pub(crate) fn buffer_len(&self) -> usize {
         self.nodes_buffer.len()
+    }
+
+    #[inline]
+    pub(crate) fn y_offset(&self) -> i32 {
+        self.y_offset
     }
 
     /// Add node and it's children to the nodes buffer.
@@ -426,7 +430,7 @@ impl TreeStore {
             return;
         }
 
-        let mut node_ptr = self.get_image()[idx];
+        let mut node_ptr = self.get_image().0[idx];
         let node = nonnull_mut!(node_ptr);
         if node.is_hovered() {
             return;
@@ -459,7 +463,7 @@ impl TreeStore {
             return;
         }
 
-        let mut node_ptr = self.get_image()[idx];
+        let mut node_ptr = self.get_image().0[idx];
         let node = nonnull_mut!(node_ptr);
 
         if self.selected_node.is_some() {
@@ -480,16 +484,27 @@ impl TreeStore {
     /// @param `internal`
     /// - true: The view scrolling triggered internally in TreeView
     ///         requires notifying the scroll bar to change the value.
-    /// 
+    ///
     /// @return `true` if scroll value has updated, should update the image.
     #[inline]
-    pub(crate) fn scroll_to(&mut self, value: i32, internal: bool) -> bool {
-        if self.current_line == value || value > self.nodes_buffer.len() as i32 {
+    pub(crate) fn scroll_to(&mut self, mut value: i32, internal: bool) -> bool {
+        if internal {
+            value *= 10;
+        }
+
+        let move_to = value / 10;
+        if move_to < 0 || move_to > self.nodes_buffer.len() as i32 {
             return false;
         }
+
+        self.y_offset = value % 10;
+        if self.current_line == move_to {
+            return true;
+        }
+
         // if value was 0, scroll to the begining, first node index was 0
         // scroll to 1, first node index was 1
-        self.current_line = value;
+        self.current_line = move_to;
 
         if internal {
             emit!(self.internal_scroll_value_changed(), value);

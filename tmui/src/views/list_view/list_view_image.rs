@@ -140,6 +140,10 @@ impl IterExecutor for ListViewImage {
 impl ListViewImage {
     #[inline]
     fn draw_image(&mut self, painter: &mut Painter) {
+        if self.store.occupied() {
+            return
+        }
+
         let mut rect = self.contents_rect_f(Some(Coordinate::Widget));
         self.clear(painter, rect);
 
@@ -367,7 +371,7 @@ impl ListViewImage {
                     if let Some(ref on_node_pressed) = self.on_node_pressed {
                         on_node_pressed(node, event);
                     }
-                    return true;
+                    true
                 } else {
                     let mut update = false;
                     let mut old_select = selected_node.take();
@@ -381,8 +385,8 @@ impl ListViewImage {
                         on_frea_area_pressed(parent, event);
                     }
 
-                    return update;
-                };
+                    update
+                }
             });
 
         if update {
