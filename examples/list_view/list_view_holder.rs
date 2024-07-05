@@ -156,7 +156,7 @@ impl ObjectImpl for ListViewHolder {
                 println!("Build list 3 in thread {:?}", thread::current().id());
                 let mut list = arc.lock();
 
-                for i in 0..1000000 {
+                for i in 0..1000 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
                     })
