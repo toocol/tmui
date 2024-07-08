@@ -6,7 +6,8 @@ use tmui::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     views::{
         cell::{cell_render::TextCellRender, Cell},
-        list_view::{list_view_object::ListViewObject, ListView}, node::node_render::NodeRender,
+        list_view::{list_view_object::ListViewObject, ListView},
+        node::node_render::NodeRender,
     },
     widget::WidgetImpl,
 };
@@ -49,9 +50,9 @@ impl ObjectImpl for CtxMenu {
         scroll_bar.set_color(Color::GREY_LIGHT.with_a(155));
         scroll_bar.set_active_color(Some(Color::GREY_MEDIUM.with_a(155)));
         scroll_bar.set_visible_in_valid(true);
-        for i in 0..1000 {
-            self.list.add_node(&Selection { val: format!("Node_{}", i) })
-        }
+        self.list.add_node(&Selection {
+            val: "Selection".to_string(),
+        });
     }
 }
 

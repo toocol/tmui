@@ -4,11 +4,20 @@ use super::{
     list_view_object::ListViewObject,
     Painter,
 };
-use crate::views::{
-    cell::Cell,
-    node::{node_render::NodeRender, Status},
+use crate::{
+    views::{
+        cell::{cell_render::CellRender, Cell},
+        node::{node_render::NodeRender, Status},
+    },
+    widget::WidgetImpl,
 };
-use tlib::{global::AsAny, object::ObjectId};
+use log::warn;
+use tlib::{
+    global::AsAny,
+    object::ObjectId,
+    types::StaticType,
+    values::{FromValue, ToValue},
+};
 
 pub struct ListNode {
     store: ObjectId,
@@ -56,6 +65,74 @@ impl ListNode {
     pub fn store_mut(&mut self) -> &mut ListStore {
         ListStore::store_mut(self.store)
             .expect("Call `store_mut()` after adding this node to `ListStore`.")
+    }
+
+    #[inline]
+    pub fn get_view(&mut self) -> &mut dyn WidgetImpl {
+        self.store_mut().get_view()
+    }
+
+    pub fn get_value<T: 'static + StaticType + FromValue>(&self, cell_idx: usize) -> Option<T> {
+        self.cells
+            .get(cell_idx)
+            .or_else(|| {
+                warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
+                None
+            })
+            .and_then(|cell| {
+                if !T::static_type().is_a(cell.type_()) {
+                    warn!(
+                        "Value type mismatched of cell, expected: {:?}, get: {:?} ",
+                        cell.type_().name(),
+                        T::static_type().name()
+                    );
+                    return None;
+                }
+
+                Some(cell.value().get::<T>())
+            })
+    }
+
+    pub fn set_value<T: StaticType + ToValue>(&mut self, cell_idx: usize, val: T) {
+        if let Some(cell) = self.cells.get_mut(cell_idx) {
+            if !T::static_type().is_a(cell.type_()) {
+                warn!(
+                    "Value type mismatched of cell, expected: {:?}, get: {:?} ",
+                    cell.type_().name(),
+                    T::static_type().name()
+                );
+                return;
+            }
+
+            cell.set_value(val.to_value())
+        } else {
+            warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
+        }
+    }
+
+    pub fn get_cell_render(&self, cell_idx: usize) -> Option<&dyn CellRender> {
+        self.cells
+            .get(cell_idx)
+            .or_else(|| {
+                warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
+                None
+            })
+            .and_then(|cell| cell.get_render())
+    }
+
+    pub fn get_cell_render_mut(&mut self, cell_idx: usize) -> Option<&mut dyn CellRender> {
+        self.cells
+            .get_mut(cell_idx)
+            .or_else(|| {
+                warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
+                None
+            })
+            .and_then(|cell| cell.get_render_mut())
+    }
+
+    #[inline]
+    pub fn notify_update(&mut self) {
+        self.store_mut().notify_update()
     }
 }
 
