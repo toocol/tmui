@@ -25,11 +25,7 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
-    events::{Event, EventType, MouseEvent},
-    figure::Size,
-    nonnull_mut, nonnull_ref,
-    object::{ObjectImpl, ObjectSubclass},
-    winit::window::WindowId,
+    events::{DeltaType, Event, EventType, MouseEvent}, figure::Size, namespace::{KeyboardModifier, MouseButton}, nonnull_mut, nonnull_ref, object::{ObjectImpl, ObjectSubclass}, winit::window::WindowId
 };
 
 use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
@@ -531,6 +527,25 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn set_modal_widget(&mut self, id: Option<ObjectId>) {
+        // Trigger the mouse leave method for all entered widgets
+        // when a modal widget is present.
+        self.mouse_enter_widgets.retain_mut(|w| {
+            let widget = nonnull_mut!(w);
+            let mouse_leave = MouseEvent::new(
+                EventType::MouseLeave,
+                (0, 0),
+                MouseButton::NoButton,
+                KeyboardModifier::NoModifier,
+                0,
+                Point::default(),
+                DeltaType::default(),
+            );
+            widget.inner_mouse_leave(&mouse_leave);
+            widget.on_mouse_leave(&mouse_leave);
+
+            false
+        });
+
         self.modal_widget = id;
     }
 
@@ -541,11 +556,6 @@ impl ApplicationWindow {
         } else {
             None
         }
-    }
-
-    #[inline]
-    pub(crate) fn has_modal_widget(&self) -> bool {
-        self.modal_widget.is_some()
     }
 
     #[inline]

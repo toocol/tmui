@@ -33,27 +33,27 @@ impl ObjectImpl for CtrlButtons {
         self.minimize.width_request(30);
         self.minimize.height_request(20);
         self.minimize
-            .callback_hover_in(|w| w.set_background(Color::grey_with(223)));
+            .register_hover_in(|w| w.set_background(Color::grey_with(223)));
         self.minimize
-            .callback_hover_out(|w| w.set_background(Color::GREY_LIGHT));
+            .register_hover_out(|w| w.set_background(Color::GREY_LIGHT));
 
         self.maximize_restore.set_background(Color::GREY_LIGHT);
         self.maximize_restore.width_request(30);
         self.maximize_restore.height_request(20);
         self.maximize_restore
-            .callback_hover_in(|w| w.set_background(Color::grey_with(223)));
+            .register_hover_in(|w| w.set_background(Color::grey_with(223)));
         self.maximize_restore
-            .callback_hover_out(|w| w.set_background(Color::GREY_LIGHT));
+            .register_hover_out(|w| w.set_background(Color::GREY_LIGHT));
         self.maximize_restore
-            .callback_mouse_released(|w, _| w.downcast_mut::<SvgToggleIcon>().unwrap().toggle());
+            .register_mouse_released(|w, _| w.downcast_mut::<SvgToggleIcon>().unwrap().toggle());
 
         self.close.set_background(Color::GREY_LIGHT);
         self.close.width_request(30);
         self.close.height_request(20);
         self.close
-            .callback_hover_in(|w| w.set_background(Color::RED));
+            .register_hover_in(|w| w.set_background(Color::RED));
         self.close
-            .callback_hover_out(|w| w.set_background(Color::GREY_LIGHT));
+            .register_hover_out(|w| w.set_background(Color::GREY_LIGHT));
     }
 }
 

@@ -30,7 +30,7 @@ pub struct Callbacks {
 
 pub trait CallbacksRegister: WidgetImpl {
     #[inline]
-    fn callback_hover_in<F>(&mut self, f: F)
+    fn register_hover_in<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
@@ -38,7 +38,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_hover_out<F>(&mut self, f: F)
+    fn register_hover_out<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
@@ -46,7 +46,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_mouse_pressed<F>(&mut self, f: F)
+    fn register_mouse_pressed<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl, &MouseEvent) + 'static,
     {
@@ -54,7 +54,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_mouse_released<F>(&mut self, f: F)
+    fn register_mouse_released<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl, &MouseEvent) + 'static,
     {
@@ -62,7 +62,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_mouse_move<F>(&mut self, f: F)
+    fn register_mouse_move<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl, &MouseEvent) + 'static,
     {
@@ -70,7 +70,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_mouse_wheel<F>(&mut self, f: F)
+    fn register_mouse_wheel<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl, &MouseEvent) + 'static,
     {
@@ -78,7 +78,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_key_pressed<F>(&mut self, f: F)
+    fn register_key_pressed<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl, &KeyEvent) + 'static,
     {
@@ -86,7 +86,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_key_released<F>(&mut self, f: F)
+    fn register_key_released<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl, &KeyEvent) + 'static,
     {
@@ -94,7 +94,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_window_minimized<F>(&mut self, f: F)
+    fn register_window_minimized<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
@@ -102,7 +102,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_window_maximized<F>(&mut self, f: F)
+    fn register_window_maximized<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
@@ -110,7 +110,7 @@ pub trait CallbacksRegister: WidgetImpl {
     }
 
     #[inline]
-    fn callback_window_restored<F>(&mut self, f: F)
+    fn register_window_restored<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {

@@ -690,6 +690,9 @@ impl<T: WidgetImpl> WidgetExt for T {
         if self.is_animation_progressing() {
             return;
         }
+        if !self.visibility_check() {
+            return;
+        }
         if let Some(snapshot) = cast_mut!(self as Snapshot) {
             snapshot.start(true);
         }

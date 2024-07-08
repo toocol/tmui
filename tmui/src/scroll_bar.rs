@@ -312,6 +312,11 @@ impl WidgetImpl for ScrollBar {
             self.notify_update();
         }
     }
+
+    #[inline]
+    fn visibility_check(&self) -> bool {
+        !(self.visible_in_valid && self.minimum == self.maximum)
+    }
 }
 
 pub trait ScrollBarSignal: ActionExt {
@@ -700,8 +705,8 @@ impl ScrollBar {
         };
 
         match self.orientation {
-            Orientation::Vertical => (self.size().height() as f32 * factor) as i32,
-            Orientation::Horizontal => (self.size().width() as f32 * factor) as i32,
+            Orientation::Vertical => (self.size().height() as f32 * factor).max(20.) as i32,
+            Orientation::Horizontal => (self.size().width() as f32 * factor).max(20.) as i32,
         }
     }
 

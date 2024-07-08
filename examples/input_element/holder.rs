@@ -72,7 +72,7 @@ impl ObjectImpl for Holder {
 
         self.password.set_margin_left(20);
         self.password.set_margin_top(10);
-        self.password.callback_mouse_released(|w, evt| {
+        self.password.register_mouse_released(|w, evt| {
             if evt.mouse_button() == MouseButton::RightButton {
                 let pwd = w.downcast_mut::<Password>().unwrap();
                 let v = !pwd.is_password_visible();

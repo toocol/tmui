@@ -1,4 +1,5 @@
 mod layouts;
+mod ctx_menu;
 mod asset;
 
 use layouts::View;
@@ -11,7 +12,7 @@ use tmui::{
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
 
-    let app = Application::builder()
+    let app: Application<(), ()> = Application::builder()
         .width(1280)
         .height(800)
         .title("Complex Layout")

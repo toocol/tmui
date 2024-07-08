@@ -307,6 +307,9 @@ impl Widget {
     fn notify_visible(&mut self, visible: bool) {
         if let Some(child) = self.get_child_mut() {
             if visible {
+                if !child.visibility_check() {
+                    return;
+                }
                 if let Some(iv) = cast!(child as IsolatedVisibility) {
                     if iv.auto_hide() {
                         return;
@@ -1297,6 +1300,13 @@ pub trait WidgetImpl:
     /// Invoke when window restored.
     #[inline]
     fn on_window_restored(&mut self) {}
+
+    /// Check the visibility of widget.
+    /// false: prevent the `show()` calling of widget.
+    #[inline]
+    fn visibility_check(&self) -> bool {
+        true
+    }
 }
 
 impl dyn WidgetImpl {
