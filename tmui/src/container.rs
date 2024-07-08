@@ -67,6 +67,9 @@ impl ObjectImpl for Container {
                 emit!(self.visibility_changed(), visible);
                 if !self.children.is_empty() {
                     for child in self.children.iter_mut() {
+                        if !child.visibility_check() {
+                            continue;
+                        }
                         if let Some(iv) = cast!(child as IsolatedVisibility) {
                             if iv.auto_hide() {
                                 continue;

@@ -48,30 +48,46 @@ impl ObjectImpl for WinCtrlBtns {
 
         self.minimize.width_request(46);
         self.minimize.height_request(30);
-        self.minimize.callback_hover_in(|w| w.set_background(CTRL_BTN_GREY));
-        self.minimize.callback_hover_out(move |w| w.set_background(background));
-        self.minimize.callback_mouse_released(|w, _| w.window().minimize());
+        self.minimize
+            .register_hover_in(|w| w.set_background(CTRL_BTN_GREY));
+        self.minimize
+            .register_hover_out(move |w| w.set_background(background));
+        self.minimize
+            .register_mouse_released(|w, _| w.window().minimize());
 
         self.large_restore.width_request(46);
         self.large_restore.height_request(30);
-        self.large_restore.callback_hover_in(|w| w.set_background(CTRL_BTN_GREY));
-        self.large_restore.callback_hover_out(move |w| w.set_background(background));
-        self.large_restore.callback_mouse_released(|w, _| {
+        self.large_restore
+            .register_hover_in(|w| w.set_background(CTRL_BTN_GREY));
+        self.large_restore
+            .register_hover_out(move |w| w.set_background(background));
+        self.large_restore.register_mouse_released(|w, _| {
             let icon = w.downcast_mut::<SvgToggleIcon>().unwrap();
             match icon.current_icon() {
                 0 => icon.window().maximize(),
                 1 => icon.window().restore(),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         });
-        self.large_restore.callback_window_maximized(|w| w.downcast_mut::<SvgToggleIcon>().unwrap().set_current_icon(1));
-        self.large_restore.callback_window_restored(|w| w.downcast_mut::<SvgToggleIcon>().unwrap().set_current_icon(0));
+        self.large_restore.register_window_maximized(|w| {
+            w.downcast_mut::<SvgToggleIcon>()
+                .unwrap()
+                .set_current_icon(1)
+        });
+        self.large_restore.register_window_restored(|w| {
+            w.downcast_mut::<SvgToggleIcon>()
+                .unwrap()
+                .set_current_icon(0)
+        });
 
         self.close.width_request(46);
         self.close.height_request(30);
-        self.close.callback_hover_in(|w| w.set_background(CTRL_BTN_RED));
-        self.close.callback_hover_out(move |w| w.set_background(background));
-        self.close.callback_mouse_released(|w, _| w.window().close());
+        self.close
+            .register_hover_in(|w| w.set_background(CTRL_BTN_RED));
+        self.close
+            .register_hover_out(move |w| w.set_background(background));
+        self.close
+            .register_mouse_released(|w, _| w.window().close());
     }
 }
 

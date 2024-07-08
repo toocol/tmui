@@ -43,7 +43,7 @@ impl ObjectImpl for InputDialog {
         self.submit.width_request(50);
         self.submit.height_request(20);
         self.submit.set_halign(Align::Center);
-        self.submit.callback_mouse_released(move |widget, _| {
+        self.submit.register_mouse_released(move |widget, _| {
             // let username = widget
             //     .find_siblings::<TextBundle>()
             //     .first()

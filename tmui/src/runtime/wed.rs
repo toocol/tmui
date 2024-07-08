@@ -137,9 +137,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 return event;
             }
 
-            if !window.has_modal_widget() {
-                window.check_mouse_leave(&pos, &evt);
-            }
+            window.check_mouse_leave(&pos, &evt);
 
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
