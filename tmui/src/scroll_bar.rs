@@ -469,6 +469,8 @@ impl ScrollBar {
 
             if self.minimum != self.maximum && self.visible_in_valid && !self.auto_hide {
                 self.show()
+            } else if self.visible_in_valid && self.minimum == self.maximum {
+                self.hide()
             }
 
             if self.visible() {
