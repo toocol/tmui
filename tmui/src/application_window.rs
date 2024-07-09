@@ -25,7 +25,12 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
-    events::{DeltaType, Event, EventType, MouseEvent}, figure::Size, namespace::{KeyboardModifier, MouseButton}, nonnull_mut, nonnull_ref, object::{ObjectImpl, ObjectSubclass}, winit::window::WindowId
+    events::{DeltaType, Event, EventType, MouseEvent},
+    figure::Size,
+    namespace::{KeyboardModifier, MouseButton},
+    nonnull_mut, nonnull_ref,
+    object::{ObjectImpl, ObjectSubclass},
+    winit::window::WindowId,
 };
 
 use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
@@ -65,6 +70,7 @@ pub struct ApplicationWindow {
     run_after: Option<FnRunAfter>,
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
     overlaid_rects: HashMap<ObjectId, Rect>,
+    outer_position: Point,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -211,7 +217,7 @@ impl ApplicationWindow {
         for (_, widget) in self.widgets.iter() {
             let widget = nonnull_ref!(widget);
             if widget.name().eq(name) {
-                return Some(widget)
+                return Some(widget);
             }
         }
         None
@@ -222,7 +228,7 @@ impl ApplicationWindow {
         for (_, widget) in self.widgets.iter_mut() {
             let widget = nonnull_mut!(widget);
             if widget.name().eq(name) {
-                return Some(widget)
+                return Some(widget);
             }
         }
         None
@@ -328,6 +334,12 @@ impl ApplicationWindow {
         if let Some(parent_window) = self.parent_window {
             self.send_message(Message::WindowResponse(parent_window, Box::new(f)))
         }
+    }
+
+    /// Get the outer position of window.
+    #[inline]
+    pub fn outer_position(&self) -> Point {
+        self.outer_position
     }
 
     /// Should set the parent of widget before use this function.
@@ -680,6 +692,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn add_shadow_mouse_watch(&mut self, widget: &mut dyn WidgetImpl) {
         self.shadow_mouse_watch.push(NonNull::new(widget))
+    }
+
+    #[inline]
+    pub(crate) fn set_outer_position(&mut self, position: Point) {
+        self.outer_position = position
     }
 }
 

@@ -74,7 +74,9 @@ pub trait ObjectOperation {
     /// Set the name of object.
     ///
     /// Go to[`Function defination`](ObjectOperation::id) (Defined in [`ObjectOperation`])
-    fn set_name(&mut self, name: &str);
+    fn set_name(&mut self, name: &str) {
+        self.set_property("name", name.to_value())
+    }
 }
 
 impl Object {
@@ -126,11 +128,6 @@ impl ObjectOperation for Object {
     #[inline]
     fn constructed(&self) -> bool {
         self.constructed
-    }
-    
-    #[inline]
-    fn set_name(&mut self, name: &str) {
-        self.set_property("name", name.to_value())
     }
 }
 

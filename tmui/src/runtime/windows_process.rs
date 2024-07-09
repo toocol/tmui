@@ -288,6 +288,12 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 self.windows.remove(&window_id);
                             }
 
+                            // Window moved event.
+                            WindowEvent::Moved(pos) => {
+                                let position = Point::new(pos.x, pos.y);
+                                window.send_input(Message::WindowMoved(position))
+                            }
+
                             // Modifier change event.
                             WindowEvent::ModifiersChanged(modifier) => {
                                 convert_modifier(&mut runtime_track.modifier, modifier.state())

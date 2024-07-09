@@ -1,5 +1,9 @@
 use tmui::{
-    input::text::Text, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl, window::{win_builder::WindowBuilder, win_config::WindowConfig}
+    input::text::Text,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
+    window::{win_builder::WindowBuilder, win_config::WindowConfig},
 };
 
 use crate::input_dialog::InputDialog;
@@ -8,7 +12,7 @@ use crate::input_dialog::InputDialog;
 #[derive(Childable)]
 pub struct MyWidget {
     #[child]
-    text: Box<Text>
+    text: Box<Text>,
 }
 
 impl ObjectSubclass for MyWidget {
@@ -25,10 +29,17 @@ impl ObjectImpl for MyWidget {
 }
 
 impl WidgetImpl for MyWidget {
-    fn on_mouse_pressed(&mut self, _: &tlib::events::MouseEvent) {
+    fn on_mouse_pressed(&mut self, evt: &tlib::events::MouseEvent) {
+        let pos = evt.position().into();
         self.window().create_window(
             WindowBuilder::new()
-                .config(WindowConfig::builder().width(300).height(100).build())
+                .config(
+                    WindowConfig::builder()
+                        .width(300)
+                        .height(100)
+                        .position(self.map_to_outer(&self.map_to_global(&pos)))
+                        .build(),
+                )
                 .modal(true)
                 .on_activate(|window| {
                     println!(

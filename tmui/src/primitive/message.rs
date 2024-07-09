@@ -1,11 +1,7 @@
 use std::{fmt::Debug, time::Instant};
 use tipc::ipc_event::IpcEvent;
 use tlib::{
-    events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
-    namespace::AsNumeric,
-    payload::PayloadWeight,
-    prelude::SystemCursorShape,
-    winit::window::WindowId,
+    events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent}, figure::Point, namespace::AsNumeric, payload::PayloadWeight, prelude::SystemCursorShape, winit::window::WindowId
 };
 
 use crate::{application_window::ApplicationWindow, window::Window};
@@ -38,7 +34,11 @@ pub(crate) enum Message {
     /// Reqeust window to restore.
     WindowRestoreRequest(WindowId),
 
-    WindowResponse(WindowId, Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>)
+    /// Sub window calling response.
+    WindowResponse(WindowId, Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>),
+
+    /// Window has moved.
+    WindowMoved(Point),
 }
 
 impl Debug for Message {
@@ -54,6 +54,7 @@ impl Debug for Message {
             Self::WindowMaximizeRequest(arg0) => f.debug_tuple("WindowMaximizeRequest").field(arg0).finish(),
             Self::WindowRestoreRequest(arg0) => f.debug_tuple("WindowRestoreRequest").field(arg0).finish(),
             Self::WindowResponse(arg0, _) => f.debug_tuple("WindowResponse").field(arg0).finish(),
+            Self::WindowMoved(arg0) => f.debug_tuple("point").field(arg0).finish(),
         }
     }
 }

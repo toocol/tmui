@@ -100,6 +100,7 @@ where
     window.set_board(board.as_mut());
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());
+    window.set_outer_position(logic_window.initial_position);
 
     if let Some(window_id) = logic_window.window_id() {
         window.set_winit_id(window_id)
@@ -173,6 +174,7 @@ where
                 Message::WindowClosed => {
                     break;
                 }
+                Message::WindowMoved(position) => window.set_outer_position(position),
                 _ => {}
             }
         }
