@@ -35,6 +35,8 @@ pub(crate) const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
 
 pub(crate) const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 
+type FnRequireInvalidRender = Box<dyn Fn(&mut Painter, FRect)>;
+
 #[extends(Widget)]
 #[run_after]
 #[popupable]
@@ -77,6 +79,9 @@ pub(crate) struct TextProps {
     pub(crate) letter_spacing: f32,
     pub(crate) placeholder: String,
     pub(crate) unicode_text: bool,
+    pub(crate) require_invalid: bool,
+    pub(crate) customize_require_invalid_render: Option<FnRequireInvalidRender>,
+    pub(crate) require_invalid_border_color: Option<Color>,
 
     //////////////////////////// Font
     pub(crate) font_dimension: (f32, f32),
@@ -143,7 +148,9 @@ impl ObjectSubclass for Text {
 }
 
 impl ObjectImpl for Text {
-    fn initialize(&mut self) {
+    fn construct(&mut self) {
+        self.parent_construct();
+
         self.input_wrapper.init(self.id());
 
         self.font_changed();
@@ -191,6 +198,8 @@ impl WidgetImpl for Text {
         } else {
             self.draw_disable(painter);
         }
+
+        self.draw_require_invalid(painter);
     }
 
     #[inline]
@@ -306,6 +315,11 @@ impl Input for Text {
     #[inline]
     fn input_wrapper(&self) -> &InputWrapper<Self::Value> {
         &self.input_wrapper
+    }
+
+    #[inline]
+    fn required_handle(&mut self) -> bool {
+        self.inner_required_handle()
     }
 }
 
@@ -520,6 +534,26 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
             _ => {}
         }
     }
+
+    #[inline]
+    fn clean(&mut self) {
+        self.clear_selection();
+        *self.input_wrapper().value_mut() = String::new();
+        self.update();
+    }
+
+    #[inline]
+    fn set_customize_require_invalid_render<F: Fn(&mut Painter, FRect) + 'static>(&mut self, f: F) {
+        self.props_mut().customize_require_invalid_render = Some(Box::new(f))
+    }
+
+    #[inline]
+    fn set_require_invalid_border_color(&mut self, color: Color) {
+        if self.props().require_invalid {
+            self.set_border_color(color);
+        }
+        self.props_mut().require_invalid_border_color = Some(color);
+    }
 }
 
 pub(crate) trait TextShorcutRegister: TextExt {
@@ -707,6 +741,35 @@ pub(crate) trait TextInnerExt:
             cursor_x,
             self.props().text_window.bottom(),
         )
+    }
+
+    fn draw_require_invalid(&mut self, painter: &mut Painter) {
+        if self.props().customize_require_invalid_render.is_some() {
+            painter.save();
+            painter.clip_rect_global(self.props().text_window, ClipOp::Difference);
+
+            self.clear_global(painter, self.borderless_rect_f());
+
+            painter.restore();
+        }
+
+        if !self.props().require_invalid {
+            return;
+        }
+
+        if let Some(ref customize_require_invalid_render) =
+            self.props().customize_require_invalid_render
+        {
+            painter.save();
+            painter.save_pen();
+            painter.clip_rect_global(self.props().text_window, ClipOp::Difference);
+            painter.clip_rect_global(self.borderless_rect_f(), ClipOp::Intersect);
+
+            customize_require_invalid_render(painter, self.borderless_rect_f());
+
+            painter.restore_pen();
+            painter.restore();
+        }
     }
 
     fn calc_text_geometry(&mut self) {
@@ -1264,6 +1327,13 @@ pub(crate) trait TextInnerExt:
             (val.len(), val.chars().count())
         };
 
+        if bytes_len != 0 && chars_len != 0 {
+            self.props_mut().require_invalid = false;
+            if self.props().require_invalid_border_color.is_some() {
+                self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
+            }
+        }
+
         if bytes_len != chars_len && !self.props().unicode_text {
             self.props_mut().font_dimension = self.font().calc_font_dimension_unicode();
             self.props_mut().unicode_text = true;
@@ -1271,6 +1341,9 @@ pub(crate) trait TextInnerExt:
             self.props_mut().font_dimension = self.font().calc_font_dimension();
             self.props_mut().unicode_text = false;
         }
+
+        self.clear_selection();
+        self.update();
     }
 
     #[inline]
@@ -1299,6 +1372,20 @@ pub(crate) trait TextInnerExt:
 
         self.props_mut().predict_start = a;
         self.props_mut().predict_start_len = b;
+    }
+
+    #[inline]
+    fn inner_required_handle(&mut self) -> bool {
+        if self.value().is_empty() {
+            self.props_mut().require_invalid = true;
+            if let Some(color) = self.props().require_invalid_border_color {
+                self.set_border_color(color);
+            }
+            self.update();
+            false
+        } else {
+            true
+        }
     }
 }
 

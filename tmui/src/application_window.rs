@@ -207,6 +207,28 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub fn find_name(&self, name: &str) -> Option<&dyn WidgetImpl> {
+        for (_, widget) in self.widgets.iter() {
+            let widget = nonnull_ref!(widget);
+            if widget.name().eq(name) {
+                return Some(widget)
+            }
+        }
+        None
+    }
+
+    #[inline]
+    pub fn find_name_mut(&mut self, name: &str) -> Option<&mut dyn WidgetImpl> {
+        for (_, widget) in self.widgets.iter_mut() {
+            let widget = nonnull_mut!(widget);
+            if widget.name().eq(name) {
+                return Some(widget)
+            }
+        }
+        None
+    }
+
+    #[inline]
     pub fn high_load_request(&mut self, high_load: bool) {
         self.high_load_request = high_load
     }

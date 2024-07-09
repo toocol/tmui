@@ -73,11 +73,37 @@ pub trait Input: InputSignals {
 
     /// Set the value of the input widget.
     #[inline]
-    fn set_value(&mut self, val: Self::Value) {
+    fn set_value(&self, val: Self::Value) {
         self.input_wrapper().set_value(val);
 
         emit!(self.value_changed())
     }
+
+    #[inline]
+    fn set_required(&self, required: bool) {
+        self.input_wrapper().set_required(required)
+    }
+
+    #[inline]
+    fn is_required(&self) -> bool {
+        self.input_wrapper().is_required()
+    }
+
+    /// Check the value of input element,
+    /// different actions will be taken based on different components.
+    /// 
+    /// @return </br>
+    /// true : Check passed </br>
+    /// false: Check failed
+    fn check_required(&mut self) -> bool {
+        if self.is_required() {
+            self.required_handle()
+        } else {
+            true
+        }
+    }
+
+    fn required_handle(&mut self) -> bool;
 }
 
 pub trait InputBounds: Clone + Default + 'static {}
@@ -90,6 +116,7 @@ pub struct InputWrapper<T: InputBounds> {
     initialized: Cell<bool>,
     #[derivative(Default(value = "Cell::new(true)"))]
     enable: Cell<bool>,
+    required: Cell<bool>,
     value: RefCell<T>,
 }
 
@@ -165,5 +192,15 @@ impl<T: InputBounds> InputWrapper<T> {
     #[inline]
     pub fn is_enable(&self) -> bool {
         self.enable.get()
+    }
+
+    #[inline]
+    pub fn set_required(&self, required: bool) {
+        self.required.set(required)
+    }
+
+    #[inline]
+    pub fn is_required(&self) -> bool {
+        self.required.get()
     }
 }

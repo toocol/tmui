@@ -1326,6 +1326,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_border_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color = (color, color, color, color);
+        self.set_render_styles(true);
     }
 
     #[inline]

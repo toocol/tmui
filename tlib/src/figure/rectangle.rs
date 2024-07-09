@@ -458,6 +458,45 @@ impl Rect {
             ),
         )
     }
+
+    pub fn shrink(&self, distance: i32) -> Self {
+        let new_width = if self.width > 2 * distance {
+            self.width - 2 * distance
+        } else {
+            0
+        };
+
+        let new_height = if self.height > 2 * distance {
+            self.height - 2 * distance
+        } else {
+            0
+        };
+
+        let new_x = self.x + distance;
+        let new_y = self.y + distance;
+
+        Self {
+            x: new_x,
+            y: new_y,
+            width: new_width,
+            height: new_height,
+        }
+    }
+
+    pub fn enlarge(&self, distance: i32) -> Self {
+        let new_width = self.width + 2 * distance;
+        let new_height = self.height + 2 * distance;
+
+        let new_x = self.x - distance;
+        let new_y = self.y - distance;
+
+        Self {
+            x: new_x,
+            y: new_y,
+            width: new_width - 1,
+            height: new_height - 1,
+        }
+    }
 }
 
 impl From<(i32, i32, i32, i32)> for Rect {
@@ -1077,6 +1116,45 @@ impl FRect {
         self.y = 0.;
         self.width = 0.;
         self.height = 0.;
+    }
+
+    pub fn shrink(&self, distance: f32) -> Self {
+        let new_width = if self.width > 2.0 * distance {
+            self.width - 2.0 * distance
+        } else {
+            0.0
+        };
+
+        let new_height = if self.height > 2.0 * distance {
+            self.height - 2.0 * distance
+        } else {
+            0.0
+        };
+
+        let new_x = self.x + distance;
+        let new_y = self.y + distance;
+
+        Self {
+            x: new_x,
+            y: new_y,
+            width: new_width - 1.,
+            height: new_height - 1.,
+        }
+    }
+
+    pub fn enlarge(&self, distance: f32) -> Self {
+        let new_width = self.width + 2.0 * distance;
+        let new_height = self.height + 2.0 * distance;
+
+        let new_x = self.x - distance;
+        let new_y = self.y - distance;
+
+        Self {
+            x: new_x,
+            y: new_y,
+            width: new_width - 1.,
+            height: new_height - 1.,
+        }
     }
 }
 
