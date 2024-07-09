@@ -1523,6 +1523,20 @@ pub trait WidgetFinder: WidgetImpl {
             .and_then(|w| w.downcast_mut::<T>())
     }
 
+    #[inline]
+    fn find_name<T: WidgetImpl + StaticType>(&self, name: &str) -> Option<&T> {
+        self.window()
+            .find_name(name)
+            .and_then(|w| w.downcast_ref::<T>())
+    }
+
+    #[inline]
+    fn find_name_mut<T: WidgetImpl + StaticType>(&self, name: &str) -> Option<&mut T> {
+        self.window()
+            .find_name_mut(name)
+            .and_then(|w| w.downcast_mut::<T>())
+    }
+
     /// Only affected when the parent is a container.
     #[inline]
     fn find_siblings<T: WidgetImpl + StaticType>(&self) -> Vec<&T> {

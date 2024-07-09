@@ -47,6 +47,7 @@ impl ObjectSubclass for ListViewImage {
 impl ObjectImpl for ListViewImage {
     fn initialize(&mut self) {
         self.set_mouse_tracking(true);
+        self.store.initialize();
 
         connect!(
             self.store,

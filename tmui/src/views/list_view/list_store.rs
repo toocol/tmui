@@ -188,7 +188,7 @@ impl ListStore {
         let object = Object::default();
         let id = object.id();
 
-        let mut store = ListStore {
+        ListStore {
             object,
             concurrent_store: Arc::new(Mutex::new(ConcurrentStore::new(id))),
             arc_count: 1,
@@ -201,10 +201,7 @@ impl ListStore {
             entered_node: None,
             hovered_node: None,
             selected_node: None,
-        };
-        Self::store_map().insert(store.id(), NonNull::new(&mut store));
-
-        store
+        }
     }
 
     #[inline]
@@ -259,7 +256,7 @@ impl ListStore {
 
     #[inline]
     pub(crate) fn set_view(&mut self, view: WidgetHnd) {
-        self.view = view
+        self.view = view;
     }
 
     #[inline]
@@ -356,6 +353,11 @@ impl ListStore {
     #[inline]
     pub(crate) fn occupied(&self) -> bool {
         self.concurrent_store.is_locked()
+    }
+
+    #[inline]
+    pub(crate) fn initialize(&mut self) {
+        Self::store_map().insert(self.id(), NonNull::new(self));
     }
 }
 

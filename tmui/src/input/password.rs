@@ -57,7 +57,9 @@ impl ObjectSubclass for Password {
 }
 
 impl ObjectImpl for Password {
-    fn initialize(&mut self) {
+    fn construct(&mut self) {
+        self.parent_construct();
+        
         self.input_wrapper.init(self.id());
 
         self.font_changed();
@@ -106,6 +108,8 @@ impl WidgetImpl for Password {
         } else {
             self.draw_disable(painter);
         }
+
+        self.draw_require_invalid(painter);
     }
 
     #[inline]
@@ -221,6 +225,11 @@ impl Input for Password {
     #[inline]
     fn input_wrapper(&self) -> &InputWrapper<Self::Value> {
         &self.input_wrapper
+    }
+    
+    #[inline]
+    fn required_handle(&mut self) -> bool {
+        self.inner_required_handle()
     }
 }
 

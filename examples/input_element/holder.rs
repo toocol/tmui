@@ -79,11 +79,21 @@ impl ObjectImpl for Holder {
                 pwd.set_password_visible(v);
             }
         });
+        self.password.set_required(true);
+        self.password.check_required();
+        self.password.set_require_invalid_border_color(Color::grey_with(210));
+        self.password
+            .set_customize_require_invalid_render(move |painter, mut rect| {
+                rect.set_width(rect.width() - 1.);
+                rect.set_height(rect.height() - 1.);
+
+                painter.set_color(Color::from_hex("#ff6b6b"));
+                painter.draw_rect_global(rect);
+            });
 
         self.set_vexpand(true);
         self.set_spacing(30);
         self.set_hexpand(true);
-        // self.set_background(Color::GREY_LIGHT);
     }
 }
 

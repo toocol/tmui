@@ -40,6 +40,11 @@ impl<T: InputBounds> Input for Radio<T> {
     fn input_wrapper(&self) -> &InputWrapper<Self::Value> {
         &self.input_wrapper
     }
+    
+    #[inline]
+    fn required_handle(&mut self) -> bool {
+        true
+    }
 }
 
 impl<T: InputBounds> Radio<T> {
