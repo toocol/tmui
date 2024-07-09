@@ -24,7 +24,10 @@ use std::{
     sync::{mpsc::channel, Arc},
 };
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
-use tlib::winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
+use tlib::{
+    figure::Point,
+    winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+};
 
 use self::macos_window::MacosWindow;
 
