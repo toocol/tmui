@@ -1,10 +1,10 @@
 use crate::{graphics::icon::Icon, primitive::Message};
 use derivative::Derivative;
 use tlib::{
-    figure::Size,
-    typedef::{WinitIcon, WinitWindowBuilder},
+    figure::{Point, Size},
+    typedef::{WinitIcon, WinitPosition, WinitWindowBuilder},
     winit::{
-        dpi::PhysicalSize,
+        dpi::{PhysicalPosition, PhysicalSize},
         error::OsError,
         event_loop::EventLoopWindowTarget,
         window::{Window, WindowButtons},
@@ -49,6 +49,8 @@ pub struct WindowConfig {
     active: bool,
     /// The enabled window buttons.
     enable_buttons: WindowButtons,
+    /// The initial position of new window.
+    position: Option<Point>,
 }
 
 impl WindowConfig {
@@ -69,6 +71,7 @@ impl WindowConfig {
             maximized: Default::default(),
             active: Default::default(),
             enable_buttons: WindowButtons::all(),
+            position: Default::default(),
         }
     }
 
@@ -142,6 +145,11 @@ impl WindowConfig {
         self.active
     }
 
+    #[inline]
+    pub fn position(&self) -> Option<Point> {
+        self.position
+    }
+
     pub(crate) fn create_window_builder(self) -> WinitWindowBuilder {
         let (width, height) = self.size();
 
@@ -175,6 +183,11 @@ impl WindowConfig {
             window_bld = window_bld.with_window_icon(Some(icon))
         }
 
+        if let Some(pos) = self.position {
+            let position = WinitPosition::Physical(PhysicalPosition::new(pos.x(), pos.y()));
+            window_bld = window_bld.with_position(position);
+        }
+
         window_bld
     }
 }
@@ -202,6 +215,7 @@ pub struct WindowConfigBuilder {
     active: bool,
     #[derivative(Default(value = "WindowButtons::all()"))]
     enable_buttons: WindowButtons,
+    position: Option<Point>,
 }
 
 impl WindowConfigBuilder {
@@ -326,6 +340,15 @@ impl WindowConfigBuilder {
         self
     }
 
+    /// Sets the initial position of window.
+    ///
+    /// The default is [`None`]
+    #[inline]
+    pub fn position<T: Into<Point>>(mut self, position: T) -> Self {
+        self.position = Some(position.into());
+        self
+    }
+
     #[inline]
     pub fn build(self) -> WindowConfig {
         let mut cfg = WindowConfig::new();
@@ -346,6 +369,7 @@ impl WindowConfigBuilder {
         cfg.maximized = self.maximized;
         cfg.active = self.active;
         cfg.enable_buttons = self.enable_buttons;
+        cfg.position = self.position;
 
         cfg
     }

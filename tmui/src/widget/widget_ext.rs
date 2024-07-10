@@ -315,11 +315,21 @@ pub trait WidgetExt {
     /// Map the given point to widget coordinate.
     fn map_to_widget(&self, point: &Point) -> Point;
 
+    /// Map the given point to outer coordinate.
+    /// 
+    /// The given point's coordinate must be global.
+    fn map_to_outer(&self, point: &Point) -> Point;
+
     /// Map the given point to global coordinate.
     fn map_to_global_f(&self, point: &FPoint) -> FPoint;
 
     /// Map the given point to widget coordinate.
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint;
+
+    /// Map the given point to outer coordinate.
+    /// 
+    /// The given point's coordinate must be global.
+    fn map_to_outer_f(&self, point: &FPoint) -> FPoint;
 
     /// The widget tracking the `MouseMoveEvent` or not.
     fn mouse_tracking(&self) -> bool;
@@ -1383,6 +1393,12 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
+    fn map_to_outer(&self, point: &Point) -> Point {
+        let pos = self.window().outer_position();
+        Point::new(point.x() + pos.x(), point.y() + pos.y())
+    }
+
+    #[inline]
     fn map_to_global_f(&self, point: &FPoint) -> FPoint {
         let rect = self.rect();
         FPoint::new(point.x() + rect.x() as f32, point.y() + rect.y() as f32)
@@ -1392,6 +1408,12 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint {
         let rect = self.rect();
         FPoint::new(point.x() - rect.x() as f32, point.y() - rect.y() as f32)
+    }
+
+    #[inline]
+    fn map_to_outer_f(&self, point: &FPoint) -> FPoint {
+        let pos = self.window().outer_position();
+        FPoint::new(point.x() + pos.x() as f32, point.y() + pos.y() as f32)
     }
 
     #[inline]

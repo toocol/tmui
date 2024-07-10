@@ -32,3 +32,4 @@ pub type WinitWindowBuilder = winit::window::WindowBuilder;
 pub type WinitIcon = winit::window::Icon;
 pub type WinitKeyCode = winit::keyboard::KeyCode;
 pub type WinitMouseButton = winit::event::MouseButton;
+pub type WinitPosition = winit::dpi::Position;

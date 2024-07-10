@@ -24,7 +24,10 @@ use std::{
     sync::{mpsc::channel, Arc},
 };
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
-use tlib::winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
+use tlib::{
+    figure::Point,
+    winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+};
 
 use self::macos_window::MacosWindow;
 
@@ -130,6 +133,11 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         self.main_win_create.set(false);
 
+        let init_position = if let Ok(pos) = window.outer_position() {
+            Point::new(pos.x, pos.y)
+        } else {
+            Point::new(0, 0)
+        };
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
                 window_id,
@@ -141,6 +149,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     output_sender: OutputSender::EventLoopProxy(event_loop_proxy),
                     input_receiver: InputReceiver(input_receiver),
                 },
+                init_position,
             ),
             PhysicalWindow::Macos(MacosWindow::new(
                 window_id,
