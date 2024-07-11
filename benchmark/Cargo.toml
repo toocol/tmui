@@ -21,11 +21,11 @@ windows = { version = "0.43.0", features = [
 widestring = "1.0.2"
 
 [[bench]]
-name = "value_benchmark"
+name = "action_benchmark"
 harness = false
 
 [[bench]]
-name = "action_benchmark"
+name = "color_format_benchmark"
 harness = false
 
 [[bench]]
@@ -33,11 +33,11 @@ name = "font_benchmark"
 harness = false
 
 [[bench]]
-name = "pixels_benchmark"
+name = "objects_benchmark"
 harness = false
 
 [[bench]]
-name = "objects_benchmark"
+name = "pixels_benchmark"
 harness = false
 
 [[bench]]
@@ -45,13 +45,17 @@ name = "regex_benchmark"
 harness = false
 
 [[bench]]
-name = "win32_benchmark"
-harness = false
-
-[[bench]]
 name = "size_probe_benchmark"
 harness = false
 
 [[bench]]
-name = "color_format_benchmark"
+name = "syntax_benchmark"
+harness = false
+
+[[bench]]
+name = "value_benchmark"
+harness = false
+
+[[bench]]
+name = "win32_benchmark"
 harness = false

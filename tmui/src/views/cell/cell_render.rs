@@ -121,7 +121,7 @@ macro_rules! cell_render_struct {
             )*
 
             #[inline]
-            pub fn build(self) -> Box<dyn CellRender> {
+            pub fn build(self) -> Box<$cell> {
                 Box::new($cell {
                     border: self.border,
                     border_style: self.border_style,

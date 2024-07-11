@@ -11,7 +11,7 @@ use super::Status;
 const DEFAULT_SELECTION: Color = Color::from_rgb(51, 167, 255);
 const DEFAULT_HOVER: Color = Color::from_rgb(190, 190, 190);
 
-#[derive(Derivative)]
+#[derive(Derivative, Clone, Copy)]
 #[derivative(Default)]
 pub struct NodeRender {
     #[derivative(Default(value = "DEFAULT_SELECTION"))]

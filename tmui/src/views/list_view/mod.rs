@@ -11,7 +11,7 @@ use std::sync::Arc;
 use list_group::ListGroup;
 use list_node::ListNode;
 use list_separator::GroupSeparator;
-use list_store::{ConcurrentStore, ListStore};
+use list_store::{ConcurrentStore, ConcurrentStoreMutexGuard, ListStore};
 use list_view_image::ListViewImage;
 use list_view_object::ListViewObject;
 use tipc::parking_lot::Mutex;
@@ -108,14 +108,23 @@ impl ListView {
         Object::new(&[])
     }
 
+    /// @return the index of added node.
     #[inline]
-    pub fn add_node(&mut self, obj: &dyn ListViewObject) {
+    pub fn add_node(&mut self, obj: &dyn ListViewObject) -> usize {
         self.get_store_mut().add_node(obj)
     }
 
+    /// @return
+    /// - Some: the index of last node in items.
+    /// - None: if group is empty.
     #[inline]
-    pub fn add_group(&mut self, group: ListGroup) {
+    pub fn add_group(&mut self, group: ListGroup) -> Option<usize> {
         self.get_store_mut().add_group(group)
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.get_store_mut().clear()
     }
 
     #[inline]
@@ -156,22 +165,47 @@ impl ListView {
     }
 
     #[inline]
-    pub fn register_node_enter<F: 'static + Fn(&mut ListNode, &MouseEvent)>(&mut self, f: F) {
+    pub fn scroll_to(&mut self, idx: usize) {
+        self.get_store_mut().scroll_to_index(idx);
+    }
+
+    #[inline]
+    pub fn register_node_enter<
+        F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
+    >(
+        &mut self,
+        f: F,
+    ) {
         self.get_image_mut().on_node_enter = Some(Box::new(f));
     }
 
     #[inline]
-    pub fn register_node_leave<F: 'static + Fn(&mut ListNode, &MouseEvent)>(&mut self, f: F) {
+    pub fn register_node_leave<
+        F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
+    >(
+        &mut self,
+        f: F,
+    ) {
         self.get_image_mut().on_node_leave = Some(Box::new(f));
     }
 
     #[inline]
-    pub fn register_node_pressed<F: 'static + Fn(&mut ListNode, &MouseEvent)>(&mut self, f: F) {
+    pub fn register_node_pressed<
+        F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
+    >(
+        &mut self,
+        f: F,
+    ) {
         self.get_image_mut().on_node_pressed = Some(Box::new(f));
     }
 
     #[inline]
-    pub fn register_node_released<F: 'static + Fn(&mut ListNode, &MouseEvent)>(&mut self, f: F) {
+    pub fn register_node_released<
+        F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
+    >(
+        &mut self,
+        f: F,
+    ) {
         self.get_image_mut().on_node_released = Some(Box::new(f));
     }
 

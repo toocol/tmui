@@ -1,6 +1,10 @@
 use super::{
-    list_group::ListGroup, list_item::ListItem, list_node::ListNode,
-    list_separator::{GroupSeparator, DEFAULT_SEPARATOR_HEIGHT}, list_view_object::ListViewObject, WidgetHnd,
+    list_group::ListGroup,
+    list_item::ListItem,
+    list_node::ListNode,
+    list_separator::{GroupSeparator, DEFAULT_SEPARATOR_HEIGHT},
+    list_view_object::ListViewObject,
+    WidgetHnd,
 };
 use crate::{views::list_view::list_item::ListItemCast, widget::WidgetImpl};
 use once_cell::sync::Lazy;
@@ -9,7 +13,7 @@ use std::{
     ptr::{addr_of_mut, NonNull},
     sync::{atomic::Ordering, Arc},
 };
-use tipc::parking_lot::Mutex;
+use tipc::parking_lot::{lock_api::MutexGuard, Mutex, RawMutex};
 use tlib::{
     extends,
     global::SemanticExt,
@@ -19,12 +23,15 @@ use tlib::{
     signal, signals,
 };
 
+pub type ConcurrentStoreMutexGuard<'a> = MutexGuard<'a, RawMutex, ConcurrentStore>;
+
 pub struct ConcurrentStore {
     id: ObjectId,
-    items: Vec<Box<dyn ListItem>>,
+    pub(crate) items: Vec<Box<dyn ListItem>>,
 
     separator: GroupSeparator,
     separator_cnt: usize,
+    separator_pos: Vec<usize>,
 
     id_increment: IdGenerator,
 }
@@ -36,6 +43,7 @@ impl ConcurrentStore {
             items: vec![],
             separator: GroupSeparator::default(),
             separator_cnt: 0,
+            separator_pos: vec![],
             id_increment: IdGenerator::new(0),
         }
     }
@@ -46,13 +54,15 @@ impl ConcurrentStore {
     }
 }
 impl ConcurrentStore {
-    pub fn add_node(&mut self, obj: &dyn ListViewObject) {
+    /// @return the index of added node
+    pub fn add_node(&mut self, obj: &dyn ListViewObject) -> usize {
         if let Some(last) = self.items.last() {
             if let Some(node) = last.downcast_ref::<ListNode>() {
                 if node.is_group_managed() {
                     let separator = self.separator.clone().boxed();
                     self.items.push(separator.as_list_item());
                     self.separator_cnt += 1;
+                    self.separator_pos.push(self.items.len() - 1);
                 }
             }
         }
@@ -61,17 +71,20 @@ impl ConcurrentStore {
         node.set_store_id(self.id);
         node.set_id(self.next_id());
         self.items.push(node);
+        self.items.len() - 1
     }
 
-    pub fn add_group(&mut self, mut group: ListGroup) {
+    /// @return the index of last node in items.
+    pub fn add_group(&mut self, mut group: ListGroup) -> Option<usize> {
         if group.is_empty() {
-            return;
+            return None;
         }
 
         if !self.items.is_empty() {
             let separator = self.separator.clone().boxed();
             self.items.push(separator.as_list_item());
             self.separator_cnt += 1;
+            self.separator_pos.push(self.items.len() - 1);
         }
 
         let nodes = group.take_nodes();
@@ -81,6 +94,13 @@ impl ConcurrentStore {
             node.set_group_managed(true);
             self.items.push(node.boxed())
         }
+
+        Some(self.items.len() - 1)
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.items.clear()
     }
 
     #[inline]
@@ -92,13 +112,19 @@ impl ConcurrentStore {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    #[inline]
+    pub fn separator_pos(&self) -> &[usize] {
+        &self.separator_pos
+    }
 }
 
 #[extends(Object, ignore_default = true)]
 pub struct ListStore {
     view: WidgetHnd,
     concurrent_store: Arc<Mutex<ConcurrentStore>>,
-    arc_count: usize,
+
+    scroll_index_rec: Option<usize>,
 
     window_lines: i32,
     current_line: i32,
@@ -131,19 +157,28 @@ impl ObjectImpl for ListStore {}
 
 impl ListStore {
     #[inline]
-    pub fn add_node(&mut self, obj: &dyn ListViewObject) {
+    pub fn add_node(&mut self, obj: &dyn ListViewObject) -> usize {
         let mut mutex = self.concurrent_store.lock();
-        mutex.add_node(obj);
+        let idx = mutex.add_node(obj);
 
         emit!(self.items_len_changed(), mutex.len());
+        idx
     }
 
     #[inline]
-    pub fn add_group(&mut self, group: ListGroup) {
+    pub fn add_group(&mut self, group: ListGroup) -> Option<usize> {
         let mut mutex = self.concurrent_store.lock();
-        mutex.add_group(group);
+        let idx = mutex.add_group(group);
 
         emit!(self.items_len_changed(), mutex.len());
+        idx
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.concurrent_store.lock().clear();
+
+        emit!(self.items_len_changed(), 0);
     }
 
     #[inline]
@@ -153,7 +188,6 @@ impl ListStore {
 
     #[inline]
     pub fn concurrent_store(&mut self) -> Arc<Mutex<ConcurrentStore>> {
-        self.arc_count += 1;
         if let Some(mutex) = self.concurrent_store.try_lock() {
             self.len_rec = mutex.len();
         }
@@ -191,7 +225,7 @@ impl ListStore {
         ListStore {
             object,
             concurrent_store: Arc::new(Mutex::new(ConcurrentStore::new(id))),
-            arc_count: 1,
+            scroll_index_rec: None,
             view: None,
             window_lines: 0,
             current_line: 0,
@@ -222,7 +256,9 @@ impl ListStore {
     #[inline]
     pub(crate) fn with_image_mut<
         F: FnOnce(
-            &mut [Box<dyn ListItem>],
+            ConcurrentStoreMutexGuard,
+            usize,
+            usize,
             i32,
             &mut Option<NonNull<ListNode>>,
             &mut Option<NonNull<ListNode>>,
@@ -238,12 +274,14 @@ impl ListStore {
             (self.current_line - 1).max(0)
         } as usize;
 
-        if let Some(mut mutex) = self.concurrent_store.try_lock() {
+        if let Some(mutex) = self.concurrent_store.try_lock() {
             let end = (start + self.window_lines as usize + mutex.separator_cnt).min(mutex.len());
             self.len_rec = mutex.len();
 
             f(
-                &mut mutex.items[start..end],
+                mutex,
+                start,
+                end,
                 self.y_offset,
                 &mut self.entered_node,
                 &mut self.hovered_node,
@@ -305,17 +343,15 @@ impl ListStore {
     ///
     /// @return `true` if scroll value has updated, should update the image.
     #[inline]
-    pub(crate) fn scroll_to(&mut self, mut value: i32, internal: bool) -> bool {
-        if internal {
-            value *= 10;
-        }
-
+    pub(crate) fn scroll_to(&mut self, value: i32) -> bool {
         let move_to = value / 10;
+
         let len = if let Some(mutex) = self.concurrent_store.try_lock() {
             mutex.len()
         } else {
             self.len_rec
         };
+
         if move_to < 0 || move_to > len as i32 {
             return false;
         }
@@ -325,28 +361,59 @@ impl ListStore {
         }
         self.current_line = move_to;
 
-        if internal {
-            emit!(self.internal_scroll_value_changed())
-        }
-
         true
+    }
+
+    pub(crate) fn scroll_to_index(&mut self, idx: usize) {
+        let idx_offset = if let Some(mutex) = self.concurrent_store.try_lock() {
+            let mut offset = 0;
+            for &i in mutex.separator_pos().iter() {
+                if idx >= i {
+                    offset += 1;
+                } else {
+                    break;
+                }
+            }
+            offset
+        } else {
+            self.scroll_index_rec = Some(idx);
+            return;
+        };
+
+        let win_lines = self.get_window_lines();
+        let item_len = self.get_items_len() as i32;
+        let mut scroll_to = (idx as i32 + idx_offset).max(0).min(item_len - win_lines);
+        scroll_to *= 10;
+
+        let scrolled = self.scroll_to(scroll_to);
+
+        if scrolled {
+            emit!(self.internal_scroll_value_changed(), scroll_to)
+        }
     }
 
     #[inline]
     pub(crate) fn check_arc_count(&mut self) {
-        if self.arc_count == 1 {
-            return;
-        }
+        let mut f = false;
 
-        let sc = Arc::strong_count(&self.concurrent_store);
-        if sc < self.arc_count {
-            self.arc_count = sc;
-            let new_len = self.concurrent_store.lock().len();
+        if let Some(mutex) = self.concurrent_store.try_lock() {
+            let new_len = mutex.len();
 
             if self.len_rec != new_len {
                 self.len_rec = new_len;
                 emit!(self.items_len_changed(), new_len);
+                println!("items_len_chaged {}", new_len);
+
+                f = true;
             }
+        }
+
+        if !f {
+            return;
+        }
+
+        if let Some(idx) = self.scroll_index_rec.take() {
+            self.scroll_to_index(idx);
         }
     }
 

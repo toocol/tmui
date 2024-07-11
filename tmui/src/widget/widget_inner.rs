@@ -63,6 +63,8 @@ pub(crate) trait WidgetInnerExt {
     fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp);
 
     fn handle_child_overflow_hidden(&mut self, child_size: Size);
+
+    fn update_render_styles(&mut self);
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -222,6 +224,12 @@ macro_rules! widget_inner_ext_impl {
                     }
                 }
             }
+        }
+
+        #[inline]
+        fn update_render_styles(&mut self) {
+            self.update();
+            self.set_render_styles(true);
         }
     };
 }

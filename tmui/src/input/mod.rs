@@ -3,6 +3,7 @@ pub mod ctrl;
 pub mod date;
 pub mod password;
 pub mod radio;
+pub mod select;
 pub mod text;
 
 use std::cell::{Cell, Ref, RefCell, RefMut};
@@ -17,6 +18,7 @@ pub enum InputType {
     Radio,
     Checkbox,
     Date,
+    Select,
 }
 
 /// All the input widget should implement this trait.

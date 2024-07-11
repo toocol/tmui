@@ -1317,6 +1317,8 @@ impl<T: WidgetImpl> WidgetExt for T {
         props.border.width.1 = right;
         props.border.width.2 = bottom;
         props.border.width.3 = left;
+
+        self.update_render_styles();
     }
 
     #[inline]
@@ -1326,37 +1328,50 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         self.widget_props_mut().border.border_radius = radius;
+
+        self.update_render_styles();
     }
 
     #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
         self.widget_props_mut().border.style = style;
+
+        self.update_render_styles();
     }
 
     #[inline]
     fn set_border_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color = (color, color, color, color);
-        self.set_render_styles(true);
+
+        self.update_render_styles();
     }
 
     #[inline]
     fn set_border_top_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.0 = color;
+
+        self.update_render_styles();
     }
 
     #[inline]
     fn set_border_right_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.1 = color;
+
+        self.update_render_styles();
     }
 
     #[inline]
     fn set_border_bottom_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.2 = color;
+
+        self.update_render_styles();
     }
 
     #[inline]
     fn set_border_left_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.3 = color;
+
+        self.update_render_styles();
     }
 
     #[inline]
