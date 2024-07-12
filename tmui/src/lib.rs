@@ -1,5 +1,6 @@
 pub mod animation;
 pub mod application;
+pub mod asset;
 pub mod application_window;
 pub mod backend;
 pub mod button;

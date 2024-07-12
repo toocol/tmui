@@ -1,9 +1,7 @@
 use tlib::{connect, run_after};
 use tmui::{
     input::{
-        password::Password,
-        text::{Text, TextExt, TextSignals},
-        Input, InputSignals,
+        password::Password, select::{select_option::SelectOption, Select}, text::{Text, TextExt, TextSignals}, Input, InputSignals
     },
     prelude::*,
     tlib::{
@@ -28,6 +26,9 @@ pub struct Holder {
 
     #[children]
     password: Box<Password>,
+
+    #[children]
+    select: Box<Select<String>>,
 }
 
 impl ObjectSubclass for Holder {
@@ -90,6 +91,15 @@ impl ObjectImpl for Holder {
                 painter.set_color(Color::from_hex("#ff6b6b"));
                 painter.draw_rect_global(rect);
             });
+
+        let options = vec![
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), true),
+            SelectOption::new("Date".to_string(), false),
+        ];
+        self.select.set_options(&options);
+        self.select.set_margin_left(20);
 
         self.set_vexpand(true);
         self.set_spacing(30);

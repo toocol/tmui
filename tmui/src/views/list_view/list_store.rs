@@ -109,6 +109,11 @@ impl ConcurrentStore {
     }
 
     #[inline]
+    pub fn nodes_len(&self) -> usize {
+        self.items.len() - self.separator_cnt
+    }
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -192,6 +197,11 @@ impl ListStore {
             self.len_rec = mutex.len();
         }
         self.concurrent_store.clone()
+    }
+
+    #[inline]
+    pub fn nodes_len(&self) -> usize {
+        self.concurrent_store.lock().nodes_len()
     }
 }
 
@@ -393,7 +403,7 @@ impl ListStore {
     }
 
     #[inline]
-    pub(crate) fn check_arc_count(&mut self) {
+    pub(crate) fn check_lock(&mut self) {
         let mut f = false;
 
         if let Some(mutex) = self.concurrent_store.try_lock() {
@@ -402,7 +412,6 @@ impl ListStore {
             if self.len_rec != new_len {
                 self.len_rec = new_len;
                 emit!(self.items_len_changed(), new_len);
-                println!("items_len_chaged {}", new_len);
 
                 f = true;
             }

@@ -1,24 +1,39 @@
 pub mod dropdown_list;
 pub mod select_option;
 
-use dropdown_list::DropdownList;
-use select_option::SelectOption;
 use super::{Input, InputBounds, InputSignals, InputWrapper};
 use crate::{
+    asset::Asset,
+    font::FontCalculation,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::WidgetImpl,
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
+};
+use dropdown_list::DropdownList;
+use select_option::SelectOption;
+use tlib::{
+    events::MouseEvent, global::PrecisionOps, namespace::MouseButton, run_after,
+    skia_safe::FontMgr, typedef::SkiaSvgDom,
 };
 
 const DEFAULT_BORDER_COLOR: Color = Color::grey_with(96);
+const MINIMUN_WIDTH: i32 = 25;
+const TEXT_MARGIN: i32 = 3;
+
+const ARROW_MARGIN: f32 = 2.;
+const ARROW_WIDTH: f32 = 10.;
+const ARROW_HEIGHT: f32 = 10.;
 
 pub trait SelectBounds: InputBounds + ToString {}
 impl<T: InputBounds + ToString> SelectBounds for T {}
 
 #[extends(Widget)]
 #[popupable]
+#[run_after]
 pub struct Select<T: SelectBounds> {
     input_wrapper: InputWrapper<T>,
+    maximum_text: String,
+    dom: Option<SkiaSvgDom>,
 }
 
 impl<T: SelectBounds> ObjectSubclass for Select<T> {
@@ -31,18 +46,52 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
         self.set_border_radius(2.);
         self.set_borders(1., 1., 1., 1.);
         self.set_border_color(DEFAULT_BORDER_COLOR);
+        self.set_fixed_width(MINIMUN_WIDTH);
+        self.set_detecting_width(MINIMUN_WIDTH);
 
         self.input_wrapper.init(self.id());
 
         let dropdown_list = DropdownList::new();
         self.add_popup(dropdown_list);
+
+        let arrow = Asset::get("arrow_down_small.svg").unwrap();
+        self.dom = Some(
+            SkiaSvgDom::from_bytes(&arrow.data, FontMgr::default())
+                .expect("`Select` crate svg dom failed."),
+        );
     }
 }
 
 impl<T: SelectBounds> WidgetImpl for Select<T> {
     #[inline]
+    fn paint(&mut self, painter: &mut Painter) {
+        self.draw_text(painter);
+
+        self.draw_arrow(painter)
+    }
+
+    #[inline]
+    fn run_after(&mut self) {
+        self.font_changed();
+    }
+
+    #[inline]
     fn enable_focus(&self) -> bool {
         true
+    }
+
+    #[inline]
+    fn font_changed(&mut self) {
+        self.on_font_changed()
+    }
+
+    #[inline]
+    fn on_mouse_pressed(&mut self, event: &MouseEvent) {
+        if event.mouse_button() != MouseButton::LeftButton {
+            return;
+        }
+
+        self.show_popup(event.position().into());
     }
 }
 
@@ -76,21 +125,28 @@ impl<T: SelectBounds> Select<T> {
     #[inline]
     pub fn set_options(&mut self, options: &[SelectOption<T>]) {
         if options.is_empty() {
-            return
+            return;
         }
         self.dropdown_list().clear_options();
+        self.maximum_text = String::new();
 
         let default_val = options.first().unwrap().value();
-        let mut max_len = default_val.to_string().chars().count();
+        let mut max_width = 0;
         let mut idx = 0;
         self.set_value(default_val);
 
         for (i, option) in options.iter().enumerate() {
+            let value = option.value();
+            let val_str = value.to_string();
+            let (w, _) = self.font().calc_text_dimension(&val_str, 0.).ceil();
+            if w as i32 > max_width {
+                max_width = w as i32;
+                self.maximum_text = val_str;
+            }
+
             self.dropdown_list().add_option(option);
-            
+
             if option.is_selected() {
-                let value = option.value();
-                max_len = max_len.max(value.to_string().chars().count());
                 idx = i;
 
                 self.set_value(value);
@@ -99,11 +155,60 @@ impl<T: SelectBounds> Select<T> {
 
         self.dropdown_list().scroll_to(idx);
 
+        let width = max_width + ARROW_WIDTH.ceil() as i32 + ARROW_MARGIN as i32 * 2 + TEXT_MARGIN;
+        self.set_fixed_width(width);
+        self.set_detecting_width(width);
+
+        let dropdown_list = self.dropdown_list();
+        dropdown_list.width_request(width);
+        dropdown_list.calc_height();
+
+        if self.window().initialized() {
+            self.window().layout_change(self);
+        }
+
         self.update();
     }
 }
 
 impl<T: SelectBounds> Select<T> {
+    #[inline]
+    fn draw_text(&mut self, painter: &mut Painter) {
+        let text = self.value().to_string();
+        let pos = self.text_pos();
+        painter.set_color(Color::BLACK);
+        painter.draw_paragraph_global(&text, pos, 0., f32::MAX, Some(1), false)
+    }
+
+    #[inline]
+    fn draw_arrow(&mut self, painter: &mut Painter) {
+        if let Some(ref dom) = self.dom {
+            painter.save();
+            let pos = self.arrow_pos();
+            painter.translate(pos.x(), pos.y());
+            painter.draw_dom(dom);
+            painter.restore();
+        }
+    }
+
+    #[inline]
+    fn text_pos(&self) -> Point {
+        let mut rect = self.rect();
+        rect.set_x(rect.x() + TEXT_MARGIN);
+        rect.set_y(rect.y() + TEXT_MARGIN);
+        rect.top_left()
+    }
+
+    #[inline]
+    fn arrow_pos(&self) -> FPoint {
+        let mut rect = self.rect_f();
+
+        rect.set_x(rect.x() + (rect.width() - ARROW_WIDTH - ARROW_MARGIN * 2.));
+        rect.set_y(rect.y() + (rect.height() - ARROW_HEIGHT) / 2.);
+
+        rect.top_left()
+    }
+
     #[inline]
     fn dropdown_list(&mut self) -> &mut DropdownList {
         self.get_popup_mut()
@@ -111,5 +216,22 @@ impl<T: SelectBounds> Select<T> {
             .as_any_mut()
             .downcast_mut::<DropdownList>()
             .unwrap()
+    }
+
+    #[inline]
+    fn on_font_changed(&mut self) {
+        let (_, h) = self.font().calc_font_dimension().ceil();
+        let height = h as i32 + TEXT_MARGIN * 2;
+        self.set_fixed_height(height);
+        self.set_detecting_height(height);
+
+        let font = self.font().clone();
+        let dropdown_list = self.dropdown_list();
+        dropdown_list.set_font(font);
+        dropdown_list.calc_height();
+
+        if self.window().initialized() {
+            self.window().layout_change(self);
+        }
     }
 }

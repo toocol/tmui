@@ -170,6 +170,31 @@ impl ListView {
     }
 
     #[inline]
+    pub fn len(&self) -> usize {
+        self.get_store().nodes_len()
+    }
+
+    #[inline]
+    pub fn get_line_spacing(&self) -> i32 {
+        self.get_image().line_spacing
+    }
+
+    #[inline]
+    pub fn set_line_spacing(&mut self, line_spacing: i32) {
+        self.get_image_mut().line_spacing = line_spacing;
+    }
+
+    #[inline]
+    pub fn get_line_height(&self) -> i32 {
+        self.get_image().line_height
+    }
+
+    #[inline]
+    pub fn set_line_height(&mut self, line_height: i32) {
+        self.get_image_mut().line_height = line_height
+    }
+
+    #[inline]
     pub fn register_node_enter<
         F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
     >(

@@ -30,8 +30,8 @@ pub(crate) struct ListViewImage {
 
     indent_length: i32,
     #[derivative(Default(value = "1"))]
-    line_height: i32,
-    line_spacing: i32,
+    pub(crate) line_height: i32,
+    pub(crate) line_spacing: i32,
 
     pub(crate) on_node_enter: Option<FnNodeAction>,
     pub(crate) on_node_leave: Option<FnNodeAction>,
@@ -48,6 +48,7 @@ impl ObjectImpl for ListViewImage {
     fn initialize(&mut self) {
         self.set_mouse_tracking(true);
         self.store.initialize();
+        self.font_changed();
 
         connect!(
             self.store,
@@ -74,8 +75,6 @@ impl ObjectImpl for ListViewImage {
 impl WidgetImpl for ListViewImage {
     #[inline]
     fn run_after(&mut self) {
-        self.font_changed();
-
         self.on_items_changed(self.store.get_items_len());
     }
 
@@ -134,7 +133,7 @@ impl ListViewImage {
 impl IterExecutor for ListViewImage {
     #[inline]
     fn iter_execute(&mut self) {
-        self.store.check_arc_count();
+        self.store.check_lock();
     }
 }
 
