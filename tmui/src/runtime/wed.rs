@@ -70,9 +70,6 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
 
             let pressed_widget = window.pressed_widget();
             let prevent = window.handle_global_watch(GlobalWatchEvent::MouseReleased, |handle| {
-                if pressed_widget != 0 {
-                    return false;
-                }
                 handle.on_global_mouse_released(&evt)
             });
             if prevent {

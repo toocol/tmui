@@ -175,6 +175,11 @@ impl ListView {
     }
 
     #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[inline]
     pub fn get_line_spacing(&self) -> i32 {
         self.get_image().line_spacing
     }

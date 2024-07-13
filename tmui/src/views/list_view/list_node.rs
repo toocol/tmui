@@ -1,11 +1,12 @@
 use super::{
-    list_item::{ItemType, ListItem, RenderCtx}, list_store::ListStore, list_view_object::ListViewObject, ListView, Painter
+    list_item::{ItemType, ListItem, RenderCtx},
+    list_store::ListStore,
+    list_view_object::ListViewObject,
+    ListView, Painter,
 };
-use crate::{
-    views::{
-        cell::{cell_render::CellRender, Cell},
-        node::{node_render::NodeRender, Status},
-    },
+use crate::views::{
+    cell::{cell_render::CellRender, Cell},
+    node::{node_render::NodeRender, Status},
 };
 use log::warn;
 use tlib::{
@@ -65,7 +66,10 @@ impl ListNode {
 
     #[inline]
     pub fn get_view(&mut self) -> &mut ListView {
-        self.store_mut().get_view().downcast_mut::<ListView>().unwrap()
+        self.store_mut()
+            .get_view()
+            .downcast_mut::<ListView>()
+            .unwrap()
     }
 
     pub fn get_value<T: 'static + StaticType + FromValue>(&self, cell_idx: usize) -> Option<T> {

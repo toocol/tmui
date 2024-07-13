@@ -5,9 +5,23 @@ use crate::{
     views::list_view::{list_view_object::ListViewObject, ListView},
     widget::WidgetImpl,
 };
+use tlib::{global_watch, signals};
+
+pub trait DropdownListSignals: ActionExt {
+    signals!(
+        DropdownListSignals:
+
+        /// Emit when list value's selected value chaged.
+        ///
+        /// @param [`String`]
+        value_changed();
+    );
+}
+impl DropdownListSignals for DropdownList {}
 
 #[extends(Popup, internal = true)]
 #[derive(Childable)]
+#[global_watch(MousePressed)]
 pub struct DropdownList {
     #[child]
     list: Box<ListView>,
@@ -26,6 +40,17 @@ impl ObjectImpl for DropdownList {
 
         self.list.set_hexpand(true);
         self.list.set_vexpand(true);
+        self.list.register_node_released(|node, _, _| {
+            let val = node.get_value::<String>(0).unwrap();
+            let dropdown_list = node
+                .get_view()
+                .get_parent_mut()
+                .unwrap()
+                .downcast_mut::<DropdownList>()
+                .unwrap();
+            emit!(dropdown_list.value_changed(), val);
+            dropdown_list.hide();
+        });
 
         let scroll_bar = self.list.scroll_bar_mut();
         scroll_bar.set_overlaid(true);
@@ -53,6 +78,20 @@ impl PopupImpl for DropdownList {
     }
 }
 
+impl GlobalWatchImpl for DropdownList {
+    fn on_global_mouse_pressed(&mut self, evt: &tlib::events::MouseEvent) -> bool {
+        if !self.visible() {
+            return false;
+        }
+        let pos: Point = evt.position().into();
+        if !self.rect().contains(&pos) {
+            self.hide();
+        }
+
+        false
+    }
+}
+
 impl DropdownList {
     #[inline]
     pub fn new() -> Box<Self> {
@@ -76,7 +115,10 @@ impl DropdownList {
 
     #[inline]
     pub fn calc_height(&mut self) {
-        let height = (self.list.get_line_height() + self.list.get_line_spacing()) * self.list.len() as i32;
-        self.height_request(height + 1 * 2)
+        let height =
+            (self.list.get_line_height() + self.list.get_line_spacing()) * self.list.len() as i32;
+
+        // Add the height of borders.
+        self.height_request(height + 2)
     }
 }

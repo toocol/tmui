@@ -9,10 +9,10 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{widget_inner::WidgetInnerExt, WidgetImpl},
 };
-use dropdown_list::DropdownList;
+use dropdown_list::{DropdownList, DropdownListSignals};
 use select_option::SelectOption;
 use tlib::{
-    events::MouseEvent, global::PrecisionOps, namespace::MouseButton, run_after,
+    connect, events::MouseEvent, global::PrecisionOps, namespace::MouseButton, run_after,
     skia_safe::FontMgr, typedef::SkiaSvgDom,
 };
 
@@ -24,8 +24,8 @@ const ARROW_MARGIN: f32 = 2.;
 const ARROW_WIDTH: f32 = 10.;
 const ARROW_HEIGHT: f32 = 10.;
 
-pub trait SelectBounds: InputBounds + ToString {}
-impl<T: InputBounds + ToString> SelectBounds for T {}
+pub trait SelectBounds: InputBounds + ToString + From<String> {}
+impl<T: InputBounds + ToString + From<String>> SelectBounds for T {}
 
 #[extends(Widget)]
 #[popupable]
@@ -52,6 +52,12 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
         self.input_wrapper.init(self.id());
 
         let dropdown_list = DropdownList::new();
+        connect!(
+            dropdown_list,
+            value_changed(),
+            self,
+            dropdown_list_value_changed(String)
+        );
         self.add_popup(dropdown_list);
 
         let arrow = Asset::get("arrow_down_small.svg").unwrap();
@@ -175,7 +181,7 @@ impl<T: SelectBounds> Select<T> {
     #[inline]
     fn draw_text(&mut self, painter: &mut Painter) {
         let text = self.value().to_string();
-        let pos = self.text_pos();
+        let pos = self.text_rect().top_left();
         painter.set_color(Color::BLACK);
         painter.draw_paragraph_global(&text, pos, 0., f32::MAX, Some(1), false)
     }
@@ -192,11 +198,17 @@ impl<T: SelectBounds> Select<T> {
     }
 
     #[inline]
-    fn text_pos(&self) -> Point {
+    fn text_rect(&self) -> Rect {
         let mut rect = self.rect();
+
         rect.set_x(rect.x() + TEXT_MARGIN);
         rect.set_y(rect.y() + TEXT_MARGIN);
-        rect.top_left()
+
+        let arrow_width = (ARROW_WIDTH + ARROW_MARGIN * 2.) as i32;
+        rect.set_width(rect.width() - TEXT_MARGIN - arrow_width);
+        rect.set_height(rect.height() - TEXT_MARGIN * 2);
+
+        rect
     }
 
     #[inline]
@@ -233,5 +245,12 @@ impl<T: SelectBounds> Select<T> {
         if self.window().initialized() {
             self.window().layout_change(self);
         }
+    }
+
+    #[inline]
+    fn dropdown_list_value_changed(&mut self, val: String) {
+        self.set_value(T::from(val));
+        self.update_styles_rect(CoordRect::new(self.text_rect(), Coordinate::World));
+        self.set_render_styles(true);
     }
 }

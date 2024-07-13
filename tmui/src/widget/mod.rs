@@ -4,14 +4,20 @@ pub mod widget_inner;
 
 use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
-    application_window::ApplicationWindow, graphics::{
+    application_window::ApplicationWindow,
+    graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowRender},
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
         render_difference::RenderDiffence,
-    }, layout::LayoutMgr, opti::tracker::Tracker, overlay::ReflectPartCovered, prelude::*, skia_safe
+    },
+    layout::LayoutMgr,
+    opti::tracker::Tracker,
+    overlay::ReflectPartCovered,
+    prelude::*,
+    skia_safe,
 };
 use derivative::Derivative;
 use log::error;
