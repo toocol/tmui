@@ -61,17 +61,26 @@ impl RemainSize for dyn WidgetImpl {
     fn remain_size(&self) -> Size {
         if let Some(container) = cast!(self as ContainerImpl) {
             let mut size = container.borderless_size();
+            let composition = container.composition();
             for c in container.children() {
                 let (mut cw, mut ch) = c.size().into();
 
-                if c.fixed_width() && c.is_occupy_space() && c.visible() {
+                if composition == Composition::HorizontalArrange
+                    && c.fixed_width()
+                    && c.is_occupy_space()
+                    && c.visible()
+                {
                     if cw == 0 {
                         cw = c.get_width_request();
                     }
                     size.set_width(size.width() - cw);
                 }
 
-                if c.fixed_height() && c.is_occupy_space() && c.visible() {
+                if composition == Composition::VerticalArrange
+                    && c.fixed_height()
+                    && c.is_occupy_space()
+                    && c.visible()
+                {
                     if ch == 0 {
                         ch = c.get_height_request();
                     }

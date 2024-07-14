@@ -28,7 +28,10 @@ pub struct Holder {
     password: Box<Password>,
 
     #[children]
-    select: Box<Select<String>>,
+    select1: Box<Select<String>>,
+
+    #[children]
+    select2: Box<Select<String>>,
 }
 
 impl ObjectSubclass for Holder {
@@ -98,12 +101,18 @@ impl ObjectImpl for Holder {
             SelectOption::new("Cherry".to_string(), true),
             SelectOption::new("Date".to_string(), false),
         ];
-        self.select.set_options(&options);
-        self.select.set_margin_left(20);
+        self.select1.set_options(&options);
+        self.select1.set_margin_left(20);
+
+        self.select2.set_options(&options);
+        self.select2.set_margin_left(20);
+        self.select2.set_margin_bottom(20);
+        self.select2.set_valign(Align::End);
 
         self.set_vexpand(true);
-        self.set_spacing(30);
         self.set_hexpand(true);
+        self.set_spacing(30);
+        self.set_homogeneous(false);
     }
 }
 

@@ -71,7 +71,7 @@ impl PopupImpl for DropdownList {
         let win_size = self.window().size();
         let vr = self.visual_rect();
         if bl.y() as f32 + vr.height() > win_size.height() as f32 {
-            Point::new(tl.x(), tl.y() - vr.height() as i32)
+            Point::new(tl.x(), tl.y() - self.rect().height())
         } else {
             Point::new(bl.x(), bl.y())
         }
@@ -88,7 +88,7 @@ impl GlobalWatchImpl for DropdownList {
             self.hide();
         }
 
-        false
+        self.supervisor().point_effective(&pos)
     }
 }
 
@@ -115,10 +115,14 @@ impl DropdownList {
 
     #[inline]
     pub fn calc_height(&mut self) {
-        let height =
-            (self.list.get_line_height() + self.list.get_line_spacing()) * self.list.len() as i32;
+        let len = self.list.len() as i32;
+        if len == 0 {
+            self.height_request(self.list.get_line_height());
+        } else {
+            let height = (self.list.get_line_height() + self.list.get_line_spacing()) * len;
 
-        // Add the height of borders.
-        self.height_request(height + 2)
+            // Add the height of borders.
+            self.height_request(height + 2)
+        }
     }
 }

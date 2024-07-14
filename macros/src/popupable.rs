@@ -39,7 +39,8 @@ impl<'a> Popupable<'a> {
         quote!(
             impl #impl_generics Popupable for #name #ty_generics #where_clause {
                 #[inline]
-                fn set_popup(&mut self, popup: Box<dyn PopupImpl>) {
+                fn set_popup(&mut self, mut popup: Box<dyn PopupImpl>) {
+                    popup.set_supervisor(self);
                     self.popup_field = Some(popup)
                 }
 

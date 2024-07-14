@@ -51,7 +51,8 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
 
         self.input_wrapper.init(self.id());
 
-        let dropdown_list = DropdownList::new();
+        let mut dropdown_list = DropdownList::new();
+        dropdown_list.width_request(MINIMUN_WIDTH);
         connect!(
             dropdown_list,
             value_changed(),

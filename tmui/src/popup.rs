@@ -1,3 +1,7 @@
+use std::ptr::NonNull;
+
+use tlib::{nonnull_mut, nonnull_ref};
+
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -5,7 +9,9 @@ use crate::{
 };
 
 #[extends(Widget)]
-pub struct Popup {}
+pub struct Popup {
+    supervisor: WidgetHnd,
+}
 
 impl ObjectSubclass for Popup {
     const NAME: &'static str = "Popup";
@@ -31,6 +37,21 @@ impl PopupExt for Popup {
     fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl {
         self
     }
+    
+    #[inline]
+    fn set_supervisor(&mut self, widget: &mut dyn WidgetImpl) {
+        self.supervisor = NonNull::new(widget);
+    }
+    
+    #[inline]
+    fn supervisor(&self) -> &dyn WidgetImpl {
+        nonnull_ref!(self.supervisor)
+    }
+
+    #[inline]
+    fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl {
+        nonnull_mut!(self.supervisor)
+    }
 }
 
 impl PopupImpl for Popup {}
@@ -41,6 +62,12 @@ pub trait PopupExt {
     fn as_widget_impl(&self) -> &dyn WidgetImpl;
 
     fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl;
+
+    fn set_supervisor(&mut self, widget: &mut dyn WidgetImpl);
+
+    fn supervisor(&self) -> &dyn WidgetImpl;
+
+    fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl;
 }
 
 #[reflect_trait]

@@ -215,11 +215,13 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
         match child.valign() {
             Align::Start => start_childs.push(child),
             Align::Center => {
-                center_childs_height += child.image_rect().height();
-                center_childs.push(child)
+                let spacing = if center_childs.is_empty() { 0 } else { spacing };
+                center_childs_height += child.image_rect().height() + spacing;
+                center_childs.push(child);
             }
             Align::End => {
-                end_childs_height += child.image_rect().height();
+                let spacing = if end_childs.is_empty() { 0 } else { spacing };
+                end_childs_height += child.image_rect().height() + spacing;
                 end_childs.push(child)
             }
         }
@@ -237,6 +239,7 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
 
     let middle_point = parent_rect.height() / 2 + parent_rect.y();
     offset = middle_point - (center_childs_height / 2);
+    idx = 0;
     for child in center_childs {
         let spacing = if idx == 0 { 0 } else { spacing };
 
@@ -247,6 +250,7 @@ fn vbox_layout_non_homogeneous<T: WidgetImpl + ContainerImpl>(widget: &mut T) {
     }
 
     offset = parent_rect.y() + parent_rect.height() - end_childs_height;
+    idx = 0;
     for child in end_childs {
         let spacing = if idx == 0 { 0 } else { spacing };
 
