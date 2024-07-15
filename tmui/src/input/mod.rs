@@ -75,11 +75,15 @@ pub trait Input: InputSignals {
 
     /// Set the value of the input widget.
     #[inline]
-    fn set_value(&self, val: Self::Value) {
+    fn set_value(&mut self, val: Self::Value) {
         self.input_wrapper().set_value(val);
+        self.on_set_value();
 
         emit!(self.value_changed())
     }
+
+    #[inline]
+    fn on_set_value(&mut self) {}
 
     #[inline]
     fn set_required(&self, required: bool) {

@@ -1,9 +1,11 @@
 use crate::{
-    graphics::element::HierachyZ, prelude::*, widget::{ScaleCalculate, WidgetImpl}
+    graphics::element::HierachyZ,
+    prelude::*,
+    widget::{ScaleCalculate, WidgetImpl},
 };
 use tlib::{
     namespace::Orientation,
-    nonnull_mut,
+    nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
     skia_safe::region::RegionOp,
 };
@@ -215,12 +217,12 @@ impl<T: ContainerImpl> ContainerExt for T {
     fn set_strict_children_layout(&mut self, strict_children_layout: bool) {
         self.container_props_mut().strict_children_layout = strict_children_layout
     }
-    
+
     #[inline]
     fn scale_strat(&self) -> ScaleStrat {
         self.container_props().scale_strat
     }
-    
+
     #[inline]
     fn set_scale_strat(&mut self, strat: ScaleStrat) {
         self.container_props_mut().scale_strat = strat
@@ -246,7 +248,11 @@ impl ContainerPropsAcquire for Container {
 
 #[reflect_trait]
 pub trait ContainerImpl:
-    WidgetImpl + ContainerPointEffective + ContainerScaleCalculate + ContainerExt + ContainerPropsAcquire
+    WidgetImpl
+    + ContainerPointEffective
+    + ContainerScaleCalculate
+    + ContainerExt
+    + ContainerPropsAcquire
 {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`.
@@ -282,10 +288,11 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
             return false;
         }
 
-        for (&id, overlaid) in self.window().overlaid_rects().iter() {
+        for (&id, overlaid) in self.window().overlaids().iter() {
             if self.descendant_of(id) || self.id() == id {
                 continue;
             }
+            let overlaid = nonnull_ref!(overlaid).rect();
             if overlaid.contains(point) {
                 return false;
             }
@@ -428,16 +435,16 @@ pub enum ScaleStrat {
     /// In this state, the sum of the scale values of all child components is computed
     /// to determine the total sum. Each child's size is then calculated as its scale
     /// value divided by this total sum, resulting in proportions relative to the whole.
-    /// 
+    ///
     /// For example, if the scales are [2.0, 3.0], the total sum is 5.0. The sizes
     /// will be [2.0 / 5.0, 3.0 / 5.0], which are [0.4, 0.6].
     #[default]
     Sum,
-    
+
     /// In this state, the total sum is not influenced by the child components' scale
     /// values. Instead, each child's size is calculated as its scale value divided
     /// by 1, effectively meaning the size directly corresponds to the scale value.
-    /// 
+    ///
     /// For example, if the scales are [0.2, 0.3], the sizes will be [0.2 / 1.0, 0.3 / 1.0],
     /// which are [0.2, 0.3].
     Direct,

@@ -120,7 +120,6 @@ impl Board {
                         element.on_renderer(&cr);
                         element.after_renderer();
                         element.validate();
-                        element.clear_regions();
                         update = true;
                     }
                 }

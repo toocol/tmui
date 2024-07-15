@@ -69,7 +69,7 @@ pub struct ApplicationWindow {
 
     run_after: Option<FnRunAfter>,
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
-    overlaid_rects: HashMap<ObjectId, Rect>,
+    overlaids: HashMap<ObjectId, WidgetHnd>,
     outer_position: Point,
 }
 
@@ -520,6 +520,10 @@ impl ApplicationWindow {
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
+
+        for (_, widget) in self.overlaids.iter_mut() {
+            nonnull_mut!(widget).update_render_styles();
+        }
     }
 
     #[inline]
@@ -550,13 +554,13 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn overlaid_rects(&self) -> &HashMap<ObjectId, Rect> {
-        &self.overlaid_rects
+    pub(crate) fn overlaids(&self) -> &HashMap<ObjectId, WidgetHnd> {
+        &self.overlaids
     }
 
     #[inline]
-    pub(crate) fn overlaid_rects_mut(&mut self) -> &mut HashMap<ObjectId, Rect> {
-        &mut self.overlaid_rects
+    pub(crate) fn overlaids_mut(&mut self) -> &mut HashMap<ObjectId, WidgetHnd> {
+        &mut self.overlaids
     }
 
     #[inline]

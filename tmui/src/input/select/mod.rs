@@ -7,7 +7,7 @@ use crate::{
     font::FontCalculation,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
+    widget::{widget_ext::FocusStrat, widget_inner::WidgetInnerExt, WidgetImpl},
 };
 use dropdown_list::{DropdownList, DropdownListSignals};
 use select_option::SelectOption;
@@ -99,6 +99,17 @@ impl<T: SelectBounds> WidgetImpl for Select<T> {
         }
 
         self.show_popup(event.position().into());
+        self.dropdown_list_mut().trans_focus_take(FocusStrat::TakeOver);
+    }
+
+    #[inline]
+    fn on_get_focus(&mut self) {
+        self.set_borders(2., 2., 2., 2.);
+    }
+
+    #[inline]
+    fn on_lose_focus(&mut self) {
+        self.set_borders(1., 1., 1., 1.);
     }
 }
 
@@ -134,7 +145,7 @@ impl<T: SelectBounds> Select<T> {
         if options.is_empty() {
             return;
         }
-        self.dropdown_list().clear_options();
+        self.dropdown_list_mut().clear_options();
         self.maximum_text = String::new();
 
         let default_val = options.first().unwrap().value();
@@ -151,7 +162,7 @@ impl<T: SelectBounds> Select<T> {
                 self.maximum_text = val_str;
             }
 
-            self.dropdown_list().add_option(option);
+            self.dropdown_list_mut().add_option(option);
 
             if option.is_selected() {
                 idx = i;
@@ -160,13 +171,13 @@ impl<T: SelectBounds> Select<T> {
             }
         }
 
-        self.dropdown_list().scroll_to(idx);
+        self.dropdown_list_mut().scroll_to(idx);
 
         let width = max_width + ARROW_WIDTH.ceil() as i32 + ARROW_MARGIN as i32 * 2 + TEXT_MARGIN;
         self.set_fixed_width(width);
         self.set_detecting_width(width);
 
-        let dropdown_list = self.dropdown_list();
+        let dropdown_list = self.dropdown_list_mut();
         dropdown_list.width_request(width);
         dropdown_list.calc_height();
 
@@ -175,6 +186,24 @@ impl<T: SelectBounds> Select<T> {
         }
 
         self.update();
+    }
+
+    #[inline]
+    pub fn dropdown_list(&self) -> &DropdownList {
+        self.get_popup_ref()
+            .unwrap()
+            .as_any()
+            .downcast_ref::<DropdownList>()
+            .unwrap()
+    }
+
+    #[inline]
+    pub fn dropdown_list_mut(&mut self) -> &mut DropdownList {
+        self.get_popup_mut()
+            .unwrap()
+            .as_any_mut()
+            .downcast_mut::<DropdownList>()
+            .unwrap()
     }
 }
 
@@ -223,15 +252,6 @@ impl<T: SelectBounds> Select<T> {
     }
 
     #[inline]
-    fn dropdown_list(&mut self) -> &mut DropdownList {
-        self.get_popup_mut()
-            .unwrap()
-            .as_any_mut()
-            .downcast_mut::<DropdownList>()
-            .unwrap()
-    }
-
-    #[inline]
     fn on_font_changed(&mut self) {
         let (_, h) = self.font().calc_font_dimension().ceil();
         let height = h as i32 + TEXT_MARGIN * 2;
@@ -239,7 +259,7 @@ impl<T: SelectBounds> Select<T> {
         self.set_detecting_height(height);
 
         let font = self.font().clone();
-        let dropdown_list = self.dropdown_list();
+        let dropdown_list = self.dropdown_list_mut();
         dropdown_list.set_font(font);
         dropdown_list.calc_height();
 

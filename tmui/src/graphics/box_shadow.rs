@@ -3,7 +3,7 @@ use crate::{skia_safe, widget::WidgetImpl};
 use derivative::Derivative;
 use tlib::{
     bitflags::bitflags,
-    figure::{Color, FRect},
+    figure::Color,
     namespace::BlendMode,
     skia_safe::{ClipOp, MaskFilter},
 };
@@ -173,10 +173,6 @@ pub trait ShadowRender: WidgetImpl {
         painter.set_blend_mode(self.blend_mode());
         painter.restore_pen();
         painter.restore();
-    }
-
-    fn render_shadow_diff(&self, _painter: &mut Painter, _geometry: FRect, _background: Color) {
-        // TODO: implements this function.
     }
 }
 impl<T: WidgetImpl> ShadowRender for T {}

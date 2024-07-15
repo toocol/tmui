@@ -30,6 +30,7 @@ use tlib::{
     events::{InputMethodEvent, KeyEvent, MouseEvent, ReceiveCharacterEvent},
     figure::Color,
     namespace::{Align, BlendMode, Coordinate, Overflow},
+    nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
     ptr_mut, signals,
     skia_safe::{region::RegionOp, ClipOp},
@@ -53,6 +54,9 @@ pub struct Widget {
     child_overflow_rect: FRect,
     invalid_area: FRect,
     need_update_geometry: bool,
+    redraw_region: CoordRegion,
+    styles_redraw_region: CoordRegion,
+    whole_styles_render: bool,
 
     #[derivative(Default(value = "true"))]
     repaint_when_resize: bool,
@@ -61,6 +65,7 @@ pub struct Widget {
     first_rendered: bool,
     #[derivative(Default(value = "false"))]
     rerender_difference: bool,
+    redraw_shadow_box: bool,
     overflow: Overflow,
 
     #[derivative(Default(value = "Color::TRANSPARENT"))]
@@ -539,17 +544,42 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             }
         }
 
-        for (&id, &overlaid) in self.window().overlaid_rects().iter() {
-            if let Some(widget) = self.window().find_id(id) {
-                if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
-                    painter.clip_rect_global(overlaid, ClipOp::Difference);
-                }
+        if self.whole_styles_render() {
+            self.widget_props_mut().styles_redraw_region.clear();
+        }
+
+        for (&id, overlaid) in self.window().overlaids_mut().iter_mut() {
+            let widget = nonnull_mut!(overlaid);
+
+            if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
+                painter.clip_rect_global(widget.rect(), ClipOp::Difference);
+            } else {
+                continue;
+            }
+
+            if !widget.first_rendered()
+                || !self.rect_f().is_intersects(&widget.visual_rect())
+                || self.is_resize_redraw()
+            {
+                continue;
+            }
+
+            widget.set_redraw_shadow_box(true);
+            if !self.styles_redraw_region().is_empty() {
+                widget.update_styles_region(self.styles_redraw_region());
+            } else {
+                widget.update_styles_rect(CoordRect::new(self.rect(), Coordinate::World));
             }
         }
 
         let cliped = painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
-        if !self.first_rendered() || self.render_styles() {
+        if self.redraw_shadow_box() {
+            self.render_shadow(&mut painter);
+            self.set_redraw_shadow_box(false);
+            painter.restore();
+            return;
+        } else if !self.first_rendered() || self.render_styles() {
             painter.save();
             self.clip_rect(&mut painter, ClipOp::Intersect);
 
@@ -579,7 +609,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
                 self.border_ref()
                     .clear_border(&mut painter, border_rect, background);
 
-                self.render_shadow_diff(&mut painter, border_rect, background);
                 self.render_difference(&mut painter, background);
             } else {
                 painter.fill_rect(geometry, background);
@@ -621,14 +650,20 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         }
 
         painter.restore();
-
-        self.set_resize_redraw(false);
     }
 
     #[inline]
     fn after_renderer(&mut self) {
         self.set_rect_record(self.rect_f());
         self.set_image_rect_record(self.visual_image_rect());
+        self.clear_regions();
+        self.set_whole_styles_render(false);
+        self.set_resize_redraw(false);
+    }
+
+    #[inline]
+    fn when_update(&mut self) {
+        self.clear_regions();
     }
 }
 
@@ -750,10 +785,11 @@ impl PointEffective for Widget {
             return false;
         }
 
-        for (&id, overlaid) in self.window().overlaid_rects().iter() {
+        for (&id, overlaid) in self.window().overlaids().iter() {
             if self.descendant_of(id) || self.id() == id {
                 continue;
             }
+            let overlaid = nonnull_ref!(overlaid).rect();
             if overlaid.contains(point) {
                 return false;
             }
@@ -1194,6 +1230,9 @@ pub trait WidgetImpl:
     + WindowAcquire
 {
     /// The widget can be focused or not, default value was false.
+    ///
+    /// The ability of widget to receive focus determines
+    /// whether it can receive keyboard-related events.
     #[inline]
     fn enable_focus(&self) -> bool {
         false

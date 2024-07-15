@@ -261,8 +261,12 @@ impl Rect {
 
     #[inline]
     pub fn is_intersects(&self, rect: &Rect) -> bool {
-        self.x.max(rect.x) < (self.x + self.width).min(rect.x + rect.width)
-            && self.y.max(rect.y) < (self.y + self.height).min(rect.y + rect.height)
+        let left = self.x.max(rect.x);
+        let top = self.y.max(rect.y);
+        let right = (self.x + self.width).min(rect.x + rect.width);
+        let bottom = (self.y + self.height).min(rect.y + rect.height);
+
+        left <= right && top <= bottom
     }
 
     #[inline]
@@ -909,8 +913,12 @@ impl FRect {
 
     #[inline]
     pub fn is_intersects(&self, rect: &FRect) -> bool {
-        self.x.max(rect.x) <= self.width.min(rect.width)
-            && self.y.max(rect.y) <= self.height.min(rect.height)
+        let left = self.x.max(rect.x);
+        let top = self.y.max(rect.y);
+        let right = (self.x + self.width).min(rect.x + rect.width);
+        let bottom = (self.y + self.height).min(rect.y + rect.height);
+
+        left <= right && top <= bottom
     }
 
     #[inline]

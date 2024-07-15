@@ -51,8 +51,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     let widget_point = widget.map_to_widget(&pos);
                     evt.set_position((widget_point.x(), widget_point.y()));
 
-                    widget.on_mouse_pressed(evt.as_ref());
                     widget.inner_mouse_pressed(evt.as_ref(), false);
+                    widget.on_mouse_pressed(evt.as_ref());
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);
@@ -83,8 +83,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     let widget_point = widget.map_to_widget(&pos);
                     evt.set_position((widget_point.x(), widget_point.y()));
 
-                    widget.on_mouse_released(evt.as_ref());
                     widget.inner_mouse_released(evt.as_ref(), false);
+                    widget.on_mouse_released(evt.as_ref());
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);
@@ -107,8 +107,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                         let widget_point = widget.map_to_widget(&pos);
                         evt.set_position((widget_point.x(), widget_point.y()));
 
-                        widget.on_mouse_released(evt.as_ref());
                         widget.inner_mouse_released(evt.as_ref(), false);
+                        widget.on_mouse_released(evt.as_ref());
 
                         if widget.super_type().is_a(SharedWidget::static_type()) {
                             event = Some(evt);
@@ -166,8 +166,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                             evt.delta_type(),
                         );
 
-                        widget.on_mouse_over(&mouse_over);
                         widget.inner_mouse_over(&mouse_over);
+                        widget.on_mouse_over(&mouse_over);
                     } else {
                         let mouse_over_widget = nonnull_mut!(window.mouse_over_widget());
                         if widget.id() != mouse_over_widget.id() {
@@ -204,8 +204,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     }
 
                     evt.set_position((widget_position.x(), widget_position.y()));
-                    widget.on_mouse_move(evt.as_ref());
                     widget.inner_mouse_move(evt.as_ref());
+                    widget.on_mouse_move(evt.as_ref());
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);
@@ -247,8 +247,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 if widget.point_effective(&evt.position().into()) {
                     let widget_point = widget.map_to_widget(&pos);
                     evt.set_position((widget_point.x(), widget_point.y()));
-                    widget.on_mouse_wheel(evt.as_ref());
                     widget.inner_mouse_wheel(evt.as_ref());
+                    widget.on_mouse_wheel(evt.as_ref());
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);
@@ -289,8 +289,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     if !ShortcutMgr::with(|shortcut_manager| {
                         shortcut_manager.borrow_mut().trigger(widget.id())
                     }) {
-                        widget.on_key_pressed(&evt);
                         widget.inner_key_pressed(&evt);
+                        widget.on_key_pressed(&evt);
                     }
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
@@ -320,8 +320,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 let widget = nonnull_mut!(widget_opt);
 
                 if widget.id() == window.focused_widget() {
-                    widget.on_key_released(&evt);
                     widget.inner_key_released(&evt);
+                    widget.on_key_released(&evt);
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
                         event = Some(evt);

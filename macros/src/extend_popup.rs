@@ -243,6 +243,16 @@ pub(crate) fn gen_popup_trait_impl_clause(
             fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl {
                 self.#(#popup_path).*.supervisor_mut()
             }
+
+            #[inline]
+            fn calc_relative_position(&mut self) {
+                self.#(#popup_path).*.calc_relative_position()
+            }
+
+            #[inline]
+            fn layout_relative_position(&mut self) {
+                self.#(#popup_path).*.layout_relative_position()
+            }
         }
     ))
 }

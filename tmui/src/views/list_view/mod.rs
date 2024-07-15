@@ -100,7 +100,12 @@ impl ObjectImpl for ListView {
     }
 }
 
-impl WidgetImpl for ListView {}
+impl WidgetImpl for ListView {
+    #[inline]
+    fn enable_focus(&self) -> bool {
+        true
+    }
+}
 
 impl ListView {
     #[inline]

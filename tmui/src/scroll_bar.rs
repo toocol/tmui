@@ -581,6 +581,9 @@ impl ScrollBar {
         self.pressed
     }
 
+    /// Do not call this function directly.
+    /// 
+    /// Use [`ScrollArea::set_layout_mode`](crate::scroll_area::ScrollArea::set_layout_mode).
     #[inline]
     pub fn set_overlaid(&mut self, overlaid: bool) {
         self.overlaid = overlaid;

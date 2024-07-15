@@ -1,11 +1,9 @@
 use crate::{
-    graphics::box_shadow::BoxShadow,
-    prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    views::list_view::{list_view_object::ListViewObject, ListView},
-    widget::WidgetImpl,
+    graphics::box_shadow::BoxShadow, prelude::*, scroll_area::LayoutMode, tlib::object::{ObjectImpl, ObjectSubclass}, views::list_view::{list_view_object::ListViewObject, ListView}, widget::{widget_ext::FocusStrat, WidgetImpl}
 };
 use tlib::{global_watch, signals};
+
+const MAX_VISIBLE_ITEMS: i32 = 20;
 
 pub trait DropdownListSignals: ActionExt {
     signals!(
@@ -38,6 +36,7 @@ impl ObjectImpl for DropdownList {
         self.set_border_color(Color::GREY_LIGHT);
         self.set_box_shadow(BoxShadow::new(6., Color::BLACK, None, None, None));
 
+        self.list.set_layout_mode(LayoutMode::Overlay);
         self.list.set_hexpand(true);
         self.list.set_vexpand(true);
         self.list.register_node_released(|node, _, _| {
@@ -49,11 +48,11 @@ impl ObjectImpl for DropdownList {
                 .downcast_mut::<DropdownList>()
                 .unwrap();
             emit!(dropdown_list.value_changed(), val);
+            dropdown_list.trans_focus_take(FocusStrat::Restore);
             dropdown_list.hide();
         });
 
         let scroll_bar = self.list.scroll_bar_mut();
-        scroll_bar.set_overlaid(true);
         scroll_bar.set_visible_in_valid(true);
     }
 }
@@ -85,6 +84,7 @@ impl GlobalWatchImpl for DropdownList {
         }
         let pos: Point = evt.position().into();
         if !self.rect().contains(&pos) {
+            self.trans_focus_take(FocusStrat::Restore);
             self.hide();
         }
 
@@ -94,28 +94,28 @@ impl GlobalWatchImpl for DropdownList {
 
 impl DropdownList {
     #[inline]
-    pub fn new() -> Box<Self> {
+    pub(crate) fn new() -> Box<Self> {
         Object::new(&[])
     }
 
     #[inline]
-    pub fn clear_options(&mut self) {
+    pub(crate) fn clear_options(&mut self) {
         self.list.clear();
     }
 
     #[inline]
-    pub fn add_option(&mut self, option: &dyn ListViewObject) {
+    pub(crate) fn add_option(&mut self, option: &dyn ListViewObject) {
         self.list.add_node(option);
     }
 
     #[inline]
-    pub fn scroll_to(&mut self, idx: usize) {
+    pub(crate) fn scroll_to(&mut self, idx: usize) {
         self.list.scroll_to(idx)
     }
 
     #[inline]
-    pub fn calc_height(&mut self) {
-        let len = self.list.len() as i32;
+    pub(crate) fn calc_height(&mut self) {
+        let len = (self.list.len() as i32).min(MAX_VISIBLE_ITEMS);
         if len == 0 {
             self.height_request(self.list.get_line_height());
         } else {
@@ -124,5 +124,10 @@ impl DropdownList {
             // Add the height of borders.
             self.height_request(height + 2)
         }
+    }
+
+    #[inline]
+    pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
+        self.list.take_over_focus(strat);
     }
 }

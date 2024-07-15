@@ -9,7 +9,7 @@ use crate::{
     graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowPos, ShadowSide},
-        element::ElementImpl,
+        element::{element_update, ElementImpl},
     },
     popup::ReflectPopupImpl,
     primitive::Message,
@@ -90,7 +90,7 @@ pub trait WidgetExt {
     fn is_focus(&self) -> bool;
 
     /// Temporarily take over focus(`take_over_focus(FocusStrat::TakeOver)`), <br>
-    /// after the widget loses focus(`take_over_focus(FocusStrat::Restore)`), 
+    /// after the widget loses focus(`take_over_focus(FocusStrat::Restore)`),
     /// the focus will return to the original widget.
     fn take_over_focus(&mut self, strat: FocusStrat);
 
@@ -316,7 +316,7 @@ pub trait WidgetExt {
     fn map_to_widget(&self, point: &Point) -> Point;
 
     /// Map the given point to outer coordinate.
-    /// 
+    ///
     /// The given point's coordinate must be global.
     fn map_to_outer(&self, point: &Point) -> Point;
 
@@ -327,7 +327,7 @@ pub trait WidgetExt {
     fn map_to_widget_f(&self, point: &FPoint) -> FPoint;
 
     /// Map the given point to outer coordinate.
-    /// 
+    ///
     /// The given point's coordinate must be global.
     fn map_to_outer_f(&self, point: &FPoint) -> FPoint;
 
@@ -514,6 +514,31 @@ pub trait WidgetExt {
     fn invalid_area(&self) -> FRect;
 
     fn set_invalid_area(&mut self, rect: FRect);
+
+    /// Specified the rects to redraw.
+    /// This will result in clipping the drawing area of the widget.(after styles render)
+    fn update_rect(&mut self, rect: CoordRect);
+
+    /// Specified the styles rects to redraw.
+    /// This will result in clipping the drawing area of the widget.(before styles render)
+    fn update_styles_rect(&mut self, rect: CoordRect);
+
+    /// Specified the region to redraw.
+    /// @return false if region is empty.
+    fn update_region(&mut self, region: &CoordRegion) -> bool;
+
+    /// Specified the styles region to redraw;
+    /// @return false if region is empty.
+    fn update_styles_region(&mut self, region: &CoordRegion) -> bool;
+
+    /// Cleaer the redraw region.
+    fn clear_regions(&mut self);
+
+    /// Get the redraw region. <br>
+    fn redraw_region(&self) -> &CoordRegion;
+
+    /// Get the styles redraw region. <br>
+    fn styles_redraw_region(&self) -> &CoordRegion;
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -681,7 +706,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         if let Some(popup) = cast_mut!(self as PopupImpl) {
-            popup.remove_overlaid();
+            popup.window().overlaids_mut().remove(&popup.id());
 
             if popup.is_modal() {
                 popup.take_over_focus(FocusStrat::Restore);
@@ -712,7 +737,11 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.update();
 
         if let Some(popup) = cast_mut!(self as PopupImpl) {
-            popup.register_overlaid();
+            popup
+                .window()
+                .overlaids_mut()
+                .insert(popup.id(), NonNull::new(popup.as_widget_impl_mut()));
+
             if popup.is_modal() {
                 popup.take_over_focus(FocusStrat::TakeOver);
 
@@ -1135,6 +1164,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.widget_props_mut().background = color;
         emit!(Widget::set_background => self.background_changed(), color);
 
+        self.set_whole_styles_render(true);
         self.notify_update();
     }
 
@@ -1318,6 +1348,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         props.border.width.2 = bottom;
         props.border.width.3 = left;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1329,6 +1360,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         self.widget_props_mut().border.border_radius = radius;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1336,6 +1368,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_border_style(&mut self, style: BorderStyle) {
         self.widget_props_mut().border.style = style;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1343,6 +1376,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_border_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color = (color, color, color, color);
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1350,6 +1384,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_border_top_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.0 = color;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1357,6 +1392,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_border_right_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.1 = color;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1364,6 +1400,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_border_bottom_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.2 = color;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1371,6 +1408,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_border_left_color(&mut self, color: Color) {
         self.widget_props_mut().border.border_color.3 = color;
 
+        self.set_whole_styles_render(true);
         self.update_render_styles();
     }
 
@@ -1731,6 +1769,60 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_invalid_area(&mut self, rect: FRect) {
         self.widget_props_mut().invalid_area = rect;
         emit!(self.invalid_area_changed(), rect);
+    }
+
+    #[inline]
+    fn update_rect(&mut self, rect: CoordRect) {
+        self.widget_props_mut().redraw_region.add_rect(rect);
+        element_update(self, false);
+    }
+
+    #[inline]
+    fn update_styles_rect(&mut self, rect: CoordRect) {
+        if !self.whole_styles_render() {
+            self.widget_props_mut().styles_redraw_region.add_rect(rect);
+        }
+        element_update(self, false);
+    }
+
+    #[inline]
+    fn update_region(&mut self, region: &CoordRegion) -> bool {
+        if region.is_empty() {
+            return false;
+        }
+        self.widget_props_mut().redraw_region.add_region(region);
+        element_update(self, false);
+        true
+    }
+
+    #[inline]
+    fn update_styles_region(&mut self, region: &CoordRegion) -> bool {
+        if region.is_empty() {
+            return false;
+        }
+        if !self.whole_styles_render() {
+            self.widget_props_mut()
+                .styles_redraw_region
+                .add_region(region);
+        }
+        element_update(self, false);
+        true
+    }
+
+    #[inline]
+    fn clear_regions(&mut self) {
+        self.widget_props_mut().redraw_region.clear();
+        self.widget_props_mut().styles_redraw_region.clear();
+    }
+
+    #[inline]
+    fn redraw_region(&self) -> &CoordRegion {
+        &self.widget_props().redraw_region
+    }
+
+    #[inline]
+    fn styles_redraw_region(&self) -> &CoordRegion {
+        &self.widget_props().styles_redraw_region
     }
 }
 

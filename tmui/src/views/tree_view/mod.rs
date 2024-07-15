@@ -93,7 +93,12 @@ impl ObjectImpl for TreeView {
     }
 }
 
-impl WidgetImpl for TreeView {}
+impl WidgetImpl for TreeView {
+    #[inline]
+    fn enable_focus(&self) -> bool {
+        true
+    }
+}
 
 impl TreeView {
     #[inline]

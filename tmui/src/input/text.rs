@@ -321,6 +321,12 @@ impl Input for Text {
     fn required_handle(&mut self) -> bool {
         self.inner_required_handle()
     }
+
+    #[inline]
+    fn on_set_value(&mut self) {
+        let len = self.value_ref().chars().count();
+        self.props_mut().cursor_index = len;
+    }
 }
 
 #[allow(private_bounds)]
