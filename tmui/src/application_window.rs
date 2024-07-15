@@ -60,7 +60,7 @@ pub struct ApplicationWindow {
     shadow_mouse_watch: Vec<WidgetHnd>,
 
     focused_widget: ObjectId,
-    focused_widget_mem: ObjectId,
+    focused_widget_mem: Vec<ObjectId>,
     pressed_widget: ObjectId,
     modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
@@ -427,20 +427,19 @@ impl ApplicationWindow {
                 widget.on_lose_focus();
             }
 
-            self.focused_widget_mem = self.focused_widget;
+            self.focused_widget_mem.push(self.focused_widget);
             self.focused_widget = 0;
         }
     }
 
     /// Restore the previous focused widget.
     pub(crate) fn restore_focus(&mut self) {
-        if self.focused_widget_mem != 0 {
-            if let Some(widget) = self.find_id_mut(self.focused_widget_mem) {
+        if let Some(focused_widget) = self.focused_widget_mem.pop() {
+            if let Some(widget) = self.find_id_mut(focused_widget) {
                 widget.on_get_focus();
             }
 
-            self.focused_widget = self.focused_widget_mem;
-            self.focused_widget_mem = 0;
+            self.focused_widget = focused_widget;
         }
     }
 
