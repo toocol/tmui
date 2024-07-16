@@ -19,7 +19,6 @@ pub type SkiaColor = skia_safe::Color;
 pub type SkiaColor3f = skia_safe::Color3f;
 pub type SkiaColor4f = skia_safe::Color4f;
 pub type SkiaBlendMode = skia_safe::BlendMode;
-#[cfg(feature = "svg")]
 pub type SkiaSvgDom = skia_safe::svg::Dom;
 pub type SkiaImage = skia_safe::Image;
 pub type SkiaSize = skia_safe::Size;

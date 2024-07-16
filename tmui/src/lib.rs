@@ -1,7 +1,7 @@
 pub mod animation;
 pub mod application;
-pub mod asset;
 pub mod application_window;
+pub mod asset;
 pub mod backend;
 pub mod button;
 pub mod clipboard;
@@ -33,9 +33,11 @@ pub mod split_pane;
 pub mod stack;
 pub mod system;
 pub mod vbox;
+pub mod views;
 pub mod widget;
 pub mod window;
-pub mod views;
+
+pub(crate) mod svg;
 
 pub mod skia_safe {
     pub use tlib::skia_safe::*;

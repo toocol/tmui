@@ -848,7 +848,6 @@ impl<'a> Painter<'a> {
         let _ = self.canvas.write_pixels(info, pixels, row_bytes, offset);
     }
 
-    #[cfg(svg)]
     #[inline]
     pub fn draw_dom(&self, dom: &tlib::typedef::SkiaSvgDom) {
         dom.render(self.canvas);

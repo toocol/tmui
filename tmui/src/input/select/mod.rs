@@ -3,11 +3,7 @@ pub mod select_option;
 
 use super::{Input, InputBounds, InputSignals, InputWrapper};
 use crate::{
-    asset::Asset,
-    font::FontCalculation,
-    prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{widget_ext::FocusStrat, widget_inner::WidgetInnerExt, WidgetImpl},
+    asset::Asset, font::FontCalculation, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_ext::FocusStrat, widget_inner::WidgetInnerExt, WidgetImpl}
 };
 use dropdown_list::{DropdownList, DropdownListSignals};
 use select_option::SelectOption;
@@ -17,12 +13,13 @@ use tlib::{
 };
 
 const DEFAULT_BORDER_COLOR: Color = Color::grey_with(96);
+const FOCUSED_BORDER_COLOR: Color = Color::BLACK;
+
 const MINIMUN_WIDTH: i32 = 25;
 const TEXT_MARGIN: i32 = 3;
 
 const ARROW_MARGIN: f32 = 2.;
-const ARROW_WIDTH: f32 = 10.;
-const ARROW_HEIGHT: f32 = 10.;
+const ARROW_SIZE: f32 = 10.;
 
 pub trait SelectBounds: InputBounds + ToString + From<String> {}
 impl<T: InputBounds + ToString + From<String>> SelectBounds for T {}
@@ -61,9 +58,14 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
         );
         self.add_popup(dropdown_list);
 
-        let arrow = Asset::get("arrow_down_small.svg").unwrap();
+        let size = ARROW_SIZE as u32;
+        let arrow = SvgStr::get::<Asset>(
+            "arrow_down_small.svg",
+            SvgAttr::new(size, size, Color::BLACK),
+        )
+        .unwrap();
         self.dom = Some(
-            SkiaSvgDom::from_bytes(&arrow.data, FontMgr::default())
+            SkiaSvgDom::from_str(arrow, FontMgr::default())
                 .expect("`Select` crate svg dom failed."),
         );
     }
@@ -99,17 +101,20 @@ impl<T: SelectBounds> WidgetImpl for Select<T> {
         }
 
         self.show_popup(event.position().into());
-        self.dropdown_list_mut().trans_focus_take(FocusStrat::TakeOver);
+        self.dropdown_list_mut()
+            .trans_focus_take(FocusStrat::TakeOver);
     }
 
     #[inline]
     fn on_get_focus(&mut self) {
         self.set_borders(2., 2., 2., 2.);
+        self.set_border_color(FOCUSED_BORDER_COLOR);
     }
 
     #[inline]
     fn on_lose_focus(&mut self) {
         self.set_borders(1., 1., 1., 1.);
+        self.set_border_color(DEFAULT_BORDER_COLOR);
     }
 }
 
@@ -173,7 +178,7 @@ impl<T: SelectBounds> Select<T> {
 
         self.dropdown_list_mut().scroll_to(idx);
 
-        let width = max_width + ARROW_WIDTH.ceil() as i32 + ARROW_MARGIN as i32 * 2 + TEXT_MARGIN;
+        let width = max_width + ARROW_SIZE.ceil() as i32 + ARROW_MARGIN as i32 * 2 + TEXT_MARGIN;
         self.set_fixed_width(width);
         self.set_detecting_width(width);
 
@@ -234,7 +239,7 @@ impl<T: SelectBounds> Select<T> {
         rect.set_x(rect.x() + TEXT_MARGIN);
         rect.set_y(rect.y() + TEXT_MARGIN);
 
-        let arrow_width = (ARROW_WIDTH + ARROW_MARGIN * 2.) as i32;
+        let arrow_width = (ARROW_SIZE + ARROW_MARGIN * 2.) as i32;
         rect.set_width(rect.width() - TEXT_MARGIN - arrow_width);
         rect.set_height(rect.height() - TEXT_MARGIN * 2);
 
@@ -245,8 +250,8 @@ impl<T: SelectBounds> Select<T> {
     fn arrow_pos(&self) -> FPoint {
         let mut rect = self.rect_f();
 
-        rect.set_x(rect.x() + (rect.width() - ARROW_WIDTH - ARROW_MARGIN * 2.));
-        rect.set_y(rect.y() + (rect.height() - ARROW_HEIGHT) / 2.);
+        rect.set_x(rect.x() + (rect.width() - ARROW_SIZE - ARROW_MARGIN * 2.));
+        rect.set_y(rect.y() + (rect.height() - ARROW_SIZE) / 2.);
 
         rect.top_left()
     }

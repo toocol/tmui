@@ -1,6 +1,7 @@
 pub mod checkbox;
 pub mod ctrl;
 pub mod date;
+pub mod number;
 pub mod password;
 pub mod radio;
 pub mod select;
