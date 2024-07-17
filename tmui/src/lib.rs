@@ -37,7 +37,7 @@ pub mod views;
 pub mod widget;
 pub mod window;
 
-pub(crate) mod svg;
+pub mod svg;
 
 pub mod skia_safe {
     pub use tlib::skia_safe::*;

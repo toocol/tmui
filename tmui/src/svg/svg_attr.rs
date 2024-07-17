@@ -1,6 +1,6 @@
 use tlib::figure::Color;
 
-pub(crate) struct SvgAttr {
+pub struct SvgAttr {
     width: u32,
     height: u32,
     color: Color,

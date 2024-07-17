@@ -20,6 +20,7 @@ pub enum InputType {
     Checkbox,
     Date,
     Select,
+    Number,
 }
 
 /// All the input widget should implement this trait.
@@ -77,14 +78,22 @@ pub trait Input: InputSignals {
     /// Set the value of the input widget.
     #[inline]
     fn set_value(&mut self, val: Self::Value) {
+        if !self.check_value(&val) {
+            return;
+        }
         self.input_wrapper().set_value(val);
-        self.on_set_value();
 
         emit!(self.value_changed())
     }
 
+    /// @return
+    ///  - true:  Check success, normal execution of the value setting process.
+    ///  - false: Check failed, value setting is ignored.
     #[inline]
-    fn on_set_value(&mut self) {}
+    #[allow(unused_variables)]
+    fn check_value(&mut self, val: &Self::Value) -> bool {
+        true
+    }
 
     #[inline]
     fn set_required(&self, required: bool) {
@@ -98,7 +107,7 @@ pub trait Input: InputSignals {
 
     /// Check the value of input element,
     /// different actions will be taken based on different components.
-    /// 
+    ///
     /// @return </br>
     /// true : Check passed </br>
     /// false: Check failed

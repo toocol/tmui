@@ -59,7 +59,7 @@ impl ObjectSubclass for Password {
 impl ObjectImpl for Password {
     fn construct(&mut self) {
         self.parent_construct();
-        
+
         self.input_wrapper.init(self.id());
 
         self.font_changed();
@@ -226,16 +226,17 @@ impl Input for Password {
     fn input_wrapper(&self) -> &InputWrapper<Self::Value> {
         &self.input_wrapper
     }
-    
+
     #[inline]
     fn required_handle(&mut self) -> bool {
         self.inner_required_handle()
     }
 
     #[inline]
-    fn on_set_value(&mut self) {
-        let len = self.value_ref().chars().count();
+    fn check_value(&mut self, val: &Self::Value) -> bool {
+        let len = val.chars().count();
         self.props_mut().cursor_index = len;
+        true
     }
 }
 

@@ -66,7 +66,7 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
         .unwrap();
         self.dom = Some(
             SkiaSvgDom::from_str(arrow, FontMgr::default())
-                .expect("`Select` crate svg dom failed."),
+                .expect("`Select` create svg dom `arrow_down_small` failed."),
         );
     }
 }

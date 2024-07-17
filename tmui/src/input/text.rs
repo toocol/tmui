@@ -323,9 +323,10 @@ impl Input for Text {
     }
 
     #[inline]
-    fn on_set_value(&mut self) {
-        let len = self.value_ref().chars().count();
+    fn check_value(&mut self, val: &Self::Value) -> bool {
+        let len = val.chars().count();
         self.props_mut().cursor_index = len;
+        true
     }
 }
 
@@ -431,6 +432,9 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
     #[inline]
     fn paste(&mut self) {
         if let Some(cp) = System::clipboard().text(ClipboardLevel::Os) {
+            if !self.check_value(&cp) {
+                return
+            }
             self.save_revoke();
 
             if self.has_selection() {
