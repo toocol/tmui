@@ -4,7 +4,6 @@ use super::{
 };
 use crate::{
     cast_do, impl_text_shortcut_register,
-    input::text::TEXT_DEFAULT_BORDER_COLOR,
     prelude::*,
     shortcut::ShortcutRegister,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -61,25 +60,10 @@ impl ObjectImpl for Password {
         self.parent_construct();
 
         self.input_wrapper.init(self.id());
-
-        self.font_changed();
-        self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
-        self.set_borders(1., 1., 1., 1.);
         self.register_shortcuts();
+        self.text_construct();
 
-        if self.is_enable() {
-            self.props.cursor_index = self.value_chars_count();
-        }
-
-        connect!(self, value_changed(), self, on_value_changed());
         connect!(self, value_changed(), self, update_shown_text());
-        connect!(self.props.blink_timer, timeout(), self, blink_event());
-        connect!(
-            self,
-            geometry_changed(),
-            self,
-            handle_geometry_changed(FRect)
-        );
     }
 }
 
@@ -115,6 +99,8 @@ impl WidgetImpl for Password {
     #[inline]
     fn font_changed(&mut self) {
         self.handle_font_changed();
+        
+        self.calc_text_geometry();
     }
 
     #[inline]

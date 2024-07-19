@@ -23,7 +23,7 @@ pub const DEFAULT_SCROLL_BAR_WIDTH: i32 = 10;
 pub const DEFAULT_SCROLL_BAR_HEIGHT: i32 = 10;
 
 pub const DEFAULT_SCROLL_BAR_BACKGROUND: Color = Color::GREY_LIGHT;
-pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::from_rgb(250, 250, 250);
+pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::rgb(250, 250, 250);
 
 #[extends(Widget)]
 #[run_after]

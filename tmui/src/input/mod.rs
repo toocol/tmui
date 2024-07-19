@@ -10,7 +10,7 @@ pub mod text;
 use std::cell::{Cell, Ref, RefCell, RefMut};
 
 use log::warn;
-use tlib::{object::ObjectId, prelude::*, signal, signals};
+use tlib::{figure::Color, object::ObjectId, prelude::*, signal, signals};
 
 #[derive(Debug, Clone, Copy, Hash)]
 pub enum InputType {
@@ -220,3 +220,8 @@ impl<T: InputBounds> InputWrapper<T> {
         self.required.get()
     }
 }
+
+/// Constants
+pub const INPUT_DEFAULT_BORDER_COLOR: Color = Color::rgb(96, 96, 96);
+pub const INPUT_FOCUSED_BORDER_COLOR: Color = Color::BLACK;
+pub const INPUT_DEFAULT_BORDER_RADIUS: f32 = 2.;

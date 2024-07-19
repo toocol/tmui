@@ -1,16 +1,16 @@
 pub mod color;
 pub mod image_buf;
 pub mod point;
-pub mod size;
 pub mod rectangle;
 pub mod region;
+pub mod size;
 
 pub use color::*;
 pub use image_buf::*;
 pub use point::*;
-pub use size::*;
 pub use rectangle::*;
 pub use region::*;
+pub use size::*;
 
 #[cfg(test)]
 mod tests {
@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_color() {
-        let color = Color::from_rgba(13, 13, 13, 13);
+        let color = Color::rgba(13, 13, 13, 13);
         let val = color.to_value();
         let get = val.get();
         assert_eq!(color, get);

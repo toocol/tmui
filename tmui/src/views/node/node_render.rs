@@ -8,8 +8,8 @@ use tlib::{
 
 use super::Status;
 
-const DEFAULT_SELECTION: Color = Color::from_rgb(51, 167, 255);
-const DEFAULT_HOVER: Color = Color::from_rgb(190, 190, 190);
+const DEFAULT_SELECTION: Color = Color::rgb(51, 167, 255);
+const DEFAULT_HOVER: Color = Color::rgb(190, 190, 190);
 
 #[derive(Derivative, Clone, Copy)]
 #[derivative(Default)]

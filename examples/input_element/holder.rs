@@ -1,7 +1,7 @@
 use tlib::{connect, run_after};
 use tmui::{
     input::{
-        password::Password, select::{select_option::SelectOption, Select}, text::{Text, TextExt, TextSignals}, Input, InputSignals
+        number::Number, password::Password, select::{select_option::SelectOption, Select}, text::{Text, TextExt, TextSignals}, Input, InputSignals
     },
     prelude::*,
     tlib::{
@@ -32,6 +32,9 @@ pub struct Holder {
 
     #[children]
     select2: Box<Select<String>>,
+
+    #[children]
+    number: Box<Number>,
 }
 
 impl ObjectSubclass for Holder {
@@ -85,13 +88,14 @@ impl ObjectImpl for Holder {
         });
         self.password.set_required(true);
         self.password.check_required();
-        self.password.set_require_invalid_border_color(Color::grey_with(210));
+        self.password
+            .set_require_invalid_border_color(Color::grey_with(210));
         self.password
             .set_customize_require_invalid_render(move |painter, mut rect| {
                 rect.set_width(rect.width() - 1.);
                 rect.set_height(rect.height() - 1.);
 
-                painter.set_color(Color::from_hex("#ff6b6b"));
+                painter.set_color(Color::hex("#ff6b6b"));
                 painter.draw_rect_global(rect);
             });
 
@@ -128,6 +132,8 @@ impl ObjectImpl for Holder {
         self.select2.set_margin_left(20);
         self.select2.set_margin_bottom(20);
         self.select2.set_valign(Align::End);
+
+        self.number.set_margin_left(20);
 
         self.set_vexpand(true);
         self.set_hexpand(true);

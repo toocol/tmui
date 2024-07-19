@@ -30,9 +30,9 @@ impl ObjectImpl for VBoxLayout {
         self.width_request(200);
         self.set_background(Color::CYAN);
 
-        self.hbox_1.set_background(Color::from_rgb(200, 200, 200));
-        self.hbox_2.set_background(Color::from_rgb(100, 220, 200));
-        self.hbox_3.set_background(Color::from_rgb(220, 100, 220));
+        self.hbox_1.set_background(Color::rgb(200, 200, 200));
+        self.hbox_2.set_background(Color::rgb(100, 220, 200));
+        self.hbox_3.set_background(Color::rgb(220, 100, 220));
     }
 }
 
