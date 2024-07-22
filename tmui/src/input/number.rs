@@ -15,6 +15,7 @@ use crate::{
 use lazy_static::lazy_static;
 use regex::Regex;
 use tlib::{
+    connect,
     events::{KeyEvent, MouseEvent},
     global_watch,
     namespace::KeyCode,
@@ -23,8 +24,12 @@ use tlib::{
     typedef::SkiaSvgDom,
 };
 
-const SPINNER_SIZE: f32 = 5.;
-const SPINNER_PADDING: f32 = 3.;
+const ARROW_SIZE: f32 = 7.;
+const SPINNER_WIDTH: f32 = 13.;
+const SPINNER_HEIGHT: f32 = 8.;
+
+const SPINNER_BACKGROUND: Color = Color::grey_with(220);
+const SPINNER_EFFECT_BACKGROUND: Color = Color::grey_with(180);
 
 lazy_static! {
     // Use `\d*` to match the number after scientific counting symbols `e/E`
@@ -41,6 +46,7 @@ pub struct Number {
     props: TextProps,
 
     val: Option<f32>,
+    init_val: Option<f32>,
     min: Option<f32>,
     max: Option<f32>,
     #[derivative(Default(value = "1."))]
@@ -50,6 +56,9 @@ pub struct Number {
 
     arrow_up: Option<SkiaSvgDom>,
     arrow_down: Option<SkiaSvgDom>,
+
+    spinner_up_effect: bool,
+    spinner_down_effect: bool,
 }
 
 pub trait NumberSignals: ActionExt {
@@ -137,7 +146,7 @@ impl WidgetImpl for Number {
         }
 
         let text = event.text();
-        if !text.is_empty() && !self.check_number(text) {
+        if !text.is_empty() && !self.check_number(text, false) {
             return;
         }
 
@@ -166,6 +175,8 @@ impl WidgetImpl for Number {
             2 => self.handle_mouse_double_click(),
             _ => {}
         }
+
+        self.handle_spinner_press(event);
     }
 
     #[inline]
@@ -176,6 +187,9 @@ impl WidgetImpl for Number {
         if !self.props.entered {
             self.window()
                 .set_cursor_shape(SystemCursorShape::ArrowCursor);
+        }
+        if !self.props.blink_timer.is_active() {
+            self.start_blink_timer()
         }
 
         self.handle_mouse_release()
@@ -208,6 +222,8 @@ impl GlobalWatchImpl for Number {
 
         self.handle_mouse_move(evt);
 
+        self.handle_spinner_hover(evt);
+
         false
     }
 }
@@ -232,12 +248,13 @@ impl Input for Number {
 
     #[inline]
     fn check_value(&mut self, val: &Self::Value) -> bool {
-        if !self.check_number(val) {
+        if !self.check_number(val, true) {
             return false;
         }
 
-        let len = self.value_ref().chars().count();
+        let len = val.chars().count();
         self.props_mut().cursor_index = len;
+
         true
     }
 }
@@ -268,11 +285,28 @@ impl Number {
 
     #[inline]
     pub fn val(&self) -> Option<f32> {
-        self.val
+        if let Some(val) = self.val {
+            if let Some(max) = self.max {
+                if val > max {
+                    return None;
+                }
+            }
+
+            if let Some(min) = self.max {
+                if val < min {
+                    return None;
+                }
+            }
+
+            Some(val)
+        } else {
+            self.val
+        }
     }
     #[inline]
     pub fn set_val(&mut self, val: f32) {
-        self.val = Some(val)
+        self.init_val = Some(val);
+        self.set_value(show_value(val));
     }
 
     #[inline]
@@ -333,7 +367,7 @@ impl Number {
         self.register_shortcuts();
         self.text_construct();
 
-        let size = SPINNER_SIZE as u32;
+        let size = ARROW_SIZE as u32;
         self.arrow_up = Some(
             SkiaSvgDom::from_str(
                 SvgStr::get::<Asset>("arrow_up_small.svg", SvgAttr::new(size, size, Color::BLACK))
@@ -351,8 +385,10 @@ impl Number {
                 .unwrap(),
                 FontMgr::default(),
             )
-            .expect("`Number` create svg dom `arrow_up_small` failed"),
+            .expect("`Number` create svg dom `arrow_down_small` failed"),
         );
+
+        connect!(self, value_changed(), self, handle_number_value_changed());
     }
 
     fn draw_spinner(&self, painter: &mut Painter) {
@@ -360,24 +396,51 @@ impl Number {
             return;
         }
 
-        let spinner_rect = self.spinner_rect();
+        let (inner1, inner2) = self.spinner_rect();
+
+        let background = if self.spinner_up_effect {
+            SPINNER_EFFECT_BACKGROUND
+        } else {
+            SPINNER_BACKGROUND
+        };
+        painter.fill_rect_global(inner1, background);
+
+        let background = if self.spinner_down_effect {
+            SPINNER_EFFECT_BACKGROUND
+        } else {
+            SPINNER_BACKGROUND
+        };
+        painter.fill_rect_global(inner2, background);
+
+        let x = inner1.x() + (inner1.width() - ARROW_SIZE) / 2.;
+        let y = inner1.y() + (inner1.height() - ARROW_SIZE) / 2.;
         if let Some(ref dom) = self.arrow_up {
             painter.save();
-            painter.translate(spinner_rect.x(), spinner_rect.y());
+            painter.translate(x, y);
+            painter.draw_dom(dom);
+            painter.restore();
+        }
+
+        let x = inner2.x() + (inner1.width() - ARROW_SIZE) / 2.;
+        let y = inner2.y() + (inner1.height() - ARROW_SIZE) / 2.;
+        if let Some(ref dom) = self.arrow_down {
+            painter.save();
+            painter.translate(x, y);
             painter.draw_dom(dom);
             painter.restore();
         }
     }
 
     #[inline]
-    fn check_number(&self, val: &str) -> bool {
-        let res = if val == "." || val == "e" || val == "E" {
-            let mut text = self.value();
-            text.insert_str(self.map(self.props().cursor_index), val);
-            NUMBER_REGEX.is_match(&text)
-        } else {
-            NUMBER_REGEX.is_match(val)
-        };
+    fn check_number(&self, val: &str, whole_set: bool) -> bool {
+        let res =
+            if (val == "." || val == "e" || val == "E" || val == "+" || val == "-") && !whole_set {
+                let mut text = self.value();
+                text.insert_str(self.map(self.props().cursor_index), val);
+                NUMBER_REGEX.is_match(&text)
+            } else {
+                NUMBER_REGEX.is_match(val)
+            };
 
         if !res {
             emit!(self.value_invalid());
@@ -387,20 +450,125 @@ impl Number {
     }
 
     #[inline]
-    fn spinner_rect(&self) -> FRect {
+    fn spinner_rect(&self) -> (FRect, FRect) {
         if !self.enable_spinner {
-            return FRect::default();
+            return (FRect::default(), FRect::default());
         }
 
         let rect = self.rect_f();
         let text_window = self.props().text_window;
 
-        FRect::new(
-            rect.x() + text_window.width(),
+        let outer_rect = FRect::new(
+            rect.x() + text_window.width() + self.props().text_padding,
             rect.y(),
             rect.width() - text_window.width(),
             rect.height(),
-        )
+        );
+
+        let center_height = SPINNER_HEIGHT * 2.;
+
+        let y1 = outer_rect.y() + (outer_rect.height() - center_height) / 2.;
+        let y2 = y1 + SPINNER_HEIGHT;
+        let xm = outer_rect.x();
+        let inner1 = FRect::new(xm, y1, SPINNER_WIDTH, SPINNER_HEIGHT);
+        let inner2 = FRect::new(xm, y2, SPINNER_WIDTH, SPINNER_HEIGHT);
+        (inner1, inner2)
+    }
+
+    #[inline]
+    fn handle_spinner_hover(&mut self, evt: &MouseEvent) {
+        let (spinner1, spinner2) = self.spinner_rect();
+        let pos = evt.position().into();
+
+        let mut need_update = false;
+        let spinner1_effect = spinner1.contains(&pos);
+        let spinner2_effect = spinner2.contains(&pos);
+        if self.spinner_up_effect != spinner1_effect || self.spinner_down_effect != spinner2_effect
+        {
+            need_update = true;
+        }
+        self.spinner_up_effect = spinner1_effect;
+        self.spinner_down_effect = spinner2_effect;
+
+        let window = self.window();
+        if self.spinner_up_effect || self.spinner_down_effect {
+            window.set_cursor_shape(SystemCursorShape::ArrowCursor);
+        } else {
+            if self.props().entered {
+                window.set_cursor_shape(SystemCursorShape::TextCursor);
+            }
+        }
+
+        if need_update {
+            self.update()
+        }
+    }
+
+    fn handle_spinner_press(&mut self, evt: &MouseEvent) {
+        let pos = self.map_to_global_f(&evt.position().into());
+        let (spinner1, spinner2) = self.spinner_rect();
+        let spinner1_effect = spinner1.contains(&pos);
+        let spinner2_effect = spinner2.contains(&pos);
+
+        if !spinner1_effect && !spinner2_effect {
+            return;
+        }
+
+        let mut res = if spinner1_effect {
+            if let Some(val) = self.val {
+                if val == f32::INFINITY {
+                    self.step
+                } else {
+                    val + self.step
+                }
+            } else {
+                self.step
+            }
+        } else if spinner2_effect {
+            if let Some(val) = self.val {
+                if val == f32::INFINITY {
+                    -self.step
+                } else {
+                    val - self.step
+                }
+            } else {
+                -self.step
+            }
+        } else {
+            0.
+        };
+
+        if let Some(max) = self.max {
+            if res > max {
+                res = max;
+            }
+        }
+
+        if let Some(min) = self.min {
+            if res < min {
+                res = min;
+            }
+        }
+
+        self.props_mut().blink_timer.stop();
+        self.props_mut().cursor_visible = true;
+
+        self.set_value(show_value(res));
+    }
+
+    fn handle_number_value_changed(&mut self) {
+        let parse = self.value_ref().parse::<f32>();
+        match parse {
+            Ok(val) => self.val = Some(val),
+            Err(_) => {
+                if let Some(init_val) = self.init_val {
+                    self.val = Some(init_val)
+                } else {
+                    self.val = None
+                }
+            }
+        }
+        println!("val {:?}", self.val);
     }
 }
 
@@ -424,15 +592,25 @@ fn calc_text_window(props: &TextProps, rect: FRect, enable_spinner: bool) -> FRe
         window.set_y(rect.y() + offset.floor());
     }
 
-    let spinner_width = if enable_spinner {
-        2. * SPINNER_PADDING + SPINNER_SIZE
-    } else {
-        0.
-    };
+    let spinner_width = if enable_spinner { SPINNER_WIDTH } else { 0. };
     window.set_width(rect.width() - 2. * props.text_padding - spinner_width);
     window.set_height(font_height);
 
     window
+}
+
+#[inline]
+fn show_value(val: f32) -> String {
+    if val.fract() == 0. {
+        let abs_val = val.abs();
+        if abs_val >= 1e16 || (abs_val != 0.0 && abs_val < 1e-16) {
+            format!("{:?}", val)
+        } else {
+            format!("{}", val)
+        }
+    } else {
+        format!("{:?}", val)
+    }
 }
 
 impl InputSignals for Number {}
@@ -450,5 +628,22 @@ mod tests {
         assert!(NUMBER_REGEX.is_match("2.3e1"));
         assert!(NUMBER_REGEX.is_match("23.e"));
         assert!(!NUMBER_REGEX.is_match("2e.1"));
+        assert!(NUMBER_REGEX.is_match("-2"));
+        assert!(NUMBER_REGEX.is_match("+2"));
+        assert!(NUMBER_REGEX.is_match("-23.e"));
+    }
+
+    #[test]
+    fn test_f32_format() {
+        match "1e15".parse::<f32>() {
+            Ok(res) => {
+                println!("f32 max value: {}", f32::MAX);
+                println!("{} - {:?}", res, res);
+                let res = res + 1.;
+                println!("{} - {:?}", res, res);
+                assert!(res == 1000000000000000.);
+            },
+            Err(e) => println!("{:?}", e)
+        }
     }
 }

@@ -1234,7 +1234,7 @@ pub(crate) trait TextInnerExt:
 
     #[inline]
     fn calc_widget_height(&self) -> f32 {
-       self.props().calc_widget_height() 
+        self.props().calc_widget_height()
     }
 
     #[inline]

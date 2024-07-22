@@ -370,8 +370,8 @@ impl Rect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.x() + self.width()
-            && point.y() <= self.y() + self.height()
+            && point.x() < self.x() + self.width()
+            && point.y() < self.y() + self.height()
     }
 
     #[inline]
@@ -1022,8 +1022,8 @@ impl FRect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.x() + self.width()
-            && point.y() <= self.y() + self.height()
+            && point.x() < self.x() + self.width()
+            && point.y() < self.y() + self.height()
     }
 
     #[inline]
@@ -1031,10 +1031,11 @@ impl FRect {
         if !self.is_valid() {
             return false;
         }
-        point.x() as f32 >= self.x()
-            && point.y() as f32 >= self.y()
-            && point.x() as f32 <= self.x() + self.width()
-            && point.y() as f32 <= self.y() + self.height()
+        let (x, y) = (point.x() as f32, point.y() as f32);
+        x >= self.x()
+            && y >= self.y()
+            && x < self.x() + self.width()
+            && y < self.y() + self.height()
     }
 
     #[inline]
@@ -1596,8 +1597,8 @@ impl AtomicRect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.x() + self.width()
-            && point.y() <= self.y() + self.height()
+            && point.x() < self.x() + self.width()
+            && point.y() < self.y() + self.height()
     }
 
     #[inline]

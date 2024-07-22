@@ -134,6 +134,10 @@ impl ObjectImpl for Holder {
         self.select2.set_valign(Align::End);
 
         self.number.set_margin_left(20);
+        self.number.set_val(10.);
+        // self.number.set_max(20.);
+        // self.number.set_min(-1.);
+        self.number.set_step(2.);
 
         self.set_vexpand(true);
         self.set_hexpand(true);
