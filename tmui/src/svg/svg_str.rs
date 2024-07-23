@@ -16,7 +16,7 @@ pub struct SvgStr<'a> {
 
 impl<'a> SvgStr<'a> {
     #[inline]
-    pub fn from_str(data: &'a str) -> Self {
+    pub fn new(data: &'a str) -> Self {
         SvgStr { data }
     }
 

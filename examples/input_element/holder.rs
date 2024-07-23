@@ -135,9 +135,9 @@ impl ObjectImpl for Holder {
 
         self.number.set_margin_left(20);
         self.number.set_val(10.);
-        // self.number.set_max(20.);
-        // self.number.set_min(-1.);
-        self.number.set_step(2.);
+        self.number.set_max(20.);
+        self.number.set_min(-1.);
+        self.number.set_step(2.4);
 
         self.set_vexpand(true);
         self.set_hexpand(true);

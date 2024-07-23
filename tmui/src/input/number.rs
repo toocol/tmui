@@ -14,6 +14,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use regex::Regex;
+use rust_decimal::{prelude::FromPrimitive, prelude::*, Decimal};
 use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
@@ -45,7 +46,7 @@ pub struct Number {
     input_wrapper: InputWrapper<String>,
     props: TextProps,
 
-    val: Option<f32>,
+    val: Option<f64>,
     init_val: Option<f32>,
     min: Option<f32>,
     max: Option<f32>,
@@ -287,26 +288,26 @@ impl Number {
     pub fn val(&self) -> Option<f32> {
         if let Some(val) = self.val {
             if let Some(max) = self.max {
-                if val > max {
+                if val > max as f64 {
                     return None;
                 }
             }
 
             if let Some(min) = self.max {
-                if val < min {
+                if val < min as f64 {
                     return None;
                 }
             }
 
-            Some(val)
+            Some(val as f32)
         } else {
-            self.val
+            self.val.map(|val| val as f32)
         }
     }
     #[inline]
     pub fn set_val(&mut self, val: f32) {
         self.init_val = Some(val);
-        self.set_value(show_value(val));
+        self.set_value(show_value(val as f64));
     }
 
     #[inline]
@@ -493,10 +494,8 @@ impl Number {
         let window = self.window();
         if self.spinner_up_effect || self.spinner_down_effect {
             window.set_cursor_shape(SystemCursorShape::ArrowCursor);
-        } else {
-            if self.props().entered {
-                window.set_cursor_shape(SystemCursorShape::TextCursor);
-            }
+        } else if self.props().entered {
+            window.set_cursor_shape(SystemCursorShape::TextCursor);
         }
 
         if need_update {
@@ -516,37 +515,41 @@ impl Number {
 
         let mut res = if spinner1_effect {
             if let Some(val) = self.val {
-                if val == f32::INFINITY {
-                    self.step
+                if val == f64::INFINITY {
+                    self.step as f64
                 } else {
-                    val + self.step
+                    let val = Decimal::from_f64(val).unwrap();
+                    let step = Decimal::from_f32(self.step).unwrap();
+                    (val + step).to_f64().unwrap()
                 }
             } else {
-                self.step
+                self.step as f64
             }
         } else if spinner2_effect {
             if let Some(val) = self.val {
-                if val == f32::INFINITY {
-                    -self.step
+                if val == f64::INFINITY {
+                    -self.step as f64
                 } else {
-                    val - self.step
+                    let val = Decimal::from_f64(val).unwrap();
+                    let step = Decimal::from_f32(self.step).unwrap();
+                    (val - step).to_f64().unwrap()
                 }
             } else {
-                -self.step
+                -self.step as f64
             }
         } else {
             0.
         };
 
         if let Some(max) = self.max {
-            if res > max {
-                res = max;
+            if res > max as f64 {
+                res = max as f64;
             }
         }
 
         if let Some(min) = self.min {
-            if res < min {
-                res = min;
+            if res < min as f64 {
+                res = min as f64;
             }
         }
 
@@ -557,18 +560,17 @@ impl Number {
     }
 
     fn handle_number_value_changed(&mut self) {
-        let parse = self.value_ref().parse::<f32>();
+        let parse = self.value_ref().parse::<f64>();
         match parse {
             Ok(val) => self.val = Some(val),
             Err(_) => {
                 if let Some(init_val) = self.init_val {
-                    self.val = Some(init_val)
+                    self.val = Some(init_val as f64)
                 } else {
                     self.val = None
                 }
             }
         }
-        println!("val {:?}", self.val);
     }
 }
 
@@ -600,10 +602,10 @@ fn calc_text_window(props: &TextProps, rect: FRect, enable_spinner: bool) -> FRe
 }
 
 #[inline]
-fn show_value(val: f32) -> String {
+fn show_value(val: f64) -> String {
     if val.fract() == 0. {
         let abs_val = val.abs();
-        if abs_val >= 1e16 || (abs_val != 0.0 && abs_val < 1e-16) {
+        if abs_val >= 1e17 || (abs_val != 0.0 && abs_val < 1e-17) {
             format!("{:?}", val)
         } else {
             format!("{}", val)
@@ -631,19 +633,5 @@ mod tests {
         assert!(NUMBER_REGEX.is_match("-2"));
         assert!(NUMBER_REGEX.is_match("+2"));
         assert!(NUMBER_REGEX.is_match("-23.e"));
-    }
-
-    #[test]
-    fn test_f32_format() {
-        match "1e15".parse::<f32>() {
-            Ok(res) => {
-                println!("f32 max value: {}", f32::MAX);
-                println!("{} - {:?}", res, res);
-                let res = res + 1.;
-                println!("{} - {:?}", res, res);
-                assert!(res == 1000000000000000.);
-            },
-            Err(e) => println!("{:?}", e)
-        }
     }
 }

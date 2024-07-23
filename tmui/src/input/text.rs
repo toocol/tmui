@@ -35,6 +35,7 @@ pub(crate) const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
 pub(crate) const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 
 type FnRequireInvalidRender = Box<dyn Fn(&mut Painter, FRect)>;
+type FnTextWindowCalc = Box<dyn Fn(&TextProps, FRect) -> FRect>;
 
 #[extends(Widget)]
 #[run_after]
@@ -96,7 +97,7 @@ pub(crate) struct TextProps {
     #[derivative(Default(value = "Color::WHITE"))]
     pub(crate) selection_color: Color,
 
-    pub(crate) fn_calc_text_window: Option<Box<dyn Fn(&TextProps, FRect) -> FRect>>,
+    pub(crate) fn_calc_text_window: Option<FnTextWindowCalc>,
 }
 impl TextProps {
     #[inline]
@@ -796,7 +797,7 @@ pub(crate) trait TextInnerExt:
 
         self.props_mut().text_window =
             if let Some(ref fn_calc_text_window) = self.props().fn_calc_text_window {
-                fn_calc_text_window(&self.props(), rect)
+                fn_calc_text_window(self.props(), rect)
             } else {
                 let font_height = self.props().font_dimension.1;
                 let calced_height = self.calc_widget_height();

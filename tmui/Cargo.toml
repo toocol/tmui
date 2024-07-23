@@ -38,6 +38,7 @@ strum = "0.24.1"
 strum_macros = "0.24"
 usvg = { version = "0.41.0" }
 regex = "1.10.5"
+rust_decimal = "1.17.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.43.0", features = [

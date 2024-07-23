@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn test_svg_str() {
-        let svg_str = SvgStr::from_str(SVG);
+        let svg_str = SvgStr::new(SVG);
         let svg = svg_str.with_attr(SvgAttr::new(10, 10, Color::BLACK));
 
         let target: &'static str = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 2048 2048\" width=\"10\" height=\"10\"><path d=\"M559 815L414 670l610-610 610 610-145 145-465-465-465 465zm930 418l145 145-610 610-610-610 145-145 465 465 465-465z\" fill=\"#000000\"></path></svg>";
