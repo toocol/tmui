@@ -1,3 +1,5 @@
+use std::ptr::NonNull;
+use tlib::{nonnull_mut, nonnull_ref};
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -5,7 +7,10 @@ use crate::{
 };
 
 #[extends(Widget)]
-pub struct Popup {}
+pub struct Popup {
+    supervisor: WidgetHnd,
+    offsets: (i32, i32),
+}
 
 impl ObjectSubclass for Popup {
     const NAME: &'static str = "Popup";
@@ -31,6 +36,38 @@ impl PopupExt for Popup {
     fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl {
         self
     }
+
+    #[inline]
+    fn set_supervisor(&mut self, widget: &mut dyn WidgetImpl) {
+        self.supervisor = NonNull::new(widget);
+    }
+
+    #[inline]
+    fn supervisor(&self) -> &dyn WidgetImpl {
+        nonnull_ref!(self.supervisor)
+    }
+
+    #[inline]
+    fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl {
+        nonnull_mut!(self.supervisor)
+    }
+
+    #[inline]
+    fn calc_relative_position(&mut self) {
+        let supervisor_rect = self.supervisor().rect();
+        let rect = self.rect();
+        self.offsets = (
+            rect.x() - supervisor_rect.x(),
+            rect.y() - supervisor_rect.y(),
+        );
+    }
+
+    #[inline]
+    fn layout_relative_position(&mut self) {
+        let supervisor_rect = self.supervisor().rect();
+        self.set_fixed_x(supervisor_rect.x() + self.offsets.0);
+        self.set_fixed_y(supervisor_rect.y() + self.offsets.1);
+    }
 }
 
 impl PopupImpl for Popup {}
@@ -41,6 +78,16 @@ pub trait PopupExt {
     fn as_widget_impl(&self) -> &dyn WidgetImpl;
 
     fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl;
+
+    fn set_supervisor(&mut self, widget: &mut dyn WidgetImpl);
+
+    fn supervisor(&self) -> &dyn WidgetImpl;
+
+    fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl;
+
+    fn calc_relative_position(&mut self);
+
+    fn layout_relative_position(&mut self);
 }
 
 #[reflect_trait]
@@ -87,6 +134,7 @@ pub trait Popupable: WidgetImpl {
             let pos = popup.calculate_position(rect, basic_point);
             popup.set_fixed_x(pos.x());
             popup.set_fixed_y(pos.y());
+            popup.calc_relative_position();
 
             popup.show();
 

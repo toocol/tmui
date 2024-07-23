@@ -60,7 +60,7 @@ pub struct ApplicationWindow {
     shadow_mouse_watch: Vec<WidgetHnd>,
 
     focused_widget: ObjectId,
-    focused_widget_mem: ObjectId,
+    focused_widget_mem: Vec<ObjectId>,
     pressed_widget: ObjectId,
     modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
@@ -69,7 +69,7 @@ pub struct ApplicationWindow {
 
     run_after: Option<FnRunAfter>,
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
-    overlaid_rects: HashMap<ObjectId, Rect>,
+    overlaids: HashMap<ObjectId, WidgetHnd>,
     outer_position: Point,
 }
 
@@ -427,20 +427,19 @@ impl ApplicationWindow {
                 widget.on_lose_focus();
             }
 
-            self.focused_widget_mem = self.focused_widget;
+            self.focused_widget_mem.push(self.focused_widget);
             self.focused_widget = 0;
         }
     }
 
     /// Restore the previous focused widget.
     pub(crate) fn restore_focus(&mut self) {
-        if self.focused_widget_mem != 0 {
-            if let Some(widget) = self.find_id_mut(self.focused_widget_mem) {
+        if let Some(focused_widget) = self.focused_widget_mem.pop() {
+            if let Some(widget) = self.find_id_mut(focused_widget) {
                 widget.on_get_focus();
             }
 
-            self.focused_widget = self.focused_widget_mem;
-            self.focused_widget_mem = 0;
+            self.focused_widget = focused_widget;
         }
     }
 
@@ -520,6 +519,10 @@ impl ApplicationWindow {
     pub(crate) fn when_size_change(&mut self, size: Size) {
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
+
+        for (_, widget) in self.overlaids.iter_mut() {
+            nonnull_mut!(widget).update_render_styles();
+        }
     }
 
     #[inline]
@@ -550,13 +553,13 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn overlaid_rects(&self) -> &HashMap<ObjectId, Rect> {
-        &self.overlaid_rects
+    pub(crate) fn overlaids(&self) -> &HashMap<ObjectId, WidgetHnd> {
+        &self.overlaids
     }
 
     #[inline]
-    pub(crate) fn overlaid_rects_mut(&mut self) -> &mut HashMap<ObjectId, Rect> {
-        &mut self.overlaid_rects
+    pub(crate) fn overlaids_mut(&mut self) -> &mut HashMap<ObjectId, WidgetHnd> {
+        &mut self.overlaids
     }
 
     #[inline]

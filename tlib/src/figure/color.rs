@@ -27,7 +27,7 @@ impl Color {
     }
 
     #[inline]
-    pub const fn from_rgb(r: u8, g: u8, b: u8) -> Self {
+    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self {
             r: r as i16,
             g: g as i16,
@@ -38,7 +38,7 @@ impl Color {
     }
 
     #[inline]
-    pub const fn from_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self {
             r: r as i16,
             g: g as i16,
@@ -49,7 +49,7 @@ impl Color {
     }
 
     #[inline]
-    pub const fn from_rgb_uncheck(r: i16, g: i16, b: i16) -> Self {
+    pub const fn rgb_uncheck(r: i16, g: i16, b: i16) -> Self {
         Self {
             r,
             g,
@@ -60,7 +60,7 @@ impl Color {
     }
 
     #[inline]
-    pub const fn from_rgba_uncheck(r: i16, g: i16, b: i16, a: i16) -> Self {
+    pub const fn rgba_uncheck(r: i16, g: i16, b: i16, a: i16) -> Self {
         Self {
             r,
             g,
@@ -82,7 +82,7 @@ impl Color {
     }
 
     #[inline]
-    pub fn from_hex(hex_code: &str) -> Self {
+    pub fn hex(hex_code: &str) -> Self {
         let color = HexColor::parse(hex_code)
             .unwrap_or_else(|_| panic!("Parse hex color failed, {}", hex_code));
         Self {
@@ -277,42 +277,42 @@ impl Color {
 impl From<(u8, u8, u8)> for Color {
     #[inline]
     fn from((r, g, b): (u8, u8, u8)) -> Self {
-        Self::from_rgb(r, g, b)
+        Self::rgb(r, g, b)
     }
 }
 
 impl From<(i32, i32, i32)> for Color {
     #[inline]
     fn from((r, g, b): (i32, i32, i32)) -> Self {
-        Self::from_rgb(r as u8, g as u8, b as u8)
+        Self::rgb(r as u8, g as u8, b as u8)
     }
 }
 
 impl From<(u8, u8, u8, u8)> for Color {
     #[inline]
     fn from((r, g, b, a): (u8, u8, u8, u8)) -> Self {
-        Self::from_rgba(r, g, b, a)
+        Self::rgba(r, g, b, a)
     }
 }
 
 impl From<(i32, i32, i32, i32)> for Color {
     #[inline]
     fn from((r, g, b, a): (i32, i32, i32, i32)) -> Self {
-        Self::from_rgba(r as u8, g as u8, b as u8, a as u8)
+        Self::rgba(r as u8, g as u8, b as u8, a as u8)
     }
 }
 
 impl From<String> for Color {
     #[inline]
     fn from(hex: String) -> Self {
-        Self::from_hex(hex.as_str())
+        Self::hex(hex.as_str())
     }
 }
 
 impl From<&str> for Color {
     #[inline]
     fn from(hex: &str) -> Self {
-        Self::from_hex(hex)
+        Self::hex(hex)
     }
 }
 
@@ -409,7 +409,7 @@ impl Add<Color> for Color {
 
     #[inline]
     fn add(self, rhs: Color) -> Self::Output {
-        Self::from_rgba_uncheck(
+        Self::rgba_uncheck(
             self.r + rhs.r,
             self.g + rhs.g,
             self.b + rhs.b,
@@ -423,7 +423,7 @@ impl Sub<Color> for Color {
 
     #[inline]
     fn sub(self, rhs: Color) -> Self::Output {
-        Self::from_rgba_uncheck(
+        Self::rgba_uncheck(
             self.r - rhs.r,
             self.g - rhs.g,
             self.b - rhs.b,
@@ -437,7 +437,7 @@ impl Mul<Color> for Color {
 
     #[inline]
     fn mul(self, rhs: Color) -> Self::Output {
-        Self::from_rgba_uncheck(
+        Self::rgba_uncheck(
             self.r * rhs.r,
             self.g * rhs.g,
             self.b * rhs.b,
@@ -451,7 +451,7 @@ impl Div<Color> for Color {
 
     #[inline]
     fn div(self, rhs: Color) -> Self::Output {
-        Self::from_rgba_uncheck(
+        Self::rgba_uncheck(
             self.r / rhs.r,
             self.g / rhs.g,
             self.b / rhs.b,

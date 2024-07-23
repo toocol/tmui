@@ -54,7 +54,7 @@ impl ObjectImpl for CtxMenu {
             val: "Selection".to_string(),
         });
 
-        self.list.register_node_pressed(|node, _| {
+        self.list.register_node_pressed(|node, _, _| {
             let _ = node.get_view();
         })
     }

@@ -6,7 +6,11 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool, use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn expand(
+    ast: &mut DeriveInput,
+    ignore_default: bool,
+    use_prefix: &Ident,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
@@ -206,9 +210,13 @@ pub(crate) fn expand(ast: &mut DeriveInput, ignore_default: bool, use_prefix: &I
 
 pub(crate) fn gen_popup_trait_impl_clause(
     name: &Ident,
-    _popup_path: Vec<&'static str>,
+    popup_path: Vec<&'static str>,
     (impl_generics, ty_generics, where_clause): SplitGenericsRef<'_>,
 ) -> syn::Result<proc_macro2::TokenStream> {
+    let popup_path: Vec<_> = popup_path
+        .iter()
+        .map(|s| Ident::new(s, name.span()))
+        .collect();
     Ok(quote!(
         impl #impl_generics PopupExt for #name #ty_generics #where_clause {
             #[inline]
@@ -219,6 +227,31 @@ pub(crate) fn gen_popup_trait_impl_clause(
             #[inline]
             fn as_widget_impl_mut(&mut self) -> &mut dyn WidgetImpl {
                 self
+            }
+
+            #[inline]
+            fn set_supervisor(&mut self, widget: &mut dyn WidgetImpl) {
+                self.#(#popup_path).*.set_supervisor(widget)
+            }
+
+            #[inline]
+            fn supervisor(&self) -> &dyn WidgetImpl {
+                self.#(#popup_path).*.supervisor()
+            }
+
+            #[inline]
+            fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl {
+                self.#(#popup_path).*.supervisor_mut()
+            }
+
+            #[inline]
+            fn calc_relative_position(&mut self) {
+                self.#(#popup_path).*.calc_relative_position()
+            }
+
+            #[inline]
+            fn layout_relative_position(&mut self) {
+                self.#(#popup_path).*.layout_relative_position()
             }
         }
     ))

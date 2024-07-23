@@ -3,6 +3,7 @@ use crate::{
     application, cast_do,
     clipboard::ClipboardLevel,
     font::{FontCalculation, SkiaParagraphExt},
+    input::{INPUT_DEFAULT_BORDER_COLOR, INPUT_DEFAULT_BORDER_RADIUS},
     prelude::*,
     shortcut::ShortcutRegister,
     system::System,
@@ -26,9 +27,7 @@ use tlib::{
 
 pub(crate) const TEXT_DEFAULT_MAX_MEMORIES_SIZE: usize = 50;
 pub(crate) const TEXT_DEFAULT_WIDTH: i32 = 150;
-pub(crate) const TEXT_DEFAULT_PADDING: f32 = 3.;
-
-pub(crate) const TEXT_DEFAULT_BORDER_COLOR: Color = Color::grey_with(150);
+pub(crate) const TEXT_DEFAULT_PADDING: f32 = 4.;
 
 pub(crate) const TEXT_DEFAULT_DISABLE_COLOR: Color = Color::grey_with(80);
 pub(crate) const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
@@ -36,6 +35,7 @@ pub(crate) const TEXT_DEFAULT_DISABLE_BACKGROUND: Color = Color::grey_with(240);
 pub(crate) const TEXT_DEFAULT_PLACEHOLDER_COLOR: Color = Color::grey_with(130);
 
 type FnRequireInvalidRender = Box<dyn Fn(&mut Painter, FRect)>;
+type FnTextWindowCalc = Box<dyn Fn(&TextProps, FRect) -> FRect>;
 
 #[extends(Widget)]
 #[run_after]
@@ -92,10 +92,18 @@ pub(crate) struct TextProps {
     pub(crate) selection_start: i32,
     #[derivative(Default(value = "-1"))]
     pub(crate) selection_end: i32,
-    #[derivative(Default(value = "Color::from_rgb(51, 167, 255)"))]
+    #[derivative(Default(value = "Color::rgb(51, 167, 255)"))]
     pub(crate) selection_background: Color,
     #[derivative(Default(value = "Color::WHITE"))]
     pub(crate) selection_color: Color,
+
+    pub(crate) fn_calc_text_window: Option<FnTextWindowCalc>,
+}
+impl TextProps {
+    #[inline]
+    pub(crate) fn calc_widget_height(&self) -> f32 {
+        (self.font_dimension.1 + 2. * self.text_padding).ceil()
+    }
 }
 
 pub(crate) trait TextPropsAcquire: Input<Value = String> {
@@ -152,24 +160,8 @@ impl ObjectImpl for Text {
         self.parent_construct();
 
         self.input_wrapper.init(self.id());
-
-        self.font_changed();
-        self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
-        self.set_borders(1., 1., 1., 1.);
         self.register_shortcuts();
-
-        if self.is_enable() {
-            self.props.cursor_index = self.value_chars_count();
-        }
-
-        connect!(self, value_changed(), self, on_value_changed());
-        connect!(self.props.blink_timer, timeout(), self, blink_event());
-        connect!(
-            self,
-            geometry_changed(),
-            self,
-            handle_geometry_changed(FRect)
-        );
+        self.text_construct();
     }
 }
 
@@ -205,6 +197,8 @@ impl WidgetImpl for Text {
     #[inline]
     fn font_changed(&mut self) {
         self.handle_font_changed();
+
+        self.calc_text_geometry();
     }
 
     #[inline]
@@ -321,6 +315,13 @@ impl Input for Text {
     fn required_handle(&mut self) -> bool {
         self.inner_required_handle()
     }
+
+    #[inline]
+    fn check_value(&mut self, val: &Self::Value) -> bool {
+        let len = val.chars().count();
+        self.props_mut().cursor_index = len;
+        true
+    }
 }
 
 #[allow(private_bounds)]
@@ -425,6 +426,9 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
     #[inline]
     fn paste(&mut self) {
         if let Some(cp) = System::clipboard().text(ClipboardLevel::Os) {
+            if !self.check_value(&cp) {
+                return;
+            }
             self.save_revoke();
 
             if self.has_selection() {
@@ -593,6 +597,22 @@ impl_text_shortcut_register!(Text);
 pub(crate) trait TextInnerExt:
     TextPropsAcquire + WidgetImpl + WidgetInnerExt + TextSignals + Sized
 {
+    fn text_construct(&mut self) {
+        self.handle_font_changed();
+        self.set_border_color(INPUT_DEFAULT_BORDER_COLOR);
+        self.set_border_radius(INPUT_DEFAULT_BORDER_RADIUS);
+        self.set_borders(1., 1., 1., 1.);
+
+        connect!(self, value_changed(), self, on_value_changed());
+        connect!(self.props().blink_timer, timeout(), self, blink_event());
+        connect!(
+            self,
+            geometry_changed(),
+            self,
+            handle_geometry_changed(FRect)
+        );
+    }
+
     fn draw_enable(&mut self, painter: &mut Painter) {
         // Calculates the position of cursor, and adjust the `text_draw_position`:
         let cursor_x = self.sync_cursor_text_draw();
@@ -774,26 +794,34 @@ pub(crate) trait TextInnerExt:
 
     fn calc_text_geometry(&mut self) {
         let rect: FRect = self.rect().into();
-        let font_height = self.props().font_dimension.1;
-        let calced_height = self.calc_widget_height();
-        let mut window = FRect::default();
 
-        window.set_x(rect.x() + self.props().text_padding);
-        if calced_height == rect.height() {
-            window.set_y(rect.y() + self.props().text_padding);
-        } else {
-            let offset = (rect.height() - font_height) / 2.;
-            window.set_y(rect.y() + offset.floor());
-        }
+        self.props_mut().text_window =
+            if let Some(ref fn_calc_text_window) = self.props().fn_calc_text_window {
+                fn_calc_text_window(self.props(), rect)
+            } else {
+                let font_height = self.props().font_dimension.1;
+                let calced_height = self.calc_widget_height();
+                let mut window = FRect::default();
 
-        window.set_width(rect.width() - 2. * self.props().text_padding);
-        window.set_height(font_height);
+                window.set_x(rect.x() + self.props().text_padding);
+                if calced_height == rect.height() {
+                    window.set_y(rect.y() + self.props().text_padding);
+                } else {
+                    let offset = (rect.height() - font_height) / 2.;
+                    window.set_y(rect.y() + offset.floor());
+                }
 
-        self.props_mut().text_window = window;
+                window.set_width(rect.width() - 2. * self.props().text_padding);
+                window.set_height(font_height);
+
+                window
+            };
+
+        let window = self.props().text_window;
         if let Some(ref mut pos) = self.props_mut().text_draw_position {
             pos.set_y(window.y());
         } else {
-            self.props_mut().text_draw_position = Some(self.props().text_window.top_left());
+            self.props_mut().text_draw_position = Some(window.top_left());
         };
     }
 
@@ -1207,7 +1235,7 @@ pub(crate) trait TextInnerExt:
 
     #[inline]
     fn calc_widget_height(&self) -> f32 {
-        (self.props().font_dimension.1 + 2. * self.props().text_padding).ceil()
+        self.props().calc_widget_height()
     }
 
     #[inline]
@@ -1330,7 +1358,7 @@ pub(crate) trait TextInnerExt:
         if bytes_len != 0 && chars_len != 0 {
             self.props_mut().require_invalid = false;
             if self.props().require_invalid_border_color.is_some() {
-                self.set_border_color(TEXT_DEFAULT_BORDER_COLOR);
+                self.set_border_color(INPUT_DEFAULT_BORDER_COLOR);
             }
         }
 

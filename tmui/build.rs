@@ -18,7 +18,6 @@ fn main() {
 
         // Others:
         font_awesome: { feature = "font_awesome" },
-        svg: { feature = "svg" },
         verbose_logging: { feature = "verbose_logging" },
     }
 }

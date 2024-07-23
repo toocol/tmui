@@ -1,14 +1,16 @@
 pub mod checkbox;
 pub mod ctrl;
 pub mod date;
+pub mod number;
 pub mod password;
 pub mod radio;
+pub mod select;
 pub mod text;
 
 use std::cell::{Cell, Ref, RefCell, RefMut};
 
 use log::warn;
-use tlib::{object::ObjectId, prelude::*, signal, signals};
+use tlib::{figure::Color, object::ObjectId, prelude::*, signal, signals};
 
 #[derive(Debug, Clone, Copy, Hash)]
 pub enum InputType {
@@ -17,6 +19,8 @@ pub enum InputType {
     Radio,
     Checkbox,
     Date,
+    Select,
+    Number,
 }
 
 /// All the input widget should implement this trait.
@@ -73,10 +77,22 @@ pub trait Input: InputSignals {
 
     /// Set the value of the input widget.
     #[inline]
-    fn set_value(&self, val: Self::Value) {
+    fn set_value(&mut self, val: Self::Value) {
+        if !self.check_value(&val) {
+            return;
+        }
         self.input_wrapper().set_value(val);
 
         emit!(self.value_changed())
+    }
+
+    /// @return
+    ///  - true:  Check success, normal execution of the value setting process.
+    ///  - false: Check failed, value setting is ignored.
+    #[inline]
+    #[allow(unused_variables)]
+    fn check_value(&mut self, val: &Self::Value) -> bool {
+        true
     }
 
     #[inline]
@@ -91,7 +107,7 @@ pub trait Input: InputSignals {
 
     /// Check the value of input element,
     /// different actions will be taken based on different components.
-    /// 
+    ///
     /// @return </br>
     /// true : Check passed </br>
     /// false: Check failed
@@ -204,3 +220,8 @@ impl<T: InputBounds> InputWrapper<T> {
         self.required.get()
     }
 }
+
+/// Constants
+pub const INPUT_DEFAULT_BORDER_COLOR: Color = Color::rgb(96, 96, 96);
+pub const INPUT_FOCUSED_BORDER_COLOR: Color = Color::BLACK;
+pub const INPUT_DEFAULT_BORDER_RADIUS: f32 = 2.;

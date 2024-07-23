@@ -261,8 +261,12 @@ impl Rect {
 
     #[inline]
     pub fn is_intersects(&self, rect: &Rect) -> bool {
-        self.x.max(rect.x) < (self.x + self.width).min(rect.x + rect.width)
-            && self.y.max(rect.y) < (self.y + self.height).min(rect.y + rect.height)
+        let left = self.x.max(rect.x);
+        let top = self.y.max(rect.y);
+        let right = (self.x + self.width).min(rect.x + rect.width);
+        let bottom = (self.y + self.height).min(rect.y + rect.height);
+
+        left <= right && top <= bottom
     }
 
     #[inline]
@@ -366,8 +370,8 @@ impl Rect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.x() + self.width()
-            && point.y() <= self.y() + self.height()
+            && point.x() < self.x() + self.width()
+            && point.y() < self.y() + self.height()
     }
 
     #[inline]
@@ -909,8 +913,12 @@ impl FRect {
 
     #[inline]
     pub fn is_intersects(&self, rect: &FRect) -> bool {
-        self.x.max(rect.x) <= self.width.min(rect.width)
-            && self.y.max(rect.y) <= self.height.min(rect.height)
+        let left = self.x.max(rect.x);
+        let top = self.y.max(rect.y);
+        let right = (self.x + self.width).min(rect.x + rect.width);
+        let bottom = (self.y + self.height).min(rect.y + rect.height);
+
+        left <= right && top <= bottom
     }
 
     #[inline]
@@ -1014,8 +1022,8 @@ impl FRect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.x() + self.width()
-            && point.y() <= self.y() + self.height()
+            && point.x() < self.x() + self.width()
+            && point.y() < self.y() + self.height()
     }
 
     #[inline]
@@ -1023,10 +1031,11 @@ impl FRect {
         if !self.is_valid() {
             return false;
         }
-        point.x() as f32 >= self.x()
-            && point.y() as f32 >= self.y()
-            && point.x() as f32 <= self.x() + self.width()
-            && point.y() as f32 <= self.y() + self.height()
+        let (x, y) = (point.x() as f32, point.y() as f32);
+        x >= self.x()
+            && y >= self.y()
+            && x < self.x() + self.width()
+            && y < self.y() + self.height()
     }
 
     #[inline]
@@ -1588,8 +1597,8 @@ impl AtomicRect {
         }
         point.x() >= self.x()
             && point.y() >= self.y()
-            && point.x() <= self.x() + self.width()
-            && point.y() <= self.y() + self.height()
+            && point.x() < self.x() + self.width()
+            && point.y() < self.y() + self.height()
     }
 
     #[inline]

@@ -63,6 +63,16 @@ pub(crate) trait WidgetInnerExt {
     fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp);
 
     fn handle_child_overflow_hidden(&mut self, child_size: Size);
+
+    fn update_render_styles(&mut self);
+
+    fn whole_styles_render(&self) -> bool;
+
+    fn set_whole_styles_render(&mut self, whole_styles_render: bool);
+
+    fn redraw_shadow_box(&self) -> bool;
+
+    fn set_redraw_shadow_box(&mut self, redraw: bool);
 }
 
 macro_rules! widget_inner_ext_impl {
@@ -222,6 +232,35 @@ macro_rules! widget_inner_ext_impl {
                     }
                 }
             }
+        }
+
+        #[inline]
+        fn update_render_styles(&mut self) {
+            self.update();
+            self.set_render_styles(true);
+        }
+
+        #[inline]
+        fn whole_styles_render(&self) -> bool {
+            self.widget_props().whole_styles_render
+        }
+
+        #[inline]
+        fn set_whole_styles_render(&mut self, whole_styles_render: bool) {
+            self.widget_props_mut().whole_styles_render = whole_styles_render;
+            if whole_styles_render {
+                self.widget_props_mut().styles_redraw_region.clear();
+            }
+        }
+
+        #[inline]
+        fn redraw_shadow_box(&self) -> bool {
+            self.widget_props().redraw_shadow_box
+        }
+
+        #[inline]
+        fn set_redraw_shadow_box(&mut self, redraw: bool) {
+            self.widget_props_mut().redraw_shadow_box = redraw
         }
     };
 }

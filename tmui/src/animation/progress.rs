@@ -266,7 +266,7 @@ impl Add<Color> for Progress {
 
     #[inline]
     fn add(self, rhs: Color) -> Self::Output {
-        Color::from_rgba_uncheck(
+        Color::rgba_uncheck(
             (self.0 + rhs.r_i16() as f32) as i16,
             (self.0 + rhs.g_i16() as f32) as i16,
             (self.0 + rhs.b_i16() as f32) as i16,
@@ -280,7 +280,7 @@ impl Sub<Color> for Progress {
 
     #[inline]
     fn sub(self, rhs: Color) -> Self::Output {
-        Color::from_rgba_uncheck(
+        Color::rgba_uncheck(
             (self.0 - rhs.r_i16() as f32) as i16,
             (self.0 - rhs.g_i16() as f32) as i16,
             (self.0 - rhs.b_i16() as f32) as i16,
@@ -294,7 +294,7 @@ impl Mul<Color> for Progress {
 
     #[inline]
     fn mul(self, rhs: Color) -> Self::Output {
-        Color::from_rgba_uncheck(
+        Color::rgba_uncheck(
             (self.0 * rhs.r_i16() as f32) as i16,
             (self.0 * rhs.g_i16() as f32) as i16,
             (self.0 * rhs.b_i16() as f32) as i16,
@@ -308,7 +308,7 @@ impl Div<Color> for Progress {
 
     #[inline]
     fn div(self, rhs: Color) -> Self::Output {
-        Color::from_rgba_uncheck(
+        Color::rgba_uncheck(
             (self.0 / rhs.r_i16() as f32) as i16,
             (self.0 / rhs.g_i16() as f32) as i16,
             (self.0 / rhs.b_i16() as f32) as i16,
@@ -421,7 +421,7 @@ impl Mul<u8> for Progress {
 
     #[inline]
     fn mul(self, rhs: u8) -> Self::Output {
-        (self.0 * rhs as f32) as u8 
+        (self.0 * rhs as f32) as u8
     }
 }
 
@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn test_op() {
         let p = Progress(10.);
-        let color = Color::from_rgb(100, 100, 100);
+        let color = Color::rgb(100, 100, 100);
         let sub = p - color;
         assert_eq!(sub.r_i16(), -90);
         assert_eq!(sub.g_i16(), -90);

@@ -1,9 +1,7 @@
 use tlib::{connect, run_after};
 use tmui::{
     input::{
-        password::Password,
-        text::{Text, TextExt, TextSignals},
-        Input, InputSignals,
+        number::Number, password::Password, select::{select_option::SelectOption, Select}, text::{Text, TextExt, TextSignals}, Input, InputSignals
     },
     prelude::*,
     tlib::{
@@ -28,6 +26,15 @@ pub struct Holder {
 
     #[children]
     password: Box<Password>,
+
+    #[children]
+    select1: Box<Select<String>>,
+
+    #[children]
+    select2: Box<Select<String>>,
+
+    #[children]
+    number: Box<Number>,
 }
 
 impl ObjectSubclass for Holder {
@@ -81,19 +88,61 @@ impl ObjectImpl for Holder {
         });
         self.password.set_required(true);
         self.password.check_required();
-        self.password.set_require_invalid_border_color(Color::grey_with(210));
+        self.password
+            .set_require_invalid_border_color(Color::grey_with(210));
         self.password
             .set_customize_require_invalid_render(move |painter, mut rect| {
                 rect.set_width(rect.width() - 1.);
                 rect.set_height(rect.height() - 1.);
 
-                painter.set_color(Color::from_hex("#ff6b6b"));
+                painter.set_color(Color::hex("#ff6b6b"));
                 painter.draw_rect_global(rect);
             });
 
+        let options = vec![
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), true),
+            SelectOption::new("Date".to_string(), false),
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), false),
+            SelectOption::new("Date".to_string(), false),
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), false),
+            SelectOption::new("Date".to_string(), false),
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), false),
+            SelectOption::new("Date".to_string(), false),
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), false),
+            SelectOption::new("Date".to_string(), false),
+            SelectOption::new("Apple".to_string(), false),
+            SelectOption::new("Banana".to_string(), false),
+            SelectOption::new("Cherry".to_string(), false),
+            SelectOption::new("Date".to_string(), false),
+        ];
+        self.select1.set_options(&options);
+        self.select1.set_margin_left(20);
+
+        self.select2.set_options(&options);
+        self.select2.set_margin_left(20);
+        self.select2.set_margin_bottom(20);
+        self.select2.set_valign(Align::End);
+
+        self.number.set_margin_left(20);
+        self.number.set_val(10.);
+        self.number.set_max(20.);
+        self.number.set_min(-1.);
+        self.number.set_step(2.4);
+
         self.set_vexpand(true);
-        self.set_spacing(30);
         self.set_hexpand(true);
+        self.set_spacing(30);
+        self.set_homogeneous(false);
     }
 }
 

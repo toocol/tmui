@@ -44,7 +44,7 @@ impl ObjectImpl for WinCtrlBtns {
 
         let background = self.background();
         const CTRL_BTN_GREY: Color = Color::grey_with(225);
-        const CTRL_BTN_RED: Color = Color::from_rgb(245, 40, 40);
+        const CTRL_BTN_RED: Color = Color::rgb(245, 40, 40);
 
         self.minimize.width_request(46);
         self.minimize.height_request(30);

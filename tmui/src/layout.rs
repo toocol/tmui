@@ -61,17 +61,26 @@ impl RemainSize for dyn WidgetImpl {
     fn remain_size(&self) -> Size {
         if let Some(container) = cast!(self as ContainerImpl) {
             let mut size = container.borderless_size();
+            let composition = container.composition();
             for c in container.children() {
                 let (mut cw, mut ch) = c.size().into();
 
-                if c.fixed_width() && c.is_occupy_space() && c.visible() {
+                if composition == Composition::HorizontalArrange
+                    && c.fixed_width()
+                    && c.is_occupy_space()
+                    && c.visible()
+                {
                     if cw == 0 {
                         cw = c.get_width_request();
                     }
                     size.set_width(size.width() - cw);
                 }
 
-                if c.fixed_height() && c.is_occupy_space() && c.visible() {
+                if composition == Composition::VerticalArrange
+                    && c.fixed_height()
+                    && c.is_occupy_space()
+                    && c.visible()
+                {
                     if ch == 0 {
                         ch = c.get_height_request();
                     }
@@ -512,9 +521,6 @@ impl LayoutMgr {
         );
 
         if widget.repaint_when_resize() {
-            if widget.first_rendered() {
-                widget.set_resize_redraw(true)
-            }
             widget.update();
             widget.set_render_styles(true);
         }
@@ -629,6 +635,10 @@ impl LayoutMgr {
             widget.calc_node_size(child_size);
 
             if widget.size() != size {
+                if widget.repaint_when_resize() && widget.first_rendered() {
+                    widget.set_resize_redraw(true)
+                }
+
                 emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
             }
             widget.image_rect().size()
@@ -652,6 +662,9 @@ impl LayoutMgr {
                 let shadow_rect = iv.shadow_rect_mut();
                 shadow_rect.set_x(r.x());
                 shadow_rect.set_y(r.y());
+            }
+            if r != widget_ref.rect_record() {
+                widget_ref.set_resize_redraw(true);
             }
 
             debug!(
@@ -696,6 +709,12 @@ impl LayoutMgr {
                     children.push_back(crm);
                 }
             }
+            if let Some(popupable) = cast_mut!(widget_ref as Popupable) {
+                if let Some(popup) = popupable.get_popup_mut() {
+                    children.push_back(Some(popup.as_widget_impl_mut() as *mut dyn WidgetImpl));
+                }
+            };
+
             widget = children.pop_front().and_then(|widget| widget);
             parent = if let Some(c) = widget.as_ref() {
                 unsafe { c.as_mut().unwrap().get_raw_parent_mut() }
@@ -711,6 +730,10 @@ impl LayoutMgr {
         parent: Option<&dyn WidgetImpl>,
     ) {
         if parent.is_none() || cast!(widget as Overlaid).is_some() {
+            if let Some(popup) = cast_mut!(widget as PopupImpl) {
+                popup.layout_relative_position();
+            }
+
             return;
         }
         if widget.is_manage_by_container() {

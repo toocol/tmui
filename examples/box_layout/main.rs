@@ -19,6 +19,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.set_background(Color::from_rgb(100, 100, 100));
+    window.set_background(Color::rgb(100, 100, 100));
     window.child(VBoxLayout::new())
 }

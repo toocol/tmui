@@ -2,7 +2,7 @@ use super::{
     list_item::{ItemType, ListItem, ListItemCast, RenderCtx},
     list_node::ListNode,
     list_separator::GroupSeparator,
-    list_store::{ListStore, ListStoreSignals},
+    list_store::{ConcurrentStoreMutexGuard, ListStore, ListStoreSignals},
 };
 use crate::{
     font::FontCalculation,
@@ -17,7 +17,7 @@ use tlib::{
     connect, disconnect, events::MouseEvent, iter_executor, nonnull_mut, ptr_mut, run_after,
 };
 
-type FnNodeAction = Box<dyn Fn(&mut ListNode, &MouseEvent)>;
+type FnNodeAction = Box<dyn Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent)>;
 type FnAreaAction = Box<dyn Fn(&mut dyn WidgetImpl, &MouseEvent)>;
 
 #[extends(Widget)]
@@ -30,8 +30,8 @@ pub(crate) struct ListViewImage {
 
     indent_length: i32,
     #[derivative(Default(value = "1"))]
-    line_height: i32,
-    line_spacing: i32,
+    pub(crate) line_height: i32,
+    pub(crate) line_spacing: i32,
 
     pub(crate) on_node_enter: Option<FnNodeAction>,
     pub(crate) on_node_leave: Option<FnNodeAction>,
@@ -48,6 +48,7 @@ impl ObjectImpl for ListViewImage {
     fn initialize(&mut self) {
         self.set_mouse_tracking(true);
         self.store.initialize();
+        self.font_changed();
 
         connect!(
             self.store,
@@ -74,8 +75,6 @@ impl ObjectImpl for ListViewImage {
 impl WidgetImpl for ListViewImage {
     #[inline]
     fn run_after(&mut self) {
-        self.font_changed();
-
         self.on_items_changed(self.store.get_items_len());
     }
 
@@ -134,7 +133,7 @@ impl ListViewImage {
 impl IterExecutor for ListViewImage {
     #[inline]
     fn iter_execute(&mut self) {
-        self.store.check_arc_count();
+        self.store.check_lock();
     }
 }
 
@@ -142,7 +141,7 @@ impl ListViewImage {
     #[inline]
     fn draw_image(&mut self, painter: &mut Painter) {
         if self.store.occupied() {
-            return
+            return;
         }
 
         let mut rect = self.contents_rect_f(Some(Coordinate::Widget));
@@ -214,7 +213,7 @@ impl ListViewImage {
 
     #[inline]
     fn scroll_bar_value_changed(&mut self, value: i32) {
-        if self.store.scroll_to(value, false) {
+        if self.store.scroll_to(value) {
             self.update();
         }
     }
@@ -237,6 +236,7 @@ impl ListViewImage {
     fn on_items_changed(&mut self, len: usize) {
         nonnull_mut!(self.scroll_bar)
             .set_range(0, (len as i32 - self.store.get_window_lines()) * 10);
+        self.update();
     }
 
     fn handle_mouse_move(&mut self, event: &MouseEvent) {
@@ -250,9 +250,10 @@ impl ListViewImage {
         let separator_height = self.store.separator_height() as f32;
         let rect = self.contents_rect_f(Some(Coordinate::Widget));
 
-        let update = self
-            .store
-            .with_image_mut(|image, y_offset, entered_node, hovered_node, _| {
+        let update = self.store.with_image_mut(
+            |mut mutex, start, end, y_offset, entered_node, hovered_node, _| {
+                let mutex_ptr = &mut mutex as *mut ConcurrentStoreMutexGuard;
+                let image = &mut mutex.items[start..end];
                 let item = index_item(
                     image,
                     y_offset as f32,
@@ -295,11 +296,12 @@ impl ListViewImage {
                         }
                     }
 
+                    let mutex_mut = unsafe { mutex_ptr.as_mut().unwrap() };
                     // Handle node enter/leave:
                     if entered_node.is_none() {
                         *entered_node = NonNull::new(node);
                         if let Some(ref on_node_enter) = self.on_node_enter {
-                            on_node_enter(node, event)
+                            on_node_enter(node, mutex_mut, event)
                         }
                     } else {
                         let previous_node = nonnull_mut!(entered_node);
@@ -308,10 +310,10 @@ impl ListViewImage {
                             *entered_node = NonNull::new(node);
 
                             if let Some(ref on_node_leave) = self.on_node_leave {
-                                on_node_leave(previous_node, event)
+                                on_node_leave(previous_node, mutex_mut, event)
                             }
                             if let Some(ref on_node_enter) = self.on_node_enter {
-                                on_node_enter(node, event);
+                                on_node_enter(node, mutex_mut, event);
                             }
                         }
                     }
@@ -329,7 +331,8 @@ impl ListViewImage {
                 }
 
                 false
-            });
+            },
+        );
 
         if update {
             self.update();
@@ -342,53 +345,56 @@ impl ListViewImage {
         let rect = self.contents_rect_f(Some(Coordinate::Widget));
         let parent = ptr_mut!(self.get_raw_parent_mut().unwrap());
 
-        let update = self
-            .store
-            .with_image_mut(|image, y_offset, _, _, selected_node| {
-                let item = index_item(
-                    image,
-                    y_offset as f32,
-                    rect,
-                    separator_height,
-                    self.line_height,
-                    self.line_spacing,
-                    y as f32,
-                );
+        let update =
+            self.store
+                .with_image_mut(|mut mutex, start, end, y_offset, _, _, selected_node| {
+                    let mutex_ptr = &mut mutex as *mut ConcurrentStoreMutexGuard;
+                    let image = &mut mutex.items[start..end];
+                    let item = index_item(
+                        image,
+                        y_offset as f32,
+                        rect,
+                        separator_height,
+                        self.line_height,
+                        self.line_spacing,
+                        y as f32,
+                    );
 
-                if let Some(item) = item {
-                    if item.item_type() == ItemType::Separator {
-                        return false;
+                    if let Some(item) = item {
+                        if item.item_type() == ItemType::Separator {
+                            return false;
+                        }
+                        let node = item.downcast_mut::<ListNode>().unwrap();
+
+                        if selected_node.is_some() {
+                            let node = nonnull_mut!(selected_node);
+                            node.set_status(Status::Default);
+                        }
+
+                        node.set_status(Status::Selected);
+                        *selected_node = NonNull::new(node);
+
+                        let mutex_mut = unsafe { mutex_ptr.as_mut().unwrap() };
+                        if let Some(ref on_node_pressed) = self.on_node_pressed {
+                            on_node_pressed(node, mutex_mut, event);
+                        }
+                        true
+                    } else {
+                        let mut update = false;
+                        let mut old_select = selected_node.take();
+                        if old_select.is_some() {
+                            let node = nonnull_mut!(old_select);
+                            node.set_status(Status::Default);
+                            update = true;
+                        }
+
+                        if let Some(ref on_frea_area_pressed) = self.on_free_area_pressed {
+                            on_frea_area_pressed(parent, event);
+                        }
+
+                        update
                     }
-                    let node = item.downcast_mut::<ListNode>().unwrap();
-
-                    if selected_node.is_some() {
-                        let node = nonnull_mut!(selected_node);
-                        node.set_status(Status::Default);
-                    }
-
-                    node.set_status(Status::Selected);
-                    *selected_node = NonNull::new(node);
-
-                    if let Some(ref on_node_pressed) = self.on_node_pressed {
-                        on_node_pressed(node, event);
-                    }
-                    true
-                } else {
-                    let mut update = false;
-                    let mut old_select = selected_node.take();
-                    if old_select.is_some() {
-                        let node = nonnull_mut!(old_select);
-                        node.set_status(Status::Default);
-                        update = true;
-                    }
-
-                    if let Some(ref on_frea_area_pressed) = self.on_free_area_pressed {
-                        on_frea_area_pressed(parent, event);
-                    }
-
-                    update
-                }
-            });
+                });
 
         if update {
             self.update();
@@ -407,7 +413,9 @@ impl ListViewImage {
 
         if let Some(ref on_node_released) = self.on_node_released {
             let node = nonnull_mut!(selected_node);
-            on_node_released(node, event)
+            let cs = self.store.concurrent_store();
+            let mut mutex = cs.lock();
+            on_node_released(node, &mut mutex, event)
         }
     }
 }

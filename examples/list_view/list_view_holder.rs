@@ -1,5 +1,6 @@
 use std::thread;
 
+use tlib::namespace::MouseButton;
 use tmui::{
     container::ScaleStrat,
     prelude::*,
@@ -64,16 +65,21 @@ impl ObjectImpl for ListViewHolder {
         self.list_view_3.set_hscale(0.3);
         self.list_view_3.scroll_bar_mut().set_auto_hide(true);
 
-        self.list_view_1.register_node_enter(|node, _| {
+        self.list_view_1.register_node_enter(|node, _, _| {
             println!("Node enter, {}", node.id());
         });
-        self.list_view_1.register_node_leave(|node, _| {
+        self.list_view_1.register_node_leave(|node, _, _| {
             println!("Node leave, {}", node.id());
         });
-        self.list_view_1.register_node_pressed(|node, _| {
+        self.list_view_1.register_node_pressed(|node, mutex, evt| {
             println!("Node pressed, {}", node.id());
+
+            if evt.mouse_button() == MouseButton::RightButton {
+                let idx = mutex.add_node(&Node { name: "New Node".to_string() });
+                node.get_view().scroll_to(idx);
+            }
         });
-        self.list_view_1.register_node_released(|node, _| {
+        self.list_view_1.register_node_released(|node, _, _| {
             println!("Node released, {}", node.id());
         });
 
@@ -87,7 +93,7 @@ impl ObjectImpl for ListViewHolder {
                 for i in 10..1000000 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
-                    })
+                    });
                 }
                 println!("List view async add node complete.");
                 ()
@@ -106,7 +112,7 @@ impl ObjectImpl for ListViewHolder {
                 for i in 0..5 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
-                    })
+                    });
                 }
 
                 let mut group = ListGroup::new();
@@ -120,11 +126,12 @@ impl ObjectImpl for ListViewHolder {
                 for i in 10..1000000 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
-                    })
+                    });
                 }
             },
             |w: &mut ListViewHolder, _| {
                 w.list_view_1.stop_loading();
+                w.list_view_1.scroll_to(9);
             },
         );
 
@@ -138,7 +145,7 @@ impl ObjectImpl for ListViewHolder {
                 for i in 0..10 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
-                    })
+                    });
                 }
 
                 drop(list);
@@ -159,7 +166,7 @@ impl ObjectImpl for ListViewHolder {
                 for i in 0..1000 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
-                    })
+                    });
                 }
 
                 drop(list);
