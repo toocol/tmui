@@ -10,7 +10,7 @@ use crate::{
     opti::tracker::Tracker,
     platform::logic_window::LogicWindow,
     primitive::{cpu_balance::CpuBalance, frame::Frame, Message},
-    widget::widget_ext::WidgetExt,
+    widget::{widget_ext::WidgetExt, widget_inner::WidgetInnerExt},
 };
 
 pub const FRAME_INTERVAL: u128 = 16000;
@@ -68,6 +68,7 @@ impl FrameMgr {
             FrameAnimatorMgr::with(|m| m.borrow_mut().process(self.frame));
 
             let update = board.invalidate_visual(self.frame);
+            window.set_resize_redraw(false);
             if window.minimized() {
                 window.set_minimized(false);
             }
