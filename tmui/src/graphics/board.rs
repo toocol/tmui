@@ -1,4 +1,4 @@
-use super::{drawing_context::DrawingContext, element::ElementImpl};
+use super::{drawing_context::DrawingContext, element::{ElementImpl, HierachyZ}};
 use crate::{
     backend::Backend, opti::tracker::Tracker, primitive::{bitmap::Bitmap, frame::Frame},
     shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
@@ -8,7 +8,7 @@ use tipc::{
     parking_lot::RwLock,
     parking_lot::{lock_api::RwLockWriteGuard, RawRwLock},
 };
-use tlib::{nonnull_mut, prelude::*, ptr_ref};
+use tlib::{nonnull_mut, nonnull_ref, prelude::*, ptr_ref};
 
 thread_local! {
     static NOTIFY_UPDATE: RefCell<bool> = const { RefCell::new(true) };
@@ -77,6 +77,15 @@ impl Board {
     #[inline]
     pub(crate) fn add_element(&self, element: &mut dyn ElementImpl) {
         self.element_list.borrow_mut().push(NonNull::new(element))
+    }
+
+    #[inline]
+    pub(crate) fn shuffle(&self) {
+        self.element_list.borrow_mut().sort_by(|a, b| {
+            let a = nonnull_ref!(a).z_index();
+            let b = nonnull_ref!(b).z_index();
+            a.cmp(&b)
+        });
     }
 
     #[inline]

@@ -76,6 +76,9 @@ pub trait ElementExt {
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     ///
     /// This function will propagate to widget's children.
+    /// 
+    /// #### Notice:
+    /// This function will clear all the `styles_redraw_region` and `redraw_region`.
     fn update(&mut self);
 
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.

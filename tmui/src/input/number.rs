@@ -499,7 +499,15 @@ impl Number {
         }
 
         if need_update {
-            self.update()
+            self.update_styles_rect(CoordRect::new(
+                FRect::new(
+                    spinner1.x(),
+                    spinner1.y(),
+                    spinner1.width(),
+                    spinner1.height() + spinner2.height(),
+                ),
+                Coordinate::World,
+            ))
         }
     }
 

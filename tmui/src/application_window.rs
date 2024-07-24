@@ -369,6 +369,8 @@ impl ApplicationWindow {
         }
 
         child_initialize(Some(widget), window_id);
+
+        window.board().shuffle();
     }
 }
 

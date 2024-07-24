@@ -544,33 +544,13 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             }
         }
 
-        if self.whole_styles_render() {
+        let window_resized = self.window().is_resize_redraw();
+        if self.whole_styles_render() || self.is_resize_redraw() || window_resized {
             self.widget_props_mut().styles_redraw_region.clear();
+            self.widget_props_mut().redraw_region.clear();
         }
 
-        for (&id, overlaid) in self.window().overlaids_mut().iter_mut() {
-            let widget = nonnull_mut!(overlaid);
-
-            if self.z_index() < widget.z_index() && !self.descendant_of(id) && self.id() != id {
-                painter.clip_rect_global(widget.rect(), ClipOp::Difference);
-            } else {
-                continue;
-            }
-
-            if !widget.first_rendered()
-                || !self.rect_f().is_intersects(&widget.visual_rect())
-                || self.is_resize_redraw()
-            {
-                continue;
-            }
-
-            widget.set_redraw_shadow_box(true);
-            if !self.styles_redraw_region().is_empty() {
-                widget.update_styles_region(self.styles_redraw_region());
-            } else {
-                widget.update_styles_rect(CoordRect::new(self.rect(), Coordinate::World));
-            }
-        }
+        handle_global_overlaid(self, &mut painter, window_resized);
 
         let cliped = painter_clip(self, &mut painter, self.styles_redraw_region().iter());
 
@@ -658,7 +638,9 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         self.set_image_rect_record(self.visual_image_rect());
         self.clear_regions();
         self.set_whole_styles_render(false);
-        self.set_resize_redraw(false);
+        if self.window().id() != self.id() {
+            self.set_resize_redraw(false);
+        }
     }
 
     #[inline]
@@ -690,6 +672,56 @@ pub(crate) fn painter_clip(
         painter.clip_region_global(region, ClipOp::Intersect);
     }
     op
+}
+
+fn handle_global_overlaid(
+    widget: &mut dyn WidgetImpl,
+    painter: &mut Painter,
+    window_resized: bool,
+) {
+    for (&id, overlaid) in widget.window().overlaids_mut().iter_mut() {
+        let overlaid = nonnull_mut!(overlaid);
+
+        // Clip the overliad widget area.
+        if widget.z_index() < overlaid.z_index() && !widget.descendant_of(id) && widget.id() != id {
+            painter.clip_rect_global(overlaid.rect(), ClipOp::Difference);
+        } else {
+            continue;
+        }
+
+        if window_resized
+            || !overlaid.first_rendered()
+            || !widget.render_styles()
+            || !widget.rect_f().is_intersects(&overlaid.visual_rect())
+            || widget.is_resize_redraw()
+        {
+            continue;
+        }
+
+        // Handle overlaid box shadow overflow.
+        if !widget.styles_redraw_region().is_empty() || !widget.redraw_region().is_empty() {
+            let mut intersects = false;
+            let vr = overlaid.visual_rect();
+            for r in widget.styles_redraw_region().iter() {
+                if r.rect().is_intersects(&vr) {
+                    intersects = true;
+                    overlaid.update_styles_rect(*r);
+                }
+            }
+            for r in widget.redraw_region().iter() {
+                if r.rect().is_intersects(&vr) {
+                    intersects = true;
+                    overlaid.update_styles_rect(*r);
+                }
+            }
+            if !intersects {
+                continue;
+            }
+        } else {
+            overlaid.update_styles_rect(CoordRect::new(widget.rect(), Coordinate::World));
+        }
+        overlaid.set_redraw_shadow_box(true);
+    }
 }
 
 pub trait WidgetAcquire: WidgetImpl + Default {}
