@@ -3,7 +3,7 @@ use crate::{
     backend::Backend, opti::tracker::Tracker, primitive::{bitmap::Bitmap, frame::Frame},
     shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
 };
-use std::{cell::RefCell, cmp::Ordering, ptr::NonNull, sync::Arc};
+use std::{cell::RefCell, ptr::NonNull, sync::Arc};
 use tipc::{
     parking_lot::RwLock,
     parking_lot::{lock_api::RwLockWriteGuard, RawRwLock},
@@ -84,13 +84,7 @@ impl Board {
         self.element_list.borrow_mut().sort_by(|a, b| {
             let a = nonnull_ref!(a).z_index();
             let b = nonnull_ref!(b).z_index();
-            if a < b {
-                Ordering::Less
-            } else if a == b {
-                Ordering::Equal
-            } else {
-                Ordering::Greater
-            }
+            a.cmp(&b)
         });
     }
 

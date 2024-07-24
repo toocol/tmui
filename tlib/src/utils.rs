@@ -205,7 +205,7 @@ impl StaticType for Timestamp {
 
     #[inline]
     fn bytes_len() -> usize {
-        size_of::<usize>()
+        std::mem::size_of::<usize>()
     }
 }
 
