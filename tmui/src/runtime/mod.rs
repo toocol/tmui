@@ -123,6 +123,7 @@ where
 
     Application::<T, M>::set_app_started();
     drop(track);
+    board.shuffle();
 
     loop {
         if APP_STOPPED.load(Ordering::Relaxed) {

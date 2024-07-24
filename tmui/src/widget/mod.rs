@@ -705,19 +705,18 @@ fn handle_global_overlaid(
             for r in widget.styles_redraw_region().iter() {
                 if r.rect().is_intersects(&vr) {
                     intersects = true;
+                    overlaid.update_styles_rect(*r);
                 }
             }
             for r in widget.redraw_region().iter() {
                 if r.rect().is_intersects(&vr) {
                     intersects = true;
+                    overlaid.update_styles_rect(*r);
                 }
             }
             if !intersects {
                 continue;
             }
-
-            overlaid.update_styles_region(widget.styles_redraw_region());
-            overlaid.update_styles_region(widget.redraw_region());
         } else {
             overlaid.update_styles_rect(CoordRect::new(widget.rect(), Coordinate::World));
         }

@@ -1,6 +1,12 @@
 #![allow(dead_code)]
+use crate::{
+    global::From,
+    prelude::{FromBytes, ToBytes, ToValue},
+    types::StaticType,
+    values::FromValue,
+    Type, Value,
+};
 use chrono::{DateTime, Local};
-use crate::global::From;
 use std::{
     error::Error,
     sync::Mutex,
@@ -117,6 +123,7 @@ impl From<u128> for u16 {
 }
 
 /// Get the timestamp since unix epoch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Timestamp(SystemTime);
 
 impl Default for Timestamp {
@@ -129,9 +136,22 @@ impl Default for Timestamp {
 impl Timestamp {
     #[inline]
     pub fn now() -> Self {
-        Self(
-            SystemTime::now()
-        )
+        Self(SystemTime::now())
+    }
+
+    #[inline]
+    pub fn from_millis(millis: u128) -> Self {
+        Self(SystemTime::UNIX_EPOCH + Duration::from_millis(millis as u64))
+    }
+
+    #[inline]
+    pub fn from_micros(micros: u128) -> Self {
+        Self(SystemTime::UNIX_EPOCH + Duration::from_micros(micros as u64))
+    }
+
+    #[inline]
+    pub fn from_nanos(nanos: u128) -> Self {
+        Self(SystemTime::UNIX_EPOCH + Duration::from_nanos(nanos as u64))
     }
 
     #[inline]
@@ -145,6 +165,11 @@ impl Timestamp {
     }
 
     #[inline]
+    pub fn as_nanos<T: From<u128>>(&self) -> T {
+        T::from(self.duration().as_nanos())
+    }
+
+    #[inline]
     pub fn as_u16(&self) -> u16 {
         let mut ts = (self.duration().as_millis() % 65536) as u16;
         if ts == u16::MAX {
@@ -154,7 +179,7 @@ impl Timestamp {
     }
 
     /// Default format: "%Y-%m-%d %H:%M:%S"
-    /// 
+    ///
     /// See the [`chrono::format::strftime`] module for the whole supported escape sequences.
     #[inline]
     pub fn format_string(&self, format: Option<&str>) -> String {
@@ -169,6 +194,49 @@ impl Timestamp {
     #[inline]
     fn duration(&self) -> Duration {
         self.0.duration_since(SystemTime::UNIX_EPOCH).unwrap()
+    }
+}
+
+impl StaticType for Timestamp {
+    #[inline]
+    fn static_type() -> Type {
+        Type::from_name("Timestamp")
+    }
+
+    #[inline]
+    fn bytes_len() -> usize {
+        size_of::<usize>()
+    }
+}
+
+impl ToBytes for Timestamp {
+    #[inline]
+    fn to_bytes(&self) -> Vec<u8> {
+        self.duration().as_nanos().to_bytes()
+    }
+}
+impl FromBytes for Timestamp {
+    #[inline]
+    fn from_bytes(data: &[u8], len: usize) -> Self {
+        let nanos = u128::from_bytes(data, len);
+        Self::from_nanos(nanos)
+    }
+}
+impl ToValue for Timestamp {
+    #[inline]
+    fn to_value(&self) -> Value {
+        Value::new(self)
+    }
+
+    #[inline]
+    fn value_type(&self) -> Type {
+        Self::static_type()
+    }
+}
+impl FromValue for Timestamp {
+    #[inline]
+    fn from_value(value: &Value) -> Self {
+        Self::from_bytes(value.data(), Self::bytes_len())
     }
 }
 
@@ -208,5 +276,12 @@ mod tests {
     fn test_timestamp_format_string() {
         let timestamp = Timestamp::now();
         println!("{}", timestamp.format_string(None));
+    }
+
+    #[test]
+    fn test_timestamp_value() {
+        let timestamp = Timestamp::now();
+        let val = timestamp.to_value();
+        assert_eq!(timestamp, val.get::<Timestamp>());
     }
 }
