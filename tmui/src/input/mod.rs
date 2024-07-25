@@ -1,6 +1,7 @@
 pub mod checkbox;
 pub mod ctrl;
 pub mod date;
+pub mod focus_mgr;
 pub mod number;
 pub mod password;
 pub mod radio;
@@ -12,6 +13,8 @@ use std::cell::{Cell, Ref, RefCell, RefMut};
 use log::warn;
 use tlib::{figure::Color, object::ObjectId, prelude::*, signal, signals};
 
+use crate::widget::WidgetImpl;
+
 #[derive(Debug, Clone, Copy, Hash)]
 pub enum InputType {
     Text,
@@ -21,6 +24,45 @@ pub enum InputType {
     Date,
     Select,
     Number,
+}
+
+#[reflect_trait]
+pub trait InputEle: WidgetImpl {
+    fn tabindex(&self) -> i16;
+
+    fn set_tabindex(&self, tabindex: i16);
+
+    fn on_tab_focused(&mut self);
+}
+#[macro_export]
+macro_rules! input_ele_impl {
+    () => {
+        #[inline]
+        fn tabindex(&self) -> i16 {
+            self.input_wrapper().tabindex()
+        }
+
+        #[inline]
+        fn set_tabindex(&self, tabindex: i16) {
+            self.input_wrapper().set_tabindex(tabindex)
+        }
+    };
+    ( $name:ident $(<$($gen:ident: $bound:path),+>)? ) => {
+        impl $(<$($gen: $bound),+ >)? InputEle for $name $(<$($gen),+>)? {
+            #[inline]
+            fn tabindex(&self) -> i16 {
+                self.input_wrapper().tabindex()
+            }
+
+            #[inline]
+            fn set_tabindex(&self, tabindex: i16) {
+                self.input_wrapper().set_tabindex(tabindex)
+            }
+
+            #[inline]
+            fn on_tab_focused(&mut self) {}
+        }
+    };
 }
 
 /// All the input widget should implement this trait.
@@ -134,6 +176,7 @@ pub struct InputWrapper<T: InputBounds> {
     enable: Cell<bool>,
     required: Cell<bool>,
     value: RefCell<T>,
+    tabindex: Cell<i16>,
 }
 
 pub trait InputSignals: ActionExt {
@@ -218,6 +261,16 @@ impl<T: InputBounds> InputWrapper<T> {
     #[inline]
     pub fn is_required(&self) -> bool {
         self.required.get()
+    }
+
+    #[inline]
+    pub fn tabindex(&self) -> i16 {
+        self.tabindex.get()
+    }
+
+    #[inline]
+    pub fn set_tabindex(&self, tabindex: i16) {
+        self.tabindex.set(tabindex)
     }
 }
 

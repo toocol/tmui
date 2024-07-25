@@ -1,14 +1,6 @@
-use super::{Input, InputSignals, InputWrapper};
+use super::{Input, InputEle, InputSignals, InputWrapper, ReflectInputEle, INPUT_FOCUSED_BORDER_COLOR};
 use crate::{
-    application, cast_do,
-    clipboard::ClipboardLevel,
-    font::{FontCalculation, SkiaParagraphExt},
-    input::{INPUT_DEFAULT_BORDER_COLOR, INPUT_DEFAULT_BORDER_RADIUS},
-    prelude::*,
-    shortcut::ShortcutRegister,
-    system::System,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
+    application, cast_do, clipboard::ClipboardLevel, font::{FontCalculation, SkiaParagraphExt}, input::{INPUT_DEFAULT_BORDER_COLOR, INPUT_DEFAULT_BORDER_RADIUS}, input_ele_impl, prelude::*, shortcut::ShortcutRegister, system::System, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl}
 };
 use log::warn;
 use std::{
@@ -82,6 +74,7 @@ pub(crate) struct TextProps {
     pub(crate) require_invalid: bool,
     pub(crate) customize_require_invalid_render: Option<FnRequireInvalidRender>,
     pub(crate) require_invalid_border_color: Option<Color>,
+    pub(crate) require_invalid_focused_border_color: Option<Color>,
 
     //////////////////////////// Font
     pub(crate) font_dimension: (f32, f32),
@@ -156,12 +149,18 @@ impl ObjectSubclass for Text {
 }
 
 impl ObjectImpl for Text {
+    #[inline]
     fn construct(&mut self) {
         self.parent_construct();
 
         self.input_wrapper.init(self.id());
         self.register_shortcuts();
         self.text_construct();
+    }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
     }
 }
 
@@ -203,22 +202,12 @@ impl WidgetImpl for Text {
 
     #[inline]
     fn on_get_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(true);
-        self.update();
+        self.handle_get_focus()
     }
 
     #[inline]
     fn on_lose_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(false);
-        self.update();
+        self.handle_lose_focus()
     }
 
     #[inline]
@@ -553,10 +542,18 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
 
     #[inline]
     fn set_require_invalid_border_color(&mut self, color: Color) {
-        if self.props().require_invalid {
+        if self.props().require_invalid && !self.is_focus() {
             self.set_border_color(color);
         }
         self.props_mut().require_invalid_border_color = Some(color);
+    }
+
+    #[inline]
+    fn set_require_invalid_focused_border_color(&mut self, color: Color) {
+        if self.props().require_invalid && self.is_focus() {
+            self.set_border_color(color);
+        }
+        self.props_mut().require_invalid_focused_border_color = Some(color);
     }
 }
 
@@ -1080,6 +1077,44 @@ pub(crate) trait TextInnerExt:
         self.update();
     }
 
+    #[inline]
+    fn handle_get_focus(&mut self) {
+        if !self.is_enable() {
+            return;
+        }
+
+        self.check_blink_timer(true);
+        if self.props().require_invalid {
+            if let Some(invalid_focused_border_color) = self.props().require_invalid_focused_border_color {
+                self.set_border_color(invalid_focused_border_color);
+            } else {
+                self.set_border_color(INPUT_FOCUSED_BORDER_COLOR);
+            }
+        } else {
+            self.set_border_color(INPUT_FOCUSED_BORDER_COLOR);
+        }
+        self.set_borders(2., 2., 2., 2.);
+    }
+
+    #[inline]
+    fn handle_lose_focus(&mut self) {
+        if !self.is_enable() {
+            return;
+        }
+
+        self.check_blink_timer(false);
+        if self.props().require_invalid {
+            if let Some(invalid_border_color) = self.props().require_invalid_border_color {
+                self.set_border_color(invalid_border_color)
+            } else {
+                self.set_border_color(INPUT_DEFAULT_BORDER_COLOR);
+            }
+        } else {
+            self.set_border_color(INPUT_DEFAULT_BORDER_COLOR);
+        }
+        self.set_borders(1., 1., 1., 1.);
+    }
+
     /// Calculate `cursor_index`(the index of the corresponding character in the text)
     /// based on the given x-coordinate.
     fn calc_cursor_index(&self, x_pos: f32) -> usize {
@@ -1355,9 +1390,11 @@ pub(crate) trait TextInnerExt:
             (val.len(), val.chars().count())
         };
 
-        if bytes_len != 0 && chars_len != 0 {
+        if bytes_len != 0 && chars_len != 0 && self.props().require_invalid {
             self.props_mut().require_invalid = false;
-            if self.props().require_invalid_border_color.is_some() {
+            if self.is_focus() {
+                self.set_border_color(INPUT_FOCUSED_BORDER_COLOR);
+            } else {
                 self.set_border_color(INPUT_DEFAULT_BORDER_COLOR);
             }
         }
@@ -1448,3 +1485,12 @@ impl Text {
 
 impl TextExt for Text {}
 impl TextInnerExt for Text {}
+
+impl InputEle for Text {
+    input_ele_impl!();
+    
+    #[inline]
+    fn on_tab_focused(&mut self) {
+        self.select_all()
+    }
+}

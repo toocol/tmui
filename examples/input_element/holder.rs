@@ -90,6 +90,7 @@ impl ObjectImpl for Holder {
         self.password.check_required();
         self.password
             .set_require_invalid_border_color(Color::grey_with(210));
+        self.password.set_require_invalid_focused_border_color(Color::hex("#ff6b6b"));
         self.password
             .set_customize_require_invalid_render(move |painter, mut rect| {
                 rect.set_width(rect.width() - 1.);

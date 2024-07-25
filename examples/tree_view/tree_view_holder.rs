@@ -14,7 +14,7 @@ use tmui::{
 
 use crate::ctx_menu::CtxMenu;
 
-const DATA_SIZE: i32 = 300000;
+const DATA_SIZE: u32 = 300000;
 
 #[extends(Widget)]
 #[derive(Childable)]
@@ -60,6 +60,7 @@ impl ObjectImpl for TreeViewHolder {
                 if node.is_extensible() {
                     node.add_node(&Content {
                         val: "new_content".to_string(),
+                        idx: 1,
                     });
                 } else {
                     node.remove();
@@ -103,25 +104,25 @@ impl ObjectImpl for TreeViewHolder {
 
                 for i in 0..10 {
                     let content = format!("content_{}", i);
-                    group1.add_node(&Content { val: content });
+                    group1.add_node(&Content { val: content, idx: i });
                 }
 
                 if let Some(group2) = group1.add_node(&Group { name: "group-2" }) {
                     for i in 0..DATA_SIZE {
                         let content = format!("sub_content_{}", i);
-                        group2.add_node(&Content { val: content });
+                        group2.add_node(&Content { val: content, idx: i });
                     }
                 }
 
                 for i in 10..15 {
                     let content = format!("content_{}", i);
-                    group1.add_node(&Content { val: content });
+                    group1.add_node(&Content { val: content, idx: i });
                 }
 
                 if let Some(group3) = group1.add_node(&Group { name: "group-3" }) {
                     for i in 0..DATA_SIZE {
                         let content = format!("sub_content_{}", i);
-                        group3.add_node(&Content { val: content });
+                        group3.add_node(&Content { val: content, idx: i });
                     }
                 }
 
@@ -289,6 +290,7 @@ impl TreeViewObject for Group {
 
 pub struct Content {
     val: String,
+    idx: u32,
 }
 impl TreeViewObject for Content {
     #[inline]
@@ -299,6 +301,10 @@ impl TreeViewObject for Content {
             .build(),
             Cell::string()
             .value(self.val.clone())
+            .cell_render(TextCellRender::builder().color(Color::BLACK).build())
+            .build(),
+            Cell::u32()
+            .value(self.idx)
             .cell_render(TextCellRender::builder().color(Color::BLACK).build())
             .build()
             ]

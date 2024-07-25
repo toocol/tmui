@@ -4,10 +4,7 @@ use crate::{
 };
 use std::ptr::NonNull;
 use tlib::{
-    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
-    nonnull_mut,
-    object::ObjectOperation,
-    types::StaticType,
+    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent}, namespace::KeyCode, nonnull_mut, object::ObjectOperation, types::StaticType
 };
 
 use super::ElementExt;
@@ -281,7 +278,8 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             if global_shorcut_triggered {
                 return None;
             }
-
+            
+            let key_code = evt.key_code();
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
@@ -298,6 +296,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     }
                     break;
                 }
+            }
+            if key_code == KeyCode::KeyTab {
+                window.focus_switch_on_tab()
             }
         }
 

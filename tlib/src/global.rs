@@ -88,6 +88,25 @@ pub fn same_second(a: u64, b: u64) -> bool {
     a / 1000 == b / 1000
 }
 
+#[inline]
+pub fn shown_value_32(val: f32) -> String {
+    shown_value_64(val as f64)
+}
+
+#[inline]
+pub fn shown_value_64(val: f64) -> String {
+    if val.fract() == 0. {
+        let abs_val = val.abs();
+        if abs_val >= 1e17 || (abs_val != 0.0 && abs_val < 1e-17) {
+            format!("{:?}", val)
+        } else {
+            format!("{}", val)
+        }
+    } else {
+        format!("{:?}", val)
+    }
+}
+
 pub trait AsAny {
     fn as_any(&self) -> &dyn Any;
 

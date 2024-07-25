@@ -1,9 +1,9 @@
 use super::{
     text::{TextExt, TextInnerExt, TextProps, TextPropsAcquire, TextShorcutRegister, TextSignals},
-    Input, InputSignals, InputWrapper,
+    Input, InputEle, InputSignals, InputWrapper,
 };
 use crate::{
-    cast_do, impl_text_shortcut_register,
+    cast_do, impl_text_shortcut_register, input_ele_impl,
     prelude::*,
     shortcut::ShortcutRegister,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -99,28 +99,18 @@ impl WidgetImpl for Password {
     #[inline]
     fn font_changed(&mut self) {
         self.handle_font_changed();
-        
+
         self.calc_text_geometry();
     }
 
     #[inline]
     fn on_get_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(true);
-        self.update();
+        self.handle_get_focus()
     }
 
     #[inline]
     fn on_lose_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(false);
-        self.update();
+        self.handle_lose_focus()
     }
 
     #[inline]
@@ -277,3 +267,4 @@ impl InputSignals for Password {}
 impl TextExt for Password {}
 impl TextInnerExt for Password {}
 impl_text_shortcut_register!(Password);
+input_ele_impl!(Password);

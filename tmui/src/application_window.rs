@@ -5,6 +5,7 @@ use crate::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
     },
+    input::{focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
     loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
@@ -703,6 +704,9 @@ impl ApplicationWindow {
     pub(crate) fn set_outer_position(&mut self, position: Point) {
         self.outer_position = position
     }
+
+    #[inline]
+    pub(crate) fn focus_switch_on_tab(&mut self) {}
 }
 
 /// Get window id in current ui thread.
@@ -789,6 +793,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         }
         if let Some(frame_animator) = cast_mut!(child_ref as FrameAnimator) {
             FrameAnimatorMgr::with(|m| m.borrow_mut().add_frame_animator(frame_animator))
+        }
+        if let Some(input_ele) = cast_mut!(child_ref as InputEle) {
+            FocusMgr::with(|m| m.borrow_mut().add(input_ele))
         }
 
         // Determine whether the widget is a container.
