@@ -51,12 +51,13 @@ pub struct ApplicationWindow {
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
     shared_widget_size_changed: bool,
+    high_load_request: bool,
+    outer_position: Point,
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_mgr: LayoutMgr,
     widgets: HashMap<ObjectId, WidgetHnd>,
-    run_afters: Vec<WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
     shadow_mouse_watch: Vec<WidgetHnd>,
 
@@ -66,12 +67,12 @@ pub struct ApplicationWindow {
     modal_widget: Option<ObjectId>,
     mouse_over_widget: WidgetHnd,
     mouse_enter_widgets: Vec<WidgetHnd>,
-    high_load_request: bool,
 
     run_after: Option<FnRunAfter>,
+    run_afters: Vec<WidgetHnd>,
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
     overlaids: HashMap<ObjectId, WidgetHnd>,
-    outer_position: Point,
+    root_ancestors: Vec<ObjectId>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -83,7 +84,7 @@ impl ObjectImpl for ApplicationWindow {
         self.parent_construct();
 
         self.set_background(DEFAULT_WINDOW_BACKGROUND);
-        self.set_render_difference(true)
+        self.set_render_difference(true);
     }
 
     fn initialize(&mut self) {
@@ -93,6 +94,7 @@ impl ObjectImpl for ApplicationWindow {
         Self::widgets_of(self.id()).insert(self.id(), NonNull::new(self));
 
         let window_id = self.id();
+        self.root_ancestors.push(window_id);
         child_initialize(self.get_child_mut(), window_id);
 
         self.when_size_change(self.size());
@@ -416,33 +418,35 @@ impl ApplicationWindow {
         if id != 0 {
             if let Some(widget) = self.find_id_mut(id) {
                 widget.on_get_focus();
+
+                if let Some(_) = cast!(widget as InputEle) {
+                    FocusMgr::with(|m| {
+                        m.borrow_mut()
+                            .set_currrent(widget.root_ancestor(), Some(id))
+                    })
+                }
             } else {
                 return;
             }
+        } else if let Some(widget) = self.find_id_mut(self.focused_widget) {
+            FocusMgr::with(|m| m.borrow_mut().set_currrent(widget.root_ancestor(), None))
         }
+
         self.focused_widget = id
     }
 
     /// Let the focused widget lose focus temporarily.
     pub(crate) fn temp_lose_focus(&mut self) {
         if self.focused_widget != 0 {
-            if let Some(widget) = self.find_id_mut(self.focused_widget) {
-                widget.on_lose_focus();
-            }
-
             self.focused_widget_mem.push(self.focused_widget);
-            self.focused_widget = 0;
+            self.set_focused_widget(0);
         }
     }
 
     /// Restore the previous focused widget.
     pub(crate) fn restore_focus(&mut self) {
         if let Some(focused_widget) = self.focused_widget_mem.pop() {
-            if let Some(widget) = self.find_id_mut(focused_widget) {
-                widget.on_get_focus();
-            }
-
-            self.focused_widget = focused_widget;
+            self.set_focused_widget(focused_widget);
         }
     }
 
@@ -706,7 +710,9 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn focus_switch_on_tab(&mut self) {}
+    pub(crate) fn root_ancestors(&self) -> &[ObjectId] {
+        &self.root_ancestors
+    }
 }
 
 /// Get window id in current ui thread.
@@ -716,7 +722,7 @@ pub fn current_window_id() -> ObjectId {
 }
 
 fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId) {
-    let board = ApplicationWindow::window_of(window_id).board();
+    let window = ApplicationWindow::window_of(window_id);
     let type_registry = TypeRegistry::instance();
 
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
@@ -728,14 +734,17 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             child_ref.name()
         );
 
-        board.add_element(child_ref.as_element());
-        ApplicationWindow::widgets_of(window_id).insert(child_ref.id(), NonNull::new(child_ref));
+        window.board().add_element(child_ref.as_element());
+        window
+            .widgets
+            .insert(child_ref.id(), NonNull::new(child_ref));
         index_children(child_ref);
 
         child_ref.inner_type_register(type_registry);
         child_ref.type_register(type_registry);
 
-        if let Some(_pop) = cast!(child_ref as PopupImpl) {
+        if let Some(pop) = cast!(child_ref as PopupImpl) {
+            window.root_ancestors.push(pop.id());
             child_ref.set_z_index(TOP_Z_INDEX);
         } else {
             let parent = child_ref
@@ -795,7 +804,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             FrameAnimatorMgr::with(|m| m.borrow_mut().add_frame_animator(frame_animator))
         }
         if let Some(input_ele) = cast_mut!(child_ref as InputEle) {
-            FocusMgr::with(|m| m.borrow_mut().add(input_ele))
+            FocusMgr::with(|m| m.borrow_mut().add(input_ele.root_ancestor(), input_ele))
         }
 
         // Determine whether the widget is a container.

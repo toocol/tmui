@@ -412,6 +412,9 @@ pub trait WidgetExt {
     /// This will result in clipping the drawing area of the widget.(before styles render)
     fn propagate_update_styles_rect(&mut self, rect: CoordRect);
 
+    /// Get the root ancestor id of the widget.
+    fn root_ancestor(&self) -> ObjectId;
+
     /// Check if the widget is the ancestor of the widget represented by the specified id.
     fn ancestor_of(&self, id: ObjectId) -> bool;
 
@@ -1572,6 +1575,16 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.update_styles_rect(rect);
 
         self.set_property("propagate_update_styles_rect", rect.to_value());
+    }
+
+    #[inline]
+    fn root_ancestor(&self) -> ObjectId {
+        for &root in self.window().root_ancestors() {
+            if self.id() == root || self.descendant_of(root) {
+                return root
+            }
+        }
+        return 0
     }
 
     #[inline]

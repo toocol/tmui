@@ -1,6 +1,6 @@
 use super::{
     text::{TextExt, TextInnerExt, TextProps, TextPropsAcquire, TextShorcutRegister, TextSignals},
-    Input, InputEle, InputSignals, InputType, InputWrapper,
+    Input, InputEle, InputSignals, InputType, InputWrapper, ReflectInputEle,
 };
 use crate::{
     asset::Asset,
@@ -77,10 +77,16 @@ impl ObjectSubclass for Number {
 }
 
 impl ObjectImpl for Number {
+    #[inline]
     fn construct(&mut self) {
         self.parent_construct();
 
         self.construct_number();
+    }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
     }
 }
 
@@ -155,7 +161,7 @@ impl WidgetImpl for Number {
 
     #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
 
@@ -170,7 +176,7 @@ impl WidgetImpl for Number {
 
     #[inline]
     fn on_mouse_released(&mut self, _: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
         if !self.props.entered {

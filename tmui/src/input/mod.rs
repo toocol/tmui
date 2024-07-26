@@ -33,6 +33,10 @@ pub trait InputEle: WidgetImpl {
     fn set_tabindex(&self, tabindex: i16);
 
     fn on_tab_focused(&mut self);
+
+    fn on_tab_lose_focus(&mut self);
+
+    fn _is_enable(&self) -> bool;
 }
 #[macro_export]
 macro_rules! input_ele_impl {
@@ -45,6 +49,11 @@ macro_rules! input_ele_impl {
         #[inline]
         fn set_tabindex(&self, tabindex: i16) {
             self.input_wrapper().set_tabindex(tabindex)
+        }
+
+        #[inline]
+        fn _is_enable(&self) -> bool {
+            self.input_wrapper().is_enable()
         }
     };
     ( $name:ident $(<$($gen:ident: $bound:path),+>)? ) => {
@@ -61,6 +70,14 @@ macro_rules! input_ele_impl {
 
             #[inline]
             fn on_tab_focused(&mut self) {}
+
+            #[inline]
+            fn on_tab_lose_focus(&mut self) {}
+
+            #[inline]
+            fn _is_enable(&self) -> bool {
+                self.input_wrapper().is_enable()
+            }
         }
     };
 }

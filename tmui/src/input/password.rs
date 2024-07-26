@@ -1,6 +1,6 @@
 use super::{
     text::{TextExt, TextInnerExt, TextProps, TextPropsAcquire, TextShorcutRegister, TextSignals},
-    Input, InputEle, InputSignals, InputWrapper,
+    Input, InputEle, InputSignals, InputWrapper, ReflectInputEle,
 };
 use crate::{
     cast_do, impl_text_shortcut_register, input_ele_impl,
@@ -64,6 +64,11 @@ impl ObjectImpl for Password {
         self.text_construct();
 
         connect!(self, value_changed(), self, update_shown_text());
+    }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
     }
 }
 
@@ -135,7 +140,7 @@ impl WidgetImpl for Password {
 
     #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
 
@@ -148,7 +153,7 @@ impl WidgetImpl for Password {
 
     #[inline]
     fn on_mouse_released(&mut self, _: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
         if !self.props.entered {

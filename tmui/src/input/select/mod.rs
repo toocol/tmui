@@ -1,7 +1,7 @@
 pub mod dropdown_list;
 pub mod select_option;
 
-use super::{Input, InputBounds, InputEle, InputSignals, InputWrapper, INPUT_FOCUSED_BORDER_COLOR};
+use super::{Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle, INPUT_FOCUSED_BORDER_COLOR};
 use crate::{
     asset::Asset, font::FontCalculation, input::INPUT_DEFAULT_BORDER_COLOR, input_ele_impl, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_ext::FocusStrat, widget_inner::WidgetInnerExt, WidgetImpl}
 };
@@ -65,6 +65,11 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
             SkiaSvgDom::from_str(arrow, FontMgr::default())
                 .expect("`Select` create svg dom `arrow_down_small` failed."),
         );
+    }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
     }
 }
 

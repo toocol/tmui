@@ -1238,6 +1238,9 @@ pub(crate) trait TextInnerExt:
 
     #[inline]
     fn handle_mouse_release(&mut self) {
+        if !self.is_focus() {
+            return
+        }
         self.props_mut().drag_status = DragStatus::None;
 
         if self.props().selection_start == self.props().selection_end {
@@ -1492,5 +1495,10 @@ impl InputEle for Text {
     #[inline]
     fn on_tab_focused(&mut self) {
         self.select_all()
+    }
+    
+    #[inline]
+    fn on_tab_lose_focus(&mut self) {
+        self.clear_selection()
     }
 }

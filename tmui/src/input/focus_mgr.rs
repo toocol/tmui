@@ -1,6 +1,8 @@
-use std::{cell::RefCell, ptr::NonNull};
-use tlib::{nonnull_ref, object::ObjectId};
 use super::InputEle;
+use derivative::Derivative;
+use log::warn;
+use std::{cell::RefCell, collections::HashMap, ptr::NonNull};
+use tlib::{nonnull_mut, nonnull_ref, object::ObjectId};
 
 type InputEleHnd = Option<NonNull<dyn InputEle>>;
 
@@ -8,10 +10,12 @@ thread_local! {
     static INSTANCE: RefCell<FocusMgr> = RefCell::new(FocusMgr::default());
 }
 
-#[derive(Default)]
+#[derive(Derivative)]
+#[derivative(Default)]
 pub(crate) struct FocusMgr {
-    eles: Vec<InputEleHnd>,
+    eles: HashMap<ObjectId, Vec<InputEleHnd>>,
     current: Option<usize>,
+    cur_root: ObjectId,
 }
 
 impl FocusMgr {
@@ -23,19 +27,25 @@ impl FocusMgr {
         INSTANCE.with(f)
     }
 
-    pub(crate) fn add(&mut self, ele: &mut dyn InputEle) {
+    pub(crate) fn add(&mut self, root: ObjectId, ele: &mut dyn InputEle) {
+        if root == 0 {
+            warn!("Add input ele `{}` to `FocusMgr` failed, the `root` is 0.", ele.name());
+            return;
+        }
         let mut shuffle = false;
-        if let Some(last) = self.eles.last() {
+        let vec = self.eles.entry(root).or_default();
+
+        if let Some(last) = vec.last() {
             let last = nonnull_ref!(last);
             if last.tabindex() > ele.tabindex() {
                 shuffle = true;
             }
         }
 
-        self.eles.push(NonNull::new(ele));
+        vec.push(NonNull::new(ele));
 
         if shuffle {
-            self.eles.sort_by(|a, b| {
+            vec.sort_by(|a, b| {
                 let a = nonnull_ref!(a).tabindex();
                 let b = nonnull_ref!(b).tabindex();
                 a.cmp(&b)
@@ -44,36 +54,56 @@ impl FocusMgr {
     }
 
     /// Should pre-check the widget is `InputEle`.
-    pub(crate) fn set_currrent(&mut self, id: ObjectId) {
-        for (idx, ele) in self.eles.iter().enumerate() {
+    pub(crate) fn set_currrent(&mut self, root: ObjectId, id: Option<ObjectId>) {
+        self.cur_root = root;
+        if id.is_none() {
+            self.current = None;
+            return;
+        }
+        let id = id.unwrap();
+
+        let eles = self.eles.entry(root).or_default();
+
+        for (idx, ele) in eles.iter().enumerate() {
             let ele = nonnull_ref!(ele);
             if id == ele.id() {
-                self.current = Some(idx);
+                if ele._is_enable() {
+                    self.current = Some(idx);
+                }
                 break;
             }
         }
     }
 
-    #[inline]
-    pub(crate) fn get_current(&self) -> Option<usize> {
-        self.current
-    }
-
-    #[inline]
-    pub(crate) fn clear_current(&mut self) {
-        self.current = None;
-    }
-
-    pub(crate) fn next(&mut self) {
+    pub(crate) fn next(&mut self) -> Option<ObjectId> {
         if self.current.is_none() {
-            return;
+            return None;
         }
 
-        let current = self.current.unwrap();
-        if current == self.eles.len() - 1 {
-            self.current = Some(0)
-        } else {
-            self.current = Some(current + 1)
+        let eles = self.eles.get_mut(&self.cur_root);
+        if eles.is_none() {
+            return None;
         }
+        let eles = eles.unwrap();
+
+        let last = self.current.unwrap();
+        let mut current = last;
+        loop {
+            current += 1;
+            if current == eles.len() {
+                current = 0;
+            }
+            if nonnull_ref!(eles.get(current).unwrap())._is_enable() {
+                self.current = Some(current);
+                break;
+            }
+        }
+
+        let ele = nonnull_mut!(eles.get_mut(last).unwrap());
+        ele.on_tab_lose_focus();
+
+        let ele = nonnull_mut!(eles.get_mut(self.current.unwrap()).unwrap());
+        ele.on_tab_focused();
+        Some(ele.id())
     }
 }

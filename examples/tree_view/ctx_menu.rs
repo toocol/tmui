@@ -1,3 +1,4 @@
+use tlib::run_after;
 use tmui::{
     graphics::box_shadow::{BoxShadow, ShadowSide},
     prelude::*,
@@ -15,6 +16,7 @@ use tmui::{
 #[extends(Popup)]
 #[derive(Childable)]
 #[global_watch(MouseReleased)]
+#[run_after]
 pub struct CtxMenu {
     #[child]
     selection_list: Box<TreeView>,
@@ -57,7 +59,13 @@ impl ObjectImpl for CtxMenu {
     }
 }
 
-impl WidgetImpl for CtxMenu {}
+impl WidgetImpl for CtxMenu {
+    fn run_after(&mut self) {
+        let root = self.selection_list.root_ancestor();
+        let root = self.window().find_id(root).unwrap();
+        println!("{}'s root ancestor was {}", self.selection_list.name(), root.name());
+    }
+}
 
 impl GlobalWatchImpl for CtxMenu {
     fn on_global_mouse_released(&mut self, evt: &tlib::events::MouseEvent) -> bool {

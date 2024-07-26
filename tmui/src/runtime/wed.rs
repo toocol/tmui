@@ -1,6 +1,5 @@
 use crate::{
-    application_window::ApplicationWindow, prelude::SharedWidget,
-    primitive::global_watch::GlobalWatchEvent, shortcut::mgr::ShortcutMgr,
+    application_window::ApplicationWindow, input::focus_mgr::FocusMgr, prelude::SharedWidget, primitive::global_watch::GlobalWatchEvent, shortcut::mgr::ShortcutMgr
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -298,7 +297,13 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 }
             }
             if key_code == KeyCode::KeyTab {
-                window.focus_switch_on_tab()
+                FocusMgr::with(|m| { 
+                    let id = m.borrow_mut().next();
+
+                    if let Some(id) = id {
+                        window.set_focused_widget(id)
+                    }
+                })
             }
         }
 

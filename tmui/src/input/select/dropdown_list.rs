@@ -86,9 +86,10 @@ impl GlobalWatchImpl for DropdownList {
         if !self.rect().contains(&pos) {
             self.trans_focus_take(FocusStrat::Restore);
             self.hide();
+            true
+        } else {
+            false
         }
-
-        self.supervisor().point_effective(&pos)
     }
 }
 

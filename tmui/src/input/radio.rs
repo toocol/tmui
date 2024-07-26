@@ -1,4 +1,4 @@
-use super::{ctrl::RadioControl, Input, InputBounds, InputEle, InputSignals, InputWrapper};
+use super::{ctrl::RadioControl, Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle};
 use crate::{
     input_ele_impl,
     prelude::*,
@@ -24,6 +24,11 @@ impl<T: InputBounds> ObjectImpl for Radio<T> {
         self.parent_construct();
 
         self.input_wrapper.init(self.id());
+    }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
     }
 }
 
