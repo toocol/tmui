@@ -163,7 +163,7 @@ impl ObjectImpl for Holder {
 
 impl WidgetImpl for Holder {
     fn run_after(&mut self) {
-        self.text1.set_focus(true);
+        self.select1.set_focus(true);
     }
 
     fn on_mouse_pressed(&mut self, evt: &tlib::events::MouseEvent) {

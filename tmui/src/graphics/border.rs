@@ -10,7 +10,7 @@ use super::painter::Painter;
 
 pub(crate) const DEFAULT_BORDER_COLOR: Color = Color::BLACK;
 
-#[derive(Derivative, Clone, Copy)]
+#[derive(Derivative, Clone, Copy, Debug)]
 #[derivative(Default)]
 pub struct Border {
     pub(crate) style: BorderStyle,

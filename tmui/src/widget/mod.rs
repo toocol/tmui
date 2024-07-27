@@ -691,6 +691,7 @@ fn handle_global_overlaid(
 
         if window_resized
             || !overlaid.first_rendered()
+            || overlaid.render_styles()
             || !widget.render_styles()
             || !widget.rect_f().is_intersects(&overlaid.visual_rect())
             || widget.is_resize_redraw()

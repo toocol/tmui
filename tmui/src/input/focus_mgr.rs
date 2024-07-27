@@ -76,18 +76,12 @@ impl FocusMgr {
     }
 
     pub(crate) fn next(&mut self) -> Option<ObjectId> {
-        if self.current.is_none() {
-            return None;
-        }
+        let last = self.current?;
+        let mut current = last;
 
         let eles = self.eles.get_mut(&self.cur_root);
-        if eles.is_none() {
-            return None;
-        }
-        let eles = eles.unwrap();
+        let eles = eles?;
 
-        let last = self.current.unwrap();
-        let mut current = last;
         loop {
             current += 1;
             if current == eles.len() {

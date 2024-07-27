@@ -91,9 +91,10 @@ impl GlobalWatchImpl for InputPopup {
         let pos: Point = evt.position().into();
         if !self.rect().contains(&pos) {
             self.hide();
+            true
+        } else {
+            false
         }
-
-        true
     }
 }
 

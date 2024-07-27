@@ -790,7 +790,7 @@ pub(crate) trait TextInnerExt:
     }
 
     fn calc_text_geometry(&mut self) {
-        let rect: FRect = self.rect().into();
+        let rect: FRect = self.rect_f();
 
         self.props_mut().text_window =
             if let Some(ref fn_calc_text_window) = self.props().fn_calc_text_window {
@@ -815,8 +815,13 @@ pub(crate) trait TextInnerExt:
             };
 
         let window = self.props().text_window;
+        let rect_rec = self.rect_record();
         if let Some(ref mut pos) = self.props_mut().text_draw_position {
             pos.set_y(window.y());
+            if rect_rec.is_valid() {
+                let x_offset = rect.x() - rect_rec.x();
+                pos.set_x(pos.x() + x_offset);
+            }
         } else {
             self.props_mut().text_draw_position = Some(window.top_left());
         };
@@ -1061,6 +1066,9 @@ pub(crate) trait TextInnerExt:
     }
 
     fn handle_mouse_move(&mut self, event: &MouseEvent) {
+        if !self.is_focus() || !self.is_enable() {
+            return;
+        }
         if self.props().drag_status == DragStatus::None {
             return;
         }

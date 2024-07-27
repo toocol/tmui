@@ -1584,7 +1584,7 @@ impl<T: WidgetImpl> WidgetExt for T {
                 return root
             }
         }
-        return 0
+        0
     }
 
     #[inline]

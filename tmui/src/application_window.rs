@@ -419,7 +419,7 @@ impl ApplicationWindow {
             if let Some(widget) = self.find_id_mut(id) {
                 widget.on_get_focus();
 
-                if let Some(_) = cast!(widget as InputEle) {
+                if cast!(widget as InputEle).is_some() {
                     FocusMgr::with(|m| {
                         m.borrow_mut()
                             .set_currrent(widget.root_ancestor(), Some(id))
@@ -744,8 +744,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         child_ref.type_register(type_registry);
 
         if let Some(pop) = cast!(child_ref as PopupImpl) {
+            let supervisor = pop.supervisor();
             window.root_ancestors.push(pop.id());
-            child_ref.set_z_index(TOP_Z_INDEX);
+            child_ref.set_z_index(supervisor.z_index() + TOP_Z_INDEX);
         } else {
             let parent = child_ref
                 .get_parent_mut()

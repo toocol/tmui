@@ -1,9 +1,14 @@
 use crate::{
-    application_window::ApplicationWindow, input::focus_mgr::FocusMgr, prelude::SharedWidget, primitive::global_watch::GlobalWatchEvent, shortcut::mgr::ShortcutMgr
+    application_window::ApplicationWindow, input::focus_mgr::FocusMgr, prelude::SharedWidget,
+    primitive::global_watch::GlobalWatchEvent, shortcut::mgr::ShortcutMgr,
 };
 use std::ptr::NonNull;
 use tlib::{
-    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent}, namespace::KeyCode, nonnull_mut, object::ObjectOperation, types::StaticType
+    events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
+    namespace::KeyCode,
+    nonnull_mut,
+    object::ObjectOperation,
+    types::StaticType,
 };
 
 use super::ElementExt;
@@ -277,7 +282,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             if global_shorcut_triggered {
                 return None;
             }
-            
+
             let key_code = evt.key_code();
             for (_name, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
@@ -297,7 +302,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 }
             }
             if key_code == KeyCode::KeyTab {
-                FocusMgr::with(|m| { 
+                FocusMgr::with(|m| {
                     let id = m.borrow_mut().next();
 
                     if let Some(id) = id {
