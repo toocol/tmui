@@ -77,3 +77,6 @@ unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(font_awesome)',
     'cfg(verbose_logging)',
 ] }
+
+[patch.crates-io]
+xcb = "1.0.0"

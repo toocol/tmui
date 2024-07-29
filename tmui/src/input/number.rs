@@ -1,11 +1,10 @@
 use super::{
     text::{TextExt, TextInnerExt, TextProps, TextPropsAcquire, TextShorcutRegister, TextSignals},
-    Input, InputSignals, InputType, InputWrapper, INPUT_DEFAULT_BORDER_COLOR,
-    INPUT_FOCUSED_BORDER_COLOR,
+    Input, InputEle, InputSignals, InputType, InputWrapper, ReflectInputEle,
 };
 use crate::{
     asset::Asset,
-    cast_do, impl_text_shortcut_register,
+    cast_do, impl_text_shortcut_register, input_ele_impl,
     prelude::*,
     shortcut::ShortcutRegister,
     svg::{svg_attr::SvgAttr, svg_str::SvgStr},
@@ -18,6 +17,7 @@ use rust_decimal::{prelude::FromPrimitive, prelude::*, Decimal};
 use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
+    global::shown_value_64,
     global_watch,
     namespace::KeyCode,
     run_after, shortcut, signals,
@@ -77,10 +77,16 @@ impl ObjectSubclass for Number {
 }
 
 impl ObjectImpl for Number {
+    #[inline]
     fn construct(&mut self) {
         self.parent_construct();
 
         self.construct_number();
+    }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
     }
 }
 
@@ -120,24 +126,12 @@ impl WidgetImpl for Number {
 
     #[inline]
     fn on_get_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(true);
-        self.set_border_color(INPUT_FOCUSED_BORDER_COLOR);
-        self.set_borders(2., 2., 2., 2.);
+        self.handle_get_focus()
     }
 
     #[inline]
     fn on_lose_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(false);
-        self.set_border_color(INPUT_DEFAULT_BORDER_COLOR);
-        self.set_borders(1., 1., 1., 1.);
+        self.handle_lose_focus()
     }
 
     #[inline]
@@ -167,7 +161,7 @@ impl WidgetImpl for Number {
 
     #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
 
@@ -182,7 +176,7 @@ impl WidgetImpl for Number {
 
     #[inline]
     fn on_mouse_released(&mut self, _: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
         if !self.props.entered {
@@ -307,7 +301,7 @@ impl Number {
     #[inline]
     pub fn set_val(&mut self, val: f32) {
         self.init_val = Some(val);
-        self.set_value(show_value(val as f64));
+        self.set_value(shown_value_64(val as f64));
     }
 
     #[inline]
@@ -564,7 +558,7 @@ impl Number {
         self.props_mut().blink_timer.stop();
         self.props_mut().cursor_visible = true;
 
-        self.set_value(show_value(res));
+        self.set_value(shown_value_64(res));
     }
 
     fn handle_number_value_changed(&mut self) {
@@ -609,25 +603,12 @@ fn calc_text_window(props: &TextProps, rect: FRect, enable_spinner: bool) -> FRe
     window
 }
 
-#[inline]
-fn show_value(val: f64) -> String {
-    if val.fract() == 0. {
-        let abs_val = val.abs();
-        if abs_val >= 1e17 || (abs_val != 0.0 && abs_val < 1e-17) {
-            format!("{:?}", val)
-        } else {
-            format!("{}", val)
-        }
-    } else {
-        format!("{:?}", val)
-    }
-}
-
 impl InputSignals for Number {}
 impl TextSignals for Number {}
 impl TextExt for Number {}
 impl TextInnerExt for Number {}
 impl_text_shortcut_register!(Number);
+input_ele_impl!(Number);
 
 #[cfg(test)]
 mod tests {

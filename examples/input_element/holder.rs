@@ -11,9 +11,12 @@ use tmui::{
     widget::{callbacks::CallbacksRegister, WidgetImpl},
 };
 
+use crate::popup::InputPopup;
+
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
 #[run_after]
+#[popupable]
 pub struct Holder {
     #[children]
     text1: Box<Text>,
@@ -31,10 +34,13 @@ pub struct Holder {
     select1: Box<Select<String>>,
 
     #[children]
-    select2: Box<Select<String>>,
+    number: Box<Number>,
 
     #[children]
-    number: Box<Number>,
+    text4: Box<Text>,
+
+    #[children]
+    select2: Box<Select<String>>,
 }
 
 impl ObjectSubclass for Holder {
@@ -42,6 +48,11 @@ impl ObjectSubclass for Holder {
 }
 
 impl ObjectImpl for Holder {
+    fn construct(&mut self) {
+        self.parent_construct();
+        self.add_popup(InputPopup::new());
+    }
+
     fn initialize(&mut self) {
         // self.text1.set_background(Color::RED);
         self.text1.width_request(400);
@@ -77,6 +88,9 @@ impl ObjectImpl for Holder {
             .set_placeholder("Placeholder of text-3/中文提示符");
         // self.text3.set_vexpand(true);
 
+        self.text4.set_margin_left(20);
+        self.text4.set_valign(Align::End);
+
         self.password.set_margin_left(20);
         self.password.set_margin_top(10);
         self.password.register_mouse_released(|w, evt| {
@@ -90,6 +104,7 @@ impl ObjectImpl for Holder {
         self.password.check_required();
         self.password
             .set_require_invalid_border_color(Color::grey_with(210));
+        self.password.set_require_invalid_focused_border_color(Color::hex("#ff6b6b"));
         self.password
             .set_customize_require_invalid_render(move |painter, mut rect| {
                 rect.set_width(rect.width() - 1.);
@@ -148,7 +163,15 @@ impl ObjectImpl for Holder {
 
 impl WidgetImpl for Holder {
     fn run_after(&mut self) {
-        self.text1.set_focus(true);
+        self.select1.set_focus(true);
+    }
+
+    fn on_mouse_pressed(&mut self, evt: &tlib::events::MouseEvent) {
+        if evt.mouse_button() != MouseButton::RightButton {
+            return
+        }
+
+        self.show_popup(evt.position().into())
     }
 }
 

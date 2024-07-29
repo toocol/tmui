@@ -1,9 +1,9 @@
 use super::{
     text::{TextExt, TextInnerExt, TextProps, TextPropsAcquire, TextShorcutRegister, TextSignals},
-    Input, InputSignals, InputWrapper,
+    Input, InputEle, InputSignals, InputWrapper, ReflectInputEle,
 };
 use crate::{
-    cast_do, impl_text_shortcut_register,
+    cast_do, impl_text_shortcut_register, input_ele_impl,
     prelude::*,
     shortcut::ShortcutRegister,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -65,6 +65,11 @@ impl ObjectImpl for Password {
 
         connect!(self, value_changed(), self, update_shown_text());
     }
+
+    #[inline]
+    fn type_register(&self, type_registry: &mut TypeRegistry) {
+        type_registry.register::<Self, ReflectInputEle>()
+    }
 }
 
 impl WidgetImpl for Password {
@@ -99,28 +104,18 @@ impl WidgetImpl for Password {
     #[inline]
     fn font_changed(&mut self) {
         self.handle_font_changed();
-        
+
         self.calc_text_geometry();
     }
 
     #[inline]
     fn on_get_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(true);
-        self.update();
+        self.handle_get_focus()
     }
 
     #[inline]
     fn on_lose_focus(&mut self) {
-        if !self.is_enable() {
-            return;
-        }
-
-        self.check_blink_timer(false);
-        self.update();
+        self.handle_lose_focus()
     }
 
     #[inline]
@@ -145,7 +140,7 @@ impl WidgetImpl for Password {
 
     #[inline]
     fn on_mouse_pressed(&mut self, event: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
 
@@ -158,7 +153,7 @@ impl WidgetImpl for Password {
 
     #[inline]
     fn on_mouse_released(&mut self, _: &MouseEvent) {
-        if !self.is_enable() {
+        if !self.is_enable() || !self.is_focus() {
             return;
         }
         if !self.props.entered {
@@ -277,3 +272,4 @@ impl InputSignals for Password {}
 impl TextExt for Password {}
 impl TextInnerExt for Password {}
 impl_text_shortcut_register!(Password);
+input_ele_impl!(Password);

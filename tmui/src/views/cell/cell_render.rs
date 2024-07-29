@@ -4,9 +4,10 @@ use derivative::Derivative;
 use std::fmt::Debug;
 use tlib::{
     figure::{Color, FRect},
+    global::{shown_value_32, shown_value_64},
     namespace::BorderStyle,
     skia_safe::ClipOp,
-    Value,
+    Type, Value,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -223,7 +224,23 @@ impl CellRender for TextCellRender {
             painter.fill_rect(geometry, background);
         }
 
-        let text = val.get::<String>();
+        let text = match val.ty() {
+            Type::STRING => val.get::<String>(),
+            Type::BOOL => val.get::<bool>().to_string(),
+            Type::U8 => val.get::<u8>().to_string(),
+            Type::I8 => val.get::<i8>().to_string(),
+            Type::U16 => val.get::<u16>().to_string(),
+            Type::I16 => val.get::<i16>().to_string(),
+            Type::U32 => val.get::<u32>().to_string(),
+            Type::I32 => val.get::<i32>().to_string(),
+            Type::U64 => val.get::<u64>().to_string(),
+            Type::I64 => val.get::<i64>().to_string(),
+            Type::U128 => val.get::<u128>().to_string(),
+            Type::I128 => val.get::<i128>().to_string(),
+            Type::F32 => shown_value_32(val.get::<f32>()),
+            Type::F64 => shown_value_64(val.get::<f64>()),
+            _ => "Unkonwn value.".to_string(),
+        };
         let origin = geometry.top_left();
         painter.draw_paragraph(
             &text,

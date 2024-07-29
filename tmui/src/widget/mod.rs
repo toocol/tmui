@@ -281,7 +281,9 @@ pub trait WidgetSignals: ActionExt {
         invalid_area_changed();
     }
 }
+
 impl<T: WidgetImpl + ActionExt> WidgetSignals for T {}
+
 impl WidgetSignals for dyn WidgetImpl {}
 
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
@@ -691,6 +693,7 @@ fn handle_global_overlaid(
 
         if window_resized
             || !overlaid.first_rendered()
+            || overlaid.render_styles()
             || !widget.render_styles()
             || !widget.rect_f().is_intersects(&overlaid.visual_rect())
             || widget.is_resize_redraw()
@@ -805,6 +808,7 @@ pub trait PointEffective {
     /// Is the detection point effective.
     fn point_effective(&self, point: &Point) -> bool;
 }
+
 impl PointEffective for Widget {
     fn point_effective(&self, point: &Point) -> bool {
         if !self.visible() {
@@ -818,11 +822,11 @@ impl PointEffective for Widget {
         }
 
         for (&id, overlaid) in self.window().overlaids().iter() {
-            if self.descendant_of(id) || self.id() == id {
+            let overlaid = nonnull_ref!(overlaid);
+            if self.descendant_of(id) || self.id() == id || self.z_index() > overlaid.z_index() {
                 continue;
             }
-            let overlaid = nonnull_ref!(overlaid).rect();
-            if overlaid.contains(point) {
+            if overlaid.rect().contains(point) {
                 return false;
             }
         }
@@ -841,6 +845,7 @@ impl PointEffective for Widget {
 pub trait ChildRegionAcquire {
     fn child_region(&self) -> tlib::skia_safe::Region;
 }
+
 impl ChildRegionAcquire for Widget {
     fn child_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
@@ -858,6 +863,7 @@ impl ChildRegionAcquire for Widget {
 pub(crate) trait ChildRegionClip {
     fn clip_child_region(&self, painter: &mut Painter);
 }
+
 impl<T: WidgetImpl> ChildRegionClip for T {
     #[inline]
     fn clip_child_region(&self, painter: &mut Painter) {
@@ -921,6 +927,7 @@ pub trait InnerEventProcess {
     /// Invoke when widget's receive character event.
     fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent);
 }
+
 impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     #[inline]
     fn inner_mouse_pressed(&mut self, event: &MouseEvent, bubbled: bool) {
@@ -1446,6 +1453,7 @@ impl dyn WidgetImpl {
         }
     }
 }
+
 impl AsMutPtr for dyn WidgetImpl {}
 
 pub trait ChildOp: WidgetImpl {
@@ -1507,6 +1515,7 @@ macro_rules! z_index_step_impl {
 impl<T: WidgetImpl> ZIndexStep for T {
     z_index_step_impl!();
 }
+
 impl ZIndexStep for dyn WidgetImpl {
     z_index_step_impl!();
 }
@@ -1530,6 +1539,7 @@ impl ScaleCalculate for dyn WidgetImpl {}
 pub trait WindowAcquire {
     fn window(&self) -> &'static mut ApplicationWindow;
 }
+
 impl<T: WidgetImpl> WindowAcquire for T {
     #[inline]
     fn window(&self) -> &'static mut ApplicationWindow {
@@ -1543,6 +1553,7 @@ pub trait IterExecutor {
     /// This function will be executed in each iteration of the UI main thread loop.
     fn iter_execute(&mut self);
 }
+
 pub type IterExecutorHnd = Option<NonNull<dyn IterExecutor>>;
 
 ////////////////////////////////////// WidgetHndAsable //////////////////////////////////////
@@ -1552,6 +1563,7 @@ pub(crate) trait WidgetHndAsable: WidgetImpl + Sized {
         NonNull::new(self)
     }
 }
+
 impl<T: WidgetImpl + Sized> WidgetHndAsable for T {}
 
 ////////////////////////////////////// WidgetPropsAcquire //////////////////////////////////////
@@ -1562,6 +1574,7 @@ pub trait WidgetPropsAcquire {
     /// Get the mutable ref of widget props.
     fn widget_props_mut(&mut self) -> &mut Widget;
 }
+
 impl WidgetPropsAcquire for Widget {
     #[inline]
     fn widget_props(&self) -> &Widget {
@@ -1648,7 +1661,9 @@ pub trait WidgetFinder: WidgetImpl {
         siblings
     }
 }
+
 impl<T: WidgetImpl> WidgetFinder for T {}
+
 impl WidgetFinder for dyn WidgetImpl {}
 
 ////////////////////////////////////// RegionClear //////////////////////////////////////
@@ -1665,7 +1680,9 @@ pub trait RegionClear: WidgetImpl {
         painter.fill_rect_global(rect, self.opaque_background())
     }
 }
+
 impl<T: WidgetImpl> RegionClear for T {}
+
 impl RegionClear for dyn WidgetImpl {}
 
 ////////////////////////////////////// IsolatedVisibility //////////////////////////////////////
