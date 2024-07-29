@@ -207,6 +207,7 @@ pub trait ContainerExt {
 
     fn set_scale_strat(&mut self, strat: ScaleStrat);
 }
+
 impl<T: ContainerImpl> ContainerExt for T {
     #[inline]
     fn is_strict_children_layout(&self) -> bool {
@@ -234,6 +235,7 @@ pub trait ContainerPropsAcquire {
 
     fn container_props_mut(&mut self) -> &mut Container;
 }
+
 impl ContainerPropsAcquire for Container {
     #[inline]
     fn container_props(&self) -> &Container {
@@ -248,11 +250,11 @@ impl ContainerPropsAcquire for Container {
 
 #[reflect_trait]
 pub trait ContainerImpl:
-    WidgetImpl
-    + ContainerPointEffective
-    + ContainerScaleCalculate
-    + ContainerExt
-    + ContainerPropsAcquire
+WidgetImpl
++ ContainerPointEffective
++ ContainerScaleCalculate
++ ContainerExt
++ ContainerPropsAcquire
 {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`.
@@ -269,13 +271,14 @@ pub trait ContainerImpl:
 pub trait ContainerImplExt: ContainerImpl {
     /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
     fn add_child<T>(&mut self, child: Box<T>)
-    where
-        T: WidgetImpl;
+        where
+            T: WidgetImpl;
 }
 
 pub trait ContainerPointEffective {
     fn container_point_effective(&self, point: &Point) -> bool;
 }
+
 impl<T: ContainerImpl> ContainerPointEffective for T {
     fn container_point_effective(&self, point: &Point) -> bool {
         if !self.visible() {
@@ -289,11 +292,11 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
         }
 
         for (&id, overlaid) in self.window().overlaids().iter() {
-            if self.descendant_of(id) || self.id() == id {
+            let overlaid = nonnull_ref!(overlaid);
+            if self.descendant_of(id) || self.id() == id || self.z_index() > overlaid.z_index() {
                 continue;
             }
-            let overlaid = nonnull_ref!(overlaid).rect();
-            if overlaid.contains(point) {
+            if overlaid.rect().contains(point) {
                 return false;
             }
         }
@@ -311,6 +314,7 @@ impl<T: ContainerImpl> ContainerPointEffective for T {
 pub trait ChildrenRegionAcquirer {
     fn children_region(&self) -> tlib::skia_safe::Region;
 }
+
 impl<T: ContainerImpl> ChildrenRegionAcquirer for T {
     fn children_region(&self) -> tlib::skia_safe::Region {
         let mut region = tlib::skia_safe::Region::new();
@@ -343,6 +347,7 @@ pub trait ContainerScaleCalculate {
 
     fn container_vscale_calculate(&self) -> f32;
 }
+
 pub trait StaticContainerScaleCalculate {
     fn static_container_hscale_calculate(c: &dyn ContainerImpl) -> f32;
 
@@ -351,11 +356,13 @@ pub trait StaticContainerScaleCalculate {
 
 pub const SCALE_ADAPTION: f32 = f32::MAX;
 pub const SCALE_DISMISS: f32 = f32::MIN;
+
 pub trait ScaleMeasure {
     fn is_adaption(&self) -> bool;
 
     fn is_dismiss(&self) -> bool;
 }
+
 impl ScaleMeasure for f32 {
     #[inline]
     fn is_adaption(&self) -> bool {
@@ -372,6 +379,7 @@ impl ScaleMeasure for f32 {
 pub trait SizeUnifiedAdjust {
     fn size_unified_adjust(&mut self);
 }
+
 pub trait StaticSizeUnifiedAdjust {
     fn static_size_unified_adjust(container: &mut dyn ContainerImpl);
 }
@@ -380,6 +388,7 @@ pub struct SpacingSize {
     spacing: i32,
     orientation: Orientation,
 }
+
 impl SpacingSize {
     #[inline]
     pub fn spacing(&self) -> i32 {
@@ -401,6 +410,7 @@ impl SpacingSize {
 }
 
 const SPACING_PROPERTY_NAME: &str = "_container_spacing";
+
 #[reflect_trait]
 pub trait SpacingCapable: ContainerImpl {
     fn orientation(&self) -> Orientation;

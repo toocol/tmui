@@ -623,6 +623,15 @@ impl ApplicationWindow {
                 return;
             }
         }
+        for (&id, overlaid) in self.overlaids.iter() {
+            let overlaid = nonnull_ref!(overlaid);
+            if widget.id() == id || widget.z_index() > overlaid.z_index() {
+                continue;
+            }
+            if overlaid.rect().contains(point) {
+                return
+            }
+        }
 
         let hnd = NonNull::new(widget);
         if !self.mouse_enter_widgets.contains(&hnd) {
@@ -647,7 +656,16 @@ impl ApplicationWindow {
     pub(crate) fn check_mouse_leave(&mut self, point: &Point, evt: &MouseEvent) {
         self.mouse_enter_widgets.retain_mut(|w| {
             let widget = nonnull_mut!(w);
-            let efct = widget.rect().contains(point);
+            let mut efct = widget.rect().contains(point);
+            for (&id, overlaid) in self.overlaids.iter() {
+                let overlaid = nonnull_ref!(overlaid);
+                if widget.id() == id || widget.z_index() > overlaid.z_index() {
+                    continue;
+                }
+                if overlaid.rect().contains(point) {
+                    efct = false;
+                }
+            }
 
             if !efct {
                 let widget_position = widget.map_to_widget(point);

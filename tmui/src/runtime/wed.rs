@@ -1,6 +1,7 @@
 use crate::{
-    application_window::ApplicationWindow, input::focus_mgr::FocusMgr, prelude::SharedWidget,
-    primitive::global_watch::GlobalWatchEvent, shortcut::mgr::ShortcutMgr,
+    application_window::ApplicationWindow, graphics::element::HierachyZ,
+    input::focus_mgr::FocusMgr, prelude::SharedWidget, primitive::global_watch::GlobalWatchEvent,
+    shortcut::mgr::ShortcutMgr,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -43,7 +44,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 let widget = nonnull_mut!(widget_opt);
 
                 if let Some(ref modal) = modal_widget {
-                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                    if widget.id() != modal.id()
+                        && !modal.ancestor_of(widget.id())
+                        && widget.z_index() < modal.z_index()
+                    {
                         continue;
                     }
                 }
@@ -99,7 +103,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     let visible = widget.visible();
 
                     if let Some(ref modal) = modal_widget {
-                        if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                        if widget.id() != modal.id()
+                            && !modal.ancestor_of(widget.id())
+                            && widget.z_index() < modal.z_index()
+                        {
                             continue;
                         }
                     }
@@ -141,7 +148,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 let widget = nonnull_mut!(widget_opt);
 
                 if let Some(ref modal) = window.modal_widget() {
-                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                    if widget.id() != modal.id()
+                        && !modal.ancestor_of(widget.id())
+                        && widget.z_index() < modal.z_index()
+                    {
                         continue;
                     }
                 }
@@ -240,7 +250,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 let widget = nonnull_mut!(widget_opt);
 
                 if let Some(ref modal) = modal_widget {
-                    if widget.id() != modal.id() && !modal.ancestor_of(widget.id()) {
+                    if widget.id() != modal.id()
+                        && !modal.ancestor_of(widget.id())
+                        && widget.z_index() < modal.z_index()
+                    {
                         continue;
                     }
                 }
