@@ -1,11 +1,12 @@
 pub mod win_builder;
 pub mod win_config;
 
-use tlib::winit::window::WindowId;
+use tlib::{winit::window::WindowId, Value};
 
 use self::{win_builder::WindowBuilder, win_config::WindowConfig};
 use crate::application::FnActivate;
 use std::{
+    collections::HashMap,
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -18,6 +19,7 @@ pub struct Window {
     win_cfg: Option<WindowConfig>,
     on_activate: Option<FnActivate>,
     parent: Option<WindowId>,
+    params: Option<HashMap<String, Value>>,
 }
 
 unsafe impl Send for Window {}
@@ -43,6 +45,7 @@ impl Window {
             win_cfg: None,
             on_activate: None,
             parent: None,
+            params: None,
         }
     }
 }
@@ -73,6 +76,14 @@ impl Window {
         self.parent.unwrap()
     }
 
+    #[inline]
+    pub(crate) fn take_params(&mut self) -> Option<HashMap<String, Value>> {
+        self.params
+            .take()
+    }
+}
+
+impl Window {
     #[inline]
     pub fn index(&self) -> usize {
         self.index

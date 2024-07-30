@@ -101,6 +101,7 @@ where
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());
     window.set_outer_position(logic_window.initial_position);
+    window.set_params(logic_window.params.take());
 
     if let Some(window_id) = logic_window.window_id() {
         window.set_winit_id(window_id)

@@ -1,11 +1,14 @@
 use super::{win_config::WindowConfig, Window};
 use crate::{application::FnActivate, application_window::ApplicationWindow};
+use std::collections::HashMap;
+use tlib::{values::ToValue, Value};
 
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
     modal: bool,
     on_activate: Option<FnActivate>,
+    params: HashMap<String, Value>,
 }
 
 impl WindowBuilder {
@@ -40,6 +43,12 @@ impl WindowBuilder {
     }
 
     #[inline]
+    pub fn param(mut self, key: impl ToString, val: impl ToValue) -> Self {
+        self.params.insert(key.to_string(), val.to_value());
+        self
+    }
+
+    #[inline]
     pub fn build(self) -> Window {
         let mut window = Window::new();
 
@@ -49,6 +58,7 @@ impl WindowBuilder {
         );
         window.on_activate = self.on_activate;
         window.modal = self.modal;
+        window.params = Some(self.params);
 
         window
     }

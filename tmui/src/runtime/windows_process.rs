@@ -508,6 +508,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                                 logic_window.set_parent_window(win.get_parent());
                                 logic_window.on_activate = win.take_on_activate();
+                                logic_window.params = win.take_params();
 
                                 let phys_window = physical_window.into_phys_window();
                                 let win_id = phys_window.window_id();
