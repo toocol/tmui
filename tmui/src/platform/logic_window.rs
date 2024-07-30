@@ -10,12 +10,12 @@ use crate::{
     runtime::window_context::LogicWindowContext,
 };
 use glutin::config::Config;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
     IpcNode, IpcType,
 };
-use tlib::{figure::Point, winit::window::WindowId};
+use tlib::{figure::Point, winit::window::WindowId, Value};
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     window_id: Option<WindowId>,
@@ -41,6 +41,7 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     pub on_request_receive: Option<FnRequestReceive<M>>,
 
     pub initial_position: Point,
+    pub params: Option<HashMap<String, Value>>,
 }
 
 unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Send
@@ -77,6 +78,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             on_user_event_receive: None,
             on_request_receive: None,
             initial_position,
+            params: None,
         }
     }
 
@@ -106,6 +108,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             on_user_event_receive: None,
             on_request_receive: None,
             initial_position: Point::default(),
+            params: None,
         }
     }
 

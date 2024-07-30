@@ -41,11 +41,15 @@ impl WidgetImpl for MyWidget {
                         .build(),
                 )
                 .modal(true)
+                .param("key-1", 10.)
+                .param("key-2", "value")
                 .on_activate(|window| {
                     println!(
                         "{} => Child window created.",
                         std::thread::current().name().unwrap(),
                     );
+                    assert_eq!(window.get_param::<f64>("key-1").unwrap(), 10.);
+                    assert_eq!(window.get_param::<String>("key-2").unwrap(), "value");
                     window.child(InputDialog::new());
                 }),
         )

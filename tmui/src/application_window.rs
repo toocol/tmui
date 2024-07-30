@@ -31,6 +31,7 @@ use tlib::{
     namespace::{KeyboardModifier, MouseButton},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
+    values::FromValue,
     winit::window::WindowId,
 };
 
@@ -53,6 +54,7 @@ pub struct ApplicationWindow {
     shared_widget_size_changed: bool,
     high_load_request: bool,
     outer_position: Point,
+    params: Option<HashMap<String, Value>>,
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
@@ -345,6 +347,11 @@ impl ApplicationWindow {
         self.outer_position
     }
 
+    #[inline]
+    pub fn get_param<T: FromValue + StaticType>(&self, key: &str) -> Option<T> {
+        self.params.as_ref()?.get(key).map(|p| p.get::<T>())
+    }
+
     /// Should set the parent of widget before use this function.
     pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
         INTIALIZE_PHASE.with(|p| {
@@ -629,7 +636,7 @@ impl ApplicationWindow {
                 continue;
             }
             if overlaid.rect().contains(point) {
-                return
+                return;
             }
         }
 
@@ -730,6 +737,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn root_ancestors(&self) -> &[ObjectId] {
         &self.root_ancestors
+    }
+
+    #[inline]
+    pub(crate) fn set_params(&mut self, params: Option<HashMap<String, Value>>) {
+        self.params = params
     }
 }
 

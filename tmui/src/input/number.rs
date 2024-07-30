@@ -147,6 +147,8 @@ impl WidgetImpl for Number {
 
         self.handle_key_pressed(event);
 
+        self.handle_number_key_pressed(event);
+
         self.update();
     }
 
@@ -171,7 +173,7 @@ impl WidgetImpl for Number {
             _ => {}
         }
 
-        self.handle_spinner_press(event);
+        self.handle_spinner_press(Some(event), None);
     }
 
     #[inline]
@@ -505,11 +507,16 @@ impl Number {
         }
     }
 
-    fn handle_spinner_press(&mut self, evt: &MouseEvent) {
-        let pos = self.map_to_global_f(&evt.position().into());
-        let (spinner1, spinner2) = self.spinner_rect();
-        let spinner1_effect = spinner1.contains(&pos);
-        let spinner2_effect = spinner2.contains(&pos);
+    fn handle_spinner_press(&mut self, evt: Option<&MouseEvent>, spurious_press: Option<bool>) {
+        let (spinner1_effect, spinner2_effect) = if let Some(evt) = evt {
+            let pos = self.map_to_global_f(&evt.position().into());
+            let (spinner1, spinner2) = self.spinner_rect();
+            (spinner1.contains(&pos), spinner2.contains(&pos))
+        } else if let Some(spurious_press) = spurious_press {
+            (spurious_press, !spurious_press)
+        } else {
+            (false, false)
+        };
 
         if !spinner1_effect && !spinner2_effect {
             return;
@@ -572,6 +579,14 @@ impl Number {
                     self.val = None
                 }
             }
+        }
+    }
+
+    fn handle_number_key_pressed(&mut self, event: &KeyEvent) {
+        match event.key_code() {
+            KeyCode::KeyUp => self.handle_spinner_press(None, Some(true)),
+            KeyCode::KeyDown => self.handle_spinner_press(None, Some(false)),
+            _ => {}
         }
     }
 }
