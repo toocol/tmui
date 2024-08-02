@@ -547,7 +547,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         }
 
         let window_resized = self.window().is_resize_redraw();
-        if self.whole_styles_render() || self.is_resize_redraw() || window_resized {
+        if (self.whole_styles_render() || self.is_resize_redraw() || window_resized) && !self.is_animation_progressing() {
             self.widget_props_mut().styles_redraw_region.clear();
             self.widget_props_mut().redraw_region.clear();
         }

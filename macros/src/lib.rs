@@ -342,6 +342,10 @@ pub fn pane_type_register(input: TokenStream) -> TokenStream {
 /// `direction`: the direction([`tmui::animation::Direction`]) of animation.
 ///
 /// `duration`: the time duration of animation(millis).
+/// 
+/// `mode`: [`tmui::animation::AnimationMode`]
+/// 
+/// `effect`: [`tmui::animation::AnimationEffect`]
 #[proc_macro_attribute]
 pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input

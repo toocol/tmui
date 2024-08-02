@@ -3,19 +3,17 @@ use tmui::{
     graphics::box_shadow::{BoxShadow, ShadowSide},
     prelude::*,
     scroll_area::LayoutMode,
-    tlib::{
-        global_watch,
-        object::{ObjectImpl, ObjectSubclass},
-    },
+    tlib::object::{ObjectImpl, ObjectSubclass},
     views::{
-        cell::{cell_render::TextCellRender, Cell}, node::node_render::NodeRender, tree_view::{tree_view_object::TreeViewObject, TreeView}
+        cell::{cell_render::TextCellRender, Cell},
+        node::node_render::NodeRender,
+        tree_view::{tree_view_object::TreeViewObject, TreeView},
     },
     widget::WidgetImpl,
 };
 
 #[extends(Popup)]
 #[derive(Childable)]
-#[global_watch(MouseReleased)]
 #[run_after]
 pub struct CtxMenu {
     #[child]
@@ -63,21 +61,11 @@ impl WidgetImpl for CtxMenu {
     fn run_after(&mut self) {
         let root = self.selection_list.root_ancestor();
         let root = self.window().find_id(root).unwrap();
-        println!("{}'s root ancestor was {}", self.selection_list.name(), root.name());
-    }
-}
-
-impl GlobalWatchImpl for CtxMenu {
-    fn on_global_mouse_released(&mut self, evt: &tlib::events::MouseEvent) -> bool {
-        if !self.visible() {
-            return false;
-        }
-        let pos: Point = evt.position().into();
-        if !self.rect().contains(&pos) {
-            self.hide();
-        }
-
-        true
+        println!(
+            "{}'s root ancestor was {}",
+            self.selection_list.name(),
+            root.name()
+        );
     }
 }
 

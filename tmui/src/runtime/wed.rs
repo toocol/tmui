@@ -31,10 +31,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let widgets_map = ApplicationWindow::widgets_of(window.id());
             let pos = evt.position().into();
 
-            let prevent = window.handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
+            let overlaids_prevent = window.handle_overlaids_global_mouse_click(&evt);
+
+            let global_watch_prevent = window.handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
                 handle.on_global_mouse_pressed(&evt)
             });
-            if prevent {
+            if overlaids_prevent || global_watch_prevent {
                 return event;
             }
 

@@ -659,9 +659,11 @@ impl LayoutMgr {
 
             let r = widget_ref.rect_f();
             if let Some(iv) = cast_mut!(widget_ref as IsolatedVisibility) {
-                let shadow_rect = iv.shadow_rect_mut();
-                shadow_rect.set_x(r.x());
-                shadow_rect.set_y(r.y());
+                if !iv.is_animation_progressing() {
+                    let shadow_rect = iv.shadow_rect_mut();
+                    shadow_rect.set_x(r.x());
+                    shadow_rect.set_y(r.y());
+                }
             }
             if r != widget_ref.rect_record() {
                 widget_ref.set_resize_redraw(true);
@@ -731,6 +733,9 @@ impl LayoutMgr {
     ) {
         if parent.is_none() || cast!(widget as Overlaid).is_some() {
             if let Some(popup) = cast_mut!(widget as PopupImpl) {
+                if popup.is_animation_progressing() {
+                    return;
+                }
                 popup.layout_relative_position();
             }
 

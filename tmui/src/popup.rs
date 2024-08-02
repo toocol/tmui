@@ -1,5 +1,5 @@
 use std::ptr::NonNull;
-use tlib::{nonnull_mut, nonnull_ref};
+use tlib::{events::MouseEvent, nonnull_mut, nonnull_ref};
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -104,9 +104,46 @@ pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
     }
 
     /// If true, the popup widget will be a modal widget.
+    /// 
+    /// Default value is [`false`]
+    #[inline]
     fn is_modal(&self) -> bool {
         false
     }
+
+    /// If true, popup will hide when clicking the area outside the component.
+    /// 
+    /// Default value is [`true`]
+    #[inline]
+    fn hide_on_click(&self) -> bool {
+        true
+    }
+
+    /// If true, popup will move postion by mouse dragging.
+    /// 
+    /// Default value is [`false`]
+    #[inline]
+    fn move_capable(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn handle_global_mouse_pressed(&mut self, evt: &MouseEvent) -> bool {
+        if !self.visible() {
+            return false;
+        }
+        let pos: Point = evt.position().into();
+        if !self.rect().contains(&pos) {
+            self.on_mouse_click_hide();
+            self.hide();
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    fn on_mouse_click_hide(&mut self) {}
 }
 
 #[reflect_trait]

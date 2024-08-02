@@ -1,7 +1,7 @@
 use crate::{
     graphics::box_shadow::BoxShadow, prelude::*, scroll_area::LayoutMode, tlib::object::{ObjectImpl, ObjectSubclass}, views::list_view::{list_view_object::ListViewObject, ListView}, widget::{widget_ext::FocusStrat, WidgetImpl}
 };
-use tlib::{global_watch, signals};
+use tlib::signals;
 
 const MAX_VISIBLE_ITEMS: i32 = 20;
 
@@ -19,7 +19,6 @@ impl DropdownListSignals for DropdownList {}
 
 #[extends(Popup, internal = true)]
 #[derive(Childable)]
-#[global_watch(MousePressed)]
 pub struct DropdownList {
     #[child]
     list: Box<ListView>,
@@ -75,21 +74,10 @@ impl PopupImpl for DropdownList {
             Point::new(bl.x(), bl.y())
         }
     }
-}
 
-impl GlobalWatchImpl for DropdownList {
-    fn on_global_mouse_pressed(&mut self, evt: &tlib::events::MouseEvent) -> bool {
-        if !self.visible() {
-            return false;
-        }
-        let pos: Point = evt.position().into();
-        if !self.rect().contains(&pos) {
-            self.trans_focus_take(FocusStrat::Restore);
-            self.hide();
-            true
-        } else {
-            false
-        }
+    #[inline]
+    fn on_mouse_click_hide(&mut self) {
+        self.trans_focus_take(FocusStrat::Restore);
     }
 }
 

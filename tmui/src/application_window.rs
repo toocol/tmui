@@ -525,6 +525,23 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn handle_overlaids_global_mouse_click(&mut self, evt: &MouseEvent) -> bool {
+        let mut prevent = false;
+        for (_, overlaid) in self.overlaids.iter_mut() {
+            let overlaid = nonnull_mut!(overlaid);
+            if let Some(popup) = cast_mut!(overlaid as PopupImpl) {
+                if !popup.hide_on_click() {
+                    continue;
+                }
+                if popup.handle_global_mouse_pressed(evt) {
+                    prevent = true
+                }
+            }
+        }
+        prevent
+    }
+
+    #[inline]
     pub(crate) fn animation_layout_change(&self, widget: &mut dyn WidgetImpl) {
         Self::layout_of(self.id()).layout_change(widget, true)
     }
@@ -697,9 +714,10 @@ impl ApplicationWindow {
     ///
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: FRect, id: ObjectId) {
+        let z_index = self.find_id(id).unwrap().z_index();
         for w in self.widgets.values_mut() {
             let widget = nonnull_mut!(w);
-            if widget.id() == id || widget.descendant_of(id) {
+            if widget.id() == id || widget.descendant_of(id) || widget.z_index() > z_index {
                 continue;
             }
 
