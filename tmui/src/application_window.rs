@@ -5,7 +5,7 @@ use crate::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
     },
-    input::{focus_mgr::FocusMgr, ReflectInputEle},
+    input::{dialog::InputDialog, focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
     loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
@@ -75,6 +75,9 @@ pub struct ApplicationWindow {
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
     overlaids: HashMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
+
+    #[derivative(Default(value = "InputDialog::new()"))]
+    input_dialog: Box<InputDialog>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -175,6 +178,13 @@ impl ApplicationWindow {
             panic!("Get `ApplicationWindow` in the wrong thread.");
         }
         nonnull_mut!(window)
+    }
+
+    /// Get the mutable reference of ApplicationWindow base on thread local window id.
+    #[inline]
+    pub fn window() -> &'static mut ApplicationWindow {
+        let win_id = WINDOW_ID.with(|id| *id.borrow());
+        Self::window_of(win_id)
     }
 
     #[inline]
@@ -760,6 +770,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_params(&mut self, params: Option<HashMap<String, Value>>) {
         self.params = params
+    }
+
+    #[inline]
+    pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
+        &mut self.input_dialog
     }
 }
 
