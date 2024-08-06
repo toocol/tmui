@@ -63,18 +63,21 @@ impl LayoutType {
     }
 }
 
+#[inline]
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
     internal: bool,
     ignore_default: bool,
+    is_popup: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     gen_layout_clause(
         ast,
         LayoutType::from(layout_meta, layout)?,
         internal,
         ignore_default,
+        is_popup
     )
 }
 
@@ -107,6 +110,7 @@ fn gen_layout_clause(
     layout: LayoutType,
     internal: bool,
     ignore_default: bool,
+    is_popup: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     use LayoutType::*;
     let has_content_alignment = layout == VBox || layout == HBox;
@@ -132,6 +136,7 @@ fn gen_layout_clause(
         layout,
         &use_prefix,
         Some(&children_fields),
+        is_popup,
     )?;
 
     let name = &ast.ident;

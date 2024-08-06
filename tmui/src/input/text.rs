@@ -1,11 +1,21 @@
-use super::{Input, InputEle, InputSignals, InputWrapper, ReflectInputEle, INPUT_FOCUSED_BORDER_COLOR};
+use super::{
+    Input, InputEle, InputSignals, InputWrapper, ReflectInputEle, INPUT_FOCUSED_BORDER_COLOR,
+};
 use crate::{
-    application, cast_do, clipboard::ClipboardLevel, font::{FontCalculation, SkiaParagraphExt}, input::{INPUT_DEFAULT_BORDER_COLOR, INPUT_DEFAULT_BORDER_RADIUS}, input_ele_impl, prelude::*, shortcut::ShortcutRegister, system::System, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl}
+    application, cast_do,
+    clipboard::ClipboardLevel,
+    font::{FontCalculation, SkiaParagraphExt},
+    input::{INPUT_DEFAULT_BORDER_COLOR, INPUT_DEFAULT_BORDER_RADIUS},
+    input_ele_impl,
+    prelude::*,
+    shortcut::ShortcutRegister,
+    system::System,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::{widget_inner::WidgetInnerExt, RegionClear, WidgetImpl},
 };
 use log::warn;
 use std::{
-    collections::VecDeque,
-    time::{Duration, Instant},
+    cell::RefMut, collections::VecDeque, time::{Duration, Instant}
 };
 use tlib::{
     connect,
@@ -75,6 +85,7 @@ pub(crate) struct TextProps {
     pub(crate) customize_require_invalid_render: Option<FnRequireInvalidRender>,
     pub(crate) require_invalid_border_color: Option<Color>,
     pub(crate) require_invalid_focused_border_color: Option<Color>,
+    pub(crate) x_pos_rec: f32,
 
     //////////////////////////// Font
     pub(crate) font_dimension: (f32, f32),
@@ -105,6 +116,8 @@ pub(crate) trait TextPropsAcquire: Input<Value = String> {
     fn props_mut(&mut self) -> &mut TextProps;
 
     fn shown_text(&self) -> Ref<String>;
+
+    fn shown_text_mut(&self) -> RefMut<String>;
 }
 impl TextPropsAcquire for Text {
     #[inline]
@@ -120,6 +133,11 @@ impl TextPropsAcquire for Text {
     #[inline]
     fn shown_text(&self) -> Ref<String> {
         self.input_wrapper.value_ref()
+    }
+
+    #[inline]
+    fn shown_text_mut(&self) -> RefMut<String> {
+        self.input_wrapper.value_mut()
     }
 }
 
@@ -532,6 +550,7 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
     fn clean(&mut self) {
         self.clear_selection();
         *self.input_wrapper().value_mut() = String::new();
+        *self.shown_text_mut() = String::new();
         self.update();
     }
 
@@ -815,16 +834,15 @@ pub(crate) trait TextInnerExt:
             };
 
         let window = self.props().text_window;
-        let rect_rec = self.rect_record();
+        let x_pos_rec = self.props().x_pos_rec;
         if let Some(ref mut pos) = self.props_mut().text_draw_position {
             pos.set_y(window.y());
-            if rect_rec.is_valid() {
-                let x_offset = rect.x() - rect_rec.x();
-                pos.set_x(pos.x() + x_offset);
-            }
+            let x_offset = rect.x() - x_pos_rec;
+            pos.set_x(pos.x() + x_offset);
         } else {
             self.props_mut().text_draw_position = Some(window.top_left());
         };
+        self.props_mut().x_pos_rec = rect.x();
     }
 
     fn sync_cursor_text_draw(&mut self) -> f32 {
@@ -1093,7 +1111,9 @@ pub(crate) trait TextInnerExt:
 
         self.check_blink_timer(true);
         if self.props().require_invalid {
-            if let Some(invalid_focused_border_color) = self.props().require_invalid_focused_border_color {
+            if let Some(invalid_focused_border_color) =
+                self.props().require_invalid_focused_border_color
+            {
                 self.set_border_color(invalid_focused_border_color);
             } else {
                 self.set_border_color(INPUT_FOCUSED_BORDER_COLOR);
@@ -1247,7 +1267,7 @@ pub(crate) trait TextInnerExt:
     #[inline]
     fn handle_mouse_release(&mut self) {
         if !self.is_focus() {
-            return
+            return;
         }
         self.props_mut().drag_status = DragStatus::None;
 
@@ -1499,12 +1519,12 @@ impl TextInnerExt for Text {}
 
 impl InputEle for Text {
     input_ele_impl!();
-    
+
     #[inline]
     fn on_tab_focused(&mut self) {
         self.select_all()
     }
-    
+
     #[inline]
     fn on_tab_lose_focus(&mut self) {
         self.clear_selection()

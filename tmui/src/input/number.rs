@@ -1,3 +1,5 @@
+use std::cell::RefMut;
+
 use super::{
     text::{TextExt, TextInnerExt, TextProps, TextPropsAcquire, TextShorcutRegister, TextSignals},
     Input, InputEle, InputSignals, InputType, InputWrapper, ReflectInputEle,
@@ -271,6 +273,11 @@ impl TextPropsAcquire for Number {
     fn shown_text(&self) -> Ref<String> {
         self.value_ref()
     }
+
+    #[inline]
+    fn shown_text_mut(&self) -> RefMut<String> {
+        self.input_wrapper.value_mut()
+    }
 }
 
 /// Public implement.
@@ -353,6 +360,15 @@ impl Number {
 
         self.update()
     }
+
+    pub fn clean(&mut self) {
+        if let Some(val) = self.init_val {
+            self.set_value(shown_value_64(val as f64));
+        } else {
+            self.set_value(String::new());
+        }
+        self.update();
+    }
 }
 
 /// Private implement.
@@ -430,6 +446,10 @@ impl Number {
 
     #[inline]
     fn check_number(&self, val: &str, whole_set: bool) -> bool {
+        if val.is_empty() {
+            return true
+        }
+
         let res =
             if (val == "." || val == "e" || val == "E" || val == "+" || val == "-") && !whole_set {
                 let mut text = self.value();

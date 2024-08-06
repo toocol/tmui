@@ -16,7 +16,7 @@ use tmui::{
     direction = "BottomToTop",
     duration = 150,
     mode = "Flex",
-    effect = "Appearance"
+    effect = "Slide"
 )]
 #[derive(Childable)]
 #[run_after]

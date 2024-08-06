@@ -6,6 +6,7 @@ pub mod element;
 pub mod icon;
 pub mod painter;
 pub mod render_difference;
+pub mod styles;
 
 #[cfg(test)]
 mod tests {

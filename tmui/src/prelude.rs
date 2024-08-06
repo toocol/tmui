@@ -9,12 +9,12 @@ pub use crate::animation::{
     state_holder::{RectHolder, ReflectRectHolder, ReflectTransparencyHolder, TransparencyHolder},
     Animatable, Animation, AnimationModel, ReflectAnimatable, {self},
 };
-pub use crate::application_window::{current_window_id, ApplicationWindow};
+pub use crate::application_window::{window_id, ApplicationWindow};
 pub use crate::container::{
     ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerExt, ContainerImpl,
-    ContainerImplExt, ContainerPointEffective, ContainerScaleCalculate, ReflectContainerImpl,
-    ReflectSizeUnifiedAdjust, ReflectSpacingCapable, SizeUnifiedAdjust, SpacingCapable,
-    StaticContainerScaleCalculate, StaticSizeUnifiedAdjust, ContainerPropsAcquire
+    ContainerImplExt, ContainerPointEffective, ContainerPropsAcquire, ContainerScaleCalculate,
+    ReflectContainerImpl, ReflectSizeUnifiedAdjust, ReflectSpacingCapable, SizeUnifiedAdjust,
+    SpacingCapable, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
 };
 pub use crate::font::Font;
 pub use crate::graphics::board::Board;
@@ -49,7 +49,7 @@ pub use crate::shortcut::Shortcut;
 pub use crate::split_pane::{
     ReflectSplitInfosGetter, SplitInfo, SplitInfosGetter, SplitPane, SplitPaneExt, SplitType,
 };
-pub use crate::stack::{ReflectStackTrait, Stack, StackTrait};
+pub use crate::stack::{ReflectStackImpl, Stack, StackImpl};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
     callbacks::Callbacks, widget_ext::WidgetExt, ChildOp, ChildRegionAcquire, EventBubble,

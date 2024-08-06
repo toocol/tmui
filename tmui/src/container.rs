@@ -67,28 +67,39 @@ impl ObjectImpl for Container {
             "visible" => {
                 let visible = value.get::<bool>();
                 emit!(self.visibility_changed(), visible);
+                self.on_visibility_changed(visible);
+
                 if !self.children.is_empty() {
                     for child in self.children.iter_mut() {
-                        if !child.visibility_check() {
-                            continue;
-                        }
-                        if let Some(iv) = cast!(child as IsolatedVisibility) {
-                            if iv.auto_hide() {
+                        if visible {
+                            if !child.visibility_check() {
                                 continue;
                             }
-                        }
+                            if let Some(iv) = cast!(child as IsolatedVisibility) {
+                                if iv.auto_hide() {
+                                    continue;
+                                }
+                            }
 
-                        if visible {
                             child.set_property("visible", true.to_value());
                             child.set_render_styles(true);
                         } else {
                             child.set_property("visible", false.to_value());
                         }
                     }
-                } else if self.children_ref.is_empty() {
+                } else if !self.children_ref.is_empty() {
                     for c in self.children_ref.iter_mut() {
                         let child = nonnull_mut!(c);
                         if visible {
+                            if !child.visibility_check() {
+                                continue;
+                            }
+                            if let Some(iv) = cast!(child as IsolatedVisibility) {
+                                if iv.auto_hide() {
+                                    continue;
+                                }
+                            }
+
                             child.set_property("visible", true.to_value());
                             child.set_render_styles(true);
                         } else {
@@ -250,11 +261,11 @@ impl ContainerPropsAcquire for Container {
 
 #[reflect_trait]
 pub trait ContainerImpl:
-WidgetImpl
-+ ContainerPointEffective
-+ ContainerScaleCalculate
-+ ContainerExt
-+ ContainerPropsAcquire
+    WidgetImpl
+    + ContainerPointEffective
+    + ContainerScaleCalculate
+    + ContainerExt
+    + ContainerPropsAcquire
 {
     /// Go to[`Function defination`](ContainerImpl::children) (Defined in [`ContainerImpl`])
     /// Get all the children ref in `Container`.
@@ -271,8 +282,8 @@ WidgetImpl
 pub trait ContainerImplExt: ContainerImpl {
     /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
     fn add_child<T>(&mut self, child: Box<T>)
-        where
-            T: WidgetImpl;
+    where
+        T: WidgetImpl;
 }
 
 pub trait ContainerPointEffective {

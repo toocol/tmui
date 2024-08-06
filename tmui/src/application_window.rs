@@ -5,7 +5,7 @@ use crate::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
     },
-    input::{focus_mgr::FocusMgr, ReflectInputEle},
+    input::{dialog::InputDialog, focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
     loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
@@ -75,6 +75,8 @@ pub struct ApplicationWindow {
     watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
     overlaids: HashMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
+
+    input_dialog: Option<Box<InputDialog>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -98,6 +100,11 @@ impl ObjectImpl for ApplicationWindow {
         let window_id = self.id();
         self.root_ancestors.push(window_id);
         child_initialize(self.get_child_mut(), window_id);
+
+        let mut input_dialog = InputDialog::new();
+        child_initialize(Some(input_dialog.as_widget_impl_mut()), window_id);
+        input_dialog.hide();
+        self.input_dialog = Some(input_dialog);
 
         self.when_size_change(self.size());
         self.set_initialized(true);
@@ -175,6 +182,13 @@ impl ApplicationWindow {
             panic!("Get `ApplicationWindow` in the wrong thread.");
         }
         nonnull_mut!(window)
+    }
+
+    /// Get the mutable reference of ApplicationWindow base on thread local window id.
+    #[inline]
+    pub fn window() -> &'static mut ApplicationWindow {
+        let win_id = WINDOW_ID.with(|id| *id.borrow());
+        Self::window_of(win_id)
     }
 
     #[inline]
@@ -525,12 +539,30 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn handle_overlaids_global_mouse_click(&mut self, evt: &MouseEvent) -> bool {
+        let mut prevent = false;
+        for (_, overlaid) in self.overlaids.iter_mut() {
+            let overlaid = nonnull_mut!(overlaid);
+            if let Some(popup) = cast_mut!(overlaid as PopupImpl) {
+                if !popup.hide_on_click() {
+                    continue;
+                }
+                if popup.handle_global_mouse_pressed(evt) {
+                    prevent = true
+                }
+            }
+        }
+        prevent
+    }
+
+    #[inline]
     pub(crate) fn animation_layout_change(&self, widget: &mut dyn WidgetImpl) {
         Self::layout_of(self.id()).layout_change(widget, true)
     }
 
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
+        emit!(self.size_changed(), size);
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
 
@@ -697,9 +729,10 @@ impl ApplicationWindow {
     ///
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: FRect, id: ObjectId) {
+        let z_index = self.find_id(id).unwrap().z_index();
         for w in self.widgets.values_mut() {
             let widget = nonnull_mut!(w);
-            if widget.id() == id || widget.descendant_of(id) {
+            if widget.id() == id || widget.descendant_of(id) || widget.z_index() > z_index {
                 continue;
             }
 
@@ -743,11 +776,18 @@ impl ApplicationWindow {
     pub(crate) fn set_params(&mut self, params: Option<HashMap<String, Value>>) {
         self.params = params
     }
+
+    #[inline]
+    pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
+        self.input_dialog
+            .as_mut()
+            .expect("Fatal error: `InputDialog` of `ApplicationWindow` is None.")
+    }
 }
 
 /// Get window id in current ui thread.
 #[inline]
-pub fn current_window_id() -> ObjectId {
+pub fn window_id() -> ObjectId {
     WINDOW_ID.with(|id| *id.borrow())
 }
 

@@ -1,6 +1,7 @@
 pub mod checkbox;
 pub mod ctrl;
 pub mod date;
+pub mod dialog;
 pub mod focus_mgr;
 pub mod number;
 pub mod password;

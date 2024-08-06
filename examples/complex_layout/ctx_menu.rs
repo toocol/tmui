@@ -1,4 +1,3 @@
-use tlib::global_watch;
 use tmui::{
     graphics::box_shadow::{BoxShadow, ShadowSide},
     prelude::*,
@@ -13,7 +12,6 @@ use tmui::{
 };
 
 #[extends(Popup)]
-#[global_watch(MouseReleased)]
 #[derive(Childable)]
 pub struct CtxMenu {
     #[child]
@@ -70,20 +68,6 @@ impl PopupImpl for CtxMenu {
 
     #[inline]
     fn is_modal(&self) -> bool {
-        true
-    }
-}
-
-impl GlobalWatchImpl for CtxMenu {
-    fn on_global_mouse_released(&mut self, evt: &tlib::events::MouseEvent) -> bool {
-        if !self.visible() {
-            return false;
-        }
-        let pos: Point = evt.position().into();
-        if !self.rect().contains(&pos) {
-            self.hide();
-        }
-
         true
     }
 }

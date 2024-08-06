@@ -8,7 +8,7 @@ use tlib::{
     skia_safe::{ClipOp, MaskFilter},
 };
 
-#[derive(Derivative, PartialEq, Clone, Copy)]
+#[derive(Derivative, PartialEq, Clone, Copy, Debug)]
 #[derivative(Default)]
 pub struct BoxShadow {
     blur: f32,
@@ -19,7 +19,7 @@ pub struct BoxShadow {
     strength: usize,
 }
 
-#[derive(Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum ShadowPos {
     #[default]
     Outset,

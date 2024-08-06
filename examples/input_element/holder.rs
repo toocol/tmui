@@ -1,7 +1,12 @@
 use tlib::{connect, run_after};
 use tmui::{
     input::{
-        number::Number, password::Password, select::{select_option::SelectOption, Select}, text::{Text, TextExt, TextSignals}, Input, InputSignals
+        dialog::InputDialog,
+        number::Number,
+        password::Password,
+        select::{select_option::SelectOption, Select},
+        text::{Text, TextExt, TextSignals},
+        Input, InputSignals,
     },
     prelude::*,
     tlib::{
@@ -104,7 +109,8 @@ impl ObjectImpl for Holder {
         self.password.check_required();
         self.password
             .set_require_invalid_border_color(Color::grey_with(210));
-        self.password.set_require_invalid_focused_border_color(Color::hex("#ff6b6b"));
+        self.password
+            .set_require_invalid_focused_border_color(Color::hex("#ff6b6b"));
         self.password
             .set_customize_require_invalid_render(move |painter, mut rect| {
                 rect.set_width(rect.width() - 1.);
@@ -167,11 +173,17 @@ impl WidgetImpl for Holder {
     }
 
     fn on_mouse_pressed(&mut self, evt: &tlib::events::MouseEvent) {
-        if evt.mouse_button() != MouseButton::RightButton {
-            return
+        let pos = evt.position().into();
+        if evt.mouse_button() == MouseButton::RightButton {
+            self.show_popup(pos)
+        } else if evt.mouse_button() == MouseButton::LeftButton {
+            let pos = self.map_to_global(&pos);
+            let geometry = Rect::new(pos.x(), pos.y(), 0, 0);
+            InputDialog::hide_on_win_changed(true);
+            let dialog = InputDialog::text(geometry, None);
+            assert!(dialog.input_mut::<Text>().is_some());
+            assert!(dialog.input_mut::<Number>().is_none());
         }
-
-        self.show_popup(evt.position().into())
     }
 }
 

@@ -198,10 +198,21 @@ pub trait InnerInitializer {
     fn inner_type_register(&self, type_registry: &mut TypeRegistry);
 
     /// Inner initialize function for widget.
+    #[inline]
     fn inner_initialize(&mut self) {}
 
     /// Pretreatment when constructing.
+    #[inline]
     fn pretreat_construct(&mut self) {}
+
+    /// Inner handle the property setting processing.
+    /// 
+    /// Retrun `true` if need prevent the `on_property_set` handle.
+    #[allow(unused_variables)]
+    #[inline]
+    fn inner_on_property_set(&mut self, name: &str, value: &Value) -> bool {
+        false
+    }
 }
 
 impl InnerInitializer for Object {

@@ -1,5 +1,5 @@
 use super::{board::Board, drawing_context::DrawingContext};
-use crate::{application_window::current_window_id, widget::WidgetImpl};
+use crate::{application_window::window_id, widget::WidgetImpl};
 use log::error;
 use tlib::{
     figure::{FRect, Rect},
@@ -26,7 +26,7 @@ impl ObjectImpl for Element {
         self.set_property("invalidate", (true, false).to_value());
         Board::notify_update();
 
-        let try_window_id = current_window_id();
+        let try_window_id = window_id();
         if try_window_id != 0 {
             self.window_id = try_window_id
         }
@@ -76,7 +76,7 @@ pub trait ElementExt {
     /// Mark element's invalidate field to true, and element will be redrawed in next frame.
     ///
     /// This function will propagate to widget's children.
-    /// 
+    ///
     /// #### Notice:
     /// This function will clear all the `styles_redraw_region` and `redraw_region`.
     fn update(&mut self);
@@ -129,7 +129,7 @@ impl<T: ElementImpl> ElementExt for T {
     fn window_id(&self) -> ObjectId {
         let id = self.element_props().window_id;
         if id == 0 {
-            error!("Window id of element was `0`. Please call `self.parent_construct()` in function `construct()`.")
+            error!("Window id of element {} was `0`. Please call `self.parent_construct()` in function `construct()`.", self.name())
         }
 
         id

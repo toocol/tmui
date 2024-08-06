@@ -1,10 +1,9 @@
 use crate::{
-    childable::Childable, extend_element, extend_object, extend_widget, general_attr::GeneralAttr,
-    SplitGenericsRef,
+    childable::Childable, extend_element, extend_object, extend_widget, general_attr::GeneralAttr, layout, SplitGenericsRef
 };
 use proc_macro2::Ident;
 use quote::quote;
-use syn::{parse::Parser, DeriveInput};
+use syn::{parse::Parser, DeriveInput, Meta};
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
@@ -194,8 +193,6 @@ pub(crate) fn expand(
                     }
                 }
 
-                impl #impl_generics Overlaid for #name #ty_generics #where_clause {}
-
                 impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
@@ -218,6 +215,8 @@ pub(crate) fn gen_popup_trait_impl_clause(
         .map(|s| Ident::new(s, name.span()))
         .collect();
     Ok(quote!(
+        impl #impl_generics Overlaid for #name #ty_generics #where_clause {}
+
         impl #impl_generics PopupExt for #name #ty_generics #where_clause {
             #[inline]
             fn as_widget_impl(&self) -> &dyn WidgetImpl {
@@ -255,4 +254,15 @@ pub(crate) fn gen_popup_trait_impl_clause(
             }
         }
     ))
+}
+
+#[inline]
+pub(crate) fn expand_with_layout(
+    ast: &mut DeriveInput,
+    layout_meta: &Meta,
+    layout: &str,
+    internal: bool,
+    ignore_default: bool,
+) -> syn::Result<proc_macro2::TokenStream> {
+    layout::expand(ast, layout_meta, layout, internal, ignore_default, true)
 }

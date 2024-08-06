@@ -118,14 +118,29 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 LayoutType::Non,
                 &use_prefix,
                 None,
+                false,
             ) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             }
         }
-        "Popup" => match extend_popup::expand(&mut ast, extend_attr.ignore_default, &use_prefix) {
-            Ok(tkn) => tkn.into(),
-            Err(e) => e.to_compile_error().into(),
+        "Popup" => match extend_attr.layout {
+            Some(ref layout) => {
+                match extend_popup::expand_with_layout(
+                    &mut ast,
+                    extend_attr.layout_meta.as_ref().unwrap(),
+                    layout,
+                    extend_attr.internal,
+                    extend_attr.ignore_default,
+                ) {
+                    Ok(tkn) => tkn.into(),
+                    Err(e) => e.to_compile_error().into(),
+                }
+            }
+            None => match extend_popup::expand(&mut ast, extend_attr.ignore_default, &use_prefix) {
+                Ok(tkn) => tkn.into(),
+                Err(e) => e.to_compile_error().into(),
+            },
         },
         _ => syn::Error::new_spanned(
             ast,
@@ -342,6 +357,10 @@ pub fn pane_type_register(input: TokenStream) -> TokenStream {
 /// `direction`: the direction([`tmui::animation::Direction`]) of animation.
 ///
 /// `duration`: the time duration of animation(millis).
+///
+/// `mode`: [`tmui::animation::AnimationMode`]
+///
+/// `effect`: [`tmui::animation::AnimationEffect`]
 #[proc_macro_attribute]
 pub fn animatable(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
