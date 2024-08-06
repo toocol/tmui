@@ -118,7 +118,9 @@ pub(crate) fn gen_object_trait_impl_clause(
 
             #[inline]
             fn set_property(&mut self, name: &str, value: Value) {
-                self.on_property_set(name, &value);
+                if !self.inner_on_property_set(name, &value) {
+                    self.on_property_set(name, &value);
+                }
                 self.#(#object_path).*.set_property(name, value)
             }
 

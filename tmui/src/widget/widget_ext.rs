@@ -10,6 +10,7 @@ use crate::{
         border::Border,
         box_shadow::{BoxShadow, ShadowPos, ShadowSide},
         element::{element_update, ElementImpl},
+        styles::Styles,
     },
     popup::ReflectPopupImpl,
     primitive::Message,
@@ -508,10 +509,14 @@ pub trait WidgetExt {
     /// Set the box shadow of widget.
     fn set_box_shadow(&mut self, shadow: BoxShadow);
 
-    /// Get the rect record of element.
+    /// Get the rect record of widget.
+    ///
+    /// The widget rect recorded during the `last render`.
     fn rect_record(&self) -> FRect;
 
     /// Get the image rect record of widget.
+    ///
+    /// The widget image rect recorded during the `last render`.
     fn image_rect_record(&self) -> FRect;
 
     fn invalid_area(&self) -> FRect;
@@ -542,6 +547,15 @@ pub trait WidgetExt {
 
     /// Get the styles redraw region. <br>
     fn styles_redraw_region(&self) -> &CoordRegion;
+
+    /// Get the reference of styles.
+    fn styles(&self) -> &Styles;
+
+    /// Get the mutable reference of styles.
+    fn styles_mut(&mut self) -> &mut Styles;
+
+    /// Set the styles.
+    fn set_styles(&mut self, styles: Styles);
 }
 
 impl<T: WidgetImpl> WidgetExt for T {
@@ -716,7 +730,10 @@ impl<T: WidgetImpl> WidgetExt for T {
                 self.window().set_modal_widget(None);
             }
         } else if self.window_id() != 0 {
-            self.window().layout_change(self)
+            self.window().layout_change(self);
+            if self.is_focus() {
+                self.set_focus(false);
+            }
         }
     }
 
@@ -967,18 +984,18 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_font(&mut self, font: Font) {
-        self.widget_props_mut().font = font;
+        self.widget_props_mut().styles.set_font(font);
         self.font_changed();
     }
 
     #[inline]
     fn font(&self) -> &Font {
-        &self.widget_props().font
+        self.widget_props().styles.font()
     }
 
     #[inline]
     fn font_mut(&mut self) -> &mut Font {
-        &mut self.widget_props_mut().font
+        self.widget_props_mut().styles.font_mut()
     }
 
     #[inline]
@@ -988,7 +1005,10 @@ impl<T: WidgetImpl> WidgetExt for T {
             let typeface = FontTypeface::new(f);
             typefaces.push(typeface);
         }
-        self.widget_props_mut().font.set_typefaces(typefaces);
+        self.widget_props_mut()
+            .styles
+            .font_mut()
+            .set_typefaces(typefaces);
         self.update();
         self.font_changed();
     }
@@ -1158,13 +1178,13 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn background(&self) -> Color {
-        self.widget_props().background
+        self.widget_props().styles.background()
     }
 
     #[inline]
     fn set_background(&mut self, color: Color) {
         self.set_render_styles(true);
-        self.widget_props_mut().background = color;
+        self.widget_props_mut().styles.set_background(color);
         emit!(Widget::set_background => self.background_changed(), color);
 
         self.set_whole_styles_render(true);
@@ -1328,7 +1348,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn border_ref(&self) -> &Border {
-        &self.widget_props().border
+        self.widget_props().styles.border()
     }
 
     #[inline]
@@ -1345,11 +1365,11 @@ impl<T: WidgetImpl> WidgetExt for T {
         if left < 0. {
             left = 0.;
         }
-        let props = self.widget_props_mut();
-        props.border.width.0 = top;
-        props.border.width.1 = right;
-        props.border.width.2 = bottom;
-        props.border.width.3 = left;
+        let border = self.widget_props_mut().styles.border_mut();
+        border.width.0 = top;
+        border.width.1 = right;
+        border.width.2 = bottom;
+        border.width.3 = left;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1361,7 +1381,7 @@ impl<T: WidgetImpl> WidgetExt for T {
             return;
         }
 
-        self.widget_props_mut().border.border_radius = radius;
+        self.widget_props_mut().styles.border_mut().border_radius = radius;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1369,7 +1389,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_border_style(&mut self, style: BorderStyle) {
-        self.widget_props_mut().border.style = style;
+        self.widget_props_mut().styles.border_mut().style = style;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1377,7 +1397,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_border_color(&mut self, color: Color) {
-        self.widget_props_mut().border.border_color = (color, color, color, color);
+        self.widget_props_mut().styles.border_mut().border_color = (color, color, color, color);
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1385,7 +1405,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_border_top_color(&mut self, color: Color) {
-        self.widget_props_mut().border.border_color.0 = color;
+        self.widget_props_mut().styles.border_mut().border_color.0 = color;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1393,7 +1413,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_border_right_color(&mut self, color: Color) {
-        self.widget_props_mut().border.border_color.1 = color;
+        self.widget_props_mut().styles.border_mut().border_color.1 = color;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1401,7 +1421,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_border_bottom_color(&mut self, color: Color) {
-        self.widget_props_mut().border.border_color.2 = color;
+        self.widget_props_mut().styles.border_mut().border_color.2 = color;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1409,7 +1429,7 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_border_left_color(&mut self, color: Color) {
-        self.widget_props_mut().border.border_color.3 = color;
+        self.widget_props_mut().styles.border_mut().border_color.3 = color;
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
@@ -1417,17 +1437,17 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn borders(&self) -> (f32, f32, f32, f32) {
-        self.widget_props().border.width
+        self.widget_props().styles.border().width
     }
 
     #[inline]
     fn border_style(&self) -> BorderStyle {
-        self.widget_props().border.style
+        self.widget_props().styles.border().style
     }
 
     #[inline]
     fn border_color(&self) -> (Color, Color, Color, Color) {
-        self.widget_props().border.border_color
+        self.widget_props().styles.border().border_color
     }
 
     #[inline]
@@ -1581,7 +1601,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn root_ancestor(&self) -> ObjectId {
         for &root in self.window().root_ancestors() {
             if self.id() == root || self.descendant_of(root) {
-                return root
+                return root;
             }
         }
         0
@@ -1755,12 +1775,12 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn box_shadow(&self) -> Option<&BoxShadow> {
-        self.widget_props().box_shadow.as_ref()
+        self.widget_props().styles.box_shadow()
     }
 
     #[inline]
     fn set_box_shadow(&mut self, shadow: BoxShadow) {
-        self.widget_props_mut().box_shadow = Some(shadow);
+        self.widget_props_mut().styles.set_box_shadow(shadow);
     }
 
     #[inline]
@@ -1836,6 +1856,21 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn styles_redraw_region(&self) -> &CoordRegion {
         &self.widget_props().styles_redraw_region
+    }
+
+    #[inline]
+    fn styles(&self) -> &Styles {
+        &self.widget_props().styles
+    }
+
+    #[inline]
+    fn styles_mut(&mut self) -> &mut Styles {
+        &mut self.widget_props_mut().styles
+    }
+
+    #[inline]
+    fn set_styles(&mut self, styles: Styles) {
+        self.widget_props_mut().styles = styles
     }
 }
 

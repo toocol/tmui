@@ -87,7 +87,8 @@ impl FocusMgr {
             if current == eles.len() {
                 current = 0;
             }
-            if nonnull_ref!(eles.get(current).unwrap())._is_enable() {
+            let ele = nonnull_ref!(eles.get(current).unwrap());
+            if ele._is_enable() && ele.visible() {
                 self.current = Some(current);
                 break;
             }

@@ -6,12 +6,11 @@ use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
     application_window::ApplicationWindow,
     graphics::{
-        border::Border,
-        box_shadow::{BoxShadow, ShadowRender},
+        box_shadow::ShadowRender,
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
-        render_difference::RenderDiffence,
+        render_difference::RenderDiffence, styles::Styles,
     },
     layout::LayoutMgr,
     opti::tracker::Tracker,
@@ -68,13 +67,9 @@ pub struct Widget {
     redraw_shadow_box: bool,
     overflow: Overflow,
 
-    #[derivative(Default(value = "Color::TRANSPARENT"))]
-    background: Color,
-    font: Font,
     margins: [i32; 4],
     paddings: [i32; 4],
-    border: Border,
-    box_shadow: Option<BoxShadow>,
+    styles: Styles,
 
     width_request: i32,
     height_request: i32,
@@ -437,6 +432,7 @@ impl ObjectImpl for Widget {
             "visible" => {
                 let visible = value.get::<bool>();
                 emit!(self.visibility_changed(), visible);
+                self.on_visibility_changed(visible);
                 self.notify_visible(visible)
             }
             "z_index" => {
@@ -1384,6 +1380,10 @@ pub trait WidgetImpl:
     /// Invoke when window restored.
     #[inline]
     fn on_window_restored(&mut self) {}
+
+    /// Invoke when widget's visibility changed.
+    #[inline]
+    fn on_visibility_changed(&mut self, visible: bool) {}
 
     /// Check the visibility of widget.
     /// false: prevent the `show()` calling of widget.

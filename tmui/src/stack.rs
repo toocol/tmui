@@ -22,8 +22,39 @@ impl ObjectSubclass for Stack {
 }
 
 impl ObjectImpl for Stack {
+    #[inline]
     fn type_register(&self, type_registry: &mut TypeRegistry) {
-        type_registry.register::<Stack, ReflectStackTrait>();
+        type_registry.register::<Stack, ReflectStackImpl>();
+    }
+
+    fn on_property_set(&mut self, name: &str, value: &Value) {
+        match name {
+            "visible" => {
+                let visible = value.get::<bool>();
+                emit!(self.visibility_changed(), visible);
+                self.on_visibility_changed(visible);
+                if visible {
+                    if let Some(c) = self.current_child_mut() {
+                        if !c.visibility_check() {
+                            return;
+                        }
+                        if let Some(iv) = cast!(c as IsolatedVisibility) {
+                            if iv.auto_hide() {
+                                return;
+                            }
+                        }
+
+                        c.set_property("visible", true.to_value());
+                        c.set_render_styles(true);
+                    }
+                } else {
+                    for c in self.children_mut() {
+                        c.set_property("visible", false.to_value());
+                    }
+                }
+            }
+            _ => self.parent_on_property_set(name, value),
+        }
     }
 }
 
@@ -103,7 +134,7 @@ impl ContainerLayout for Stack {
 }
 
 #[reflect_trait]
-pub trait StackTrait {
+pub trait StackImpl {
     fn current_child(&self) -> Option<&dyn WidgetImpl>;
 
     fn current_child_mut(&mut self) -> Option<&mut dyn WidgetImpl>;

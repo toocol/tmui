@@ -76,8 +76,7 @@ pub struct ApplicationWindow {
     overlaids: HashMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
 
-    #[derivative(Default(value = "InputDialog::new()"))]
-    input_dialog: Box<InputDialog>,
+    input_dialog: Option<Box<InputDialog>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -101,6 +100,11 @@ impl ObjectImpl for ApplicationWindow {
         let window_id = self.id();
         self.root_ancestors.push(window_id);
         child_initialize(self.get_child_mut(), window_id);
+
+        let mut input_dialog = InputDialog::new();
+        child_initialize(Some(input_dialog.as_widget_impl_mut()), window_id);
+        input_dialog.hide();
+        self.input_dialog = Some(input_dialog);
 
         self.when_size_change(self.size());
         self.set_initialized(true);
@@ -558,6 +562,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
+        emit!(self.size_changed(), size);
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
 
@@ -774,13 +779,15 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
-        &mut self.input_dialog
+        self.input_dialog
+            .as_mut()
+            .expect("Fatal error: `InputDialog` of `ApplicationWindow` is None.")
     }
 }
 
 /// Get window id in current ui thread.
 #[inline]
-pub fn current_window_id() -> ObjectId {
+pub fn window_id() -> ObjectId {
     WINDOW_ID.with(|id| *id.borrow())
 }
 

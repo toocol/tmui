@@ -9,7 +9,7 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use tlib::{
     connect,
     events::{KeyEvent, MouseEvent},
@@ -47,6 +47,15 @@ impl TextPropsAcquire for Password {
             self.value_ref()
         } else {
             self.show_text.borrow()
+        }
+    }
+
+    #[inline]
+    fn shown_text_mut(&self) -> RefMut<String> {
+        if self.password_visible {
+            self.input_wrapper().value_mut()
+        } else {
+            self.show_text.borrow_mut()
         }
     }
 }

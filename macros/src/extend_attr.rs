@@ -24,11 +24,11 @@ impl ExtendAttr {
     pub fn check(&self) -> syn::Result<()> {
         let extend_str = self.extend.to_string();
 
-        if extend_str != "Widget" && self.layout_meta.is_some() {
+        if extend_str != "Widget" && extend_str != "Popup" && self.layout_meta.is_some() {
             return Err(syn::Error::new_spanned(
                 self.layout_meta.as_ref().unwrap(),
                 format!(
-                    "`{}` was not supported layout, only `Widget` has layout.",
+                    "`{}` was not supported layout, only `Widget` and `Popup` has layout.",
                     extend_str
                 ),
             ));

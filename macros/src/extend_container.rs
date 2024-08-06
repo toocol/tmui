@@ -1,10 +1,5 @@
 use crate::{
-    extend_element, extend_object, extend_widget,
-    general_attr::GeneralAttr,
-    layout::LayoutType,
-    pane::{generate_pane_inner_init, generate_pane_type_register},
-    scroll_area::generate_scroll_area_pre_construct,
-    SplitGenericsRef,
+    extend_element, extend_object, extend_popup, extend_widget, general_attr::GeneralAttr, layout::LayoutType, pane::{generate_pane_inner_init, generate_pane_type_register}, scroll_area::generate_scroll_area_pre_construct, stack::{generate_stack_inner_initial, generate_stack_inner_on_property_set}, SplitGenericsRef
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -23,6 +18,7 @@ pub(crate) fn expand(
     layout: LayoutType,
     use_prefix: &Ident,
     children_fields: Option<&Vec<Ident>>,
+    is_popup: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -99,6 +95,11 @@ pub(crate) fn expand(
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             resize_pressed: bool
+                        })?);
+                    }
+                    if is_popup {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            popup: Popup
                         })?);
                     }
 
@@ -254,7 +255,13 @@ pub(crate) fn expand(
             };
 
             let reflect_stack_trait = if layout.is(LayoutType::Stack) {
-                quote!(type_registry.register::<#name, ReflectStackTrait>();)
+                quote!(type_registry.register::<#name, ReflectStackImpl>();)
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let stack_inner_initial = if layout.is(LayoutType::Stack) {
+                generate_stack_inner_initial()?
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -296,6 +303,44 @@ pub(crate) fn expand(
                 proc_macro2::TokenStream::new()
             };
 
+            // Popup related start:
+            let popup_trait_impl_clause = if is_popup {
+                extend_popup::gen_popup_trait_impl_clause(
+                    name,
+                    vec!["popup"],
+                    (&impl_generics, &ty_generics, &where_clause),
+                )?
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let popup_type_register = if is_popup {
+                quote!(
+                    type_registry.register::<#name, ReflectPopupImpl>();
+                    type_registry.register::<#name, ReflectOverlaid>();
+                )
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+
+            let popup_inner_initialize = if is_popup {
+                quote!(
+                    self.set_property("visible", false.to_value());
+                    if !self.background().is_opaque() {
+                        self.set_background(#use_prefix::tlib::figure::Color::WHITE);
+                    }
+                )
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+            // Popup related end. 
+
+            let inner_on_property_set_clause = if layout.is(LayoutType::Stack) {
+                generate_stack_inner_on_property_set()?
+            } else {
+                quote!(false)
+            };
+
             Ok(quote!(
                 #default_clause
                 #ast
@@ -320,6 +365,8 @@ pub(crate) fn expand(
                 #global_watch_impl_clause
 
                 #isolated_visibility_impl_clause
+
+                #popup_trait_impl_clause
 
                 impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
 
@@ -351,18 +398,26 @@ pub(crate) fn expand(
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
                         #isolated_visibility_reflect_clause
+                        #popup_type_register
                     }
 
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
                         #pane_inner_init
+                        #stack_inner_initial
+                        #popup_inner_initialize
                     }
 
                     #[inline]
                     fn pretreat_construct(&mut self) {
                         #scroll_area_pre_construct
                         #layout_prepare_children_ref
+                    }
+
+                    #[inline]
+                    fn inner_on_property_set(&mut self, name: &str, value: &Value) -> bool {
+                        #inner_on_property_set_clause
                     }
                 }
 

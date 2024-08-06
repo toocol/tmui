@@ -219,6 +219,7 @@ pub(crate) fn expand(
     }
 }
 
+#[inline]
 pub(crate) fn expand_with_layout(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
@@ -226,7 +227,7 @@ pub(crate) fn expand_with_layout(
     internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout, internal, ignore_default)
+    layout::expand(ast, layout_meta, layout, internal, ignore_default, false)
 }
 
 pub(crate) fn gen_widget_trait_impl_clause(
