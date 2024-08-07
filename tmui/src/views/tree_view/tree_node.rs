@@ -336,6 +336,16 @@ impl TreeNode {
             self.node_shuffle_expand()
         }
 
+        // Every node has hold their children/grand children's ids.
+        // Assuming existence parent `Node_1` hold children id (2,3,4), 
+        //
+        // Case 1: 
+        // `Node_2`,`Node_3`,`Node_4` are chidlren of `Node_1`,
+        // Now add new `Node_5` to `Node_2`, we expect `Node_1` (2,5,3,4)
+        //
+        // Case 2:
+        // `Node_2`, `Node_4` are children of `Node_1`, `Node_3` is child of `Node_2`,
+        // Now add new `Node_5` to `Node_2`, we expect `Node_1` (2,3,5,4)
         let anchor = if let Some(last) = self.children_id_holder.last() {
             *last
         } else {

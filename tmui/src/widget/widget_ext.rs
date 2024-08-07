@@ -9,7 +9,7 @@ use crate::{
     graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowPos, ShadowSide},
-        element::{element_update, ElementImpl},
+        element::{element_update, ElementImpl, UPD_FULLY_INVALIDATE, UPD_PARTIAL_INVALIDATE},
         styles::Styles,
     },
     popup::ReflectPopupImpl,
@@ -1806,16 +1806,18 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
-        self.widget_props_mut().redraw_region.add_rect(rect);
-        element_update(self, false);
+        if self.update_code() != UPD_FULLY_INVALIDATE {
+            self.widget_props_mut().redraw_region.add_rect(rect);
+        }
+        element_update(self, UPD_PARTIAL_INVALIDATE, false);
     }
 
     #[inline]
     fn update_styles_rect(&mut self, rect: CoordRect) {
-        if !self.whole_styles_render() {
+        if !self.whole_styles_render() && self.update_code() != UPD_FULLY_INVALIDATE {
             self.widget_props_mut().styles_redraw_region.add_rect(rect);
         }
-        element_update(self, false);
+        element_update(self, UPD_PARTIAL_INVALIDATE, false);
     }
 
     #[inline]
@@ -1823,8 +1825,10 @@ impl<T: WidgetImpl> WidgetExt for T {
         if region.is_empty() {
             return false;
         }
-        self.widget_props_mut().redraw_region.add_region(region);
-        element_update(self, false);
+        if self.update_code() != UPD_FULLY_INVALIDATE {
+            self.widget_props_mut().redraw_region.add_region(region);
+        }
+        element_update(self, UPD_PARTIAL_INVALIDATE, false);
         true
     }
 
@@ -1833,12 +1837,12 @@ impl<T: WidgetImpl> WidgetExt for T {
         if region.is_empty() {
             return false;
         }
-        if !self.whole_styles_render() {
+        if !self.whole_styles_render() && self.update_code() != UPD_FULLY_INVALIDATE {
             self.widget_props_mut()
                 .styles_redraw_region
                 .add_region(region);
         }
-        element_update(self, false);
+        element_update(self, UPD_PARTIAL_INVALIDATE, false);
         true
     }
 

@@ -8,10 +8,7 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 use tlib::{
-    namespace::MouseButton,
-    nonnull_mut, nonnull_ref,
-    object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass},
-    signals,
+    compare::Compare, namespace::MouseButton, nonnull_mut, nonnull_ref, object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass}, signals
 };
 
 #[extends(Object, ignore_default = true)]
@@ -19,6 +16,7 @@ pub struct TreeStore {
     view: WidgetHnd,
     root: Box<TreeNode>,
 
+    /// The buffer represent the view of nodes.
     nodes_buffer: Vec<Option<NonNull<TreeNode>>>,
     nodes_cache: HashMap<ObjectId, Option<NonNull<TreeNode>>>,
 
@@ -31,6 +29,7 @@ pub struct TreeStore {
     selected_node: Option<NonNull<TreeNode>>,
 
     pub(crate) id_increment: IdGenerator,
+    pub(crate) sort_proxy: Option<Compare<TreeNode>>,
 }
 
 pub trait TreeStoreSignals: ActionExt {
@@ -132,6 +131,11 @@ impl TreeStore {
     pub fn get_node_mut(&mut self, id: ObjectId) -> Option<&mut TreeNode> {
         self.nodes_cache.get_mut(&id).map(|n| nonnull_mut!(n))
     }
+
+    #[inline]
+    pub fn set_sort_proxy(&mut self, compare: Compare<TreeNode>) {
+        self.sort_proxy = Some(compare);
+    }
 }
 
 impl TreeStore {
@@ -155,6 +159,7 @@ impl TreeStore {
             hovered_node: None,
             selected_node: None,
             id_increment: Default::default(),
+            sort_proxy: None,
         };
 
         store.root_mut().store = store.id();
@@ -280,14 +285,13 @@ impl TreeStore {
         }
 
         let children = node.get_children_ids();
-        let mut anchor = 0;
+        let mut anchor = node.id();
         for (i, n) in children.iter().enumerate() {
             if *n == added[0] {
-                if i == 0 {
-                    anchor = children[0]
-                } else {
-                    anchor = children[i - 1]
+                if i != 0 {
+                    anchor = children[i - 1];
                 }
+                break;
             }
         }
 

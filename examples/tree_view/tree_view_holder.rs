@@ -5,7 +5,7 @@ use tlib::{
     tokio::task::JoinHandle,
 };
 use tmui::{
-    prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, views::{cell::{cell_render::TextCellRender, Cell}, node::node_render::NodeRender, tree_view::{
+    container::ScaleStrat, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, views::{cell::{cell_render::TextCellRender, Cell}, node::node_render::NodeRender, tree_view::{
         tree_node::TreeNode,
         tree_view_object::TreeViewObject,
         TreeView,
@@ -16,13 +16,15 @@ use crate::ctx_menu::CtxMenu;
 
 const DATA_SIZE: u32 = 300000;
 
-#[extends(Widget)]
-#[derive(Childable)]
+#[extends(Widget, Layout(HBox))]
+#[derive(Childrenable)]
 #[async_task(name = "BuildTreeTask", value = "Box<TreeNode>")]
 pub struct TreeViewHolder {
-    #[child]
+    #[children]
     tree_view: Box<TreeView>,
-    // task: Option<Box<AsyncTask>>,
+
+    #[children]
+    tree_view_2: Box<TreeView>,
 }
 
 impl ObjectSubclass for TreeViewHolder {
@@ -41,6 +43,7 @@ impl ObjectImpl for TreeViewHolder {
         self.tree_view.set_vexpand(true);
         self.tree_view.set_mouse_tracking(true);
         self.tree_view.set_line_spacing(10);
+        self.tree_view.set_hscale(0.3);
 
         self.tree_view.scroll_bar_mut().set_background(Color::TRANSPARENT);
         self.tree_view.scroll_bar_mut().set_color(Color::GREY_LIGHT.with_a(155));
@@ -90,8 +93,8 @@ impl ObjectImpl for TreeViewHolder {
 
         self.set_hexpand(true);
         self.set_vexpand(true);
-        self.set_hscale(0.3);
         self.set_halign(Align::Center);
+        self.set_scale_strat(ScaleStrat::Direct);
 
         let store = self.tree_view.get_store_mut();
 
@@ -201,6 +204,22 @@ impl ObjectImpl for TreeViewHolder {
         //     // }
         //     // root_mut.notify_update();
         // }));
+
+        self.tree_view_2.set_hexpand(true);
+        self.tree_view_2.set_vexpand(true);
+        self.tree_view_2.set_hscale(0.3);
+
+        self.tree_view_2.get_store_mut().root_mut().add_node(&Group { name: "roots" });
+        self.tree_view_2.register_node_released(|node, evt| {
+            if !node.is_extensible() {
+                return;
+            }
+            if evt.mouse_button() == MouseButton::RightButton {
+                node.add_node(&Group { name: "group"});
+            } else if evt.mouse_button() == MouseButton::MiddleButton {
+                node.add_node(&SimpContent { name: "content"});
+            }
+        });
     }
 }
 
@@ -280,11 +299,35 @@ impl TreeViewObject for Group {
     #[inline]
     fn node_render(&self) -> NodeRender {
         NodeRender::builder()
-            .border_top(2.)
-            .border_right(2.)
-            .border_bottom(2.)
+            // .border_top(2.)
+            // .border_right(2.)
+            // .border_bottom(2.)
             .border_left(2.)
             .build()
+    }
+}
+
+pub struct SimpContent {
+    name: &'static str
+}
+impl TreeViewObject for SimpContent {
+    #[inline]
+    fn cells(&self) -> Vec<Cell> {
+        vec![Cell::string()
+            .value(self.name.to_string())
+            .cell_render(TextCellRender::builder().color(Color::BLACK).build())
+            .build(),
+            ]
+    }
+
+    #[inline]
+    fn extensible(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn node_render(&self) -> NodeRender {
+        NodeRender::default()
     }
 }
 
