@@ -1,6 +1,4 @@
-use super::{
-    tree_store::TreeStore, tree_view_object::TreeViewObject, TreeView,
-};
+use super::{tree_store::TreeStore, tree_view_object::TreeViewObject, TreeView};
 use crate::views::cell::cell_render::CellRender;
 use crate::views::cell::Cell;
 use crate::views::node::node_render::NodeRender;
@@ -8,8 +6,9 @@ use crate::views::node::Status;
 use crate::{application::is_ui_thread, prelude::*};
 use crate::{graphics::painter::Painter, views::tree_view::tree_store::TreeStoreSignals};
 use log::warn;
-use tlib::global::SemanticExt;
 use std::{ptr::NonNull, sync::atomic::Ordering};
+use tlib::global::SemanticExt;
+use tlib::nonnull_ref;
 use tlib::{
     figure::Rect,
     nonnull_mut,
@@ -198,12 +197,92 @@ impl TreeNode {
     }
 
     #[inline]
+    pub fn clear(&mut self) {
+        for c in self.children.iter_mut() {
+            c.remove()
+        }
+    }
+
+    #[inline]
     pub fn get_view(&mut self) -> &mut TreeView {
         TreeStore::store_mut(self.store)
             .unwrap()
             .get_view()
             .downcast_mut::<TreeView>()
             .unwrap()
+    }
+
+    #[inline]
+    pub fn get_view_ref(&self) -> &TreeView {
+        TreeStore::store_ref(self.store)
+            .unwrap()
+            .get_view_ref()
+            .downcast_ref::<TreeView>()
+            .unwrap()
+    }
+
+    /// Sort the node if the [`sort_proxy`](TreeStore::sort_proxy) is not `None`.
+    ///
+    /// @params </br>
+    /// recur:  
+    ///     - [`true`] sort the node and it's chidlren nodes.
+    ///     - [`false`] sort the node only.
+    #[inline]
+    pub fn sort(&mut self, recur: bool) {
+        self.sort_inner(recur, true, None);
+    }
+
+    /// If the node is extensible, shuffle the `expanded` status of node.
+    #[inline]
+    pub fn shuffle_expand(&mut self) {
+        if !self.extensible {
+            return;
+        }
+        self.expanded = !self.expanded;
+
+        self.notify_grand_child_expand(self.expanded, self.id, self.children_id_holder.clone());
+
+        if is_ui_thread() {
+            TreeStore::store_mut(self.store)
+                .unwrap()
+                .node_expanded(self);
+        }
+    }
+
+    /// Get the area of TreeNode with the specific coordinate.
+    /// 
+    /// If the node is not in the screen image, return `None`
+    pub fn rect(&self, coord: Coordinate) -> Option<Rect> {
+        let (image, y_offset) = TreeStore::store_ref(self.store).unwrap().get_image();
+        let mut idx = 0;
+        let mut find = false;
+        for (i, node) in image.iter().enumerate() {
+            if nonnull_ref!(node).id == self.id {
+                idx = i;
+                find = true;
+                break;
+            }
+        }
+
+        if find {
+            let view = self
+                .get_view_ref()
+                .downcast_ref::<TreeView>()
+                .unwrap()
+                .get_image();
+            let view_rect = view.contents_rect(Some(coord));
+            let line_height = view.line_height();
+            let line_spacing = view.line_spacing();
+
+            let y_start = view_rect.y()
+                - (y_offset as f32 / 10. * (line_height + line_spacing) as f32) as i32;
+            let height = line_height + line_spacing;
+            let y = y_start + idx as i32 * (height);
+
+            Some(Rect::new(view_rect.x(), y, view_rect.width(), height))
+        } else {
+            None
+        }
     }
 }
 
@@ -248,7 +327,8 @@ impl TreeNode {
             status: Status::Default,
             cells: obj.cells(),
             node_render: obj.node_render(),
-        }.boxed()
+        }
+        .boxed()
     }
 
     #[inline]
@@ -333,13 +413,13 @@ impl TreeNode {
         self.children.push(node);
 
         if !self.is_expanded() && is_ui_thread() {
-            self.node_shuffle_expand()
+            self.shuffle_expand()
         }
 
         // Every node has hold their children/grand children's ids.
-        // Assuming existence parent `Node_1` hold children id (2,3,4), 
+        // Assuming existence parent `Node_1` hold children id (2,3,4),
         //
-        // Case 1: 
+        // Case 1:
         // `Node_2`,`Node_3`,`Node_4` are chidlren of `Node_1`,
         // Now add new `Node_5` to `Node_2`, we expect `Node_1` (2,5,3,4)
         //
@@ -351,16 +431,16 @@ impl TreeNode {
         } else {
             self.id
         };
-        if !is_ui_thread() && anchor + 1 != id {
-            panic!("Cross thread construction of `TreeView` must strictly follow the order.")
-        }
         self.children_id_holder.push(id);
         self.notify_grand_child_add(anchor, &ids);
 
         if is_ui_thread() {
-            let idx = store.node_added(self, id, &ids);
+            let mut idx = store.node_added(self, id, &ids);
 
             if idx != usize::MAX {
+                if let Some(id) = self.need_sort() {
+                    idx = self.sort_inner(false, true, Some(id)).unwrap();
+                }
                 let image_len = store.image_len() as i32;
                 let buffer_len = store.buffer_len() as i32;
                 let scroll_to = (idx as i32 - image_len / 2)
@@ -371,6 +451,12 @@ impl TreeNode {
         }
 
         store.get_node_mut(id)
+    }
+
+    #[inline]
+    pub(crate) fn clear_directly(&mut self) {
+        self.children.clear();
+        self.children_id_holder.clear();
     }
 
     pub(crate) fn add_node_directly_inner(
@@ -396,7 +482,7 @@ impl TreeNode {
         self.children.push(node);
 
         if !self.is_expanded() && is_ui_thread() {
-            self.node_shuffle_expand()
+            self.shuffle_expand()
         }
 
         let anchor = if let Some(last) = self.children_id_holder.last() {
@@ -404,16 +490,16 @@ impl TreeNode {
         } else {
             self.id
         };
-        if !is_ui_thread() && anchor + 1 != id {
-            panic!("Cross thread construction of `TreeView` must strictly follow the order.")
-        }
         self.children_id_holder.extend_from_slice(&ids);
         self.notify_grand_child_add(anchor, &ids);
 
         if is_ui_thread() {
-            let idx = store.node_added(self, id, &ids);
+            let mut idx = store.node_added(self, id, &ids);
 
             if idx != usize::MAX {
+                if let Some(id) = self.need_sort() {
+                    idx = self.sort_inner(false, true, Some(id)).unwrap();
+                }
                 let image_len = store.image_len() as i32;
                 let buffer_len = store.buffer_len() as i32;
                 let scroll_to = (idx as i32 - image_len / 2)
@@ -448,7 +534,7 @@ impl TreeNode {
         }
     }
 
-    pub(crate) fn notify_grand_child_remove(&mut self, ids: Vec<ObjectId>) {
+    pub(crate) fn notify_grand_child_remove(&mut self, ids: &Vec<ObjectId>) {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
 
@@ -498,6 +584,27 @@ impl TreeNode {
         parent.notify_grand_child_expand(expand, id, ids);
     }
 
+    pub(crate) fn notify_grand_chlild_update(&mut self, anchor: ObjectId, ids: Vec<ObjectId>) {
+        if self.parent.is_none() {
+            return;
+        }
+        let parent = nonnull_mut!(self.parent);
+
+        let mut idx = 0;
+        for (i, c) in parent.children_id_holder.iter().enumerate() {
+            if *c == anchor {
+                idx = i + 1;
+                break;
+            }
+        }
+
+        parent
+            .children_id_holder
+            .splice(idx..idx + ids.len(), ids.clone());
+
+        parent.notify_grand_chlild_update(anchor, ids)
+    }
+
     pub(crate) fn remove_node_inner(&mut self) -> Option<Box<TreeNode>> {
         if self.parent.is_some() {
             let parent = nonnull_mut!(self.parent);
@@ -518,9 +625,9 @@ impl TreeNode {
             }
 
             if self.expanded {
-                self.notify_grand_child_remove(ids_to_remove);
+                self.notify_grand_child_remove(&ids_to_remove);
             } else {
-                self.notify_grand_child_remove(vec![self.id()]);
+                self.notify_grand_child_remove(&vec![self.id()]);
             }
 
             return Some(hold);
@@ -529,22 +636,80 @@ impl TreeNode {
     }
 
     #[inline]
-    pub(crate) fn node_shuffle_expand(&mut self) {
-        self.expanded = !self.expanded;
-
-        self.notify_grand_child_expand(
-            self.expanded,
-            self.id(),
-            self.children_id_holder.to_owned(),
-        );
-
-        TreeStore::store_mut(self.store)
-            .unwrap()
-            .node_expanded(self);
-    }
-
-    #[inline]
     pub(crate) fn set_status(&mut self, status: Status) {
         self.status = status
+    }
+
+    pub(crate) fn sort_inner(
+        &mut self,
+        recur: bool,
+        upward: bool,
+        focus: Option<ObjectId>,
+    ) -> Option<usize> {
+        if self.children.is_empty() {
+            return None;
+        }
+
+        if let Some(ref sort_proxy) = TreeStore::store_ref(self.store)
+            .expect("Invalid store id.")
+            .sort_proxy
+        {
+            if recur {
+                self.children.iter_mut().for_each(|node| {
+                    node.sort_inner(recur, false, None);
+                });
+            }
+
+            self.children.sort_by(|a, b| sort_proxy.cmp(a, b));
+
+            let mut children_ids: Vec<ObjectId> = vec![];
+            self.children
+                .iter_mut()
+                .enumerate()
+                .for_each(|(idx, node)| {
+                    node.idx = idx;
+                    children_ids.push(node.id);
+                    if node.is_expanded() {
+                        children_ids.extend(&node.children_id_holder);
+                    }
+                });
+            self.children_id_holder = children_ids;
+
+            if upward {
+                self.notify_grand_chlild_update(self.id, self.children_id_holder.clone());
+
+                if is_ui_thread() {
+                    TreeStore::store_mut(self.store)
+                        .unwrap()
+                        .node_updated(self, focus)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn need_sort(&self) -> Option<ObjectId> {
+        if self.children.len() <= 1 {
+            return None;
+        }
+        if let Some(ref sort_proxy) = TreeStore::store_ref(self.store)
+            .expect("Invalid store")
+            .sort_proxy
+        {
+            let last = &self.children[self.children.len() - 2];
+            let added = &self.children[self.children.len() - 1];
+            if sort_proxy.cmp(last, added) == std::cmp::Ordering::Greater {
+                Some(added.id)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }

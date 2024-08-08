@@ -9,7 +9,7 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::{WidgetHndAsable, WidgetImpl},
 };
-use tlib::{connect, signals};
+use tlib::{compare::Compare, connect, signals};
 
 /// Tree components display data in a hierarchical manner.
 ///
@@ -73,6 +73,9 @@ impl ObjectImpl for TreeView {
         connect!(self, background_changed(), image, set_background(Color));
         connect!(self, invalid_area_changed(), image, set_invalid_area(FRect));
 
+        self.enable_bubble(EventBubble::KEY_PRESSED);
+        self.enable_bubble(EventBubble::KEY_RELEASED);
+
         self.set_area(image);
 
         let hnd = self.as_hnd();
@@ -93,12 +96,7 @@ impl ObjectImpl for TreeView {
     }
 }
 
-impl WidgetImpl for TreeView {
-    #[inline]
-    fn enable_focus(&self) -> bool {
-        true
-    }
-}
+impl WidgetImpl for TreeView {}
 
 impl TreeView {
     #[inline]
@@ -127,13 +125,38 @@ impl TreeView {
     }
 
     #[inline]
+    pub fn root(&mut self) -> &TreeNode {
+        self.get_store().root()
+    }
+
+    #[inline]
+    pub fn root_mut(&mut self) -> &mut TreeNode {
+        self.get_store_mut().root_mut()
+    }
+
+    #[inline]
     pub fn set_indent_length(&mut self, indent_length: i32) {
         self.get_image_mut().set_indent_length(indent_length)
     }
 
     #[inline]
+    pub fn indent_length(&self) -> i32 {
+        self.get_image().indent_length()
+    }
+
+    #[inline]
     pub fn set_line_spacing(&mut self, line_spacing: i32) {
         self.get_image_mut().set_line_spacing(line_spacing)
+    }
+
+    #[inline]
+    pub fn line_spacing(&self) -> i32 {
+        self.get_image().line_spacing()
+    }
+
+    #[inline]
+    pub fn set_sort_proxy(&mut self, compare: Compare<TreeNode>) {
+        self.get_store_mut().set_sort_proxy(compare)
     }
 
     /// Function clousure will be executed when mouse pressed the node.
