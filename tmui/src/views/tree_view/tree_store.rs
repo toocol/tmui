@@ -8,6 +8,7 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 use tlib::{
+    compare::Compare,
     namespace::MouseButton,
     nonnull_mut, nonnull_ref,
     object::{IdGenerator, ObjectId, ObjectOperation, ObjectSubclass},
@@ -19,6 +20,7 @@ pub struct TreeStore {
     view: WidgetHnd,
     root: Box<TreeNode>,
 
+    /// The buffer represent the view of nodes.
     nodes_buffer: Vec<Option<NonNull<TreeNode>>>,
     nodes_cache: HashMap<ObjectId, Option<NonNull<TreeNode>>>,
 
@@ -31,6 +33,7 @@ pub struct TreeStore {
     selected_node: Option<NonNull<TreeNode>>,
 
     pub(crate) id_increment: IdGenerator,
+    pub(crate) sort_proxy: Option<Compare<TreeNode>>,
 }
 
 pub trait TreeStoreSignals: ActionExt {
@@ -132,6 +135,22 @@ impl TreeStore {
     pub fn get_node_mut(&mut self, id: ObjectId) -> Option<&mut TreeNode> {
         self.nodes_cache.get_mut(&id).map(|n| nonnull_mut!(n))
     }
+
+    #[inline]
+    pub fn set_sort_proxy(&mut self, compare: Compare<TreeNode>) {
+        self.sort_proxy = Some(compare);
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.root_mut().clear_directly();
+
+        self.nodes_buffer.clear();
+        self.nodes_cache.clear();
+        self.enterd_node = None;
+        self.hovered_node = None;
+        self.selected_node = None;
+    }
 }
 
 impl TreeStore {
@@ -154,7 +173,8 @@ impl TreeStore {
             enterd_node: None,
             hovered_node: None,
             selected_node: None,
-            id_increment: Default::default(),
+            id_increment: IdGenerator::new(1),
+            sort_proxy: None,
         };
 
         store.root_mut().store = store.id();
@@ -165,6 +185,11 @@ impl TreeStore {
     #[inline]
     pub(crate) fn get_view(&mut self) -> &mut dyn WidgetImpl {
         nonnull_mut!(self.view)
+    }
+
+    #[inline]
+    pub(crate) fn get_view_ref(&self) -> &dyn WidgetImpl {
+        nonnull_ref!(self.view)
     }
 
     #[inline]
@@ -280,14 +305,13 @@ impl TreeStore {
         }
 
         let children = node.get_children_ids();
-        let mut anchor = 0;
+        let mut anchor = node.id();
         for (i, n) in children.iter().enumerate() {
             if *n == added[0] {
-                if i == 0 {
-                    anchor = children[0]
-                } else {
-                    anchor = children[i - 1]
+                if i != 0 {
+                    anchor = children[i - 1];
                 }
+                break;
             }
         }
 
@@ -405,6 +429,45 @@ impl TreeStore {
         emit!(self.notify_update_rect(), start_idx);
     }
 
+    pub(crate) fn node_updated(
+        &mut self,
+        node: &TreeNode,
+        focus: Option<ObjectId>,
+    ) -> Option<usize> {
+        if !node.is_expanded() {
+            return None;
+        }
+
+        let mut idx = 0;
+        let children = node.get_children_ids();
+        if node.id() != 0 {
+            for c in self.nodes_buffer.iter() {
+                idx += 1;
+                if nonnull_ref!(c).id() == node.id() {
+                    break;
+                }
+            }
+        }
+
+        let update: Vec<Option<NonNull<TreeNode>>> = children
+            .iter()
+            .map(|id| *self.nodes_cache.get(id).unwrap())
+            .collect();
+
+        let update_len = update.len();
+        self.nodes_buffer.splice(idx..idx + update_len, update);
+        emit!(self.notify_update_rect(), idx);
+
+        focus.map(|focus| {
+            for i in idx..idx + update_len {
+                if nonnull_ref!(self.nodes_buffer[i]).id() == focus {
+                    return i;
+                }
+            }
+            unreachable!()
+        })
+    }
+
     #[inline]
     pub(crate) fn set_window_lines(&mut self, window_lines: i32) {
         self.window_lines = window_lines;
@@ -475,7 +538,7 @@ impl TreeStore {
         self.selected_node = node_ptr;
 
         if mouse_button == MouseButton::LeftButton {
-            node.node_shuffle_expand();
+            node.shuffle_expand();
         }
 
         emit!(self.notify_update());

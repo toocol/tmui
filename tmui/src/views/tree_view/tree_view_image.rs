@@ -116,7 +116,9 @@ impl WidgetImpl for TreeViewImage {
                 geometry,
                 self.opaque_background(),
                 self.indent_length,
-            )
+            );
+
+            painter.draw_rect(nonnull_ref!(node).rect(Coordinate::Widget).unwrap());
         }
     }
 
@@ -224,8 +226,23 @@ impl TreeViewImage {
     }
 
     #[inline]
+    pub fn indent_length(&self) -> i32 {
+        self.indent_length
+    }
+
+    #[inline]
     pub fn set_line_spacing(&mut self, line_spacing: i32) {
         self.line_spacing = line_spacing
+    }
+
+    #[inline]
+    pub fn line_spacing(&self) -> i32 {
+        self.line_spacing
+    }
+
+    #[inline]
+    pub fn line_height(&self) -> i32 {
+        self.line_height
     }
 }
 

@@ -3,6 +3,7 @@ pub mod actions;
 pub mod r#async;
 pub mod bytes_reader;
 pub mod color_convert;
+pub mod compare;
 pub mod events;
 pub mod global;
 pub mod namespace;

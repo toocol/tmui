@@ -8,6 +8,10 @@ use tlib::{
     signal, signals,
 };
 
+pub(crate) const UPD_VALIDATE: u8 = 0;
+pub(crate) const UPD_PARTIAL_INVALIDATE: u8 = 1;
+pub(crate) const UPD_FULLY_INVALIDATE: u8 = 2;
+
 /// Basic drawing element super type for basic graphics such as triangle, rectangle....
 #[extends(Object)]
 pub struct Element {
@@ -110,6 +114,9 @@ pub trait ElementExt {
     /// The element was invalidated or not.
     fn invalidate(&self) -> bool;
 
+    /// Get the code represent the update status of element.
+    fn update_code(&self) -> u8;
+
     /// Set the property `invalidate` of element to `false`.
     fn validate(&mut self);
 }
@@ -137,18 +144,18 @@ impl<T: ElementImpl> ElementExt for T {
 
     #[inline]
     fn update(&mut self) {
-        element_update(self, true);
+        element_update(self, UPD_FULLY_INVALIDATE, true);
         self.when_update();
     }
 
     #[inline]
     fn update_with_propagate(&mut self, propagate: bool) {
-        element_update(self, propagate);
+        element_update(self, UPD_FULLY_INVALIDATE, propagate);
     }
 
     #[inline]
     fn force_update(&mut self) {
-        element_update(self, true);
+        element_update(self, UPD_FULLY_INVALIDATE, true);
         Board::force_update();
     }
 
@@ -185,14 +192,22 @@ impl<T: ElementImpl> ElementExt for T {
     #[inline]
     fn invalidate(&self) -> bool {
         match self.get_property("invalidate") {
-            Some(val) => val.get::<(bool, bool)>().0,
+            Some(val) => val.get::<(u8, bool)>().0 != UPD_VALIDATE,
             None => true,
         }
     }
 
     #[inline]
+    fn update_code(&self) -> u8 {
+        match self.get_property("invalidate") {
+            Some(val) => val.get::<(u8, bool)>().0,
+            None => UPD_VALIDATE,
+        }
+    }
+
+    #[inline]
     fn validate(&mut self) {
-        self.set_property("invalidate", (false, false).to_value());
+        self.set_property("invalidate", (UPD_VALIDATE, false).to_value());
     }
 }
 
@@ -221,9 +236,14 @@ pub trait ElementImpl:
 }
 
 #[inline]
-pub(crate) fn element_update(el: &mut impl ElementImpl, propagate: bool) {
-    if !el.invalidate() {
-        el.set_property("invalidate", (true, propagate).to_value());
+pub(crate) fn element_update(el: &mut impl ElementImpl, mut upd_code: u8, propagate: bool) {
+    let code = el.update_code();
+    if code == UPD_FULLY_INVALIDATE {
+        upd_code = UPD_FULLY_INVALIDATE;
+    }
+    el.set_property("invalidate", (upd_code, propagate).to_value());
+
+    if code == UPD_VALIDATE {
         Board::notify_update();
         emit!(el.invalidated());
     }
