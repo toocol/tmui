@@ -12,6 +12,7 @@ pub type KeyReleasedFn = Box<dyn Fn(&mut dyn WidgetImpl, &KeyEvent)>;
 pub type WindowMinimizedFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
 pub type WindowMaximizedFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
 pub type WindowRestoredFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
+pub type VisibilityChangedFn = Box<dyn Fn(&mut dyn WidgetImpl, bool)>;
 
 #[derive(Default)]
 pub struct Callbacks {
@@ -26,6 +27,7 @@ pub struct Callbacks {
     pub(crate) window_minimized: Option<WindowMinimizedFn>,
     pub(crate) window_maximized: Option<WindowMaximizedFn>,
     pub(crate) window_restored: Option<WindowRestoredFn>,
+    pub(crate) visibility_changed: Option<VisibilityChangedFn>,
 }
 
 pub trait CallbacksRegister: WidgetImpl {
@@ -115,6 +117,14 @@ pub trait CallbacksRegister: WidgetImpl {
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
         self.callbacks_mut().window_restored = Some(Box::new(f))
+    }
+
+    #[inline]
+    fn register_visibility_changed<F>(&mut self, f: F)
+    where
+        F: Fn(&mut dyn WidgetImpl, bool) + 'static,
+    {
+        self.callbacks_mut().visibility_changed = Some(Box::new(f))
     }
 }
 impl<T: WidgetImpl> CallbacksRegister for T {}

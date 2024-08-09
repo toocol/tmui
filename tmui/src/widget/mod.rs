@@ -10,7 +10,8 @@ use crate::{
         drawing_context::DrawingContext,
         element::{ElementImpl, HierachyZ},
         painter::Painter,
-        render_difference::RenderDiffence, styles::Styles,
+        render_difference::RenderDiffence,
+        styles::Styles,
     },
     layout::LayoutMgr,
     opti::tracker::Tracker,
@@ -54,7 +55,6 @@ pub struct Widget {
     invalid_area: FRect,
     need_update_geometry: bool,
     redraw_region: CoordRegion,
-    styles_redraw_region: CoordRegion,
     whole_styles_render: bool,
 
     #[derivative(Default(value = "true"))]
@@ -363,13 +363,6 @@ impl Widget {
     }
 
     #[inline]
-    fn notify_propagate_update_styles_rect(&mut self, rect: CoordRect) {
-        if let Some(child) = self.get_child_mut() {
-            child.propagate_update_styles_rect(rect);
-        }
-    }
-
-    #[inline]
     fn notify_propagate_animation_progressing(&mut self, is: bool) {
         if let Some(child) = self.get_child_mut() {
             child.propagate_animation_progressing(is)
@@ -432,6 +425,7 @@ impl ObjectImpl for Widget {
             "visible" => {
                 let visible = value.get::<bool>();
                 emit!(self.visibility_changed(), visible);
+                self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
                 self.notify_visible(visible)
             }
@@ -457,10 +451,6 @@ impl ObjectImpl for Widget {
             "propagate_update_rect" => {
                 let rect = value.get::<CoordRect>();
                 self.notify_propagate_update_rect(rect);
-            }
-            "propagate_update_styles_rect" => {
-                let rect = value.get::<CoordRect>();
-                self.notify_propagate_update_styles_rect(rect);
             }
             "animation_progressing" => {
                 let is = value.get::<bool>();
@@ -543,14 +533,15 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         }
 
         let window_resized = self.window().is_resize_redraw();
-        if (self.whole_styles_render() || self.is_resize_redraw() || window_resized) && !self.is_animation_progressing() {
-            self.widget_props_mut().styles_redraw_region.clear();
+        if (self.whole_styles_render() || self.is_resize_redraw() || window_resized)
+            && !self.is_animation_progressing()
+        {
             self.widget_props_mut().redraw_region.clear();
         }
 
         handle_global_overlaid(self, &mut painter, window_resized);
 
-        let cliped = painter_clip(self, &mut painter, self.styles_redraw_region().iter());
+        let cliped = painter_clip(self, &mut painter, self.redraw_region().iter());
 
         if self.redraw_shadow_box() {
             self.render_shadow(&mut painter);
@@ -698,26 +689,20 @@ fn handle_global_overlaid(
         }
 
         // Handle overlaid box shadow overflow.
-        if !widget.styles_redraw_region().is_empty() || !widget.redraw_region().is_empty() {
+        if !widget.redraw_region().is_empty() {
             let mut intersects = false;
             let vr = overlaid.visual_rect();
-            for r in widget.styles_redraw_region().iter() {
-                if r.rect().is_intersects(&vr) {
-                    intersects = true;
-                    overlaid.update_styles_rect(*r);
-                }
-            }
             for r in widget.redraw_region().iter() {
                 if r.rect().is_intersects(&vr) {
                     intersects = true;
-                    overlaid.update_styles_rect(*r);
+                    overlaid.update_rect(*r);
                 }
             }
             if !intersects {
                 continue;
             }
         } else {
-            overlaid.update_styles_rect(CoordRect::new(widget.rect(), Coordinate::World));
+            overlaid.update_rect(CoordRect::new(widget.rect(), Coordinate::World));
         }
         overlaid.set_redraw_shadow_box(true);
     }
@@ -922,6 +907,9 @@ pub trait InnerEventProcess {
 
     /// Invoke when widget's receive character event.
     fn inner_receive_character(&mut self, event: &ReceiveCharacterEvent);
+
+    /// Invoke when widget's visibility has changed.
+    fn inner_visibility_changed(&mut self, visible: bool);
 }
 
 impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
@@ -934,13 +922,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             self.window().set_pressed_widget(self.id());
         }
 
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_mouse_pressed(event)
-        }
-
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().mouse_pressed {
             f(ptr_mut!(ptr), event)
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_pressed(event)
         }
 
         emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
@@ -968,13 +956,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             self.window().set_pressed_widget(0);
         }
 
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_mouse_released(event)
-        }
-
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().mouse_released {
             f(ptr_mut!(ptr), event)
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_released(event)
         }
 
         emit!(Widget::inner_mouse_released => self.mouse_released(), event);
@@ -998,13 +986,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
     #[inline]
     fn inner_mouse_move(&mut self, event: &MouseEvent) {
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_mouse_move(event)
-        }
-
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().mouse_move {
             f(ptr_mut!(ptr), event)
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_move(event)
         }
 
         emit!(Widget::inner_mouse_move => self.mouse_move(), event);
@@ -1028,13 +1016,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
     #[inline]
     fn inner_mouse_wheel(&mut self, event: &MouseEvent) {
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_mouse_wheel(event)
-        }
-
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().mouse_wheel {
             f(ptr_mut!(ptr), event)
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_wheel(event)
         }
 
         emit!(Widget::inner_mouse_wheel => self.mouse_wheel(), event);
@@ -1058,12 +1046,12 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
     #[inline]
     fn inner_mouse_enter(&mut self, event: &MouseEvent) {
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_mouse_enter(event)
-        }
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().hover_in {
             f(ptr_mut!(ptr))
+        }
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_enter(event)
         }
 
         emit!(Widget::inner_mouse_enter => self.mouse_enter(), event);
@@ -1071,12 +1059,12 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
     #[inline]
     fn inner_mouse_leave(&mut self, event: &MouseEvent) {
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_mouse_leave(event)
-        }
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().hover_out {
             f(ptr_mut!(ptr))
+        }
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_mouse_leave(event)
         }
 
         emit!(Widget::inner_mouse_leave => self.mouse_leave(), event);
@@ -1132,13 +1120,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
     #[inline]
     fn inner_key_pressed(&mut self, event: &KeyEvent) {
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_key_pressed(event)
-        }
-
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().key_pressed {
             f(ptr_mut!(ptr), event)
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_key_pressed(event)
         }
 
         emit!(Widget::inner_key_pressed => self.key_pressed(), event);
@@ -1155,13 +1143,13 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
     #[inline]
     fn inner_key_released(&mut self, event: &KeyEvent) {
-        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
-            inner_customize_process.inner_customize_key_released(event)
-        }
-
         let ptr = self as *mut dyn WidgetImpl;
         if let Some(ref f) = self.callbacks().key_released {
             f(ptr_mut!(ptr), event)
+        }
+
+        if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
+            inner_customize_process.inner_customize_key_released(event)
         }
 
         emit!(Widget::inner_key_released => self.key_released(), event);
@@ -1183,6 +1171,14 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
         }
 
         emit!(Widget::inner_receive_character => self.receive_character(), event);
+    }
+    
+    #[inline]
+    fn inner_visibility_changed(&mut self, visible: bool) {
+        let ptr = self as *mut dyn WidgetImpl;
+        if let Some(ref f) = self.callbacks().visibility_changed {
+            f(ptr_mut!(ptr), visible);
+        }
     }
 }
 

@@ -18,7 +18,7 @@ use tmui::{
 
 use crate::ctx_menu::CtxMenu;
 
-const DATA_SIZE: u32 = 300000;
+const DATA_SIZE: u32 = 30;
 
 #[extends(Widget, Layout(HBox))]
 #[derive(Childrenable)]
@@ -102,6 +102,9 @@ impl ObjectImpl for TreeViewHolder {
                 return;
             }
             let view = node.get_view();
+            let id = view.id();
+            let popup = view.get_popup_mut().unwrap();
+            popup.set_property("view_id", id.to_value());
             view.show_popup(view.map_to_global(&evt.position().into()));
         });
 
@@ -408,7 +411,7 @@ impl TreeViewObject for Group {
 }
 
 pub struct SimpContent {
-    name: &'static str,
+    pub name: &'static str,
 }
 impl TreeViewObject for SimpContent {
     #[inline]

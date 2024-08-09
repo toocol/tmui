@@ -117,8 +117,6 @@ impl WidgetImpl for TreeViewImage {
                 self.opaque_background(),
                 self.indent_length,
             );
-
-            painter.draw_rect(nonnull_ref!(node).rect(Coordinate::Widget).unwrap());
         }
     }
 
@@ -275,9 +273,11 @@ impl TreeViewImage {
 
     #[inline]
     pub(crate) fn notify_update_rect(&mut self, start_idx: usize) {
+        let y_offset = -(self.store.y_offset() as f32 / 10.
+            * (self.line_height + self.line_spacing) as f32) as i32;
         let size = self.size();
         let x = 0;
-        let y = start_idx as i32 * (self.line_height + self.line_spacing);
+        let y = start_idx as i32 * (self.line_height + self.line_spacing) + y_offset;
 
         if y >= size.height() {
             return;
@@ -319,7 +319,7 @@ impl TreeViewImage {
             scroll_bar_value_changed(i32)
         );
 
-        self.update_rect(CoordRect::new(self.rect(), Coordinate::World));
+        self.update();
     }
 
     #[inline]

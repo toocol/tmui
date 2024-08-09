@@ -278,7 +278,7 @@ impl<T: SelectBounds> Select<T> {
     #[inline]
     fn dropdown_list_value_changed(&mut self, val: String) {
         self.set_value(T::from(val));
-        self.update_styles_rect(CoordRect::new(self.text_rect(), Coordinate::World));
+        self.update_rect(CoordRect::new(self.text_rect(), Coordinate::World));
         self.set_render_styles(true);
     }
 }

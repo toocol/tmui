@@ -74,29 +74,10 @@ pub trait ScrollAreaSlots: ScrollAreaExt {
         let scroll_bar_rect = self.scroll_bar().rect_f();
 
         let area = self.area().unwrap();
-        let mut need_update =
-            area.redraw_region().is_empty() && area.styles_redraw_region().is_empty();
-
-        let mut region = CoordRegion::new();
-        for coord in area.redraw_region().iter() {
-            let rect = if coord.coord() == Coordinate::Widget {
-                let mut rect = coord.rect();
-                rect.set_point(&self.map_to_global_f(&rect.point()));
-                CoordRect::new(rect, Coordinate::World)
-            } else {
-                *coord
-            };
-
-            if !rect.rect().is_intersects(&scroll_bar_rect) {
-                continue;
-            }
-
-            need_update = true;
-            region.add_rect(rect);
-        }
+        let mut need_update = area.redraw_region().is_empty();
 
         let mut styles_region = CoordRegion::new();
-        for coord in area.styles_redraw_region().iter() {
+        for coord in area.redraw_region().iter() {
             let rect = if coord.coord() == Coordinate::Widget {
                 let mut rect = coord.rect();
                 rect.set_point(&self.map_to_global_f(&rect.point()));
@@ -118,7 +99,7 @@ pub trait ScrollAreaSlots: ScrollAreaExt {
         }
 
         let scroll_bar = self.scroll_bar_mut();
-        if !(scroll_bar.update_region(&region) || scroll_bar.update_styles_region(&styles_region)) {
+        if !scroll_bar.update_region(&styles_region) {
             scroll_bar.update()
         }
     }

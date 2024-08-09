@@ -405,13 +405,9 @@ pub trait WidgetExt {
     /// Is the widget under mouse pressed.
     fn is_pressed(&self) -> bool;
 
-    /// Invalidate this widget with dirty rect to update it, and also update the child widget..<br>
-    /// This will result in clipping the drawing area of the widget.(after styles render)
-    fn propagate_update_rect(&mut self, rect: CoordRect);
-
     /// Invalidate this widget with dirty styles rect to update it, and also update the child widget..<br>
     /// This will result in clipping the drawing area of the widget.(before styles render)
-    fn propagate_update_styles_rect(&mut self, rect: CoordRect);
+    fn propagate_update_rect(&mut self, rect: CoordRect);
 
     /// Get the root ancestor id of the widget.
     fn root_ancestor(&self) -> ObjectId;
@@ -519,34 +515,25 @@ pub trait WidgetExt {
     /// The widget image rect recorded during the `last render`.
     fn image_rect_record(&self) -> FRect;
 
+    /// Get the invalid area that hoverd by other inner overlaids.
     fn invalid_area(&self) -> FRect;
 
+    /// Set the invalid area that hoverd by other inner overlaids.
     fn set_invalid_area(&mut self, rect: FRect);
-
-    /// Specified the rects to redraw.
-    /// This will result in clipping the drawing area of the widget.(after styles render)
-    fn update_rect(&mut self, rect: CoordRect);
 
     /// Specified the styles rects to redraw.
     /// This will result in clipping the drawing area of the widget.(before styles render)
-    fn update_styles_rect(&mut self, rect: CoordRect);
-
-    /// Specified the region to redraw.
-    /// @return false if region is empty.
-    fn update_region(&mut self, region: &CoordRegion) -> bool;
+    fn update_rect(&mut self, rect: CoordRect);
 
     /// Specified the styles region to redraw;
     /// @return false if region is empty.
-    fn update_styles_region(&mut self, region: &CoordRegion) -> bool;
+    fn update_region(&mut self, region: &CoordRegion) -> bool;
 
     /// Cleaer the redraw region.
     fn clear_regions(&mut self);
 
-    /// Get the redraw region. <br>
-    fn redraw_region(&self) -> &CoordRegion;
-
     /// Get the styles redraw region. <br>
-    fn styles_redraw_region(&self) -> &CoordRegion;
+    fn redraw_region(&self) -> &CoordRegion;
 
     /// Get the reference of styles.
     fn styles(&self) -> &Styles;
@@ -1591,13 +1578,6 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn propagate_update_styles_rect(&mut self, rect: CoordRect) {
-        self.update_styles_rect(rect);
-
-        self.set_property("propagate_update_styles_rect", rect.to_value());
-    }
-
-    #[inline]
     fn root_ancestor(&self) -> ObjectId {
         for &root in self.window().root_ancestors() {
             if self.id() == root || self.descendant_of(root) {
@@ -1806,16 +1786,8 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn update_rect(&mut self, rect: CoordRect) {
-        if self.update_code() != UPD_FULLY_INVALIDATE {
-            self.widget_props_mut().redraw_region.add_rect(rect);
-        }
-        element_update(self, UPD_PARTIAL_INVALIDATE, false);
-    }
-
-    #[inline]
-    fn update_styles_rect(&mut self, rect: CoordRect) {
         if !self.whole_styles_render() && self.update_code() != UPD_FULLY_INVALIDATE {
-            self.widget_props_mut().styles_redraw_region.add_rect(rect);
+            self.widget_props_mut().redraw_region.add_rect(rect);
         }
         element_update(self, UPD_PARTIAL_INVALIDATE, false);
     }
@@ -1825,22 +1797,8 @@ impl<T: WidgetImpl> WidgetExt for T {
         if region.is_empty() {
             return false;
         }
-        if self.update_code() != UPD_FULLY_INVALIDATE {
-            self.widget_props_mut().redraw_region.add_region(region);
-        }
-        element_update(self, UPD_PARTIAL_INVALIDATE, false);
-        true
-    }
-
-    #[inline]
-    fn update_styles_region(&mut self, region: &CoordRegion) -> bool {
-        if region.is_empty() {
-            return false;
-        }
         if !self.whole_styles_render() && self.update_code() != UPD_FULLY_INVALIDATE {
-            self.widget_props_mut()
-                .styles_redraw_region
-                .add_region(region);
+            self.widget_props_mut().redraw_region.add_region(region);
         }
         element_update(self, UPD_PARTIAL_INVALIDATE, false);
         true
@@ -1849,17 +1807,11 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn clear_regions(&mut self) {
         self.widget_props_mut().redraw_region.clear();
-        self.widget_props_mut().styles_redraw_region.clear();
     }
 
     #[inline]
     fn redraw_region(&self) -> &CoordRegion {
         &self.widget_props().redraw_region
-    }
-
-    #[inline]
-    fn styles_redraw_region(&self) -> &CoordRegion {
-        &self.widget_props().styles_redraw_region
     }
 
     #[inline]

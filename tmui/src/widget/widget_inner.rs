@@ -249,7 +249,7 @@ macro_rules! widget_inner_ext_impl {
         fn set_whole_styles_render(&mut self, whole_styles_render: bool) {
             self.widget_props_mut().whole_styles_render = whole_styles_render;
             if whole_styles_render {
-                self.widget_props_mut().styles_redraw_region.clear();
+                self.widget_props_mut().redraw_region.clear();
             }
         }
 
