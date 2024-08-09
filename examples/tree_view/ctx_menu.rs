@@ -12,6 +12,8 @@ use tmui::{
     widget::WidgetImpl,
 };
 
+use crate::tree_view_holder::SimpContent;
+
 #[extends(Popup)]
 #[derive(Childable)]
 #[run_after]
@@ -53,7 +55,25 @@ impl ObjectImpl for CtxMenu {
         self.selection_list.register_node_pressed(|node, _| {
             println!("Selection pressed.");
             assert_eq!(node.get_value::<i32>(1).unwrap(), 1);
+            let view = node.get_view();
+
+            let tree_view_id = view.get_property("view_id").unwrap().get::<ObjectId>();
+            let tree_view = ApplicationWindow::window().find_id_mut(tree_view_id).unwrap().downcast_mut::<TreeView>().unwrap();
+            tree_view.root_mut().add_node(&SimpContent{ name: "New Content" });
+
+            view.get_parent_mut().unwrap().hide();
         })
+    }
+
+    fn on_property_set(&mut self, name: &str, value: &Value) {
+        self.parent_on_property_set(name, value);
+
+        match name {
+            "view_id" => {
+                self.selection_list.set_property("view_id", value.clone());
+            }
+            _ => {}
+        }
     }
 }
 

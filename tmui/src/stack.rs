@@ -5,7 +5,7 @@ use crate::{
         StaticContainerScaleCalculate,
     },
     layout::{ContainerLayout, LayoutMgr},
-    prelude::*,
+    prelude::*, widget::InnerEventProcess,
 };
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
@@ -32,6 +32,7 @@ impl ObjectImpl for Stack {
             "visible" => {
                 let visible = value.get::<bool>();
                 emit!(self.visibility_changed(), visible);
+                self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
                 if visible {
                     if let Some(c) = self.current_child_mut() {

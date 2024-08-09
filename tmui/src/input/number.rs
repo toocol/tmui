@@ -242,7 +242,7 @@ impl Input for Number {
 
     #[inline]
     fn required_handle(&mut self) -> bool {
-        true
+        self.val().is_some()
     }
 
     #[inline]
@@ -296,7 +296,7 @@ impl Number {
                 }
             }
 
-            if let Some(min) = self.max {
+            if let Some(min) = self.min {
                 if val < min as f64 {
                     return None;
                 }
@@ -447,7 +447,7 @@ impl Number {
     #[inline]
     fn check_number(&self, val: &str, whole_set: bool) -> bool {
         if val.is_empty() {
-            return true
+            return true;
         }
 
         let res =
@@ -515,7 +515,7 @@ impl Number {
         }
 
         if need_update {
-            self.update_styles_rect(CoordRect::new(
+            self.update_rect(CoordRect::new(
                 FRect::new(
                     spinner1.x(),
                     spinner1.y(),

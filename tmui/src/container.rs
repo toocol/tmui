@@ -1,7 +1,7 @@
 use crate::{
     graphics::element::HierachyZ,
     prelude::*,
-    widget::{ScaleCalculate, WidgetImpl},
+    widget::{InnerEventProcess, ScaleCalculate, WidgetImpl},
 };
 use tlib::{
     namespace::Orientation,
@@ -67,6 +67,7 @@ impl ObjectImpl for Container {
             "visible" => {
                 let visible = value.get::<bool>();
                 emit!(self.visibility_changed(), visible);
+                self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
 
                 if !self.children.is_empty() {
@@ -161,18 +162,6 @@ impl ObjectImpl for Container {
                 } else if !self.children_ref.is_empty() {
                     for c in self.children_ref.iter_mut() {
                         nonnull_mut!(c).propagate_update_rect(rect)
-                    }
-                }
-            }
-            "propagate_update_styles_rect" => {
-                let rect = value.get::<CoordRect>();
-                if !self.children.is_empty() {
-                    for child in self.children.iter_mut() {
-                        child.propagate_update_styles_rect(rect)
-                    }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        nonnull_mut!(c).propagate_update_styles_rect(rect)
                     }
                 }
             }

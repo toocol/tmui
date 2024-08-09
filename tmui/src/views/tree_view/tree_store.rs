@@ -225,6 +225,11 @@ impl TreeStore {
     }
 
     #[inline]
+    pub(crate) fn y_offset(&self) -> i32 {
+        self.y_offset
+    }
+
+    #[inline]
     pub(crate) fn get_image(&self) -> (&[Option<NonNull<TreeNode>>], i32) {
         let start = if self.y_offset == 0 {
             self.current_line
@@ -275,11 +280,6 @@ impl TreeStore {
     #[inline]
     pub(crate) fn buffer_len(&self) -> usize {
         self.nodes_buffer.len()
-    }
-
-    #[inline]
-    pub(crate) fn y_offset(&self) -> i32 {
-        self.y_offset
     }
 
     /// Add node and it's children to the nodes buffer.
