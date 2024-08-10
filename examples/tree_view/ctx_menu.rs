@@ -68,11 +68,8 @@ impl ObjectImpl for CtxMenu {
     fn on_property_set(&mut self, name: &str, value: &Value) {
         self.parent_on_property_set(name, value);
 
-        match name {
-            "view_id" => {
-                self.selection_list.set_property("view_id", value.clone());
-            }
-            _ => {}
+        if name == "view_id" {
+            self.selection_list.set_property("view_id", value.clone());
         }
     }
 }

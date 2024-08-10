@@ -336,7 +336,7 @@ pub(crate) fn expand(
             // Popup related end. 
 
             let inner_on_property_set_clause = if layout.is(LayoutType::Stack) {
-                generate_stack_inner_on_property_set()?
+                generate_stack_inner_on_property_set(use_prefix)?
             } else {
                 quote!(false)
             };
