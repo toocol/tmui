@@ -17,6 +17,7 @@ fn main() {
         .height(800)
         .title("Complex Layout")
         .transparent(true)
+        .defer_display(true)
         .build();
 
     app.connect_activate(build_ui);
@@ -25,5 +26,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(View::new())
+    window.child(View::new());
+    window.show_on_ready();
 }

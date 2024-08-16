@@ -214,6 +214,7 @@ where
         }
 
         window.iter_execute();
+        window.check_show_on_ready();
 
         cpu_balance.payload_check();
         if window.is_high_load_requested() {

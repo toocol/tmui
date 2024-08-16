@@ -32,6 +32,7 @@ pub mod shortcut;
 pub mod split_pane;
 pub mod stack;
 pub mod system;
+pub mod tooltip;
 pub mod vbox;
 pub mod views;
 pub mod widget;

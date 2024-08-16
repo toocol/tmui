@@ -1,13 +1,19 @@
+use super::{
+    border::Border,
+    box_shadow::{self, BoxShadow},
+};
+use crate::font::Font;
 use derivative::Derivative;
 use tlib::figure::Color;
-use crate::font::Font;
-use super::{border::Border, box_shadow::BoxShadow};
 
 #[derive(Debug, Clone, Derivative)]
 #[derivative(Default)]
 pub struct Styles {
     #[derivative(Default(value = "Color::TRANSPARENT"))]
     background: Color,
+    /// Some UI components will ignore this property.
+    color: Option<Color>,
+
     font: Font,
     border: Border,
     box_shadow: Option<BoxShadow>,
@@ -22,6 +28,16 @@ impl Styles {
     #[inline]
     pub fn set_background(&mut self, background: Color) {
         self.background = background
+    }
+
+    #[inline]
+    pub fn color(&self) -> Option<Color> {
+        self.color
+    }
+
+    #[inline]
+    pub fn set_color(&mut self, color: Color) {
+        self.color = Some(color)
     }
 
     #[inline]
@@ -66,6 +82,12 @@ impl Styles {
     }
 
     #[inline]
+    pub fn with_color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    #[inline]
     pub fn with_font(mut self, font: Font) -> Self {
         self.font = font;
         self
@@ -81,5 +103,59 @@ impl Styles {
     pub fn with_box_shadow(mut self, box_shadow: BoxShadow) -> Self {
         self.box_shadow = Some(box_shadow);
         self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct InnerStyles {
+    background: Color,
+    font: Font,
+    border: Border,
+    box_shadow: Option<BoxShadow>,
+}
+
+impl InnerStyles {
+    #[inline]
+    pub(crate) fn new(
+        background: Color,
+        font: Font,
+        border: Border,
+        box_shadow: Option<BoxShadow>,
+    ) -> Self {
+        Self {
+            background,
+            font,
+            border,
+            box_shadow,
+        }
+    }
+}
+
+impl From<Styles> for InnerStyles {
+    #[inline]
+    fn from(value: Styles) -> Self {
+        Self::new(value.background, value.font, value.border, value.box_shadow)
+    }
+}
+
+impl InnerStyles {
+    #[inline]
+    pub fn background(&self) -> Color {
+        self.background
+    }
+
+    #[inline]
+    pub fn font(&self) -> &Font {
+        &self.font
+    }
+
+    #[inline]
+    pub fn border(&self) -> &Border {
+        &self.border
+    }
+
+    #[inline]
+    pub fn box_shadow(&self) -> Option<&BoxShadow> {
+        self.box_shadow.as_ref()
     }
 }

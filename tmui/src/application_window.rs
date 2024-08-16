@@ -12,6 +12,7 @@ use crate::{
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
+    tooltip::{Tooltip, TooltipStrat},
     widget::{
         index_children, widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, ZIndexStep,
     },
@@ -53,6 +54,7 @@ pub struct ApplicationWindow {
     ipc_bridge: Option<Box<dyn IpcBridge>>,
     shared_widget_size_changed: bool,
     high_load_request: bool,
+    show_on_ready: bool,
     outer_position: Point,
     params: Option<HashMap<String, Value>>,
 
@@ -77,6 +79,7 @@ pub struct ApplicationWindow {
     root_ancestors: Vec<ObjectId>,
 
     input_dialog: Option<Box<InputDialog>>,
+    tooltip: Option<Box<Tooltip>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -101,11 +104,6 @@ impl ObjectImpl for ApplicationWindow {
         self.root_ancestors.push(window_id);
         child_initialize(self.get_child_mut(), window_id);
 
-        let mut input_dialog = InputDialog::new();
-        child_initialize(Some(input_dialog.as_widget_impl_mut()), window_id);
-        input_dialog.hide();
-        self.input_dialog = Some(input_dialog);
-
         self.when_size_change(self.size());
         self.set_initialized(true);
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
@@ -126,6 +124,14 @@ impl WidgetImpl for ApplicationWindow {
             log::info!("[run_after] `{}` executed run after.", widget.name());
         }
         self.run_afters.clear();
+    }
+
+    #[inline]
+    fn on_visibility_changed(&mut self, visible: bool) {
+        self.send_message(Message::WindowVisibilityRequest(
+            self.winit_id().unwrap(),
+            visible,
+        ))
     }
 }
 
@@ -364,6 +370,11 @@ impl ApplicationWindow {
     #[inline]
     pub fn get_param<T: FromValue + StaticType>(&self, key: &str) -> Option<T> {
         self.params.as_ref()?.get(key).map(|p| p.get::<T>())
+    }
+
+    #[inline]
+    pub fn show_on_ready(&mut self) {
+        self.show_on_ready = true;
     }
 
     /// Should set the parent of widget before use this function.
@@ -779,9 +790,50 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
-        self.input_dialog
-            .as_mut()
-            .expect("Fatal error: `InputDialog` of `ApplicationWindow` is None.")
+        if self.input_dialog.is_none() {
+            let mut input_dialog = InputDialog::new();
+            child_initialize(Some(input_dialog.as_widget_impl_mut()), self.id());
+            self.input_dialog = Some(input_dialog);
+        }
+
+        self.input_dialog.as_mut().unwrap()
+    }
+
+    #[inline]
+    pub(crate) fn tooltip(&mut self, tooltip_strat: TooltipStrat) {
+        if self.tooltip.is_none() {
+            let mut tooltip = Tooltip::new();
+            child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
+            self.tooltip = Some(tooltip);
+        }
+
+        let tooltip = self.tooltip.as_mut().unwrap();
+
+        match tooltip_strat {
+            TooltipStrat::Show(text, geometry, styles) => {
+                tooltip.set_text(text);
+                tooltip.width_request(geometry.width());
+                tooltip.height_request(geometry.height());
+                tooltip.set_fixed_x(geometry.x());
+                tooltip.set_fixed_y(geometry.y());
+                if let Some(styles) = styles {
+                    tooltip.set_styles(styles);
+                }
+                tooltip.show();
+            }
+            TooltipStrat::Hide => tooltip.hide()
+        }
+    }
+
+    #[inline]
+    pub(crate) fn check_show_on_ready(&mut self) {
+        if self.show_on_ready {
+            self.show_on_ready = false;
+            self.send_message(Message::WindowVisibilityRequest(
+                self.winit_id().unwrap(),
+                true,
+            ));
+        }
     }
 }
 
