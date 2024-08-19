@@ -1,6 +1,6 @@
 use super::{
     border::Border,
-    box_shadow::{self, BoxShadow},
+    box_shadow::BoxShadow,
 };
 use crate::font::Font;
 use derivative::Derivative;
@@ -106,8 +106,10 @@ impl Styles {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Derivative)]
+#[derivative(Default)]
 pub(crate) struct InnerStyles {
+    #[derivative(Default(value = "Color::TRANSPARENT"))]
     background: Color,
     font: Font,
     border: Border,
@@ -145,8 +147,23 @@ impl InnerStyles {
     }
 
     #[inline]
+    pub fn set_background(&mut self, background: Color) {
+        self.background = background
+    }
+
+    #[inline]
     pub fn font(&self) -> &Font {
         &self.font
+    }
+
+    #[inline]
+    pub fn font_mut(&mut self) -> &mut Font {
+        &mut self.font
+    }
+
+    #[inline]
+    pub fn set_font(&mut self, font: Font) {
+        self.font = font
     }
 
     #[inline]
@@ -155,7 +172,17 @@ impl InnerStyles {
     }
 
     #[inline]
+    pub fn border_mut(&mut self) -> &mut Border {
+        &mut self.border
+    }
+
+    #[inline]
     pub fn box_shadow(&self) -> Option<&BoxShadow> {
         self.box_shadow.as_ref()
+    }
+
+    #[inline]
+    pub fn set_box_shadow(&mut self, shadow: BoxShadow) {
+        self.box_shadow = Some(shadow)
     }
 }

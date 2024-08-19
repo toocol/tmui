@@ -535,12 +535,6 @@ pub trait WidgetExt {
     /// Get the styles redraw region. <br>
     fn redraw_region(&self) -> &CoordRegion;
 
-    /// Get the reference of styles.
-    fn styles(&self) -> &Styles;
-
-    /// Get the mutable reference of styles.
-    fn styles_mut(&mut self) -> &mut Styles;
-
     /// Set the styles.
     fn set_styles(&mut self, styles: Styles);
 }
@@ -1815,18 +1809,8 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn styles(&self) -> &Styles {
-        &self.widget_props().styles
-    }
-
-    #[inline]
-    fn styles_mut(&mut self) -> &mut Styles {
-        &mut self.widget_props_mut().styles
-    }
-
-    #[inline]
     fn set_styles(&mut self, styles: Styles) {
-        self.widget_props_mut().styles = styles
+        self.widget_props_mut().styles = styles.into()
     }
 }
 

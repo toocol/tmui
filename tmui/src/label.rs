@@ -34,6 +34,7 @@ impl ObjectSubclass for Label {
 }
 
 impl ObjectImpl for Label {
+    #[inline]
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<Label, ReflectContentAlignment>();
     }
@@ -151,14 +152,15 @@ impl WidgetImpl for Label {
         let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
         paragraph_builder.add_text(self.text());
         let mut paragraph = paragraph_builder.build();
-        paragraph.layout(f32::MAX);
+
+        let width = self.rect().width() as f32;
+        let layout = if width == 0. { f32::MAX } else { width };
+        paragraph.layout(layout);
 
         self.paragraph_width = paragraph.max_intrinsic_width().round();
         self.paragraph_height = paragraph.height().round();
 
-        let size = self.size();
-
-        if size.width() == 0 || size.height() == 0 {
+        if self.get_width_request() == 0 || self.get_height_request() == 0 {
             let mut resized = false;
 
             if self.paragraph_width != 0. {
@@ -238,6 +240,7 @@ impl Label {
     #[inline]
     pub fn set_auto_wrap(&mut self, auto_wrap: bool) {
         self.auto_wrap = auto_wrap;
+        self.font_changed();
     }
 
     #[inline]
