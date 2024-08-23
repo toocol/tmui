@@ -7,7 +7,7 @@ use crate::{
 };
 use log::warn;
 use std::{
-    cell::{Cell, RefCell, RefMut},
+    cell::{Cell, Ref, RefCell},
     collections::HashMap,
     time::{Duration, SystemTime},
 };
@@ -77,11 +77,11 @@ impl TimerHub {
             .insert(timer.id(), timer);
     }
 
-    fn add_once_timer(&self, timer: Box<Timer>) -> RefMut<Timer> {
+    fn add_once_timer(&self, timer: Box<Timer>) -> Ref<Timer> {
         let id = timer.id();
         self.once_timers.borrow_mut().insert(id, timer);
-        RefMut::map(self.once_timers.borrow_mut(), |map| {
-            map.get_mut(&id).unwrap().as_mut()
+        Ref::map(self.once_timers.borrow(), |map| {
+            map.get(&id).unwrap().as_ref()
         })
     }
 
@@ -117,7 +117,7 @@ impl Timer {
 
     /// Create an once timer.
     /// Once timer can only be executed once and will be removed later
-    pub fn once<F: FnOnce(RefMut<Self>)>(f: F) {
+    pub fn once<F: FnOnce(Ref<Self>)>(f: F) {
         let mut timer = Self::new();
         timer.once_timer = Cell::new(true);
         TimerHub::with(|hub| {
