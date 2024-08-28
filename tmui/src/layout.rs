@@ -277,6 +277,9 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let visible = self.visible();
         let mut resized = false;
+        if self.name().contains("Tooltip") {
+            println!("child size {:?}", child_size);
+        }
 
         if (size.width() == 0 && child_size.width() != 0 && visible)
             || (!self.hexpand() && !self.fixed_width())
@@ -323,6 +326,10 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let parent_spacing_size = self.parent_spacing_size();
         let mut resized = false;
+                
+        if self.name().contains("Label") {
+            println!("detecting size {} {}", self.detecting_width(), self.detecting_height());
+        }
 
         if self.fixed_width() {
             if self.hexpand() {
@@ -756,8 +763,8 @@ impl LayoutMgr {
         let widget_rect = widget.rect();
         let parent_rect = parent.borderless_rect();
 
-        let halign = widget.get_property("halign").unwrap().get::<Align>();
-        let valign = widget.get_property("valign").unwrap().get::<Align>();
+        let halign = widget.halign();
+        let valign = widget.valign();
 
         match halign {
             Align::Start => widget.set_fixed_x(parent_rect.x() + widget.margin_left()),

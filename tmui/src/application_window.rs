@@ -810,18 +810,17 @@ impl ApplicationWindow {
         let tooltip = self.tooltip.as_mut().unwrap();
 
         match tooltip_strat {
-            TooltipStrat::Show(text, geometry, styles) => {
+            TooltipStrat::Show(text, position, styles) => {
                 tooltip.set_text(text);
-                tooltip.width_request(geometry.width());
-                tooltip.height_request(geometry.height());
-                tooltip.set_fixed_x(geometry.x());
-                tooltip.set_fixed_y(geometry.y());
+                tooltip.set_fixed_x(position.x());
+                tooltip.set_fixed_y(position.y());
                 if let Some(styles) = styles {
                     tooltip.set_styles(styles);
                 }
                 tooltip.show();
+                ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
             }
-            TooltipStrat::Hide => tooltip.hide()
+            TooltipStrat::Hide => tooltip.hide(),
         }
     }
 

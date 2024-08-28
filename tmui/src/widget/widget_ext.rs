@@ -945,22 +945,22 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_halign(&mut self, halign: Align) {
-        self.set_property("halign", halign.to_value())
+        self.widget_props_mut().styles.set_halign(halign)
     }
 
     #[inline]
     fn set_valign(&mut self, valign: Align) {
-        self.set_property("valign", valign.to_value())
+        self.widget_props_mut().styles.set_valign(valign)
     }
 
     #[inline]
     fn halign(&self) -> Align {
-        self.get_property("halign").unwrap().get::<Align>()
+        self.widget_props().styles.halign()
     }
 
     #[inline]
     fn valign(&self) -> Align {
-        self.get_property("valign").unwrap().get::<Align>()
+        self.widget_props().styles.valign()
     }
 
     #[inline]

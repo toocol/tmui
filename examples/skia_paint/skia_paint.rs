@@ -1,3 +1,5 @@
+use core::f32;
+
 use log::debug;
 use skia_safe::textlayout::{FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle};
 use tlib::{
@@ -57,6 +59,8 @@ impl WidgetImpl for SkiaPaint {
         self.draw_varying_width_line(painter);
 
         self.draw_blur_border(painter);
+
+        self.draw_multi_line_label(painter);
 
         println!("cnt: {}", painter.save_count());
     }
@@ -380,5 +384,17 @@ impl SkiaPaint {
         rect.set_width(rect.width() + 5.);
         rect.set_height(rect.height() + 5.);
         // painter.draw_rect(rect);
+    }
+
+    fn draw_multi_line_label(&self, painter: &mut Painter) {
+        let origin = Point::new(1000, 700);
+        painter.draw_paragraph(
+            r#"virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on edition 2021 which implies `resolver = "2""#,
+            origin,
+            0.,
+            220.,
+            None,
+            false,
+        );
     }
 }

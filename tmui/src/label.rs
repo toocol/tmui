@@ -6,16 +6,14 @@ use crate::{
 };
 use log::debug;
 use tlib::{
-    emit,
-    object::{ObjectImpl, ObjectSubclass},
-    signals,
-    skia_safe::textlayout::{
+    emit, object::{ObjectImpl, ObjectSubclass}, run_after, signals, skia_safe::textlayout::{
         FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-    },
+    }
 };
 
 #[extends(Widget)]
 #[popupable]
+#[run_after]
 pub struct Label {
     label: String,
     content_halign: Align,
@@ -53,6 +51,11 @@ pub trait LabelSignal: ActionExt {
 impl LabelSignal for Label {}
 
 impl WidgetImpl for Label {
+    #[inline]
+    fn run_after(&mut self) {
+        self.font_changed();
+    }
+
     fn paint(&mut self, painter: &mut Painter) {
         let content_rect: FRect = self.contents_rect(Some(Coordinate::Widget)).into();
 
@@ -157,27 +160,27 @@ impl WidgetImpl for Label {
         let layout = if width == 0. { f32::MAX } else { width };
         paragraph.layout(layout);
 
-        self.paragraph_width = paragraph.max_intrinsic_width().round();
-        self.paragraph_height = paragraph.height().round();
+        self.paragraph_width = paragraph.max_intrinsic_width().ceil();
+        self.paragraph_height = paragraph.height().ceil();
 
         if self.get_width_request() == 0 || self.get_height_request() == 0 {
             let mut resized = false;
 
-            if self.paragraph_width != 0. {
+            if self.paragraph_width != 0. && self.get_width_request() == 0 {
                 let width = self.paragraph_width as i32 + 1;
                 self.set_fixed_width(width);
                 self.set_detecting_width(width);
                 resized = true;
             }
 
-            if self.paragraph_height != 0. {
+            if self.paragraph_height != 0. && self.get_height_request() == 0 {
                 let height = self.paragraph_height as i32;
                 self.set_fixed_height(height);
                 self.set_detecting_height(height);
                 resized = true;
             }
 
-            if resized && self.window_id() != 0 && self.window().initialized() {
+            if resized && self.visible() && self.window_id() != 0 && self.window().initialized() {
                 self.window().layout_change(self);
             }
         }
@@ -190,8 +193,6 @@ impl Label {
         let mut label: Box<Self> = Object::new(&[]);
         if let Some(text) = text {
             label.label = text.to_string();
-
-            label.font_changed();
         }
         label
     }

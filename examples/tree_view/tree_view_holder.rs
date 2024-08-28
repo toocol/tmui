@@ -5,11 +5,18 @@ use tlib::{
     timer::Timer, tokio::task::JoinHandle,
 };
 use tmui::{
-    container::ScaleStrat, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, views::{
+    container::ScaleStrat,
+    cursor::Cursor,
+    graphics::styles::Styles,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    tooltip::Tooltip,
+    views::{
         cell::{cell_render::TextCellRender, Cell},
         node::node_render::NodeRender,
         tree_view::{tree_node::TreeNode, tree_view_object::TreeViewObject, TreeView},
-    }, widget::{ChildOp, WidgetImpl}
+    },
+    widget::{ChildOp, WidgetImpl},
 };
 
 use crate::ctx_menu::CtxMenu;
@@ -99,6 +106,7 @@ impl ObjectImpl for TreeViewHolder {
         self.tree_view.register_node_leave(move |node, _| {
             println!("Node leave, id = {}", node.id());
             timer.stop();
+            Tooltip::hide();
         });
         self.tree_view.register_free_area_released(|node, evt| {
             if evt.mouse_button() != MouseButton::RightButton {
@@ -339,7 +347,17 @@ impl TreeViewHolder {
 
     #[inline]
     fn tooltip(&self) {
+        println!("Show tooltip");
         self.tooltip_timer.stop();
+        Tooltip::show(
+            "This is a Tooltip.",
+            Cursor::position(),
+            Some(
+                Styles::default()
+                    .with_halign(Align::Center)
+                    .with_valign(Align::Center),
+            ),
+        );
     }
 }
 

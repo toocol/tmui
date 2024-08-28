@@ -24,9 +24,6 @@ impl ObjectImpl for Tooltip {
 
         let window = ApplicationWindow::window();
         self.set_supervisor(window);
-
-        self.label.set_hexpand(true);
-        self.label.set_vexpand(true);
     }
 }
 
@@ -36,8 +33,8 @@ impl PopupImpl for Tooltip {}
 
 impl Tooltip {
     #[inline]
-    pub fn show<'a>(text: &'a str, geometry: Rect, styles: Option<Styles>) {
-        ApplicationWindow::window().tooltip(TooltipStrat::Show(text, geometry, styles))
+    pub fn show<'a>(text: &'a str, position: Point, styles: Option<Styles>) {
+        ApplicationWindow::window().tooltip(TooltipStrat::Show(text, position, styles))
     }
 
     #[inline]
@@ -59,6 +56,6 @@ impl Tooltip {
 }
 
 pub(crate) enum TooltipStrat<'a> {
-    Show(&'a str, Rect, Option<Styles>),
+    Show(&'a str, Point, Option<Styles>),
     Hide,
 }

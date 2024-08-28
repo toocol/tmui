@@ -4,7 +4,7 @@ use super::{
 };
 use crate::font::Font;
 use derivative::Derivative;
-use tlib::figure::Color;
+use tlib::{figure::Color, prelude::Align};
 
 #[derive(Debug, Clone, Derivative)]
 #[derivative(Default)]
@@ -17,6 +17,9 @@ pub struct Styles {
     font: Font,
     border: Border,
     box_shadow: Option<BoxShadow>,
+
+    halign: Align,
+    valign: Align,
 }
 
 impl Styles {
@@ -76,6 +79,26 @@ impl Styles {
     }
 
     #[inline]
+    pub fn halign(&self) -> Align {
+        self.halign
+    }
+
+    #[inline]
+    pub fn set_halign(&mut self, halign: Align) {
+        self.halign = halign
+    }
+
+    #[inline]
+    pub fn valign(&self) -> Align {
+        self.valign
+    }
+
+    #[inline]
+    pub fn set_valign(&mut self, valign: Align) {
+        self.valign = valign
+    }
+
+    #[inline]
     pub fn with_background(mut self, background: Color) -> Self {
         self.background = background;
         self
@@ -104,6 +127,18 @@ impl Styles {
         self.box_shadow = Some(box_shadow);
         self
     }
+
+    #[inline]
+    pub fn with_halign(mut self, halign: Align) -> Self {
+        self.halign = halign;
+        self
+    }
+
+    #[inline]
+    pub fn with_valign(mut self, valign: Align) -> Self {
+        self.valign = valign;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Derivative)]
@@ -114,6 +149,8 @@ pub(crate) struct InnerStyles {
     font: Font,
     border: Border,
     box_shadow: Option<BoxShadow>,
+    halign: Align,
+    valign: Align,
 }
 
 impl InnerStyles {
@@ -123,12 +160,16 @@ impl InnerStyles {
         font: Font,
         border: Border,
         box_shadow: Option<BoxShadow>,
+        halign: Align,
+        valign: Align,
     ) -> Self {
         Self {
             background,
             font,
             border,
             box_shadow,
+            halign,
+            valign,
         }
     }
 }
@@ -136,7 +177,7 @@ impl InnerStyles {
 impl From<Styles> for InnerStyles {
     #[inline]
     fn from(value: Styles) -> Self {
-        Self::new(value.background, value.font, value.border, value.box_shadow)
+        Self::new(value.background, value.font, value.border, value.box_shadow, value.halign, value.valign)
     }
 }
 
@@ -184,5 +225,25 @@ impl InnerStyles {
     #[inline]
     pub fn set_box_shadow(&mut self, shadow: BoxShadow) {
         self.box_shadow = Some(shadow)
+    }
+
+    #[inline]
+    pub fn halign(&self) -> Align {
+        self.halign
+    }
+
+    #[inline]
+    pub fn set_halign(&mut self, halign: Align) {
+        self.halign = halign
+    }
+
+    #[inline]
+    pub fn valign(&self) -> Align {
+        self.valign
+    }
+
+    #[inline]
+    pub fn set_valign(&mut self, valign: Align) {
+        self.valign = valign
     }
 }
