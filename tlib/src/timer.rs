@@ -7,9 +7,8 @@ use crate::{
 };
 use log::warn;
 use std::{
-    cell::{RefCell, RefMut},
+    cell::{Cell, Ref, RefCell},
     collections::HashMap,
-    ptr::NonNull,
     time::{Duration, SystemTime},
 };
 
@@ -19,7 +18,7 @@ thread_local! {
 
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
-    timers: RefCell<HashMap<ObjectId, Option<NonNull<Timer>>>>,
+    timers: RefCell<HashMap<ObjectId, *const Timer>>,
     once_timers: RefCell<HashMap<ObjectId, Box<Timer>>>,
 }
 
@@ -47,8 +46,7 @@ impl TimerHub {
     #[inline]
     pub fn check_timers(&self) {
         for (id, timer) in self.timers.borrow_mut().iter_mut() {
-            if let Some(timer) = timer.as_mut() {
-                let timer = unsafe { timer.as_mut() };
+            if let Some(timer) = unsafe { timer.as_ref() } {
                 if timer.is_active() {
                     timer.check_timer();
                 }
@@ -60,7 +58,7 @@ impl TimerHub {
         self.once_timers.borrow_mut().retain(|_, timer| {
             if timer.is_active() {
                 let shoot = timer.check_timer();
-                if shoot && timer.once_timer {
+                if shoot && timer.once_timer.get() {
                     timer.disconnect_all();
                     return false;
                 }
@@ -73,17 +71,17 @@ impl TimerHub {
         })
     }
 
-    fn add_timer(&self, timer: &mut Timer) {
+    fn add_timer(&self, timer: &Timer) {
         self.timers
             .borrow_mut()
-            .insert(timer.id(), NonNull::new(timer));
+            .insert(timer.id(), timer);
     }
 
-    fn add_once_timer(&self, timer: Box<Timer>) -> RefMut<Timer> {
+    fn add_once_timer(&self, timer: Box<Timer>) -> Ref<Timer> {
         let id = timer.id();
         self.once_timers.borrow_mut().insert(id, timer);
-        RefMut::map(self.once_timers.borrow_mut(), |map| {
-            map.get_mut(&id).unwrap().as_mut()
+        Ref::map(self.once_timers.borrow(), |map| {
+            map.get(&id).unwrap().as_ref()
         })
     }
 
@@ -95,13 +93,13 @@ impl TimerHub {
 /// Timing trigger `timeout()` sginal.
 #[extends(Object)]
 pub struct Timer {
-    duration: Duration,
-    #[derivative(Default(value = "SystemTime::now()"))]
-    last_strike: SystemTime,
-    started: bool,
-    single_shoot: bool,
-    once_timer: bool,
-    triggered: i32,
+    duration: Cell<Duration>,
+    #[derivative(Default(value = "Cell::new(SystemTime::now())"))]
+    last_strike: Cell<SystemTime>,
+    started: Cell<bool>,
+    single_shoot: Cell<bool>,
+    once_timer: Cell<bool>,
+    triggered: Cell<i32>,
 }
 
 impl Drop for Timer {
@@ -119,44 +117,47 @@ impl Timer {
 
     /// Create an once timer.
     /// Once timer can only be executed once and will be removed later
-    pub fn once<F: FnOnce(RefMut<Self>)>(f: F) {
+    pub fn once<F: FnOnce(Ref<Self>)>(f: F) {
         let mut timer = Self::new();
-        timer.once_timer = true;
+        timer.once_timer = Cell::new(true);
         TimerHub::with(|hub| {
             let once = hub.add_once_timer(timer);
             f(once);
         })
     }
 
-    pub fn start(&mut self, duration: Duration) {
-        if !TimerHub::contains_timer(self.id()) && !self.once_timer {
+    pub fn start(&self, duration: Duration) {
+        if !TimerHub::contains_timer(self.id()) && !self.once_timer.get() {
             TimerHub::with(|hub| hub.add_timer(self))
         }
-        self.started = true;
-        self.duration = duration;
-        self.last_strike = SystemTime::now();
+        self.started.set(true);
+        self.duration.set(duration);
+        self.last_strike.set(SystemTime::now());
     }
 
-    pub fn set_single_shot(&mut self, single_shot: bool) {
-        self.single_shoot = single_shot
+    #[inline]
+    pub fn set_single_shot(&self, single_shot: bool) {
+        self.single_shoot.set(single_shot)
     }
 
+    #[inline]
     pub fn is_active(&self) -> bool {
-        self.started
+        self.started.get()
     }
 
-    pub fn stop(&mut self) {
-        self.started = false
+    #[inline]
+    pub fn stop(&self) {
+        self.started.set(false)
     }
 
-    pub fn check_timer(&mut self) -> bool {
-        if let Ok(duration) = SystemTime::now().duration_since(self.last_strike) {
-            if duration > self.duration {
+    pub fn check_timer(&self) -> bool {
+        if let Ok(duration) = SystemTime::now().duration_since(self.last_strike.get()) {
+            if duration > self.duration.get() {
                 emit!(Timer::check_timer => self.timeout());
-                self.last_strike = SystemTime::now();
+                self.last_strike.set(SystemTime::now());
 
-                if self.single_shoot {
-                    self.started = false;
+                if self.single_shoot.get() {
+                    self.started.set(false);
                 }
                 return true;
             }
@@ -215,12 +216,12 @@ mod tests {
         ActionHub::initialize();
 
         let mut widget: Box<Widget> = Object::new(&[]);
-        let mut timer = Timer::new();
+        let timer = Timer::new();
 
         connect!(timer, timeout(), widget, deal_num());
         timer.start(Duration::from_millis(200));
 
-        Timer::once(|mut timer| {
+        Timer::once(|timer| {
             connect!(timer, timeout(), widget, deal_num());
             timer.start(Duration::from_millis(1));
         });

@@ -34,6 +34,9 @@ pub(crate) enum Message {
     /// Reqeust window to restore.
     WindowRestoreRequest(WindowId),
 
+    /// Request window the set the visibility.
+    WindowVisibilityRequest(WindowId, bool),
+
     /// Sub window calling response.
     WindowResponse(WindowId, Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>),
 
@@ -53,6 +56,7 @@ impl Debug for Message {
             Self::WindowMinimizeRequest(arg0) => f.debug_tuple("WindowMinimizeRequest").field(arg0).finish(),
             Self::WindowMaximizeRequest(arg0) => f.debug_tuple("WindowMaximizeRequest").field(arg0).finish(),
             Self::WindowRestoreRequest(arg0) => f.debug_tuple("WindowRestoreRequest").field(arg0).finish(),
+            Self::WindowVisibilityRequest(arg0, arg1) => f.debug_tuple("WindowVisibilityRequest").field(arg0).field(arg1).finish(),
             Self::WindowResponse(arg0, _) => f.debug_tuple("WindowResponse").field(arg0).finish(),
             Self::WindowMoved(arg0) => f.debug_tuple("point").field(arg0).finish(),
         }

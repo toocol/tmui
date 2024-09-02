@@ -1,6 +1,10 @@
-use std::ops::DerefMut;
-use once_cell::sync::Lazy;
+use lazy_static::lazy_static;
+use tipc::parking_lot::Mutex;
 use tlib::figure::Point;
+
+lazy_static!{
+    static ref CURSOR: Mutex<Cursor> = Mutex::new(Cursor { position: Point::default() });
+}
 
 pub struct Cursor {
     position: Point,
@@ -8,19 +12,13 @@ pub struct Cursor {
 
 impl Cursor {
     #[inline]
-    fn instance() -> &'static mut Cursor {
-        static mut CURSOR: Lazy<Cursor> = Lazy::new(|| Cursor { position: Point::default() });
-        unsafe { CURSOR.deref_mut() }
-    }
-
-    #[inline]
     pub fn position() -> Point {
-        Self::instance().position
+        CURSOR.lock().position
     }
 
     #[inline]
     pub(crate) fn set_position<T: Into<Point>>(pos: T) {
-        Self::instance().position = pos.into()
+        CURSOR.lock().position = pos.into()
     }
 }
 

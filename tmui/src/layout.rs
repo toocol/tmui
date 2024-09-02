@@ -323,7 +323,7 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let parent_spacing_size = self.parent_spacing_size();
         let mut resized = false;
-
+                
         if self.fixed_width() {
             if self.hexpand() {
                 if let Some(ref spacing_size) = parent_spacing_size {
@@ -756,8 +756,8 @@ impl LayoutMgr {
         let widget_rect = widget.rect();
         let parent_rect = parent.borderless_rect();
 
-        let halign = widget.get_property("halign").unwrap().get::<Align>();
-        let valign = widget.get_property("valign").unwrap().get::<Align>();
+        let halign = widget.halign();
+        let valign = widget.valign();
 
         match halign {
             Align::Start => widget.set_fixed_x(parent_rect.x() + widget.margin_left()),

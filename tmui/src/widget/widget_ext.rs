@@ -535,12 +535,6 @@ pub trait WidgetExt {
     /// Get the styles redraw region. <br>
     fn redraw_region(&self) -> &CoordRegion;
 
-    /// Get the reference of styles.
-    fn styles(&self) -> &Styles;
-
-    /// Get the mutable reference of styles.
-    fn styles_mut(&mut self) -> &mut Styles;
-
     /// Set the styles.
     fn set_styles(&mut self, styles: Styles);
 }
@@ -951,22 +945,22 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn set_halign(&mut self, halign: Align) {
-        self.set_property("halign", halign.to_value())
+        self.widget_props_mut().styles.set_halign(halign)
     }
 
     #[inline]
     fn set_valign(&mut self, valign: Align) {
-        self.set_property("valign", valign.to_value())
+        self.widget_props_mut().styles.set_valign(valign)
     }
 
     #[inline]
     fn halign(&self) -> Align {
-        self.get_property("halign").unwrap().get::<Align>()
+        self.widget_props().styles.halign()
     }
 
     #[inline]
     fn valign(&self) -> Align {
-        self.get_property("valign").unwrap().get::<Align>()
+        self.widget_props().styles.valign()
     }
 
     #[inline]
@@ -1815,18 +1809,26 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn styles(&self) -> &Styles {
-        &self.widget_props().styles
-    }
-
-    #[inline]
-    fn styles_mut(&mut self) -> &mut Styles {
-        &mut self.widget_props_mut().styles
-    }
-
-    #[inline]
-    fn set_styles(&mut self, styles: Styles) {
-        self.widget_props_mut().styles = styles
+    fn set_styles(&mut self, mut styles: Styles) {
+        let styles_mut = &mut self.widget_props_mut().styles;
+        if let Some(background) = styles.background() {
+            styles_mut.set_background(background)
+        }
+        if let Some(font) = styles.take_font() {
+            styles_mut.set_font(font)
+        }
+        if let Some(border) = styles.take_border() {
+            styles_mut.set_border(border)
+        }
+        if let Some(box_shadow) = styles.take_box_shadow() {
+            styles_mut.set_box_shadow(box_shadow)
+        }
+        if let Some(halign) = styles.halign() {
+            styles_mut.set_halign(halign)
+        }
+        if let Some(valign) = styles.valign() {
+            styles_mut.set_valign(valign)
+        }
     }
 }
 

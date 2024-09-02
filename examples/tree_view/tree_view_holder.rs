@@ -1,13 +1,15 @@
 #![allow(dead_code)]
-use std::{cmp::Ordering, time::Duration};
+use std::{cmp::Ordering, rc::Rc, time::Duration};
 use tlib::{
-    actions::ActionExt, compare::Compare, connect, global::SemanticExt, namespace::MouseButton,
-    timer::Timer, tokio::task::JoinHandle,
+    actions::ActionExt, compare::Compare, connect, figure::OptionSize, global::SemanticExt, namespace::MouseButton, timer::Timer, tokio::task::JoinHandle
 };
 use tmui::{
     container::ScaleStrat,
+    cursor::Cursor,
+    graphics::styles::Styles,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
+    tooltip::Tooltip,
     views::{
         cell::{cell_render::TextCellRender, Cell},
         node::node_render::NodeRender,
@@ -33,6 +35,8 @@ pub struct TreeViewHolder {
 
     #[children]
     tree_view_3: Box<TreeView>,
+
+    tooltip_timer: Rc<Box<Timer>>,
 }
 
 impl ObjectSubclass for TreeViewHolder {
@@ -42,6 +46,7 @@ impl ObjectSubclass for TreeViewHolder {
 impl ObjectImpl for TreeViewHolder {
     fn construct(&mut self) {
         self.parent_construct();
+        connect!(self.tooltip_timer, timeout(), self, tooltip());
 
         self.tree_view
             .set_layout_mode(tmui::scroll_area::LayoutMode::Overlay);
@@ -91,11 +96,16 @@ impl ObjectImpl for TreeViewHolder {
                 evt.position()
             );
         });
-        self.tree_view.register_node_enter(|node, _| {
+        let timer = self.tooltip_timer.clone();
+        self.tree_view.register_node_enter(move |node, _| {
             println!("Node enter, id = {}", node.id());
+            timer.start(Duration::from_millis(500));
         });
-        self.tree_view.register_node_leave(|node, _| {
+        let timer = self.tooltip_timer.clone();
+        self.tree_view.register_node_leave(move |node, _| {
             println!("Node leave, id = {}", node.id());
+            timer.stop();
+            Tooltip::hide();
         });
         self.tree_view.register_free_area_released(|node, evt| {
             if evt.mouse_button() != MouseButton::RightButton {
@@ -332,6 +342,22 @@ impl TreeViewHolder {
     #[inline]
     pub fn new() -> Box<Self> {
         Object::new(&[])
+    }
+
+    #[inline]
+    fn tooltip(&self) {
+        println!("Show tooltip");
+        self.tooltip_timer.stop();
+        Tooltip::show(
+            "This is a multiple-line Tooltip text content, to test Label auto line wrapping.",
+            Cursor::position(),
+            OptionSize::width_only(200),
+            Some(
+                Styles::default()
+                    .with_halign(Align::Center)
+                    .with_valign(Align::Center),
+            ),
+        );
     }
 }
 

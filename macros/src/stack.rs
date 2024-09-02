@@ -29,12 +29,14 @@ pub(crate) fn generate_stack_inner_initial() -> syn::Result<proc_macro2::TokenSt
     })
 }
 
-pub(crate) fn generate_stack_inner_on_property_set() -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_stack_inner_on_property_set(use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!{
+        use #use_prefix::widget::InnerEventProcess;
         match name {
             "visible" => {
                 let visible = value.get::<bool>();
                 emit!(self.visibility_changed(), visible);
+                self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
                 if visible {
                     if let Some(c) = self.current_child_mut() {

@@ -11,7 +11,7 @@ use crate::{
         element::{ElementImpl, HierachyZ},
         painter::Painter,
         render_difference::RenderDiffence,
-        styles::Styles,
+        styles::InnerStyles,
     },
     layout::LayoutMgr,
     opti::tracker::Tracker,
@@ -69,7 +69,7 @@ pub struct Widget {
 
     margins: [i32; 4],
     paddings: [i32; 4],
-    styles: Styles,
+    styles: InnerStyles,
 
     width_request: i32,
     height_request: i32,

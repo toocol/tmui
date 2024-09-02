@@ -181,6 +181,9 @@ impl WidgetImpl for Holder {
             let geometry = Rect::new(pos.x(), pos.y(), 0, 0);
             InputDialog::hide_on_win_changed(true);
             let dialog = InputDialog::text(geometry, None);
+            dialog.register_visibility_changed(|w, visible| {
+                println!("InputDialog {} visibility changed, {}", w.name(), visible)
+            });
             assert!(dialog.input_mut::<Text>().is_some());
             assert!(dialog.input_mut::<Number>().is_none());
         }

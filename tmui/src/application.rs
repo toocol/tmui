@@ -601,6 +601,15 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         self.opti_track = track;
         self
     }
+
+    /// Set to `true` to hide the window until the UI is loaded.
+    ///
+    /// The default value was `false`.
+    #[inline]
+    pub fn defer_display(mut self, defer_display: bool) -> Self {
+        self.win_cfg_bld = self.win_cfg_bld.visible(!defer_display);
+        self
+    }
 }
 
 #[inline]
