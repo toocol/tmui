@@ -458,6 +458,49 @@ impl SizeHint {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// OptionSize
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+pub struct OptionSize {
+    width: Option<i32>,
+    height: Option<i32>,
+}
+
+impl OptionSize {
+    #[inline]
+    pub fn new(width: i32, height: i32) -> Self {
+        Self {
+            width: Some(width),
+            height: Some(height),
+        }
+    }
+
+    #[inline]
+    pub fn width_only(width: i32) -> Self {
+        Self { width: Some(width), height: None }
+    }
+
+    #[inline]
+    pub fn height_only(height: i32) -> Self {
+        Self { width: None, height: Some(height) }
+    }
+
+    #[inline]
+    pub fn none() -> Self {
+        Self { width: None, height: None }
+    }
+
+    #[inline]
+    pub fn width(&self) -> Option<i32> {
+        self.width
+    }
+
+    #[inline]
+    pub fn height(&self) -> Option<i32> {
+        self.height
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -1809,8 +1809,26 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
-    fn set_styles(&mut self, styles: Styles) {
-        self.widget_props_mut().styles = styles.into()
+    fn set_styles(&mut self, mut styles: Styles) {
+        let styles_mut = &mut self.widget_props_mut().styles;
+        if let Some(background) = styles.background() {
+            styles_mut.set_background(background)
+        }
+        if let Some(font) = styles.take_font() {
+            styles_mut.set_font(font)
+        }
+        if let Some(border) = styles.take_border() {
+            styles_mut.set_border(border)
+        }
+        if let Some(box_shadow) = styles.take_box_shadow() {
+            styles_mut.set_box_shadow(box_shadow)
+        }
+        if let Some(halign) = styles.halign() {
+            styles_mut.set_halign(halign)
+        }
+        if let Some(valign) = styles.valign() {
+            styles_mut.set_valign(valign)
+        }
     }
 }
 

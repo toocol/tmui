@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 use std::{cmp::Ordering, rc::Rc, time::Duration};
 use tlib::{
-    actions::ActionExt, compare::Compare, connect, global::SemanticExt, namespace::MouseButton,
-    timer::Timer, tokio::task::JoinHandle,
+    actions::ActionExt, compare::Compare, connect, figure::OptionSize, global::SemanticExt, namespace::MouseButton, timer::Timer, tokio::task::JoinHandle
 };
 use tmui::{
     container::ScaleStrat,
@@ -350,8 +349,9 @@ impl TreeViewHolder {
         println!("Show tooltip");
         self.tooltip_timer.stop();
         Tooltip::show(
-            "This is a Tooltip.",
+            "This is a multiple-line Tooltip text content, to test Label auto line wrapping.",
             Cursor::position(),
+            OptionSize::width_only(200),
             Some(
                 Styles::default()
                     .with_halign(Align::Center)

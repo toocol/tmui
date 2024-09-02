@@ -277,9 +277,6 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let visible = self.visible();
         let mut resized = false;
-        if self.name().contains("Tooltip") {
-            println!("child size {:?}", child_size);
-        }
 
         if (size.width() == 0 && child_size.width() != 0 && visible)
             || (!self.hexpand() && !self.fixed_width())
@@ -327,10 +324,6 @@ impl SizeCalculation for dyn WidgetImpl {
         let parent_spacing_size = self.parent_spacing_size();
         let mut resized = false;
                 
-        if self.name().contains("Label") {
-            println!("detecting size {} {}", self.detecting_width(), self.detecting_height());
-        }
-
         if self.fixed_width() {
             if self.hexpand() {
                 if let Some(ref spacing_size) = parent_spacing_size {

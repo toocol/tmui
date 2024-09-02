@@ -804,19 +804,38 @@ impl ApplicationWindow {
         if self.tooltip.is_none() {
             let mut tooltip = Tooltip::new();
             child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
+            self.board().shuffle();
             self.tooltip = Some(tooltip);
         }
 
         let tooltip = self.tooltip.as_mut().unwrap();
 
         match tooltip_strat {
-            TooltipStrat::Show(text, position, styles) => {
-                tooltip.set_text(text);
+            TooltipStrat::Show(text, position, size, styles) => {
                 tooltip.set_fixed_x(position.x());
                 tooltip.set_fixed_y(position.y());
+
+                if let Some(width) = size.width() {
+                    tooltip.label().width_request(width)
+                }
+                if let Some(height) = size.height() {
+                    tooltip.label().height_request(height)
+                }
                 if let Some(styles) = styles {
+                    if let Some(halign) = styles.halign() {
+                        tooltip.label().set_halign(halign)
+                    }
+                    if let Some(valign) = styles.valign() {
+                        tooltip.label().set_valign(valign)
+                    }
+                    if let Some(color) = styles.color() {
+                        tooltip.set_color(color)
+                    }
                     tooltip.set_styles(styles);
                 }
+
+                tooltip.set_text(text);
+                tooltip.calc_relative_position();
                 tooltip.show();
                 ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
             }
