@@ -1,6 +1,5 @@
 use std::{cell::RefCell, ptr::NonNull};
-
-use tlib::nonnull_mut;
+use tlib::{nonnull_mut, prelude::*};
 
 thread_local! {
     static INSTANCE: RefCell<CloseHandlerMgr> = RefCell::new(CloseHandlerMgr::new());
@@ -31,6 +30,9 @@ impl CloseHandlerMgr {
     }
 }
 
-pub trait CloseHandler: 'static {
+pub trait CloseHandlerRequire: CloseHandler {}
+
+#[reflect_trait]
+pub trait CloseHandler {
     fn handle(&mut self);
 }
