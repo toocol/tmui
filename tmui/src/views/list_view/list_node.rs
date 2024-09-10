@@ -1,12 +1,12 @@
 use super::{
-    list_item::{ItemType, ListItem, RenderCtx},
+    list_item::{ItemType, ListItem},
     list_store::ListStore,
     list_view_object::ListViewObject,
     ListView, Painter,
 };
 use crate::views::{
     cell::{cell_render::CellRender, Cell},
-    node::{node_render::NodeRender, Status},
+    node::{node_render::NodeRender, RenderCtx, Status},
 };
 use log::warn;
 use tlib::{
@@ -39,12 +39,12 @@ impl ListNode {
 
     #[inline]
     pub fn is_hovered(&self) -> bool {
-        self.status == Status::Hovered
+        self.status.contains(Status::Hovered)
     }
 
     #[inline]
     pub fn is_selected(&self) -> bool {
-        self.status == Status::Selected
+        self.status.contains(Status::Selected)
     }
 
     #[inline]
@@ -142,7 +142,7 @@ impl ListNode {
         Self {
             store: 0,
             id: 0,
-            status: Status::Default,
+            status: Status::empty(),
             group_managed: false,
             cells: obj.cells(),
             node_render: obj.node_render(),
@@ -176,8 +176,13 @@ impl ListNode {
     }
 
     #[inline]
-    pub(crate) fn set_status(&mut self, status: Status) {
-        self.status = status;
+    pub(crate) fn add_status(&mut self, status: Status) {
+        self.status.insert(status)
+    }
+
+    #[inline]
+    pub(crate) fn remove_status(&mut self, status: Status) {
+        self.status.remove(status)
     }
 }
 
@@ -189,10 +194,9 @@ impl ListItem for ListNode {
 
     fn render(&self, painter: &mut Painter, render_ctx: RenderCtx) {
         let geometry = render_ctx.geometry;
-        let background = render_ctx.background;
 
         self.node_render
-            .render(painter, geometry, background, self.status);
+            .render(painter, render_ctx, self.status);
 
         let gapping = geometry.width() / self.render_cell_size() as f32;
         let mut offset = geometry.x();

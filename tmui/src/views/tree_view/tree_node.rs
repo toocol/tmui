@@ -2,7 +2,7 @@ use super::{tree_store::TreeStore, tree_view_object::TreeViewObject, TreeView};
 use crate::views::cell::cell_render::CellRender;
 use crate::views::cell::Cell;
 use crate::views::node::node_render::NodeRender;
-use crate::views::node::Status;
+use crate::views::node::{RenderCtx, Status};
 use crate::{application::is_ui_thread, prelude::*};
 use crate::{graphics::painter::Painter, views::tree_view::tree_store::TreeStoreSignals};
 use log::warn;
@@ -170,12 +170,12 @@ impl TreeNode {
 
     #[inline]
     pub fn is_hovered(&self) -> bool {
-        self.status == Status::Hovered
+        self.status.contains(Status::Hovered)
     }
 
     #[inline]
     pub fn is_selected(&self) -> bool {
-        self.status == Status::Selected
+        self.status.contains(Status::Selected)
     }
 
     #[inline]
@@ -301,7 +301,7 @@ impl TreeNode {
             children_id_holder: vec![],
             idx: 0,
             level: -1,
-            status: Status::Default,
+            status: Status::empty(),
             cells: vec![],
             node_render: NodeRender::default(),
         }
@@ -324,7 +324,7 @@ impl TreeNode {
             children_id_holder: vec![],
             idx: 0,
             level: 0,
-            status: Status::Default,
+            status: Status::empty(),
             cells: obj.cells(),
             node_render: obj.node_render(),
         }
@@ -335,14 +335,13 @@ impl TreeNode {
     pub(crate) fn render_node(
         &self,
         painter: &mut Painter,
-        geometry: Rect,
-        background: Color,
+        render_ctx: RenderCtx,
         ident_length: i32,
     ) {
-        let mut geometry: FRect = geometry.into();
+        let mut geometry: FRect = render_ctx.geometry;
 
         self.node_render
-            .render(painter, geometry, background, self.status);
+            .render(painter, render_ctx, self.status);
 
         let tl = geometry.top_left();
         geometry.set_x(tl.x() + (ident_length * self.level) as f32);
@@ -636,8 +635,13 @@ impl TreeNode {
     }
 
     #[inline]
-    pub(crate) fn set_status(&mut self, status: Status) {
-        self.status = status
+    pub(crate) fn add_status(&mut self, status: Status) {
+        self.status.insert(status)
+    }
+
+    #[inline]
+    pub(crate) fn remove_status(&mut self, status: Status) {
+        self.status.remove(status)
     }
 
     pub(crate) fn sort_inner(

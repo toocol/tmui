@@ -4,7 +4,10 @@ use crate::{
     prelude::*,
     scroll_bar::ScrollBar,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    views::tree_view::tree_store::TreeStoreSignals,
+    views::{
+        node::{MouseEffect, RenderCtx},
+        tree_view::tree_store::TreeStoreSignals,
+    },
     widget::{RegionClear, WidgetImpl},
 };
 use std::ptr::NonNull;
@@ -29,6 +32,8 @@ pub(crate) struct TreeViewImage {
     #[derivative(Default(value = "1"))]
     line_height: i32,
     line_spacing: i32,
+    #[derivative(Default(value = "MouseEffect::all()"))]
+    mouse_effect: MouseEffect,
 
     on_node_pressed: Option<FnNodePressed>,
     on_node_released: Option<FnNodeReleased>,
@@ -111,12 +116,9 @@ impl WidgetImpl for TreeViewImage {
             let geometry = Rect::new(rect.x(), offset, rect.width(), self.line_height);
             offset += self.line_height + self.line_spacing;
 
-            nonnull_ref!(node).render_node(
-                painter,
-                geometry,
-                self.opaque_background(),
-                self.indent_length,
-            );
+            let render_ctx =
+                RenderCtx::new(geometry.into(), self.opaque_background(), self.mouse_effect);
+            nonnull_ref!(node).render_node(painter, render_ctx, self.indent_length);
         }
     }
 
@@ -241,6 +243,21 @@ impl TreeViewImage {
     #[inline]
     pub fn line_height(&self) -> i32 {
         self.line_height
+    }
+
+    #[inline]
+    pub fn mouse_effect(&self) -> MouseEffect {
+        self.mouse_effect
+    }
+
+    #[inline]
+    pub fn mouse_effect_mut(&mut self) -> &mut MouseEffect {
+        &mut self.mouse_effect
+    }
+
+    #[inline]
+    pub fn set_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.mouse_effect = mouse_effect
     }
 }
 

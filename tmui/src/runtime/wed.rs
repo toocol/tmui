@@ -146,7 +146,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
 
             window.check_mouse_leave(&pos, &evt);
 
-            for (_name, widget_opt) in widgets_map.iter_mut() {
+            for (_id, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
 
                 if let Some(ref modal) = window.modal_widget() {
@@ -166,7 +166,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 let widget_position = widget.map_to_widget(&pos);
 
                 if widget.point_effective(&evt.position().into()) {
-                    // process the `mouse_enter`,`mouse_leave` events:
+                    // process the `mouse_over`,`mouse_out` events:
                     if window.mouse_over_widget().is_none() {
                         window.set_mouse_over_widget(NonNull::new(widget));
                         let mouse_over = MouseEvent::new(

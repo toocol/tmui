@@ -7,9 +7,11 @@ use self::{tree_node::TreeNode, tree_store::TreeStore, tree_view_image::TreeView
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{WidgetHndAsable, WidgetImpl},
+    widget::{InnerEventProcess, WidgetHndAsable, WidgetImpl},
 };
 use tlib::{compare::Compare, connect, signals};
+
+use super::node::MouseEffect;
 
 /// Tree components display data in a hierarchical manner.
 ///
@@ -72,6 +74,8 @@ impl ObjectImpl for TreeView {
 
         connect!(self, background_changed(), image, set_background(Color));
         connect!(self, invalid_area_changed(), image, set_invalid_area(FRect));
+        connect!(image, mouse_leave(), self, image_mouse_leave(MouseEvent));
+        connect!(image, mouse_enter(), self, image_mouse_enter(MouseEvent));
 
         self.enable_bubble(EventBubble::KEY_PRESSED);
         self.enable_bubble(EventBubble::KEY_RELEASED);
@@ -159,6 +163,26 @@ impl TreeView {
         self.get_store_mut().set_sort_proxy(compare)
     }
 
+    #[inline]
+    pub fn mouse_effect(&self) -> MouseEffect {
+        self.get_image().mouse_effect()
+    }
+
+    #[inline]
+    pub fn set_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.get_image_mut().set_mouse_effect(mouse_effect)
+    }
+
+    #[inline]
+    pub fn disable_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.get_image_mut().mouse_effect_mut().remove(mouse_effect)
+    }
+
+    #[inline]
+    pub fn enable_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.get_image_mut().mouse_effect_mut().insert(mouse_effect)
+    }
+
     /// Function clousure will be executed when mouse pressed the node.
     #[inline]
     pub fn register_node_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(&mut self, f: T) {
@@ -219,6 +243,18 @@ impl TreeView {
     #[inline]
     pub(crate) fn get_image_mut(&mut self) -> &mut TreeViewImage {
         self.get_area_cast_mut::<TreeViewImage>().unwrap()
+    }
+
+    #[inline]
+    pub(crate) fn image_mouse_enter(&mut self, evt: MouseEvent) {
+        self.inner_mouse_enter(&evt);
+        self.on_mouse_enter(&evt);
+    }
+
+    #[inline]
+    pub(crate) fn image_mouse_leave(&mut self, evt: MouseEvent) {
+        self.inner_mouse_leave(&evt);
+        self.on_mouse_leave(&evt);
     }
 }
 

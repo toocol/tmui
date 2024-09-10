@@ -13,6 +13,7 @@ use crate::{
     font::mgr::FontManager,
     graphics::icon::Icon,
     platform::{PlatformContext, PlatformIpc, PlatformType},
+    prelude::CloseHandlerMgr,
     primitive::{cpu_balance::CpuBalance, shared_channel::SharedChannel},
     runtime::{start_ui_runtime, windows_process::WindowsProcess},
     window::win_config::{WindowConfig, WindowConfigBuilder},
@@ -120,12 +121,15 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         // Create the `UI` main thread.
         let join = start_ui_runtime(0, self.ui_stack_size, logic_window);
 
-        WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context.as_ref()).process(physical_window);
+        WindowsProcess::<T, M>::new(self.ui_stack_size, platform_context.as_ref())
+            .process(physical_window);
 
         crate::opti::tracker::Tracker::output_file()
             .unwrap_or_else(|err| error!("Output tracker file failed, error = {:?}", err));
 
         join.join().unwrap();
+
+        CloseHandlerMgr::process()
     }
 
     /// The method will be activate when the ui thread was created, and activated in the ui thread. <br>

@@ -1,8 +1,8 @@
 use super::WidgetImpl;
 use tlib::events::{KeyEvent, MouseEvent};
 
-pub type HoverInFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
-pub type HoverOutFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
+pub type MouseEnterFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
+pub type MouseLeaveFn = Box<dyn Fn(&mut dyn WidgetImpl)>;
 pub type MousePressedFn = Box<dyn Fn(&mut dyn WidgetImpl, &MouseEvent)>;
 pub type MouseReleasedFn = Box<dyn Fn(&mut dyn WidgetImpl, &MouseEvent)>;
 pub type MouseMoveFn = Box<dyn Fn(&mut dyn WidgetImpl, &MouseEvent)>;
@@ -16,8 +16,8 @@ pub type VisibilityChangedFn = Box<dyn Fn(&mut dyn WidgetImpl, bool)>;
 
 #[derive(Default)]
 pub struct Callbacks {
-    pub(crate) hover_in: Option<HoverInFn>,
-    pub(crate) hover_out: Option<HoverOutFn>,
+    pub(crate) mouse_enter: Option<MouseEnterFn>,
+    pub(crate) mouse_leave: Option<MouseLeaveFn>,
     pub(crate) mouse_pressed: Option<MousePressedFn>,
     pub(crate) mouse_released: Option<MouseReleasedFn>,
     pub(crate) mouse_move: Option<MouseMoveFn>,
@@ -32,19 +32,19 @@ pub struct Callbacks {
 
 pub trait CallbacksRegister: WidgetImpl {
     #[inline]
-    fn register_hover_in<F>(&mut self, f: F)
+    fn register_mouse_enter<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
-        self.callbacks_mut().hover_in = Some(Box::new(f));
+        self.callbacks_mut().mouse_enter = Some(Box::new(f));
     }
 
     #[inline]
-    fn register_hover_out<F>(&mut self, f: F)
+    fn register_mouse_leave<F>(&mut self, f: F)
     where
         F: Fn(&mut dyn WidgetImpl) + 'static,
     {
-        self.callbacks_mut().hover_out = Some(Box::new(f));
+        self.callbacks_mut().mouse_leave = Some(Box::new(f));
     }
 
     #[inline]

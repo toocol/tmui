@@ -49,18 +49,18 @@ impl ObjectImpl for WinCtrlBtns {
         self.minimize.width_request(46);
         self.minimize.height_request(30);
         self.minimize
-            .register_hover_in(|w| w.set_background(CTRL_BTN_GREY));
+            .register_mouse_enter(|w| w.set_background(CTRL_BTN_GREY));
         self.minimize
-            .register_hover_out(move |w| w.set_background(background));
+            .register_mouse_leave(move |w| w.set_background(background));
         self.minimize
             .register_mouse_released(|w, _| w.window().minimize());
 
         self.large_restore.width_request(46);
         self.large_restore.height_request(30);
         self.large_restore
-            .register_hover_in(|w| w.set_background(CTRL_BTN_GREY));
+            .register_mouse_enter(|w| w.set_background(CTRL_BTN_GREY));
         self.large_restore
-            .register_hover_out(move |w| w.set_background(background));
+            .register_mouse_leave(move |w| w.set_background(background));
         self.large_restore.register_mouse_released(|w, _| {
             let icon = w.downcast_mut::<SvgToggleIcon>().unwrap();
             match icon.current_icon() {
@@ -83,9 +83,9 @@ impl ObjectImpl for WinCtrlBtns {
         self.close.width_request(46);
         self.close.height_request(30);
         self.close
-            .register_hover_in(|w| w.set_background(CTRL_BTN_RED));
+            .register_mouse_enter(|w| w.set_background(CTRL_BTN_RED));
         self.close
-            .register_hover_out(move |w| w.set_background(background));
+            .register_mouse_leave(move |w| w.set_background(background));
         self.close
             .register_mouse_released(|w, _| w.window().close());
     }

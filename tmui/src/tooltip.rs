@@ -37,7 +37,7 @@ impl PopupImpl for Tooltip {}
 
 impl Tooltip {
     #[inline]
-    pub fn show<'a>(text: &'a str, position: Point, size: OptionSize, styles: Option<Styles>) {
+    pub fn show(text: &str, position: Point, size: OptionSize, styles: Option<Styles>) {
         ApplicationWindow::window().tooltip(TooltipStrat::Show(text, position, size, styles))
     }
 
@@ -54,7 +54,7 @@ impl Tooltip {
     }
 
     #[inline]
-    pub(crate) fn set_text<'a>(&mut self, text: &'a str) {
+    pub(crate) fn set_text(&mut self, text: &str) {
         self.label.set_text(text)
     }
 
