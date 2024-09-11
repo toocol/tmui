@@ -485,7 +485,7 @@ impl TreeStore {
             if old_hover.is_some() {
                 let node = nonnull_mut!(old_hover);
                 if node.is_hovered() {
-                    node.set_status(Status::Default);
+                    node.remove_status(Status::Hovered);
 
                     emit!(self.notify_update());
                 }
@@ -501,15 +501,11 @@ impl TreeStore {
 
         if self.hovered_node.is_some() {
             let node = nonnull_mut!(self.hovered_node);
-            if !node.is_selected() {
-                node.set_status(Status::Default);
-            }
+            node.remove_status(Status::Hovered);
         }
 
-        if !node.is_selected() {
-            node.set_status(Status::Hovered);
-            self.hovered_node = node_ptr;
-        }
+        node.add_status(Status::Hovered);
+        self.hovered_node = node_ptr;
 
         emit!(self.notify_update());
     }
@@ -519,7 +515,7 @@ impl TreeStore {
             let mut old_select = self.selected_node.take();
             if old_select.is_some() {
                 let node = nonnull_mut!(old_select);
-                node.set_status(Status::Default);
+                node.remove_status(Status::Selected);
 
                 emit!(self.notify_update());
             }
@@ -531,10 +527,10 @@ impl TreeStore {
 
         if self.selected_node.is_some() {
             let node = nonnull_mut!(self.selected_node);
-            node.set_status(Status::Default);
+            node.remove_status(Status::Selected);
         }
 
-        node.set_status(Status::Selected);
+        node.add_status(Status::Selected);
         self.selected_node = node_ptr;
 
         if mouse_button == MouseButton::LeftButton {

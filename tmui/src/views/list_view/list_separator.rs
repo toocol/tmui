@@ -1,6 +1,7 @@
 use std::rc::Rc;
+use crate::views::node::RenderCtx;
 use super::{
-    list_item::{ItemType, ListItem, RenderCtx},
+    list_item::{ItemType, ListItem},
     Painter,
 };
 use derivative::Derivative;

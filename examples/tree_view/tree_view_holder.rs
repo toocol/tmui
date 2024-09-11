@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 use std::{cmp::Ordering, rc::Rc, time::Duration};
 use tlib::{
-    actions::ActionExt, compare::Compare, connect, figure::OptionSize, global::SemanticExt, namespace::MouseButton, timer::Timer, tokio::task::JoinHandle
+    actions::ActionExt, compare::Compare, connect, figure::OptionSize, global::SemanticExt,
+    namespace::MouseButton, timer::Timer, tokio::task::JoinHandle,
 };
 use tmui::{
     container::ScaleStrat,
@@ -12,10 +13,10 @@ use tmui::{
     tooltip::Tooltip,
     views::{
         cell::{cell_render::TextCellRender, Cell},
-        node::node_render::NodeRender,
+        node::{node_render::NodeRender, MouseEffect},
         tree_view::{tree_node::TreeNode, tree_view_object::TreeViewObject, TreeView},
     },
-    widget::{ChildOp, WidgetImpl},
+    widget::{callbacks::CallbacksRegister, ChildOp, WidgetImpl},
 };
 
 use crate::ctx_menu::CtxMenu;
@@ -36,7 +37,7 @@ pub struct TreeViewHolder {
     #[children]
     tree_view_3: Box<TreeView>,
 
-    tooltip_timer: Rc<Box<Timer>>,
+    tooltip_timer: Rc<Timer>,
 }
 
 impl ObjectSubclass for TreeViewHolder {
@@ -69,6 +70,12 @@ impl ObjectImpl for TreeViewHolder {
             .set_active_color(Some(Color::GREY_MEDIUM.with_a(155)));
         self.tree_view.scroll_bar_mut().set_slider_radius(5.);
         self.tree_view.scroll_bar_mut().set_auto_hide(true);
+
+        let timer_rc = self.tooltip_timer.clone();
+        self.tree_view.register_mouse_leave(move |_| {
+            timer_rc.stop();
+            Tooltip::hide();
+        });
 
         self.tree_view.register_node_pressed(|node, evt| {
             println!(
@@ -275,6 +282,7 @@ impl ObjectImpl for TreeViewHolder {
         self.tree_view_3.set_hexpand(true);
         self.tree_view_3.set_vexpand(true);
         self.tree_view_3.set_hscale(0.3);
+        self.tree_view_3.disable_mouse_effect(MouseEffect::Selected);
         self.tree_view_3
             .set_sort_proxy(Compare::<TreeNode>::new(|a, b| {
                 if a.is_extensible() && !b.is_extensible() {

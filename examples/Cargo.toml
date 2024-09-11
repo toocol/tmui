@@ -82,6 +82,10 @@ name = "list_view"
 path = "list_view/main.rs"
 
 [[bin]]
+name = "mouse_evt"
+path = "mouse_evt/main.rs"
+
+[[bin]]
 name = "multi_window"
 path = "multi_window/main.rs"
 

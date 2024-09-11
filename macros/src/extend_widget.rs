@@ -42,6 +42,10 @@ pub(crate) fn expand(
     let isolated_visibility_impl_clause = &general_attr.isolated_visibility_impl_clause;
     let isolated_visibility_reflect_clause = &general_attr.isolated_visibility_reflect_clause;
 
+    let close_handler_impl_clause = &general_attr.close_handler_impl_clause;
+    let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
+    let close_handler_register_clause = &general_attr.close_handler_register_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -159,6 +163,8 @@ pub(crate) fn expand(
 
                 #isolated_visibility_impl_clause
 
+                #close_handler_impl_clause
+
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -180,11 +186,13 @@ pub(crate) fn expand(
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
                         #isolated_visibility_reflect_clause
+                        #close_handler_reflect_clause
                     }
 
                     #[inline]
                     fn inner_initialize(&mut self) {
                         #run_after_clause
+                        #close_handler_register_clause
                     }
 
                     #[inline]

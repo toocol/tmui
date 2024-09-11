@@ -5,6 +5,7 @@ mod async_do;
 mod async_task;
 mod cast;
 mod childable;
+mod close_handler;
 mod extend_attr;
 mod extend_container;
 mod extend_element;
@@ -393,5 +394,10 @@ pub fn frame_animator(_: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn isolated_visibility(_: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn close_handler(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

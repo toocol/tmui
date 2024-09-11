@@ -1047,7 +1047,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     #[inline]
     fn inner_mouse_enter(&mut self, event: &MouseEvent) {
         let ptr = self as *mut dyn WidgetImpl;
-        if let Some(ref f) = self.callbacks().hover_in {
+        if let Some(ref f) = self.callbacks().mouse_enter {
             f(ptr_mut!(ptr))
         }
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
@@ -1060,7 +1060,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
     #[inline]
     fn inner_mouse_leave(&mut self, event: &MouseEvent) {
         let ptr = self as *mut dyn WidgetImpl;
-        if let Some(ref f) = self.callbacks().hover_out {
+        if let Some(ref f) = self.callbacks().mouse_leave {
             f(ptr_mut!(ptr))
         }
         if let Some(inner_customize_process) = cast_mut!(self as InnerCustomizeEventProcess) {
@@ -1172,7 +1172,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
 
         emit!(Widget::inner_receive_character => self.receive_character(), event);
     }
-    
+
     #[inline]
     fn inner_visibility_changed(&mut self, visible: bool) {
         let ptr = self as *mut dyn WidgetImpl;

@@ -36,6 +36,10 @@ pub(crate) fn expand(
 
     let frame_animator_reflect_clause = &general_attr.frame_animator_reflect_clause;
 
+    let close_handler_impl_clause = &general_attr.close_handler_impl_clause;
+    let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
+    let close_handler_register_clause = &general_attr.close_handler_register_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -141,6 +145,8 @@ pub(crate) fn expand(
 
                 #global_watch_impl_clause
 
+                #close_handler_impl_clause
+
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -162,6 +168,7 @@ pub(crate) fn expand(
                         #global_watch_reflect_clause
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
+                        #close_handler_reflect_clause
                     }
 
                     #[inline]
@@ -171,6 +178,7 @@ pub(crate) fn expand(
                         if !self.background().is_opaque() {
                             self.set_background(#use_prefix::tlib::figure::Color::WHITE);
                         }
+                        #close_handler_register_clause
                     }
 
                     #[inline]

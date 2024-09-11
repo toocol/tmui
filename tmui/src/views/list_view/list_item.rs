@@ -1,8 +1,6 @@
+use crate::views::node::RenderCtx;
 use super::Painter;
-use tlib::{
-    figure::{Color, FRect},
-    global::AsAny,
-};
+use tlib::global::AsAny;
 
 pub trait ListItem: AsAny + Send + Sync {
     fn item_type(&self) -> ItemType;
@@ -27,22 +25,4 @@ impl ListItemCast for dyn ListItem {}
 pub enum ItemType {
     Node,
     Separator,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RenderCtx {
-    pub(crate) geometry: FRect,
-    pub(crate) background: Color,
-}
-impl RenderCtx {
-    #[inline]
-    pub(crate) fn new(
-        geometry: FRect,
-        background: Color,
-    ) -> Self {
-        Self {
-            geometry,
-            background,
-        }
-    }
 }

@@ -1,12 +1,7 @@
+use super::{MouseEffect, RenderCtx, Status};
 use crate::graphics::{border::Border, painter::Painter};
 use derivative::Derivative;
-use tlib::{
-    figure::{Color, FRect},
-    namespace::BorderStyle,
-    skia_safe::ClipOp,
-};
-
-use super::Status;
+use tlib::{figure::Color, namespace::BorderStyle, skia_safe::ClipOp};
 
 const DEFAULT_SELECTION: Color = Color::rgb(51, 167, 255);
 const DEFAULT_HOVER: Color = Color::rgb(190, 190, 190);
@@ -29,21 +24,58 @@ impl NodeRender {
 }
 
 impl NodeRender {
-    pub(crate) fn render(
-        &self,
-        painter: &mut Painter,
-        geometry: FRect,
-        background: Color,
-        status: Status,
-    ) {
+    pub(crate) fn render(&self, painter: &mut Painter, render_ctx: RenderCtx, status: Status) {
+        let geometry = render_ctx.geometry;
+        let background = render_ctx.background;
+
         painter.save();
         painter.clip_rect(geometry, ClipOp::Intersect);
 
-        let background = match status {
-            Status::Default => background,
-            Status::Selected => self.selection_color,
-            Status::Hovered => self.hover_color,
+        let effect_hovered = render_ctx.mouse_effect.contains(MouseEffect::Hovered);
+        let effect_selected = render_ctx.mouse_effect.contains(MouseEffect::Selected);
+
+        let background = if status == Status::empty() {
+            background
+        } else if status == Status::Selected {
+            if effect_selected {
+                self.selection_color
+            } else {
+                background
+            }
+        } else if status == Status::Hovered {
+            if effect_hovered {
+                self.hover_color
+            } else {
+                background
+            }
+        } else if effect_selected {
+            self.selection_color
+        } else if effect_hovered {
+            self.hover_color
+        } else {
+            background
         };
+
+        // let background = match status {
+        //     Status::empty() => background,
+        //     Status::Selected => {
+        //         if effect_selected {
+        //             self.selection_color
+        //         } else if effect_hovered {
+        //             self.hover_color
+        //         } else {
+        //             background
+        //         }
+        //     }
+        //     Status::Hovered => {
+        //         if effect_hovered {
+        //             self.hover_color
+        //         } else {
+        //             background
+        //         }
+        //     }
+        //     _ => background,
+        // };
 
         if self.border.border_radius > 0. {
             painter.fill_rect(geometry, background)

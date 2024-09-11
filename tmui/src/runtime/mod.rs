@@ -13,7 +13,7 @@ use crate::{
     opti::tracker::Tracker,
     platform::logic_window::LogicWindow,
     prelude::*,
-    primitive::{cpu_balance::CpuBalance, Message},
+    primitive::{close_handler::CloseHandlerMgr, cpu_balance::CpuBalance, Message},
 };
 use std::{
     sync::atomic::Ordering,
@@ -223,4 +223,6 @@ where
 
         cpu_balance.sleep(update);
     }
+
+    CloseHandlerMgr::process();
 }

@@ -2,9 +2,7 @@ use lazy_static::lazy_static;
 use log::debug;
 use std::time::Duration;
 use tlib::{
-    connect, disconnect,
-    object::{ObjectImpl, ObjectSubclass},
-    timer::Timer,
+    close_handler, connect, disconnect, object::{ObjectImpl, ObjectSubclass}, timer::Timer
 };
 use tmui::{animation::frame_animator::FrameAnimator, prelude::*, primitive::frame::Frame, tlib::{figure::Color, frame_animator}, widget::WidgetImpl};
 
@@ -14,6 +12,7 @@ lazy_static! {
 
 #[extends(Widget)]
 #[frame_animator]
+#[close_handler]
 pub struct TestWidget {
     idx: usize,
     timer: Timer,
@@ -70,5 +69,11 @@ impl FrameAnimator for TestWidget {
     #[inline]
     fn on_frame(&mut self, frame: Frame){
         println!("widget on frame: {:?}", frame)
+    }
+}
+
+impl CloseHandler for TestWidget {
+    fn handle(&mut self) {
+        println!("Application has closed.");
     }
 }

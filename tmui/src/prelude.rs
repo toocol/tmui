@@ -40,6 +40,7 @@ pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, 
 pub use crate::primitive::global_watch::{
     GlobalWatch, GlobalWatchEvent, GlobalWatchImpl, ReflectGlobalWatch,
 };
+pub use crate::primitive::close_handler::{CloseHandler, CloseHandlerRequire, ReflectCloseHandler, CloseHandlerMgr};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::shared_widget::{

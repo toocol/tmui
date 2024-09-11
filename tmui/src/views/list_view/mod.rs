@@ -5,23 +5,21 @@ pub mod list_separator;
 pub mod list_store;
 pub mod list_view_image;
 pub mod list_view_object;
-
-use std::sync::Arc;
-
+use super::node::MouseEffect;
+use crate::{
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::{InnerEventProcess, WidgetHndAsable, WidgetImpl},
+};
 use list_group::ListGroup;
 use list_node::ListNode;
 use list_separator::GroupSeparator;
 use list_store::{ConcurrentStore, ConcurrentStoreMutexGuard, ListStore};
 use list_view_image::ListViewImage;
 use list_view_object::ListViewObject;
+use std::sync::Arc;
 use tipc::parking_lot::Mutex;
 use tlib::connect;
-
-use crate::{
-    prelude::*,
-    tlib::object::{ObjectImpl, ObjectSubclass},
-    widget::{WidgetHndAsable, WidgetImpl},
-};
 
 /// UI component displays data in a list manner.
 ///
@@ -82,6 +80,8 @@ impl ObjectImpl for ListView {
 
         connect!(self, background_changed(), img, set_background(Color));
         connect!(self, invalid_area_changed(), img, set_invalid_area(FRect));
+        connect!(img, mouse_leave(), self, image_mouse_leave(MouseEvent));
+        connect!(img, mouse_enter(), self, image_mouse_enter(MouseEvent));
 
         self.set_area(img);
     }
@@ -205,6 +205,26 @@ impl ListView {
     }
 
     #[inline]
+    pub fn mouse_effect(&self) -> MouseEffect {
+        self.get_image().mouse_effect
+    }
+
+    #[inline]
+    pub fn set_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.get_image_mut().mouse_effect = mouse_effect
+    }
+
+    #[inline]
+    pub fn disable_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.get_image_mut().mouse_effect.remove(mouse_effect)
+    }
+
+    #[inline]
+    pub fn enable_mouse_effect(&mut self, mouse_effect: MouseEffect) {
+        self.get_image_mut().mouse_effect.insert(mouse_effect)
+    }
+
+    #[inline]
     pub fn register_node_enter<
         F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
     >(
@@ -270,5 +290,17 @@ impl ListView {
     #[inline]
     pub(crate) fn get_image_mut(&mut self) -> &mut ListViewImage {
         self.get_area_cast_mut::<ListViewImage>().unwrap()
+    }
+
+    #[inline]
+    pub(crate) fn image_mouse_enter(&mut self, evt: MouseEvent) {
+        self.inner_mouse_enter(&evt);
+        self.on_mouse_enter(&evt);
+    }
+
+    #[inline]
+    pub(crate) fn image_mouse_leave(&mut self, evt: MouseEvent) {
+        self.inner_mouse_leave(&evt);
+        self.on_mouse_leave(&evt);
     }
 }

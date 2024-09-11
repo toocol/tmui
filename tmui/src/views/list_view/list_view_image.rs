@@ -1,5 +1,5 @@
 use super::{
-    list_item::{ItemType, ListItem, ListItemCast, RenderCtx},
+    list_item::{ItemType, ListItem, ListItemCast},
     list_node::ListNode,
     list_separator::GroupSeparator,
     list_store::{ConcurrentStoreMutexGuard, ListStore, ListStoreSignals},
@@ -9,7 +9,7 @@ use crate::{
     prelude::*,
     scroll_bar::ScrollBar,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    views::node::Status,
+    views::node::{MouseEffect, RenderCtx, Status},
     widget::{IterExecutor, RegionClear, WidgetImpl},
 };
 use std::ptr::NonNull;
@@ -32,6 +32,8 @@ pub(crate) struct ListViewImage {
     #[derivative(Default(value = "1"))]
     pub(crate) line_height: i32,
     pub(crate) line_spacing: i32,
+    #[derivative(Default(value = "MouseEffect::all()"))]
+    pub(crate) mouse_effect: MouseEffect,
 
     pub(crate) on_node_enter: Option<FnNodeAction>,
     pub(crate) on_node_leave: Option<FnNodeAction>,
@@ -181,7 +183,7 @@ impl ListViewImage {
                     }
                 }
 
-                item.render(painter, RenderCtx::new(rect, background))
+                item.render(painter, RenderCtx::new(rect, background, self.mouse_effect))
             }
         });
     }
@@ -268,9 +270,7 @@ impl ListViewImage {
                     if item.item_type() == ItemType::Separator {
                         if hovered_node.is_some() {
                             let node = nonnull_mut!(hovered_node.take());
-                            if !node.is_selected() {
-                                node.set_status(Status::Default);
-                            }
+                            node.remove_status(Status::Hovered);
                             return true;
                         }
                         return false;
@@ -283,15 +283,15 @@ impl ListViewImage {
                     if !node.is_hovered() {
                         if hovered_node.is_some() {
                             let node = nonnull_mut!(hovered_node);
+                            node.remove_status(Status::Hovered);
                             if !node.is_selected() {
-                                node.set_status(Status::Default);
+                                update = true;
                             }
-                            update = true;
                         }
 
+                        node.add_status(Status::Hovered);
+                        *hovered_node = NonNull::new(node);
                         if !node.is_selected() {
-                            node.set_status(Status::Hovered);
-                            *hovered_node = NonNull::new(node);
                             update = true;
                         }
                     }
@@ -324,7 +324,7 @@ impl ListViewImage {
                     if old_hover.is_some() {
                         let node = nonnull_mut!(old_hover);
                         if node.is_hovered() {
-                            node.set_status(Status::Default);
+                            node.remove_status(Status::Hovered);
                             return true;
                         }
                     }
@@ -368,10 +368,10 @@ impl ListViewImage {
 
                         if selected_node.is_some() {
                             let node = nonnull_mut!(selected_node);
-                            node.set_status(Status::Default);
+                            node.remove_status(Status::Selected);
                         }
 
-                        node.set_status(Status::Selected);
+                        node.add_status(Status::Selected);
                         *selected_node = NonNull::new(node);
 
                         let mutex_mut = unsafe { mutex_ptr.as_mut().unwrap() };
@@ -384,7 +384,7 @@ impl ListViewImage {
                         let mut old_select = selected_node.take();
                         if old_select.is_some() {
                             let node = nonnull_mut!(old_select);
-                            node.set_status(Status::Default);
+                            node.remove_status(Status::Selected);
                             update = true;
                         }
 

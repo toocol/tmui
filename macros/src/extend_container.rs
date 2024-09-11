@@ -49,6 +49,10 @@ pub(crate) fn expand(
     let isolated_visibility_impl_clause = &general_attr.isolated_visibility_impl_clause;
     let isolated_visibility_reflect_clause = &general_attr.isolated_visibility_reflect_clause;
 
+    let close_handler_impl_clause = &general_attr.close_handler_impl_clause;
+    let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
+    let close_handler_register_clause = &general_attr.close_handler_register_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -368,6 +372,8 @@ pub(crate) fn expand(
 
                 #popup_trait_impl_clause
 
+                #close_handler_impl_clause
+
                 impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -399,6 +405,7 @@ pub(crate) fn expand(
                         #frame_animator_reflect_clause
                         #isolated_visibility_reflect_clause
                         #popup_type_register
+                        #close_handler_reflect_clause
                     }
 
                     #[inline]
@@ -407,6 +414,7 @@ pub(crate) fn expand(
                         #pane_inner_init
                         #stack_inner_initial
                         #popup_inner_initialize
+                        #close_handler_register_clause
                     }
 
                     #[inline]

@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
+use crate::{animation::Animation, async_task::AsyncTask, close_handler::CloseHandler, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
 
 pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
@@ -51,6 +51,11 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) isolated_visibility_field_clause: Vec<TokenStream>,
     pub(crate) isolated_visibility_impl_clause: TokenStream,
     pub(crate) isolated_visibility_reflect_clause: TokenStream,
+
+    // fields about `close_handler`
+    pub(crate) close_handler_impl_clause: TokenStream,
+    pub(crate) close_handler_reflect_clause: TokenStream,
+    pub(crate) close_handler_register_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -78,6 +83,8 @@ impl<'a> GeneralAttr<'a> {
 
         let mut isolated_visibility = None;
 
+        let mut close_handler = None;
+
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
                 let attr_str = attr_ident.to_string();
@@ -104,6 +111,7 @@ impl<'a> GeneralAttr<'a> {
                     "iter_executor" => iter_executor = true,
                     "frame_animator" => frame_animator = true,
                     "isolated_visibility" => isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?),
+                    "close_handler" => close_handler = Some(CloseHandler::parse(ast, generics)?),
                     _ => {}
                 }
             }
@@ -278,6 +286,24 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // CloseHandler
+        let close_handler_impl_clause = if let Some(cv) = close_handler.as_ref() {
+            cv.close_handler_impl()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let close_handler_reflect_clause = if let Some(cv) = close_handler.as_ref() {
+            cv.close_handler_reflect()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let close_handler_register_clause = if let Some(cv) = close_handler.as_ref() {
+            cv.close_handler_register()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
 
         Ok(Self {
             run_after_clause,
@@ -309,6 +335,9 @@ impl<'a> GeneralAttr<'a> {
             isolated_visibility_field_clause,
             isolated_visibility_impl_clause,
             isolated_visibility_reflect_clause,
+            close_handler_impl_clause,
+            close_handler_reflect_clause,
+            close_handler_register_clause,
         })
     }
 }
