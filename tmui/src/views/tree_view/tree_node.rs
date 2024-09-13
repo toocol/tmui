@@ -80,11 +80,11 @@ impl TreeNode {
         self.add_node_directly_inner(node)
     }
 
-    pub fn get_value<T: 'static + StaticType + FromValue>(&self, cell_idx: usize) -> Option<T> {
+    pub fn get_value<T: 'static + StaticType + FromValue>(&self, cell_idx: impl CellIndex) -> Option<T> {
         self.cells
-            .get(cell_idx)
+            .get(cell_idx.index())
             .or_else(|| {
-                warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
+                warn!("Undefined cell of tree view node, cell index: {:?}", cell_idx);
                 None
             })
             .and_then(|cell| {
@@ -114,7 +114,7 @@ impl TreeNode {
 
             cell.set_value(val.to_value());
 
-            if is_ui_thread() {
+            if is_ui_thread() && cell.is_render_cell() {
                 self.notify_update();
             }
         } else {
