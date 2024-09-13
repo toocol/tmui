@@ -1,6 +1,5 @@
 pub use std::cell::Ref;
 pub use tlib::prelude::*;
-pub use tlib::signal;
 
 pub use crate::animation::{
     frame_animator::ReflectFrameAnimator,

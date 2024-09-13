@@ -1,3 +1,4 @@
+use tlib::namespace::MouseButton;
 use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -28,9 +29,11 @@ impl ObjectImpl for WorkspacePanel {
 
         self.set_background(Color::grey_with(108));
         self.register_mouse_released(|w, evt| {
-            w.downcast_mut::<WorkspacePanel>()
-                .unwrap()
-                .show_popup(evt.position().into())
+            if evt.mouse_button() == MouseButton::RightButton {
+                w.downcast_mut::<WorkspacePanel>()
+                    .unwrap()
+                    .show_popup(evt.position().into())
+            }
         });
     }
 }

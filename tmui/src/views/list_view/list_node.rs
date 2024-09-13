@@ -4,10 +4,10 @@ use super::{
     list_view_object::ListViewObject,
     ListView, Painter,
 };
-use crate::views::{
-    cell::{cell_render::CellRender, Cell},
+use crate::{application::is_ui_thread, views::{
+    cell::{cell_index::CellIndex, cell_render::CellRender, Cell},
     node::{node_render::NodeRender, RenderCtx, Status},
-};
+}};
 use log::warn;
 use tlib::{
     global::AsAny,
@@ -93,8 +93,8 @@ impl ListNode {
             })
     }
 
-    pub fn set_value<T: StaticType + ToValue>(&mut self, cell_idx: usize, val: T) {
-        if let Some(cell) = self.cells.get_mut(cell_idx) {
+    pub fn set_value<T: StaticType + ToValue>(&mut self, cell_idx: impl CellIndex, val: T) {
+        if let Some(cell) = self.cells.get_mut(cell_idx.index()) {
             if !T::static_type().is_a(cell.type_()) {
                 warn!(
                     "Value type mismatched of cell, expected: {:?}, get: {:?} ",
@@ -104,9 +104,13 @@ impl ListNode {
                 return;
             }
 
-            cell.set_value(val.to_value())
+            cell.set_value(val.to_value());
+
+            if is_ui_thread() {
+                self.notify_update();
+            }
         } else {
-            warn!("Undefined cell of tree view node, cell index: {}", cell_idx);
+            warn!("Undefined cell of tree view node, cell index: {:?}", cell_idx);
         }
     }
 

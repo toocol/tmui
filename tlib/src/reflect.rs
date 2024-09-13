@@ -2,7 +2,8 @@ use crate::prelude::AsAny;
 use once_cell::sync::Lazy;
 use std::{
     any::{Any, TypeId},
-    collections::HashMap, ptr::addr_of_mut,
+    collections::HashMap,
+    ptr::addr_of_mut,
 };
 
 /// User register the type reflect info by override the function [`type_register()`](crate::object::ObjectImpl::type_register).<br>
@@ -122,4 +123,43 @@ pub trait ReflectTrait: Any + 'static {
 
 pub trait FromType<T: Reflect>: ReflectTrait {
     fn from_type() -> Self;
+}
+
+#[macro_export]
+macro_rules! reflect_bound {
+    ( $name:ident ) => {
+        impl Reflect for $name {
+            #[inline]
+            fn as_reflect(&self) -> &dyn Reflect {
+                self
+            }
+
+            #[inline]
+            fn as_reflect_mut(&mut self) -> &mut dyn Reflect {
+                self
+            }
+
+            #[inline]
+            fn as_reflect_boxed(self: Box<Self>) -> Box<dyn Reflect> {
+                self
+            }
+        }
+
+        impl AsAny for $name {
+            #[inline]
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+
+            #[inline]
+            fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+                self
+            }
+
+            #[inline]
+            fn as_any_boxed(self: Box<Self>) -> Box<dyn std::any::Any> {
+                self
+            }
+        }
+    };
 }

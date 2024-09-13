@@ -496,12 +496,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         }
         geometry.set_point(&(0, 0).into());
 
-        #[cfg(verbose_logging)]
-        #[rustfmt::skip]
-        info!(
-            "[on_renderer({}:{})] {}, z_index={}", frame.id(), frame.nth(), self.name(), self.z_index()
-        );
-
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 
         let name = &self.name();
@@ -538,6 +532,12 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         {
             self.widget_props_mut().redraw_region.clear();
         }
+
+        #[cfg(verbose_logging)]
+        #[rustfmt::skip]
+        info!(
+            "[on_renderer({}:{})] {}, z_index={}, redraw_region={:?}", frame.id(), frame.nth(), self.name(), self.z_index(), self.redraw_region()
+        );
 
         handle_global_overlaid(self, &mut painter, window_resized);
 
