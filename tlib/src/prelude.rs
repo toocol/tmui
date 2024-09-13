@@ -3,7 +3,7 @@ pub use macros::{
 };
 
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
-pub use crate::emit;
+pub use crate::{emit, signal, reflect_bound};
 pub use crate::figure::region::CoordRegion;
 pub use crate::figure::rectangle::CoordRect;
 pub use crate::global::AsAny;

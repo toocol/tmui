@@ -1,3 +1,4 @@
+pub mod cell_index;
 pub mod cell_render;
 
 use self::cell_render::{CellRender, CellRenderType, CellRenderType::*};
