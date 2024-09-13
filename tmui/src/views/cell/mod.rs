@@ -220,6 +220,11 @@ impl Cell {
             Self::Value { .. } => vec![],
         }
     }
+
+    #[inline]
+    pub fn is_render_cell(&self) -> bool {
+        self.get_render().is_some()
+    }
 }
 
 macro_rules! cell_builder {
