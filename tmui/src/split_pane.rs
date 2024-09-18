@@ -38,10 +38,12 @@ impl ObjectImpl for SplitPane {
 impl WidgetImpl for SplitPane {}
 
 impl ContainerImpl for SplitPane {
+    #[inline]
     fn children(&self) -> Vec<&dyn WidgetImpl> {
         self.container.children.iter().map(|c| c.as_ref()).collect()
     }
 
+    #[inline]
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
         self.container
             .children
@@ -50,6 +52,7 @@ impl ContainerImpl for SplitPane {
             .collect()
     }
 
+    #[inline]
     fn container_layout(&self) -> ContainerLayoutEnum {
         ContainerLayoutEnum::SplitPane
     }

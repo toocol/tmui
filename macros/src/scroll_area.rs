@@ -140,9 +140,7 @@ pub(crate) fn generate_scroll_area_impl(
                     }
                 }
 
-                if self.window().initialized() {
-                    self.window().layout_change(self.scroll_bar_mut())
-                }
+                self.window().layout_change(self.scroll_bar_mut())
             }
         }
 

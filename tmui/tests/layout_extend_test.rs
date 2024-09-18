@@ -1,5 +1,5 @@
 use tlib::object::ObjectSubclass;
-use tmui::{prelude::*, label::Label};
+use tmui::{label::Label, platform::PlatformType, prelude::*};
 
 #[extends(Widget, Layout(Stack))]
 #[derive(Childrenable)]
@@ -24,6 +24,7 @@ impl WidgetImpl for TestWidget {}
 #[test]
 fn main() {
     ActionHub::initialize();
+    let _window = ApplicationWindow::new(PlatformType::default(), 0, 0);
 
     let widget: Box<TestWidget> = Object::new(&[]);
     let children = widget.children();

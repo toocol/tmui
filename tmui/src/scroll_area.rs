@@ -151,9 +151,7 @@ impl ScrollAreaExt for ScrollArea {
     #[inline]
     fn set_orientation(&mut self, orientation: Orientation) {
         self.scroll_bar_mut().set_orientation(orientation);
-        if self.window().initialized() {
-            self.window().layout_change(self.scroll_bar_mut());
-        }
+        self.window().layout_change(self.scroll_bar_mut());
     }
 
     /// Scroll the widget. </br>
@@ -217,9 +215,7 @@ impl ScrollAreaExt for ScrollArea {
         }
 
         // Area'a overlaid rect will be changed when re-layout.
-        if self.window().initialized() {
-            self.window().layout_change(self.scroll_bar_mut())
-        }
+        self.window().layout_change(self.scroll_bar_mut())
     }
 }
 

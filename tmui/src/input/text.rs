@@ -959,9 +959,7 @@ pub(crate) trait TextInnerExt:
             self.set_detecting_height(height);
         }
 
-        if self.window_id() != 0 && self.window().initialized() {
-            self.window().layout_change(self);
-        }
+        self.window().layout_change(self);
     }
 
     fn handle_key_pressed(&mut self, event: &KeyEvent) {
