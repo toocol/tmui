@@ -176,9 +176,7 @@ pub trait Popupable: WidgetImpl {
             popup.show();
 
             let window = ApplicationWindow::window_of(popup.window_id());
-            if window.initialized() {
-                window.layout_change(popup.as_widget_impl_mut());
-            }
+            window.layout_change(popup.as_widget_impl_mut());
         }
     }
 

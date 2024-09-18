@@ -188,9 +188,7 @@ impl<T: SelectBounds> Select<T> {
         dropdown_list.width_request(width);
         dropdown_list.calc_height();
 
-        if self.window().initialized() {
-            self.window().layout_change(self);
-        }
+        self.window().layout_change(self);
 
         self.update();
     }
@@ -270,9 +268,7 @@ impl<T: SelectBounds> Select<T> {
         dropdown_list.set_font(font);
         dropdown_list.calc_height();
 
-        if self.window().initialized() {
-            self.window().layout_change(self);
-        }
+        self.window().layout_change(self);
     }
 
     #[inline]

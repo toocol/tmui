@@ -710,7 +710,7 @@ impl<T: WidgetImpl> WidgetExt for T {
                 popup.take_over_focus(FocusStrat::Restore);
                 self.window().set_modal_widget(None);
             }
-        } else if self.window_id() != 0 {
+        } else {
             self.window().layout_change(self);
             if self.is_focus() {
                 self.set_focus(false);
@@ -749,7 +749,7 @@ impl<T: WidgetImpl> WidgetExt for T {
                 let id = popup.id();
                 self.window().set_modal_widget(Some(id));
             }
-        } else if self.window_id() != 0 {
+        } else {
             self.window().layout_change(self)
         }
     }
@@ -823,10 +823,6 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         if self.id() != self.window_id() {
-            if !self.window().initialized() {
-                return;
-            }
-
             self.window().layout_change(self);
         }
     }

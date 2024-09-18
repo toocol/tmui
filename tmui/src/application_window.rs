@@ -339,9 +339,16 @@ impl ApplicationWindow {
 
     #[inline]
     pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
+        if !self.initialized() || !widget.initialized() {
+            return
+        }
+
         // Layout changes should be based on its parent widget.
         if let Some(parent) = widget.get_raw_parent_mut() {
             let parent = unsafe { parent.as_mut().unwrap() };
+            if !parent.initialized() {
+                return
+            }
             widget = parent;
         }
 

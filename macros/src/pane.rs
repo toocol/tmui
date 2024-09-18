@@ -52,9 +52,7 @@ pub(crate) fn generate_pane_impl(
             fn set_orientation(&mut self, orientation: #use_prefix::tlib::namespace::Orientation) {
                 self.orientation = orientation;
 
-                if self.window().initialized() {
-                    self.window().layout_change(self)
-                }
+                self.window().layout_change(self)
             }
 
             #[inline]

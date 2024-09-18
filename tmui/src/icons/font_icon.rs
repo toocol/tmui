@@ -78,7 +78,7 @@ impl WidgetImpl for FontIcon {
             resized = true;
         }
 
-        if resized && self.window_id() != 0 && self.window().initialized() {
+        if resized {
             self.window().layout_change(self);
         }
 

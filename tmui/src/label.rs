@@ -180,7 +180,7 @@ impl WidgetImpl for Label {
                 resized = true;
             }
 
-            if resized && self.visible() && self.window_id() != 0 && self.window().initialized() {
+            if resized && self.visible() {
                 self.window().layout_change(self);
             }
         }
