@@ -18,7 +18,7 @@ use crate::{
     },
     window::win_builder::WindowBuilder,
 };
-use log::{debug, error};
+use log::{debug, error, warn};
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
@@ -747,7 +747,17 @@ impl ApplicationWindow {
     ///
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: FRect, id: ObjectId) {
-        let z_index = self.find_id(id).unwrap().z_index();
+        if !self.initialized() {
+            return
+        }
+
+        let find = self.find_id(id);
+        if find.is_none() {
+            warn!("[invalid_effected_widgets()] find widget by id failed, id = {}", id);
+            return
+        }
+
+        let z_index = find.unwrap().z_index();
         for w in self.widgets.values_mut() {
             let widget = nonnull_mut!(w);
             if widget.id() == id || widget.descendant_of(id) || widget.z_index() > z_index {
