@@ -698,7 +698,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         self.set_property("visible", false.to_value());
         self.set_first_rendered(false);
 
-        if self.window().initialized() {
+        if self.initialized() {
             self.window()
                 .invalid_effected_widgets(self.visual_image_rect(), self.id());
         }
@@ -710,7 +710,7 @@ impl<T: WidgetImpl> WidgetExt for T {
                 popup.take_over_focus(FocusStrat::Restore);
                 self.window().set_modal_widget(None);
             }
-        } else {
+        } else if self.initialized() {
             self.window().layout_change(self);
             if self.is_focus() {
                 self.set_focus(false);
@@ -749,7 +749,7 @@ impl<T: WidgetImpl> WidgetExt for T {
                 let id = popup.id();
                 self.window().set_modal_widget(Some(id));
             }
-        } else {
+        } else if self.initialized() {
             self.window().layout_change(self)
         }
     }
