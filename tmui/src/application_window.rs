@@ -48,6 +48,7 @@ const DEFAULT_WINDOW_BACKGROUND: Color = Color::WHITE;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    raw_window_handle: Option<RawWindowHandle6>,
     parent_window: Option<WindowId>,
     winit_id: Option<WindowId>,
     platform_type: PlatformType,
@@ -289,7 +290,13 @@ impl ApplicationWindow {
         let mut window = window_bld.build();
         window.set_parent(self.winit_id.unwrap());
 
-        self.send_message(Message::CreateWindow(window));
+        if window.is_child_window() {
+            if let Some(rwh) = self.raw_window_handle {
+                window.set_parent_window_rwh(rwh)
+            }
+        }
+
+        self.send_message(Message::CreateWindow(self.winit_id().unwrap(), window));
     }
 
     #[inline]
@@ -340,14 +347,14 @@ impl ApplicationWindow {
     #[inline]
     pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
         if !self.initialized() || !widget.initialized() {
-            return
+            return;
         }
 
         // Layout changes should be based on its parent widget.
         if let Some(parent) = widget.get_raw_parent_mut() {
             let parent = unsafe { parent.as_mut().unwrap() };
             if !parent.initialized() {
-                return
+                return;
             }
             widget = parent;
         }
@@ -413,6 +420,8 @@ impl ApplicationWindow {
         child_initialize(Some(widget), window_id);
 
         window.board().shuffle();
+
+        window.layout_change(widget);
     }
 }
 
@@ -665,6 +674,11 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_raw_window_handle(&mut self, rwh: RawWindowHandle6) {
+        self.raw_window_handle = Some(rwh)
+    }
+
+    #[inline]
     pub(crate) fn check_mouse_enter(
         &mut self,
         widget: &mut dyn WidgetImpl,
@@ -748,13 +762,16 @@ impl ApplicationWindow {
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: FRect, id: ObjectId) {
         if !self.initialized() {
-            return
+            return;
         }
 
         let find = self.find_id(id);
         if find.is_none() {
-            warn!("[invalid_effected_widgets()] find widget by id failed, id = {}", id);
-            return
+            warn!(
+                "[invalid_effected_widgets()] find widget by id failed, id = {}",
+                id
+            );
+            return;
         }
 
         let z_index = find.unwrap().z_index();
@@ -814,6 +831,15 @@ impl ApplicationWindow {
         }
 
         self.input_dialog.as_mut().unwrap()
+    }
+
+    #[inline]
+    pub(crate) fn tooltip_visible(&self) -> bool {
+        if let Some(ref tooltip) = self.tooltip {
+            tooltip.visible()
+        } else {
+            false
+        }
     }
 
     #[inline]

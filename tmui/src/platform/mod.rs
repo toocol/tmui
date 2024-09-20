@@ -5,6 +5,7 @@ pub(crate) mod logic_window;
 pub(crate) mod macos;
 pub(crate) mod physical_window;
 pub(crate) mod win32;
+pub(crate) mod platform_win_op;
 
 #[cfg(all(not(x11_platform), not(wayland_platform), free_unix))]
 compile_error!("Please select a feature to build for unix: `x11`, `wayland`");

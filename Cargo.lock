@@ -1066,7 +1066,7 @@ dependencies = [
  "libloading",
  "objc2",
  "once_cell",
- "raw-window-handle",
+ "raw-window-handle 0.5.2",
  "wayland-sys",
  "windows-sys 0.48.0",
  "x11-dl",
@@ -1080,7 +1080,7 @@ checksum = "1ebcdfba24f73b8412c5181e56f092b5eff16671c514ce896b258a0a64bd7735"
 dependencies = [
  "cfg_aliases 0.1.1",
  "glutin",
- "raw-window-handle",
+ "raw-window-handle 0.5.2",
  "winit",
 ]
 
@@ -1505,7 +1505,8 @@ dependencies = [
  "log",
  "ndk-sys",
  "num_enum",
- "raw-window-handle",
+ "raw-window-handle 0.5.2",
+ "raw-window-handle 0.6.2",
  "thiserror",
 ]
 
@@ -1938,6 +1939,12 @@ name = "raw-window-handle"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2ff9a1f06a88b01621b7ae906ef0211290d1c8a168a15542486a8f61c0833b9"
+
+[[package]]
+name = "raw-window-handle"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "raw_sync"
@@ -2697,7 +2704,7 @@ dependencies = [
  "log4rs",
  "objc",
  "once_cell",
- "raw-window-handle",
+ "raw-window-handle 0.5.2",
  "regex",
  "rust-embed",
  "rust_decimal",
@@ -3531,7 +3538,8 @@ dependencies = [
  "once_cell",
  "orbclient",
  "percent-encoding",
- "raw-window-handle",
+ "raw-window-handle 0.5.2",
+ "raw-window-handle 0.6.2",
  "redox_syscall 0.3.5",
  "rustix",
  "smithay-client-toolkit",

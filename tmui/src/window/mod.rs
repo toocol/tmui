@@ -1,21 +1,21 @@
 pub mod win_builder;
 pub mod win_config;
 
-use tlib::{winit::window::WindowId, Value};
-
 use self::{win_builder::WindowBuilder, win_config::WindowConfig};
-use crate::application::FnActivate;
+use crate::{application::FnActivate, prelude::RawWindowHandle6};
 use std::{
     collections::HashMap,
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
+use tlib::{winit::window::WindowId, Value};
 
 static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
-pub struct Window {
+pub(crate) struct Window {
     index: usize,
     modal: bool,
+    child_window: bool,
     win_cfg: Option<WindowConfig>,
     on_activate: Option<FnActivate>,
     parent: Option<WindowId>,
@@ -29,6 +29,7 @@ impl Debug for Window {
         f.debug_struct("Window")
             .field("index", &self.index)
             .field("modal", &self.modal)
+            .field("child_window", &self.child_window)
             .field("win_cfg", &self.win_cfg)
             .field("on_activate", &self.on_activate.is_some())
             .field("parent", &self.parent)
@@ -42,6 +43,7 @@ impl Window {
         Self {
             index: WINDOW_COUNTER.fetch_add(1, Ordering::Acquire),
             modal: false,
+            child_window: false,
             win_cfg: None,
             on_activate: None,
             parent: None,
@@ -72,14 +74,18 @@ impl Window {
     }
 
     #[inline]
+    pub(crate) fn set_parent_window_rwh(&mut self, rwh: RawWindowHandle6) {
+        self.win_cfg.as_mut().unwrap().set_parent_window_rwh(rwh)
+    }
+
+    #[inline]
     pub(crate) fn get_parent(&self) -> WindowId {
         self.parent.unwrap()
     }
 
     #[inline]
     pub(crate) fn take_params(&mut self) -> Option<HashMap<String, Value>> {
-        self.params
-            .take()
+        self.params.take()
     }
 }
 
@@ -92,5 +98,10 @@ impl Window {
     #[inline]
     pub fn is_modal(&self) -> bool {
         self.modal
+    }
+
+    #[inline]
+    pub fn is_child_window(&self) -> bool {
+        self.child_window
     }
 }

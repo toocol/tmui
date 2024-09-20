@@ -6,6 +6,8 @@ use tlib::{values::ToValue, Value};
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
+    /// Os level child window or not.
+    child_window: bool,
     modal: bool,
     on_activate: Option<FnActivate>,
     params: HashMap<String, Value>,
@@ -33,6 +35,15 @@ impl WindowBuilder {
         self
     }
 
+    /// Set the new window is os level child window of current window or not.
+    ///
+    /// The default value was [`false`]
+    #[inline]
+    pub fn child_window(mut self, is_child_window: bool) -> Self {
+        self.child_window = is_child_window;
+        self
+    }
+
     #[inline]
     pub fn on_activate<F: 'static + Fn(&mut ApplicationWindow) + Send + Sync>(
         mut self,
@@ -49,7 +60,7 @@ impl WindowBuilder {
     }
 
     #[inline]
-    pub fn build(self) -> Window {
+    pub(crate) fn build(self) -> Window {
         let mut window = Window::new();
 
         window.win_cfg = Some(
@@ -58,6 +69,7 @@ impl WindowBuilder {
         );
         window.on_activate = self.on_activate;
         window.modal = self.modal;
+        window.child_window = self.child_window;
         window.params = Some(self.params);
 
         window

@@ -4,10 +4,7 @@ use super::{
     PlatformType,
 };
 use crate::{
-    application::{FnActivate, FnRequestReceive, FnUserEventReceive},
-    backend::BackendType,
-    primitive::{bitmap::Bitmap, shared_channel::SharedChannel},
-    runtime::window_context::LogicWindowContext,
+    application::{FnActivate, FnRequestReceive, FnUserEventReceive}, backend::BackendType, prelude::RawWindowHandle6, primitive::{bitmap::Bitmap, shared_channel::SharedChannel}, runtime::window_context::LogicWindowContext
 };
 use glutin::config::Config;
 use std::{collections::HashMap, sync::Arc};
@@ -15,9 +12,14 @@ use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
     IpcNode, IpcType,
 };
-use tlib::{figure::Point, winit::window::WindowId, Value};
+use tlib::{
+    figure::Point,
+    winit::window::WindowId,
+    Value,
+};
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
+    raw_window_handle: Option<RawWindowHandle6>,
     window_id: Option<WindowId>,
     parent_window: Option<WindowId>,
     gl_env: Option<Arc<GlEnv>>,
@@ -50,7 +52,9 @@ unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Se
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWindow<T, M> {
+    #[allow(clippy::too_many_arguments)]
     pub fn master(
+        raw_window_handle: RawWindowHandle6,
         window_id: WindowId,
         gl_env: Option<Arc<GlEnv>>,
         bitmap: Arc<RwLock<Bitmap>>,
@@ -61,8 +65,9 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     ) -> Self {
         let lock = master.as_ref().map(|m| m.read().buffer_lock());
         Self {
+            raw_window_handle: Some(raw_window_handle),
             window_id: Some(window_id),
-            parent_window: None, 
+            parent_window: None,
             gl_env,
             bitmap,
             lock,
@@ -91,6 +96,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     ) -> Self {
         let lock = Some(slave.read().buffer_lock());
         Self {
+            raw_window_handle: None,
             window_id: None,
             parent_window: None,
             gl_env: None,
@@ -122,6 +128,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         self.parent_window
     }
 
+    #[inline]
+    pub fn raw_window_handle(&self) -> Option<RawWindowHandle6> {
+        self.raw_window_handle
+    }
 
     #[inline]
     pub fn window_id(&self) -> Option<WindowId> {

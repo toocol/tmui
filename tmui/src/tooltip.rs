@@ -45,6 +45,11 @@ impl Tooltip {
     pub fn hide() {
         ApplicationWindow::window().tooltip(TooltipStrat::Hide)
     }
+
+    #[inline]
+    pub fn visible() -> bool {
+        ApplicationWindow::window().tooltip_visible()
+    }
 }
 
 impl Tooltip {

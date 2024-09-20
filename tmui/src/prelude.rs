@@ -1,6 +1,9 @@
 pub use std::cell::Ref;
 pub use tlib::prelude::*;
 
+pub type RawWindowHandle5 = raw_window_handle::RawWindowHandle;
+pub type RawWindowHandle6 = tlib::winit::raw_window_handle::RawWindowHandle;
+
 pub use crate::animation::{
     frame_animator::ReflectFrameAnimator,
     inner::AnimationsHolder,
@@ -36,10 +39,12 @@ pub use crate::loading::{Loadable, LoadingModel, ReflectLoadable};
 pub use crate::overlay::{Overlaid, ReflectOverlaid};
 pub use crate::pane::{Pane, PaneExt, ReflectPaneExt};
 pub use crate::popup::{Popup, PopupExt, PopupImpl, Popupable, ReflectPopupImpl, ReflectPopupable};
+pub use crate::primitive::close_handler::{
+    CloseHandler, CloseHandlerMgr, CloseHandlerRequire, ReflectCloseHandler,
+};
 pub use crate::primitive::global_watch::{
     GlobalWatch, GlobalWatchEvent, GlobalWatchImpl, ReflectGlobalWatch,
 };
-pub use crate::primitive::close_handler::{CloseHandler, CloseHandlerRequire, ReflectCloseHandler, CloseHandlerMgr};
 pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
 pub use crate::scroll_bar::ScrollBarSignal;
 pub use crate::shared_widget::{
@@ -52,11 +57,13 @@ pub use crate::split_pane::{
 pub use crate::stack::{ReflectStackImpl, Stack, StackImpl};
 pub use crate::vbox::VBox;
 pub use crate::widget::{
-    callbacks::Callbacks, widget_ext::WidgetExt, ChildOp, ChildRegionAcquire, EventBubble,
-    InnerCustomizeEventProcess, IsolatedVisibility, PointEffective,
-    ReflectInnerCustomizeEventProcess, ReflectIsolatedVisibility, ReflectIterExecutor,
-    ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd, WidgetImpl,
-    WidgetPropsAcquire, WidgetSignals, WindowAcquire,
+    callbacks::Callbacks,
+    widget_ext::WidgetExt,
+    win_widget::{ReflectWinWidget, WinWidget},
+    ChildOp, ChildRegionAcquire, EventBubble, InnerCustomizeEventProcess, IsolatedVisibility,
+    PointEffective, ReflectInnerCustomizeEventProcess, ReflectIsolatedVisibility,
+    ReflectIterExecutor, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd,
+    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire,
 };
 pub use tlib::tokio;
 pub use tlib::{

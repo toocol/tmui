@@ -26,7 +26,10 @@ use std::{
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
 use tlib::{
     figure::Point,
-    winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+    winit::{
+        event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+        raw_window_handle::HasWindowHandle,
+    },
 };
 
 use self::macos_window::MacosWindow;
@@ -140,6 +143,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         };
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
+                window
+                    .window_handle()
+                    .expect("Get window handle failed,")
+                    .as_raw(),
                 window_id,
                 gl_env.clone(),
                 bitmap.clone(),

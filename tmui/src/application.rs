@@ -509,6 +509,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     /// Set whether the application main window will support transparency.
     ///
     /// The default value was `false`.
+    /// 
+    /// The child window create from main window will follow the transparency strategy.
     #[inline]
     pub fn transparent(mut self, transparent: bool) -> Self {
         self.win_cfg_bld = self.win_cfg_bld.transparent(transparent);

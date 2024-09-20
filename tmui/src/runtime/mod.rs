@@ -97,6 +97,9 @@ where
     if let Some(parent_win) = logic_window.get_parent_window() {
         window.set_parent_window(parent_win);
     }
+    if let Some(rwh) = logic_window.raw_window_handle() {
+        window.set_raw_window_handle(rwh)
+    }
     window.set_board(board.as_mut());
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());

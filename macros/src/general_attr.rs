@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-use crate::{animation::Animation, async_task::AsyncTask, close_handler::CloseHandler, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
+use crate::{animation::Animation, async_task::AsyncTask, close_handler::CloseHandler, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, win_widget::WinWidget, SplitGenericsRef};
 
 pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
@@ -56,6 +56,12 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) close_handler_impl_clause: TokenStream,
     pub(crate) close_handler_reflect_clause: TokenStream,
     pub(crate) close_handler_register_clause: TokenStream,
+
+    // fields about `win_widget`
+    pub(crate) is_win_widget: bool,
+    pub(crate) win_widget_field_clause: TokenStream,
+    pub(crate) win_widget_reflect_clause: TokenStream,
+    pub(crate) win_widget_impl_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -85,6 +91,8 @@ impl<'a> GeneralAttr<'a> {
 
         let mut close_handler = None;
 
+        let mut win_widget = None;
+
         for attr in ast.attrs.iter() {
             if let Some(attr_ident) = attr.path.get_ident() {
                 let attr_str = attr_ident.to_string();
@@ -112,6 +120,7 @@ impl<'a> GeneralAttr<'a> {
                     "frame_animator" => frame_animator = true,
                     "isolated_visibility" => isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?),
                     "close_handler" => close_handler = Some(CloseHandler::parse(ast, generics)?),
+                    "win_widget" => win_widget = Some(WinWidget::parse(ast, generics)?),
                     _ => {}
                 }
             }
@@ -305,6 +314,25 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // WinWidget 
+        let win_widget_field_clause = if let Some(ww) = win_widget.as_ref() {
+            ww.field()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let win_widget_reflect_clause = if let Some(ww) = win_widget.as_ref() {
+            ww.relfect_clause()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let win_widget_impl_clause = if let Some(ww) = win_widget.as_ref() {
+            ww.impl_clause()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
@@ -338,6 +366,10 @@ impl<'a> GeneralAttr<'a> {
             close_handler_impl_clause,
             close_handler_reflect_clause,
             close_handler_register_clause,
+            is_win_widget: win_widget.is_some(),
+            win_widget_field_clause,
+            win_widget_reflect_clause,
+            win_widget_impl_clause,
         })
     }
 }

@@ -26,6 +26,7 @@ mod shortcut;
 mod split_pane;
 mod stack;
 mod trait_info;
+mod win_widget;
 
 use async_do::AsyncDoParser;
 use cast::CastInfo;
@@ -399,5 +400,10 @@ pub fn isolated_visibility(_: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn close_handler(_: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+#[proc_macro_attribute]
+pub fn win_widget(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

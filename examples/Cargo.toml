@@ -38,6 +38,10 @@ name = "child_attr_widget"
 path = "child_attr_widget/main.rs"
 
 [[bin]]
+name = "child_window"
+path = "child_window/main.rs"
+
+[[bin]]
 name = "complex_layout"
 path = "complex_layout/main.rs"
 

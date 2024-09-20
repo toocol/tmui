@@ -5,6 +5,7 @@ use crate::{
     platform::{
         ipc_window::IpcWindow,
         physical_window::{PhysWindow, PhysicalWindow},
+        platform_win_op::set_undecoration_window,
         PlatformContext,
     },
     primitive::{cpu_balance::CpuBalance, Message},
@@ -24,8 +25,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tipc::{ipc_event::IpcEvent, raw_sync::Timeout, IpcNode};
-#[cfg(windows_platform)]
-use tlib::winit::platform::windows::WindowExtWindows;
 use tlib::{
     events::{
         DeltaType, EventType, FocusEvent, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized,
@@ -44,6 +43,9 @@ use tlib::{
     },
 };
 
+#[cfg(windows_platform)]
+use tlib::winit::platform::windows::WindowExtWindows;
+
 pub(crate) struct WindowsProcess<
     'a,
     T: 'static + Copy + Send + Sync,
@@ -56,7 +58,17 @@ pub(crate) struct WindowsProcess<
     platform_context: &'a dyn PlatformContext<T, M>,
 
     windows: HashMap<WindowId, PhysWindow<T, M>>,
+
+    /// Window has maximize/minimize
     window_extremed: HashMap<WindowId, bool>,
+
+    /// Key: parent window's id
+    /// Val: array of child windows' id
+    child_windows: HashMap<WindowId, Vec<WindowId>>,
+    /// Key: child window's id
+    /// Val: parent window's id
+    parent_map: HashMap<WindowId, WindowId>,
+
     main_window_id: Option<WindowId>,
     proxy: Option<EventLoopProxy<Message>>,
     modal_windows: Vec<WindowId>,
@@ -74,6 +86,8 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
             platform_context,
             windows: HashMap::new(),
             window_extremed: HashMap::new(),
+            child_windows: HashMap::new(),
+            parent_map: HashMap::new(),
             main_window_id: None,
             proxy: None,
             modal_windows: vec![],
@@ -285,6 +299,16 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             // Window destroy event.
                             WindowEvent::Destroyed => {
+                                if let Some(parent) = self.parent_map.remove(&window_id) {
+                                    if let Some(child_windows) = self.child_windows.get_mut(&parent)
+                                    {
+                                        child_windows.retain(|id| *id != window_id);
+
+                                        if child_windows.is_empty() {
+                                            self.child_windows.remove(&parent);
+                                        }
+                                    }
+                                }
                                 self.windows.remove(&window_id);
                             }
 
@@ -498,13 +522,12 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 }
                             }
 
-                            Message::CreateWindow(mut win) => {
-                                let (mut logic_window, physical_window) =
-                                    self.platform_context.create_window(
-                                        win.take_config(),
-                                        Some(target),
-                                        Some(self.proxy()),
-                                    );
+                            Message::CreateWindow(parent_win_id, mut win) => {
+                                let win_cfg = win.take_config();
+                                let is_decoration = win_cfg.decoration();
+                                let (mut logic_window, physical_window) = self
+                                    .platform_context
+                                    .create_window(win_cfg, Some(target), Some(self.proxy()));
 
                                 logic_window.set_parent_window(win.get_parent());
                                 logic_window.on_activate = win.take_on_activate();
@@ -512,6 +535,18 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                                 let phys_window = physical_window.into_phys_window();
                                 let win_id = phys_window.window_id();
+
+                                if win.is_child_window() {
+                                    self.parent_map.insert(win_id, parent_win_id);
+                                    self.child_windows
+                                        .entry(parent_win_id)
+                                        .or_default()
+                                        .push(win_id);
+
+                                    if !is_decoration {
+                                        set_undecoration_window(phys_window.winit_window());
+                                    }
+                                }
 
                                 if win.is_modal() {
                                     self.modal_windows.push(win_id);

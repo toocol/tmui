@@ -1,6 +1,7 @@
 pub mod callbacks;
 pub mod widget_ext;
 pub mod widget_inner;
+pub mod win_widget;
 
 use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{

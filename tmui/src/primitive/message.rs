@@ -17,7 +17,8 @@ pub(crate) enum Message {
     Event(Event),
 
     /// Create new window.
-    CreateWindow(Window),
+    /// (Parent window id, child window)
+    CreateWindow(WindowId, Window),
 
     /// Window has closed.
     WindowClosed,
@@ -50,7 +51,7 @@ impl Debug for Message {
             Self::VSync(arg0, arg1) => f.debug_tuple("VSync").field(arg0).field(arg1).finish(),
             Self::SetCursorShape(arg0, arg1) => f.debug_tuple("SetCursorShape").field(arg0).field(arg1).finish(),
             Self::Event(arg0) => f.debug_tuple("Event").field(arg0).finish(),
-            Self::CreateWindow(arg0) => f.debug_tuple("CreateWindow").field(arg0).finish(),
+            Self::CreateWindow(arg0, arg1) => f.debug_tuple("CreateWindow").field(arg0).field(arg1).finish(),
             Self::WindowClosed => write!(f, "WindowClosed"),
             Self::WindowCloseRequest(arg0) => f.debug_tuple("WindowCloseRequest").field(arg0).finish(),
             Self::WindowMinimizeRequest(arg0) => f.debug_tuple("WindowMinimizeRequest").field(arg0).finish(),
@@ -70,7 +71,7 @@ impl PayloadWeight for Message {
             Self::VSync(..) => 1.,
             Self::SetCursorShape(..) => 0.,
             Self::Event(..) => 1.,
-            Self::CreateWindow(_) => 1.,
+            Self::CreateWindow(..) => 1.,
             Self::WindowClosed => 0.,
             _ => 0.,
         }

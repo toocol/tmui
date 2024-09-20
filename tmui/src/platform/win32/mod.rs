@@ -4,7 +4,7 @@ pub(crate) mod win32_window;
 use self::win32_window::Win32Window;
 use super::{
     ipc_inner_agent::InnerAgent, logic_window::LogicWindow, physical_window::PhysicalWindow,
-    PlatformContext, PlatformType,
+    platform_win_op::HwndGetter, PlatformContext, PlatformType,
 };
 use crate::{
     backend::BackendType,
@@ -22,7 +22,7 @@ use crate::{
     },
     runtime::window_context::OutputSender,
 };
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::HasRawWindowHandle;
 use std::{
     cell::Cell,
     sync::{mpsc::channel, Arc},
@@ -30,9 +30,11 @@ use std::{
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
 use tlib::{
     figure::Point,
-    winit::event_loop::{EventLoopProxy, EventLoopWindowTarget},
+    winit::{
+        event_loop::{EventLoopProxy, EventLoopWindowTarget},
+        raw_window_handle::HasWindowHandle,
+    },
 };
-use windows::Win32::Foundation::HWND;
 
 pub(crate) struct PlatformWin32<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     /// Shared memory ipc
@@ -98,11 +100,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         };
 
         let window_id = window.id();
-        let window_handle = window.raw_window_handle();
-        let hwnd = match window_handle {
-            RawWindowHandle::Win32(hwnd) => HWND(hwnd.hwnd as isize),
-            _ => unreachable!(),
-        };
+        let hwnd = window.raw_window_handle().hwnd();
         let event_loop_proxy = if let Some(proxy) = proxy {
             proxy
         } else {
@@ -133,6 +131,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         };
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
+                window
+                    .window_handle()
+                    .expect("Get window handle failed,")
+                    .as_raw(),
                 window_id,
                 gl_env.clone(),
                 bitmap.clone(),
