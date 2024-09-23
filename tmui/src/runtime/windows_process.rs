@@ -29,18 +29,12 @@ use tlib::{
     events::{
         DeltaType, EventType, FocusEvent, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized,
         WindowMinimized, WindowRestored,
-    },
-    figure::Point,
-    global::to_static,
-    namespace::{KeyCode, KeyboardModifier, MouseButton},
-    payload::PayloadWeight,
-    prelude::SystemCursorShape,
-    winit::{
+    }, figure::Point, global::to_static, namespace::{KeyCode, KeyboardModifier, MouseButton}, object::ObjectId, payload::PayloadWeight, prelude::SystemCursorShape, winit::{
         event::{ElementState, MouseScrollDelta},
         event_loop::{ControlFlow, EventLoopProxy, EventLoopWindowTarget},
         keyboard::{Key, ModifiersState, NamedKey, PhysicalKey},
         window::WindowId,
-    },
+    }
 };
 
 #[cfg(windows_platform)]
@@ -68,6 +62,9 @@ pub(crate) struct WindowsProcess<
     /// Key: child window's id
     /// Val: parent window's id
     parent_map: HashMap<WindowId, WindowId>,
+    /// Key: windowed widget's id
+    /// Val: child window's id
+    win_widget_map: HashMap<ObjectId, WindowId>,
 
     main_window_id: Option<WindowId>,
     proxy: Option<EventLoopProxy<Message>>,
@@ -88,6 +85,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
             window_extremed: HashMap::new(),
             child_windows: HashMap::new(),
             parent_map: HashMap::new(),
+            win_widget_map: HashMap::new(),
             main_window_id: None,
             proxy: None,
             modal_windows: vec![],
@@ -542,6 +540,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                         .entry(parent_win_id)
                                         .or_default()
                                         .push(win_id);
+                                    if win.win_widget_id() != 0 {
+                                        self.win_widget_map.insert(win.win_widget_id(), win_id);
+                                    }
 
                                     if !is_decoration {
                                         set_undecoration_window(phys_window.winit_window());

@@ -8,7 +8,7 @@ use std::{
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
-use tlib::{winit::window::WindowId, Value};
+use tlib::{object::ObjectId, winit::window::WindowId, Value};
 
 static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
@@ -16,6 +16,7 @@ pub(crate) struct Window {
     index: usize,
     modal: bool,
     child_window: bool,
+    win_widget_id: ObjectId,
     win_cfg: Option<WindowConfig>,
     on_activate: Option<FnActivate>,
     parent: Option<WindowId>,
@@ -30,6 +31,7 @@ impl Debug for Window {
             .field("index", &self.index)
             .field("modal", &self.modal)
             .field("child_window", &self.child_window)
+            .field("win_widget_id", &self.win_widget_id)
             .field("win_cfg", &self.win_cfg)
             .field("on_activate", &self.on_activate.is_some())
             .field("parent", &self.parent)
@@ -44,6 +46,7 @@ impl Window {
             index: WINDOW_COUNTER.fetch_add(1, Ordering::Acquire),
             modal: false,
             child_window: false,
+            win_widget_id: 0,
             win_cfg: None,
             on_activate: None,
             parent: None,
@@ -87,21 +90,24 @@ impl Window {
     pub(crate) fn take_params(&mut self) -> Option<HashMap<String, Value>> {
         self.params.take()
     }
-}
-
-impl Window {
-    #[inline]
-    pub fn index(&self) -> usize {
-        self.index
-    }
 
     #[inline]
-    pub fn is_modal(&self) -> bool {
+    pub(crate) fn is_modal(&self) -> bool {
         self.modal
     }
 
     #[inline]
-    pub fn is_child_window(&self) -> bool {
+    pub(crate) fn is_child_window(&self) -> bool {
         self.child_window
+    }
+
+    #[inline]
+    pub(crate) fn index(&self) -> usize {
+        self.index
+    }
+
+    #[inline]
+    pub(crate) fn win_widget_id(&self) -> ObjectId {
+        self.win_widget_id
     }
 }

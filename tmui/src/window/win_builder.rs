@@ -1,13 +1,14 @@
 use super::{win_config::WindowConfig, Window};
 use crate::{application::FnActivate, application_window::ApplicationWindow};
 use std::collections::HashMap;
-use tlib::{values::ToValue, Value};
+use tlib::{object::ObjectId, values::ToValue, Value};
 
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
     /// Os level child window or not.
     child_window: bool,
+    win_widget_id: ObjectId,
     modal: bool,
     on_activate: Option<FnActivate>,
     params: HashMap<String, Value>,
@@ -60,6 +61,12 @@ impl WindowBuilder {
     }
 
     #[inline]
+    pub(crate) fn win_widget_id(mut self, id: ObjectId) -> Self {
+        self.win_widget_id = id;
+        self
+    }
+
+    #[inline]
     pub(crate) fn build(self) -> Window {
         let mut window = Window::new();
 
@@ -70,6 +77,7 @@ impl WindowBuilder {
         window.on_activate = self.on_activate;
         window.modal = self.modal;
         window.child_window = self.child_window;
+        window.win_widget_id = self.win_widget_id;
         window.params = Some(self.params);
 
         window

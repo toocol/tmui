@@ -36,6 +36,13 @@ impl<'a> WinWidget<'a> {
         quote!(
             impl #impl_generics WinWidget for #name #ty_generics #where_clause {
                 #[inline]
+                fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send + Sync> {
+                    Box::new(|win| {
+                        win.child(Object::new::<#name>(&[]))
+                    })
+                }
+
+                #[inline]
                 fn is_win_widget_effect(&self) -> bool {
                     self.win_widget_effect
                 }

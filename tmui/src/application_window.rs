@@ -14,7 +14,8 @@ use crate::{
     runtime::{wed, window_context::OutputSender},
     tooltip::{Tooltip, TooltipStrat},
     widget::{
-        index_children, widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, ZIndexStep,
+        index_children, widget_inner::WidgetInnerExt, win_widget::handle_win_widget_create,
+        IterExecutorHnd, WidgetImpl, ZIndexStep,
     },
     window::win_builder::WindowBuilder,
 };
@@ -989,6 +990,9 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         }
         if let Some(input_ele) = cast_mut!(child_ref as InputEle) {
             FocusMgr::with(|m| m.borrow_mut().add(input_ele.root_ancestor(), input_ele))
+        }
+        if let Some(win_widget) = cast!(child_ref as WinWidget) {
+            handle_win_widget_create(win_widget)
         }
 
         // Determine whether the widget is a container.

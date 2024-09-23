@@ -6,7 +6,7 @@ pub(crate) mod windows_process;
 
 use self::frame_mgr::FrameMgr;
 use crate::{
-    application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
+    application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, IS_UI_THREAD, SHARED_CHANNEL, UI_THREAD_CNT},
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
@@ -63,7 +63,10 @@ where
     }
 
     // Set the UI thread to the `Main` thread.
-    IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+    IS_UI_THREAD.with(|is_ui| *is_ui.borrow_mut() = true);
+    if UI_THREAD_CNT.fetch_add(1, Ordering::Release) == 0 {
+        IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+    }
 
     // Setup the tokio async runtime
     let _guard = tokio_runtime().enter();
