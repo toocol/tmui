@@ -142,5 +142,9 @@ name = "tree_view"
 path = "tree_view/main.rs"
 
 [[bin]]
+name = "win_widget"
+path = "win_widget/main.rs"
+
+[[bin]]
 name = "window"
 path = "window/main.rs"

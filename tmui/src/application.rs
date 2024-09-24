@@ -343,7 +343,7 @@ pub fn is_ui_thread() -> bool {
 /// Determine whether the current thread is the UI main thread.
 #[inline]
 pub fn is_ui_main_thread() -> bool {
-    IS_UI_THREAD.with(|is_main| *is_main.borrow())
+    IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
 }
 
 /// Get the count of ui threads.

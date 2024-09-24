@@ -72,6 +72,11 @@ impl Size {
         self.width = self.width.min(size.width);
         self.height = self.height.min(size.height);
     }
+
+    #[inline]
+    pub fn is_valid(&self) -> bool {
+        self.width != 0 && self.height != 0
+    }
 }
 
 impl From<(i32, i32)> for Size {
@@ -251,6 +256,11 @@ impl FSize {
     pub fn min(&mut self, size: FSize) {
         self.width = self.width.min(size.width);
         self.height = self.height.min(size.height);
+    }
+
+    #[inline]
+    pub fn is_valid(&self) -> bool {
+        self.width != 0. && self.height != 0.
     }
 }
 
