@@ -29,12 +29,20 @@ use tlib::{
     events::{
         DeltaType, EventType, FocusEvent, KeyEvent, MouseEvent, ResizeEvent, WindowMaximized,
         WindowMinimized, WindowRestored,
-    }, figure::Point, global::to_static, namespace::{KeyCode, KeyboardModifier, MouseButton}, object::ObjectId, payload::PayloadWeight, prelude::SystemCursorShape, winit::{
+    },
+    figure::Point,
+    global::to_static,
+    namespace::{KeyCode, KeyboardModifier, MouseButton},
+    object::ObjectId,
+    payload::PayloadWeight,
+    prelude::SystemCursorShape,
+    winit::{
+        dpi::{PhysicalPosition, PhysicalSize},
         event::{ElementState, MouseScrollDelta},
         event_loop::{ControlFlow, EventLoopProxy, EventLoopWindowTarget},
         keyboard::{Key, ModifiersState, NamedKey, PhysicalKey},
         window::WindowId,
-    }
+    },
 };
 
 #[cfg(windows_platform)]
@@ -626,6 +634,17 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 window.send_input(Message::WindowResponse(window_id, closure))
+                            }
+
+                            Message::WinWidgetGeometryChangedRequest(id, rect) => {
+                                let win_id = self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
+                                let window = self.windows.get(&win_id).unwrap_or_else(|| {
+                                    panic!("Can not find window with id {:?}", win_id)
+                                });
+
+                                let winit_window = window.winit_window();
+                                winit_window.set_outer_position(PhysicalPosition::new(rect.x(), rect.y()));
+                                let _ = winit_window.request_inner_size(PhysicalSize::new(rect.width(), rect.height()));
                             }
 
                             _ => {}

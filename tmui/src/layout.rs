@@ -323,7 +323,7 @@ impl SizeCalculation for dyn WidgetImpl {
         let size = self.size();
         let parent_spacing_size = self.parent_spacing_size();
         let mut resized = false;
-                
+
         if self.fixed_width() {
             if self.hexpand() {
                 if let Some(ref spacing_size) = parent_spacing_size {
@@ -688,7 +688,15 @@ impl LayoutMgr {
             // Emit `geometry_changed()` when widget's position or size has changed.
             let new_rect = widget_ref.rect_f();
             if widget_ref.rect_record() != new_rect {
-                emit!(widget_ref.geometry_changed(), new_rect)
+                emit!(widget_ref.geometry_changed(), new_rect);
+
+                if let Some(win_widget) = cast!(widget_ref as WinWidget) {
+                    emit!(
+                        win_widget.win_widget_geometry_changed(),
+                        win_widget.id(),
+                        win_widget.borderless_rect()
+                    );
+                }
             }
 
             // Determine whether the widget is a container.

@@ -4,18 +4,31 @@ use crate::{
     window::{win_builder::WindowBuilder, win_config::WindowConfig},
 };
 use std::ptr::NonNull;
-use tlib::{prelude::*, reflect_trait};
+use tlib::{prelude::*, reflect_trait, signals, signal};
 
 pub type WinWidgetHnd = Option<NonNull<dyn WinWidget>>;
 
 #[reflect_trait]
-pub trait WinWidget: WidgetImpl {
+pub trait WinWidget: WidgetImpl + WinWidgetTrait {
     fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>;
 
     fn is_win_widget_effect(&self) -> bool;
 
     fn set_win_widget_effect(&mut self, effect: bool);
 }
+
+pub trait WinWidgetTrait: ActionExt {
+    signals! {
+        WinWidgetTrait: 
+
+        /// Emit when widget's geometry(size or position) changed.
+        ///
+        /// @param [`id`]
+        /// @param [`FRect`]
+        win_widget_geometry_changed();
+    }
+}
+impl<T: WinWidget> WinWidgetTrait for T {}
 
 pub(crate) fn handle_win_widget_create(win_widget: &dyn WinWidget) {
     if !win_widget.is_win_widget_effect() {

@@ -1,7 +1,13 @@
 use std::{fmt::Debug, time::Instant};
 use tipc::ipc_event::IpcEvent;
 use tlib::{
-    events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent}, figure::Point, namespace::AsNumeric, payload::PayloadWeight, prelude::SystemCursorShape, winit::window::WindowId
+    events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
+    figure::{Point, Rect},
+    namespace::AsNumeric,
+    object::ObjectId,
+    payload::PayloadWeight,
+    prelude::SystemCursorShape,
+    winit::window::WindowId,
 };
 
 use crate::{application_window::ApplicationWindow, window::Window};
@@ -39,27 +45,58 @@ pub(crate) enum Message {
     WindowVisibilityRequest(WindowId, bool),
 
     /// Sub window calling response.
-    WindowResponse(WindowId, Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>),
+    WindowResponse(
+        WindowId,
+        Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>,
+    ),
 
     /// Window has moved.
     WindowMoved(Point),
+
+    /// Request the child window represent by the id change the size and location.
+    WinWidgetGeometryChangedRequest(ObjectId, Rect),
 }
 
 impl Debug for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::VSync(arg0, arg1) => f.debug_tuple("VSync").field(arg0).field(arg1).finish(),
-            Self::SetCursorShape(arg0, arg1) => f.debug_tuple("SetCursorShape").field(arg0).field(arg1).finish(),
+            Self::SetCursorShape(arg0, arg1) => f
+                .debug_tuple("SetCursorShape")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
             Self::Event(arg0) => f.debug_tuple("Event").field(arg0).finish(),
-            Self::CreateWindow(arg0, arg1) => f.debug_tuple("CreateWindow").field(arg0).field(arg1).finish(),
+            Self::CreateWindow(arg0, arg1) => f
+                .debug_tuple("CreateWindow")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
             Self::WindowClosed => write!(f, "WindowClosed"),
-            Self::WindowCloseRequest(arg0) => f.debug_tuple("WindowCloseRequest").field(arg0).finish(),
-            Self::WindowMinimizeRequest(arg0) => f.debug_tuple("WindowMinimizeRequest").field(arg0).finish(),
-            Self::WindowMaximizeRequest(arg0) => f.debug_tuple("WindowMaximizeRequest").field(arg0).finish(),
-            Self::WindowRestoreRequest(arg0) => f.debug_tuple("WindowRestoreRequest").field(arg0).finish(),
-            Self::WindowVisibilityRequest(arg0, arg1) => f.debug_tuple("WindowVisibilityRequest").field(arg0).field(arg1).finish(),
+            Self::WindowCloseRequest(arg0) => {
+                f.debug_tuple("WindowCloseRequest").field(arg0).finish()
+            }
+            Self::WindowMinimizeRequest(arg0) => {
+                f.debug_tuple("WindowMinimizeRequest").field(arg0).finish()
+            }
+            Self::WindowMaximizeRequest(arg0) => {
+                f.debug_tuple("WindowMaximizeRequest").field(arg0).finish()
+            }
+            Self::WindowRestoreRequest(arg0) => {
+                f.debug_tuple("WindowRestoreRequest").field(arg0).finish()
+            }
+            Self::WindowVisibilityRequest(arg0, arg1) => f
+                .debug_tuple("WindowVisibilityRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
             Self::WindowResponse(arg0, _) => f.debug_tuple("WindowResponse").field(arg0).finish(),
-            Self::WindowMoved(arg0) => f.debug_tuple("point").field(arg0).finish(),
+            Self::WindowMoved(arg0) => f.debug_tuple("WindowMoved").field(arg0).finish(),
+            Self::WinWidgetGeometryChangedRequest(arg0, arg1) => f
+                .debug_tuple("WinWidgetGeometryChangedRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
         }
     }
 }

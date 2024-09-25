@@ -1,11 +1,26 @@
 use crate::{
-    animation::mgr::AnimationMgr, application, container::ContainerLayoutEnum, graphics::{
+    animation::mgr::AnimationMgr,
+    application,
+    container::ContainerLayoutEnum,
+    graphics::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
-    }, input::{dialog::InputDialog, focus_mgr::FocusMgr, ReflectInputEle}, layout::LayoutMgr, loading::LoadingMgr, platform::{ipc_bridge::IpcBridge, PlatformType}, prelude::*, primitive::{global_watch::GlobalWatchEvent, Message}, runtime::{wed, window_context::OutputSender}, tooltip::{Tooltip, TooltipStrat}, widget::{
-        index_children, widget_inner::WidgetInnerExt, win_widget::{handle_win_widget_create, WinWidgetHnd},
+    },
+    input::{dialog::InputDialog, focus_mgr::FocusMgr, ReflectInputEle},
+    layout::LayoutMgr,
+    loading::LoadingMgr,
+    platform::{ipc_bridge::IpcBridge, PlatformType},
+    prelude::*,
+    primitive::{global_watch::GlobalWatchEvent, Message},
+    runtime::{wed, window_context::OutputSender},
+    tooltip::{Tooltip, TooltipStrat},
+    widget::{
+        index_children,
+        widget_inner::WidgetInnerExt,
+        win_widget::{handle_win_widget_create, WinWidgetHnd},
         IterExecutorHnd, WidgetImpl, ZIndexStep,
-    }, window::win_builder::WindowBuilder
+    },
+    window::win_builder::WindowBuilder,
 };
 use log::{debug, error, warn};
 use once_cell::sync::Lazy;
@@ -16,6 +31,7 @@ use std::{
     thread::{self, ThreadId},
 };
 use tlib::{
+    connect,
     events::{DeltaType, Event, EventType, MouseEvent},
     figure::Size,
     namespace::{KeyboardModifier, MouseButton},
@@ -96,13 +112,14 @@ impl ObjectImpl for ApplicationWindow {
         child_initialize(self.get_child_mut(), window_id);
 
         self.when_size_change(self.size());
-        self.set_initialized(true);
-        INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
 
         for w in self.win_widgets.iter() {
-            handle_win_widget_create(nonnull_ref!(w));
+            let win_widget = nonnull_ref!(w);
+            handle_win_widget_create(win_widget);
         }
-        self.win_widgets.clear();
+
+        self.set_initialized(true);
+        INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
 
         debug!("Initialize-phase end.");
     }
@@ -892,6 +909,14 @@ impl ApplicationWindow {
             ));
         }
     }
+
+    #[inline]
+    pub(crate) fn handle_win_widget_geometry_changed(&self, id: ObjectId, rect: Rect) {
+        if !self.initialized() {
+            return
+        }
+        self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect))
+    }
 }
 
 /// Get window id in current ui thread.
@@ -988,7 +1013,8 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         }
         if let Some(win_widget) = cast_mut!(child_ref as WinWidget) {
             if application::is_ui_main_thread() {
-                window.win_widgets.push(NonNull::new(win_widget))
+                window.win_widgets.push(NonNull::new(win_widget));
+                connect!(win_widget, win_widget_geometry_changed(), window, handle_win_widget_geometry_changed(ObjectId:0, Rect:1));
             }
         }
 
