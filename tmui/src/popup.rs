@@ -7,6 +7,15 @@ use crate::{
 };
 
 #[extends(Widget)]
+#[cfg(win_popup)]
+#[tlib::win_widget]
+pub struct Popup {
+    supervisor: WidgetHnd,
+    offsets: (i32, i32),
+}
+
+#[extends(Widget)]
+#[cfg(not(win_popup))]
 pub struct Popup {
     supervisor: WidgetHnd,
     offsets: (i32, i32),

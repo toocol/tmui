@@ -8,8 +8,18 @@ use crate::{
     widget::WidgetImpl,
 };
 
+#[cfg(not(win_popup))]
 #[extends(Popup, internal = true)]
 #[derive(Childable)]
+pub struct Tooltip {
+    #[child]
+    label: Box<Label>,
+}
+
+#[cfg(win_popup)]
+#[extends(Popup, internal = true)]
+#[derive(Childable)]
+#[tlib::win_widget]
 pub struct Tooltip {
     #[child]
     label: Box<Label>,

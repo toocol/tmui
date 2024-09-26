@@ -403,6 +403,14 @@ pub fn close_handler(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 
+/// Mark the widget as a child-window widget, 
+/// and the system will create a child window to display this component.
+///
+/// When #\[win_widget\] is added, a CorrXXX structure will be automatically 
+/// generated (assuming there is a structure named Test, a CorrTest will be generated). 
+/// During UI construction in the main window, 
+/// the CorrXXX structure must be used instead of the original widget for UI building; 
+/// otherwise, a new window will not be created for UI rendering, just like the normal widget.
 #[proc_macro_attribute]
 pub fn win_widget(_: TokenStream, input: TokenStream) -> TokenStream {
     input

@@ -1,8 +1,11 @@
+use crate::{
+    animation::Animation, async_task::AsyncTask, close_handler::CloseHandler,
+    global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable,
+    popupable::Popupable, win_widget::WinWidget, SplitGenericsRef,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
-
-use crate::{animation::Animation, async_task::AsyncTask, close_handler::CloseHandler, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, win_widget::WinWidget, SplitGenericsRef};
 
 pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
@@ -58,10 +61,7 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) close_handler_register_clause: TokenStream,
 
     // fields about `win_widget`
-    pub(crate) is_win_widget: bool,
-    pub(crate) win_widget_field_clause: TokenStream,
-    pub(crate) win_widget_reflect_clause: TokenStream,
-    pub(crate) win_widget_impl_clause: TokenStream,
+    pub(crate) win_widget_corr_struct_clause: TokenStream,
 }
 
 impl<'a> GeneralAttr<'a> {
@@ -115,10 +115,12 @@ impl<'a> GeneralAttr<'a> {
                         let mut gw = attr.parse_args::<GlobalWatch>()?;
                         gw.set_generics(generics);
                         global_watch = Some(gw);
-                    },
+                    }
                     "iter_executor" => iter_executor = true,
                     "frame_animator" => frame_animator = true,
-                    "isolated_visibility" => isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?),
+                    "isolated_visibility" => {
+                        isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?)
+                    }
                     "close_handler" => close_handler = Some(CloseHandler::parse(ast, generics)?),
                     "win_widget" => win_widget = Some(WinWidget::parse(ast, generics)?),
                     _ => {}
@@ -224,7 +226,7 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
-        // Loadable 
+        // Loadable
         let loadable_field_clause = if let Some(loadable) = loadable.as_ref() {
             loadable.loadable_field()
         } else {
@@ -280,7 +282,7 @@ impl<'a> GeneralAttr<'a> {
         let isolated_visibility_field_clause = if let Some(iv) = isolated_visibility.as_ref() {
             iv.isolated_visibility_field()
         } else {
-           vec![] 
+            vec![]
         };
 
         let isolated_visibility_impl_clause = if let Some(iv) = isolated_visibility.as_ref() {
@@ -314,21 +316,9 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
-        // WinWidget 
-        let win_widget_field_clause = if let Some(ww) = win_widget.as_ref() {
-            ww.field()
-        } else {
-            proc_macro2::TokenStream::new()
-        };
-
-        let win_widget_reflect_clause = if let Some(ww) = win_widget.as_ref() {
-            ww.relfect_clause()
-        } else {
-            proc_macro2::TokenStream::new()
-        };
-
-        let win_widget_impl_clause = if let Some(ww) = win_widget.as_ref() {
-            ww.impl_clause()
+        // WinWidget
+        let win_widget_corr_struct_clause = if let Some(ww) = win_widget.as_ref() {
+            ww.corr_struct_clause()
         } else {
             proc_macro2::TokenStream::new()
         };
@@ -366,10 +356,7 @@ impl<'a> GeneralAttr<'a> {
             close_handler_impl_clause,
             close_handler_reflect_clause,
             close_handler_register_clause,
-            is_win_widget: win_widget.is_some(),
-            win_widget_field_clause,
-            win_widget_reflect_clause,
-            win_widget_impl_clause,
+            win_widget_corr_struct_clause,
         })
     }
 }

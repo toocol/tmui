@@ -5,7 +5,7 @@ use tmui::{
     application::Application,
     application_window::ApplicationWindow,
 };
-use win_widget::MyWinWidget;
+use win_widget::CorrMyWinWidget;
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
@@ -27,7 +27,7 @@ fn build_ui(window: &mut ApplicationWindow) {
     hbox.set_vexpand(true);
 
     let mut widget: Box<Widget> = Object::new(&[]);
-    let mut win_widget = MyWinWidget::new();
+    let mut win_widget = CorrMyWinWidget::new();
 
     widget.set_hexpand(true);
     widget.set_vexpand(true);

@@ -46,8 +46,7 @@ pub(crate) fn expand(
     let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
     let close_handler_register_clause = &general_attr.close_handler_register_clause;
 
-    let win_widget_reflect_clause = &general_attr.win_widget_reflect_clause;
-    let win_widget_impl_clause = &general_attr.win_widget_impl_clause;
+    let win_widget_corr_struct_clause = &general_attr.win_widget_corr_struct_clause;
 
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
@@ -102,13 +101,6 @@ pub(crate) fn expand(
                         }
                     }
 
-                    if general_attr.is_win_widget {
-                        let field = &general_attr.win_widget_field_clause;
-                        fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            #field
-                        })?);
-                    }
-
                     childable.parse_childable(fields)?;
                 }
                 _ => {
@@ -154,6 +146,8 @@ pub(crate) fn expand(
                 #default_clause
                 #ast
 
+                #win_widget_corr_struct_clause
+
                 #object_trait_impl_clause
 
                 #element_trait_impl_clause
@@ -174,8 +168,6 @@ pub(crate) fn expand(
                 #isolated_visibility_impl_clause
 
                 #close_handler_impl_clause
-
-                #win_widget_impl_clause
 
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
@@ -199,7 +191,6 @@ pub(crate) fn expand(
                         #frame_animator_reflect_clause
                         #isolated_visibility_reflect_clause
                         #close_handler_reflect_clause
-                        #win_widget_reflect_clause
                     }
 
                     #[inline]

@@ -1,55 +1,59 @@
 use crate::SplitGenericsRef;
 use proc_macro2::{Ident, TokenStream};
-use syn::DeriveInput;
 use quote::quote;
+use syn::DeriveInput;
 
 pub(crate) struct WinWidget<'a> {
     name: Ident,
+    corr_name: Ident,
     generics: SplitGenericsRef<'a>,
 }
 
 impl<'a> WinWidget<'a> {
     pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
+        let name = &ast.ident;
         Ok(Self {
             name: ast.ident.clone(),
+            corr_name: Ident::new(&format!("Corr{}", &name.to_string()), name.span()),
             generics,
         })
     }
 
-    pub(crate) fn field(&self) -> TokenStream {
-        quote!(win_widget_effect: bool)
-    }
-
-    pub(crate) fn relfect_clause(&self) -> TokenStream {
+    pub(crate) fn corr_struct_clause(&self) -> TokenStream {
         let name = &self.name;
+        let corr_name = &self.corr_name;
         let (_, ty_generics, _) = self.generics;
 
         quote!(
-            type_registry.register::<#name #ty_generics, ReflectWinWidget>();
-        )
-    }
+            #[extends(Widget)]
+            pub struct #corr_name {}
 
-    pub(crate) fn impl_clause(&self) -> TokenStream {
-        let name = &self.name;
-        let (impl_generics, ty_generics, where_clause) = self.generics;
+            impl ObjectSubclass for #corr_name {
+                const NAME: &'static str = stringify!(#corr_name);
+            }
 
-        quote!(
-            impl #impl_generics WinWidget for #name #ty_generics #where_clause {
+            impl ObjectImpl for #corr_name {
+                #[inline]
+                fn type_register(&self, type_registry: &mut TypeRegistry) {
+                    type_registry.register::<#corr_name #ty_generics, ReflectWinWidget>();
+                }
+            }
+
+            impl WidgetImpl for #corr_name {}
+
+            impl WinWidget for #corr_name {
                 #[inline]
                 fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send + Sync> {
                     Box::new(|win| {
                         win.child(Object::new::<#name>(&[]))
                     })
                 }
+            }
 
+            impl #corr_name {
                 #[inline]
-                fn is_win_widget_effect(&self) -> bool {
-                    self.win_widget_effect
-                }
-
-                #[inline]
-                fn set_win_widget_effect(&mut self, effect: bool) {
-                    self.win_widget_effect = effect
+                pub fn new() -> Box<Self> {
+                    Object::new(&[])
                 }
             }
         )

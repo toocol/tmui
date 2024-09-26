@@ -17,6 +17,16 @@ pub trait DropdownListSignals: ActionExt {
 }
 impl DropdownListSignals for DropdownList {}
 
+#[cfg(win_popup)]
+#[tlib::win_widget]
+#[extends(Popup, internal = true)]
+#[derive(Childable)]
+pub struct DropdownList {
+    #[child]
+    list: Box<ListView>,
+}
+
+#[cfg(not(win_popup))]
 #[extends(Popup, internal = true)]
 #[derive(Childable)]
 pub struct DropdownList {

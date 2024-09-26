@@ -14,6 +14,25 @@ use super::{
     Input, InputType,
 };
 
+#[cfg(win_popup)]
+#[tlib::win_widget]
+#[extends(Popup, Layout(Stack), internal = true)]
+#[derive(Childrenable)]
+pub struct InputDialog {
+    #[children]
+    text: Box<Text>,
+
+    #[children]
+    password: Box<Password>,
+
+    #[children]
+    number: Box<Number>,
+
+    // Other properties:
+    hide_on_win_changed: bool,
+}
+
+#[cfg(not(win_popup))]
 #[extends(Popup, Layout(Stack), internal = true)]
 #[derive(Childrenable)]
 pub struct InputDialog {

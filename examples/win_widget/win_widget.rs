@@ -15,8 +15,6 @@ impl ObjectSubclass for MyWinWidget {
 
 impl ObjectImpl for MyWinWidget {
     fn initialize(&mut self) {
-        self.set_win_widget_effect(true);
-
         self.set_hexpand(true);
         self.set_vexpand(true);
 

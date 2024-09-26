@@ -11,10 +11,6 @@ pub type WinWidgetHnd = Option<NonNull<dyn WinWidget>>;
 #[reflect_trait]
 pub trait WinWidget: WidgetImpl + WinWidgetTrait {
     fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>;
-
-    fn is_win_widget_effect(&self) -> bool;
-
-    fn set_win_widget_effect(&mut self, effect: bool);
 }
 
 pub trait WinWidgetTrait: ActionExt {
@@ -31,10 +27,6 @@ pub trait WinWidgetTrait: ActionExt {
 impl<T: WinWidget> WinWidgetTrait for T {}
 
 pub(crate) fn handle_win_widget_create(win_widget: &dyn WinWidget) {
-    if !win_widget.is_win_widget_effect() {
-        return;
-    }
-
     let rect = win_widget.borderless_rect();
     if !rect.size().is_valid() {
         panic!("Windowed Widget must specify the size.")
