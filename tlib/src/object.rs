@@ -43,6 +43,7 @@ pub struct Object {
     id: ObjectId,
     properties: HashMap<String, Box<Value>>,
     constructed: bool,
+    signal_source: Option<ObjectId>,
 }
 
 impl Default for Object {
@@ -51,6 +52,7 @@ impl Default for Object {
             id: ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
             properties: HashMap::new(),
             constructed: false,
+            signal_source: None,
         }
     }
 }
@@ -70,6 +72,12 @@ pub trait ObjectOperation {
 
     /// Go to[`Function defination`](ObjectOperation::constructed) (Defined in [`ObjectOperation`])
     fn constructed(&self) -> bool;
+
+    /// Set the signal source.
+    fn set_signal_source(&mut self, id: Option<ObjectId>);
+
+    /// Get the signal source.
+    fn get_signal_source(&self) -> Option<ObjectId>;
 
     /// Set the name of object.
     ///
@@ -128,6 +136,16 @@ impl ObjectOperation for Object {
     #[inline]
     fn constructed(&self) -> bool {
         self.constructed
+    }
+
+    #[inline]
+    fn set_signal_source(&mut self, id: Option<ObjectId>) {
+        self.signal_source = id;
+    }
+
+    #[inline]
+    fn get_signal_source(&self) -> Option<ObjectId> {
+        self.signal_source
     }
 }
 

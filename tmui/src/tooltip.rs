@@ -62,6 +62,7 @@ impl Tooltip {
     }
 }
 
+#[cfg(not(win_popup))]
 impl Tooltip {
     #[inline]
     pub(crate) fn new() -> Box<Self> {

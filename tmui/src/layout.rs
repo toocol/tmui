@@ -689,14 +689,6 @@ impl LayoutMgr {
             let new_rect = widget_ref.rect_f();
             if widget_ref.rect_record() != new_rect {
                 emit!(widget_ref.geometry_changed(), new_rect);
-
-                if let Some(win_widget) = cast!(widget_ref as WinWidget) {
-                    emit!(
-                        win_widget.win_widget_geometry_changed(),
-                        win_widget.id(),
-                        win_widget.borderless_rect()
-                    );
-                }
             }
 
             // Determine whether the widget is a container.

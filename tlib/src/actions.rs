@@ -322,32 +322,41 @@ macro_rules! connect {
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident() ) => {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
+        let signal_source = $emiter.id();
         let signal = $emiter.$signal();
         $emiter.connect(signal, id, Box::new(move |_| {
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
-            target.$slot()
+            target.set_signal_source(Some(signal_source));
+            target.$slot();
+            target.set_signal_source(None);
         }))
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($param:ident) ) => {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
+        let signal_source = $emiter.id();
         let signal = $emiter.$signal();
         $emiter.connect(signal, id, Box::new(move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             let param = val.get::<$param>();
-            target.$slot(param)
+            target.set_signal_source(Some(signal_source));
+            target.$slot(param);
+            target.set_signal_source(None);
         }))
     };
     ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
+        let signal_source = $emiter.id();
         let signal = $emiter.$signal();
         $emiter.connect(signal, id, Box::new(move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             let param = val.get::<($($param),+)>();
-            target.$slot($(param.$index),+)
+            target.set_signal_source(Some(signal_source));
+            target.$slot($(param.$index),+);
+            target.set_signal_source(None);
         }))
     };
 }
@@ -404,6 +413,7 @@ macro_rules! signals {
         $(
             $(#[$($attrss)*])*
             #[allow(dead_code)]
+            #[inline]
             fn $name(&self) -> Signal {
                 signal!(self, stringify!($name), stringify!($from_type))
             }

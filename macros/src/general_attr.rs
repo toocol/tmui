@@ -94,8 +94,8 @@ impl<'a> GeneralAttr<'a> {
         let mut win_widget = None;
 
         for attr in ast.attrs.iter() {
-            if let Some(attr_ident) = attr.path.get_ident() {
-                let attr_str = attr_ident.to_string();
+            if let Some(seg) = attr.path.segments.last() {
+                let attr_str = seg.ident.to_string();
 
                 match attr_str.as_str() {
                     "run_after" => is_run_after = true,

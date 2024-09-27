@@ -133,6 +133,16 @@ pub(crate) fn gen_object_trait_impl_clause(
             fn constructed(&self) -> bool {
                 self.#(#object_path).*.constructed()
             }
+
+            #[inline]
+            fn set_signal_source(&mut self, id: Option<ObjectId>) {
+                self.#(#object_path).*.set_signal_source(id)
+            }
+
+            #[inline]
+            fn get_signal_source(&self) -> Option<ObjectId> {
+                self.#(#object_path).*.get_signal_source()
+            }
         }
 
         impl #impl_generics ObjectType for #name #ty_generics #where_clause {

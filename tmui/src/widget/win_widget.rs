@@ -1,35 +1,25 @@
-use super::WidgetImpl;
+use super::{WidgetImpl, WidgetSignals};
 use crate::{
     prelude::ApplicationWindow,
     window::{win_builder::WindowBuilder, win_config::WindowConfig},
 };
 use std::ptr::NonNull;
-use tlib::{prelude::*, reflect_trait, signals, signal};
+use tlib::{prelude::*, reflect_trait};
 
 pub type WinWidgetHnd = Option<NonNull<dyn WinWidget>>;
 
 #[reflect_trait]
-pub trait WinWidget: WidgetImpl + WinWidgetTrait {
+pub trait WinWidget: WidgetImpl + WidgetSignals {
     fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>;
 }
 
-pub trait WinWidgetTrait: ActionExt {
-    signals! {
-        WinWidgetTrait: 
-
-        /// Emit when widget's geometry(size or position) changed.
-        ///
-        /// @param [`id`]
-        /// @param [`FRect`]
-        win_widget_geometry_changed();
-    }
-}
-impl<T: WinWidget> WinWidgetTrait for T {}
-
 pub(crate) fn handle_win_widget_create(win_widget: &dyn WinWidget) {
-    let rect = win_widget.borderless_rect();
-    if !rect.size().is_valid() {
-        panic!("Windowed Widget must specify the size.")
+    let mut rect = win_widget.borderless_rect();
+    if rect.width() == 0 {
+        rect.set_width(10)
+    }
+    if rect.height() == 0 {
+        rect.set_height(10)
     }
 
     let child_proc_fn = win_widget.child_process_fn();
@@ -41,6 +31,7 @@ pub(crate) fn handle_win_widget_create(win_widget: &dyn WinWidget) {
                     .width(rect.width() as u32)
                     .height(rect.height() as u32)
                     .decoration(false)
+                    .visible(win_widget.visible())
                     .build(),
             )
             .child_window(true)

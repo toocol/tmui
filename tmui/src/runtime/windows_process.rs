@@ -638,13 +638,22 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             Message::WinWidgetGeometryChangedRequest(id, rect) => {
                                 let win_id = self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
-                                let window = self.windows.get(&win_id).unwrap_or_else(|| {
+                                let window = self.windows.get(win_id).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", win_id)
                                 });
 
                                 let winit_window = window.winit_window();
                                 winit_window.set_outer_position(PhysicalPosition::new(rect.x(), rect.y()));
                                 let _ = winit_window.request_inner_size(PhysicalSize::new(rect.width(), rect.height()));
+                            }
+
+                            Message::WinWidgetVisibilityChangedRequest(id, visible) => {
+                                let win_id = self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
+                                let window = self.windows.get(win_id).unwrap_or_else(|| {
+                                    panic!("Can not find window with id {:?}", win_id)
+                                });
+
+                                window.winit_window().set_visible(visible);
                             }
 
                             _ => {}

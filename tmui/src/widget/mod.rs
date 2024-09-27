@@ -476,6 +476,10 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         #[cfg(verbose_logging)]
         let frame = cr.frame();
 
+        if cast!(self as WinWidget).is_some() {
+            return;
+        }
+
         if !self.visible() && !self.is_animation_progressing() {
             #[cfg(verbose_logging)]
             #[rustfmt::skip]
@@ -486,7 +490,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         }
 
         let mut geometry = self.rect();
-
         if !geometry.is_valid() {
             #[cfg(verbose_logging)]
             #[rustfmt::skip]

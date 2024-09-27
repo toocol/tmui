@@ -13,7 +13,7 @@ use crate::{
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
-    tooltip::{Tooltip, TooltipStrat},
+    tooltip::TooltipStrat,
     widget::{
         index_children,
         widget_inner::WidgetInnerExt,
@@ -86,7 +86,10 @@ pub struct ApplicationWindow {
     win_widgets: Vec<WinWidgetHnd>,
 
     input_dialog: Option<Box<InputDialog>>,
-    tooltip: Option<Box<Tooltip>>,
+    #[cfg(not(win_popup))]
+    tooltip: Option<Box<crate::tooltip::Tooltip>>,
+    #[cfg(win_popup)]
+    tooltip: Option<Box<crate::tooltip::CorrTooltip>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -858,8 +861,21 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn tooltip(&mut self, tooltip_strat: TooltipStrat) {
         if self.tooltip.is_none() {
-            let mut tooltip = Tooltip::new();
-            child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
+            #[cfg(not(win_popup))]
+            let tooltip =  {
+                let mut tooltip = crate::tooltip::Tooltip::new();
+                child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
+                tooltip
+            };
+
+            #[cfg(win_popup)]
+            let tooltip = {
+                let mut tooltip = crate::tooltip::CorrTooltip::new();
+                child_initialize(Some(tooltip.as_mut()), self.id());
+                handle_win_widget_create(tooltip.as_mut());
+                tooltip
+            };
+
             self.board().shuffle();
             self.tooltip = Some(tooltip);
         }
@@ -868,32 +884,47 @@ impl ApplicationWindow {
 
         match tooltip_strat {
             TooltipStrat::Show(text, position, size, styles) => {
-                tooltip.set_fixed_x(position.x());
-                tooltip.set_fixed_y(position.y());
+                #[cfg(not(win_popup))]
+                {
+                    tooltip.set_fixed_x(position.x());
+                    tooltip.set_fixed_y(position.y());
 
-                if let Some(width) = size.width() {
-                    tooltip.label().width_request(width)
-                }
-                if let Some(height) = size.height() {
-                    tooltip.label().height_request(height)
-                }
-                if let Some(styles) = styles {
-                    if let Some(halign) = styles.halign() {
-                        tooltip.label().set_halign(halign)
+                    if let Some(width) = size.width() {
+                        tooltip.label().width_request(width)
                     }
-                    if let Some(valign) = styles.valign() {
-                        tooltip.label().set_valign(valign)
+                    if let Some(height) = size.height() {
+                        tooltip.label().height_request(height)
                     }
-                    if let Some(color) = styles.color() {
-                        tooltip.set_color(color)
+                    if let Some(styles) = styles {
+                        if let Some(halign) = styles.halign() {
+                            tooltip.label().set_halign(halign)
+                        }
+                        if let Some(valign) = styles.valign() {
+                            tooltip.label().set_valign(valign)
+                        }
+                        if let Some(color) = styles.color() {
+                            tooltip.set_color(color)
+                        }
+                        tooltip.set_styles(styles);
                     }
-                    tooltip.set_styles(styles);
+
+                    tooltip.set_text(text);
+                    tooltip.calc_relative_position();
+                    tooltip.show();
+                    ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
                 }
 
-                tooltip.set_text(text);
-                tooltip.calc_relative_position();
-                tooltip.show();
-                ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
+                #[cfg(win_popup)]
+                {
+                    let id = tooltip.id();
+                    self.send_message(Message::WindowTooltipShowRequest(
+                        id,
+                        text.to_string(),
+                        position,
+                        size,
+                        styles,
+                    ));
+                }
             }
             TooltipStrat::Hide => tooltip.hide(),
         }
@@ -911,11 +942,21 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn handle_win_widget_geometry_changed(&self, id: ObjectId, rect: Rect) {
+    pub(crate) fn handle_win_widget_geometry_changed(&self, rect: FRect) {
         if !self.initialized() {
-            return
+            return;
         }
-        self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect))
+        let id = self.get_signal_source().unwrap();
+        self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect.into()))
+    }
+
+    #[inline]
+    pub(crate) fn handle_win_widget_visibility_changed(&self, visible: bool) {
+        if !self.initialized() {
+            return;
+        }
+        let id = self.get_signal_source().unwrap();
+        self.send_message(Message::WinWidgetVisibilityChangedRequest(id, visible))
     }
 }
 
@@ -1014,7 +1055,18 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         if let Some(win_widget) = cast_mut!(child_ref as WinWidget) {
             if application::is_ui_main_thread() {
                 window.win_widgets.push(NonNull::new(win_widget));
-                connect!(win_widget, win_widget_geometry_changed(), window, handle_win_widget_geometry_changed(ObjectId:0, Rect:1));
+                connect!(
+                    win_widget,
+                    geometry_changed(),
+                    window,
+                    handle_win_widget_geometry_changed(FRect)
+                );
+                connect!(
+                    win_widget,
+                    visibility_changed(),
+                    window,
+                    handle_win_widget_visibility_changed(bool)
+                );
             }
         }
 
