@@ -1,7 +1,7 @@
 pub mod win_builder;
 pub mod win_config;
 
-use self::{win_builder::WindowBuilder, win_config::WindowConfig};
+use self::win_config::WindowConfig;
 use crate::{application::FnActivate, prelude::RawWindowHandle6};
 use std::{
     collections::HashMap,
@@ -56,11 +56,6 @@ impl Window {
 }
 
 impl Window {
-    #[inline]
-    pub fn builder() -> WindowBuilder {
-        WindowBuilder::new()
-    }
-
     #[inline]
     pub(crate) fn take_config(&mut self) -> WindowConfig {
         self.win_cfg.take().unwrap()

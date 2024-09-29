@@ -46,7 +46,7 @@ pub(crate) static HIGH_LOAD: AtomicBool = AtomicBool::new(false);
 pub(crate) static UI_THREAD_CNT: AtomicU8 = AtomicU8::new(0);
 static ONCE: Once = Once::new();
 
-pub type FnActivate = Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>;
+pub type FnActivate = Box<dyn Fn(&mut ApplicationWindow) + Send>;
 pub type FnUserEventReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>;
 pub type FnRequestReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) -> Option<T> + Send + Sync>;
 

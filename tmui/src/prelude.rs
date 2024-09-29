@@ -59,7 +59,10 @@ pub use crate::vbox::VBox;
 pub use crate::widget::{
     callbacks::Callbacks,
     widget_ext::WidgetExt,
-    win_widget::{ReflectWinWidget, WinWidget},
+    win_widget::{
+        CrossWinMsgHandler, CrossWinMsgHandlerInner, CrossWinMsgHandlerRequire, CrossWinMsgSender,
+        ReflectCrossWinMsgHandlerInner, ReflectWinWidget, WinWidget,
+    },
     ChildOp, ChildRegionAcquire, EventBubble, InnerCustomizeEventProcess, IsolatedVisibility,
     PointEffective, ReflectInnerCustomizeEventProcess, ReflectIsolatedVisibility,
     ReflectIterExecutor, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd,

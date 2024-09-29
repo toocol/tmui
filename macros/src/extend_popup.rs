@@ -41,6 +41,9 @@ pub(crate) fn expand(
     let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
     let close_handler_register_clause = &general_attr.close_handler_register_clause;
 
+    let win_widget_receiver_field = &general_attr.win_widget_receiver_field;
+    let win_widget_receiver_impl = &general_attr.win_widget_receiver_impl;
+    let win_widget_receiver_reflect = &general_attr.win_widget_receiver_reflect;
     let win_widget_corr_struct_clause = &general_attr.win_widget_corr_struct_clause;
 
     match &mut ast.data {
@@ -75,6 +78,12 @@ pub(crate) fn expand(
 
                     if general_attr.is_popupable {
                         let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
+                    }
+
+                    if let Some(field) = win_widget_receiver_field {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
@@ -152,6 +161,8 @@ pub(crate) fn expand(
 
                 #close_handler_impl_clause
 
+                #win_widget_receiver_impl
+
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -174,6 +185,7 @@ pub(crate) fn expand(
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
                         #close_handler_reflect_clause
+                        #win_widget_receiver_reflect
                     }
 
                     #[inline]

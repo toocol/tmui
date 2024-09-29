@@ -1,6 +1,5 @@
 use crate::{
     animation::mgr::AnimationMgr,
-    application,
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,
@@ -17,7 +16,7 @@ use crate::{
     widget::{
         index_children,
         widget_inner::WidgetInnerExt,
-        win_widget::{handle_win_widget_create, WinWidgetHnd},
+        win_widget::{handle_win_widget_create, CrsWinMsgHnd, WinWidgetHnd},
         IterExecutorHnd, WidgetImpl, ZIndexStep,
     },
     window::win_builder::WindowBuilder,
@@ -70,6 +69,7 @@ pub struct ApplicationWindow {
     widgets: HashMap<ObjectId, WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
     shadow_mouse_watch: Vec<WidgetHnd>,
+    crs_win_handlers: Vec<CrsWinMsgHnd>,
 
     focused_widget: ObjectId,
     focused_widget_mem: Vec<ObjectId>,
@@ -638,7 +638,11 @@ impl ApplicationWindow {
     pub(crate) fn iter_execute(&mut self) {
         self.iter_executors
             .iter_mut()
-            .for_each(|hnd| nonnull_mut!(hnd).iter_execute())
+            .for_each(|hnd| nonnull_mut!(hnd).iter_execute());
+
+        self.crs_win_handlers
+            .iter_mut()
+            .for_each(|hnd| nonnull_mut!(hnd).handle_inner());
     }
 
     #[inline]
@@ -862,7 +866,7 @@ impl ApplicationWindow {
     pub(crate) fn tooltip(&mut self, tooltip_strat: TooltipStrat) {
         if self.tooltip.is_none() {
             #[cfg(not(win_popup))]
-            let tooltip =  {
+            let tooltip = {
                 let mut tooltip = crate::tooltip::Tooltip::new();
                 child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
                 tooltip
@@ -1053,21 +1057,22 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             FocusMgr::with(|m| m.borrow_mut().add(input_ele.root_ancestor(), input_ele))
         }
         if let Some(win_widget) = cast_mut!(child_ref as WinWidget) {
-            if application::is_ui_main_thread() {
-                window.win_widgets.push(NonNull::new(win_widget));
-                connect!(
-                    win_widget,
-                    geometry_changed(),
-                    window,
-                    handle_win_widget_geometry_changed(FRect)
-                );
-                connect!(
-                    win_widget,
-                    visibility_changed(),
-                    window,
-                    handle_win_widget_visibility_changed(bool)
-                );
-            }
+            window.win_widgets.push(NonNull::new(win_widget));
+            connect!(
+                win_widget,
+                geometry_changed(),
+                window,
+                handle_win_widget_geometry_changed(FRect)
+            );
+            connect!(
+                win_widget,
+                visibility_changed(),
+                window,
+                handle_win_widget_visibility_changed(bool)
+            );
+        }
+        if let Some(crs_win_hnd) = cast_mut!(child_ref as CrossWinMsgHandlerInner) {
+            window.crs_win_handlers.push(NonNull::new(crs_win_hnd));
         }
 
         // Determine whether the widget is a container.

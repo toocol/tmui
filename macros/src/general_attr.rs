@@ -61,6 +61,9 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) close_handler_register_clause: TokenStream,
 
     // fields about `win_widget`
+    pub(crate) win_widget_receiver_field: Option<TokenStream>,
+    pub(crate) win_widget_receiver_impl: TokenStream,
+    pub(crate) win_widget_receiver_reflect: TokenStream,
     pub(crate) win_widget_corr_struct_clause: TokenStream,
 }
 
@@ -122,7 +125,15 @@ impl<'a> GeneralAttr<'a> {
                         isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?)
                     }
                     "close_handler" => close_handler = Some(CloseHandler::parse(ast, generics)?),
-                    "win_widget" => win_widget = Some(WinWidget::parse(ast, generics)?),
+                    "win_widget" => {
+                        let mut ww = if let Ok(ww) = attr.parse_args::<WinWidget>() {
+                            ww
+                        } else {
+                            WinWidget::parse(ast, generics)?
+                        };
+                        ww.set_info(ast, generics);
+                        win_widget = Some(ww);
+                    }
                     _ => {}
                 }
             }
@@ -317,6 +328,24 @@ impl<'a> GeneralAttr<'a> {
         };
 
         // WinWidget
+        let win_widget_receiver_field = if let Some(ww) = win_widget.as_ref() {
+            ww.receiver_field_clause()
+        } else {
+            None
+        };
+
+        let win_widget_receiver_impl = if let Some(ww) = win_widget.as_ref() {
+            ww.cross_win_msg_receiver_impl()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let win_widget_receiver_reflect = if let Some(ww)= win_widget.as_ref() {
+            ww.receiver_reflect()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         let win_widget_corr_struct_clause = if let Some(ww) = win_widget.as_ref() {
             ww.corr_struct_clause()
         } else {
@@ -356,6 +385,9 @@ impl<'a> GeneralAttr<'a> {
             close_handler_impl_clause,
             close_handler_reflect_clause,
             close_handler_register_clause,
+            win_widget_receiver_field,
+            win_widget_receiver_impl,
+            win_widget_receiver_reflect,
             win_widget_corr_struct_clause,
         })
     }

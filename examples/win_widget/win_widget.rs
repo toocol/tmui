@@ -5,9 +5,28 @@ use tmui::{
     widget::WidgetImpl,
 };
 
+#[derive(Clone, Copy)]
+pub enum CrsWinMsg {
+    Test(i32, i32),
+}
+
 #[extends(Widget)]
-#[win_widget]
+#[win_widget(CrsWinMsg)]
 pub struct MyWinWidget {}
+
+impl CrossWinMsgHandler for MyWinWidget {
+    type T = CrsWinMsg;
+
+    fn handle(&mut self, msg: Self::T) {
+        println!("Receive cross window msg {:?}", std::thread::current().name());
+        match msg {
+            CrsWinMsg::Test(a, b) => {
+                assert_eq!(a, 122);
+                assert_eq!(b, 290);
+            }
+        }
+    }
+}
 
 impl ObjectSubclass for MyWinWidget {
     const NAME: &'static str = "MyWinWidget";

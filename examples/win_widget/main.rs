@@ -1,11 +1,7 @@
 mod win_widget;
 
-use tmui::{
-    prelude::*,
-    application::Application,
-    application_window::ApplicationWindow,
-};
-use win_widget::CorrMyWinWidget;
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
+use win_widget::{CorrMyWinWidget, CrsWinMsg};
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
@@ -37,9 +33,19 @@ fn build_ui(window: &mut ApplicationWindow) {
     win_widget.set_hexpand(true);
     win_widget.set_vexpand(true);
     win_widget.set_hscale(0.5);
+    let id = win_widget.id();
 
     hbox.add_child(widget);
     hbox.add_child(win_widget);
 
-    window.child(hbox)
+    window.child(hbox);
+
+    window.register_run_after(move |win| {
+        let w = win
+            .find_id(id)
+            .unwrap()
+            .downcast_ref::<CorrMyWinWidget>()
+            .unwrap();
+        w.send_cross_win_msg(CrsWinMsg::Test(122, 290));
+    })
 }
