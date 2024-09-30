@@ -1,5 +1,4 @@
 use tlib::figure::OptionSize;
-
 use crate::{
     graphics::styles::Styles,
     label::Label,
@@ -17,12 +16,32 @@ pub struct Tooltip {
 }
 
 #[cfg(win_popup)]
+pub enum TooltipCrsMsg {
+    /// Request window-tooltip showing.
+    Show(String, Point, OptionSize, Option<Styles>),
+}
+
+#[cfg(win_popup)]
 #[extends(Popup, internal = true)]
 #[derive(Childable)]
-#[tlib::win_widget]
+#[tlib::win_widget(TooltipCrsMsg)]
 pub struct Tooltip {
     #[child]
     label: Box<Label>,
+}
+
+#[cfg(win_popup)]
+impl CrossWinMsgHandler for Tooltip {
+    type T = TooltipCrsMsg;
+
+    #[inline]
+    fn handle(&mut self, msg: Self::T) {
+        match msg {
+            TooltipCrsMsg::Show(text, position, size, styles) => {
+                self.set_props(text.as_str(), position, size, styles)
+            }
+        }
+    }
 }
 
 impl ObjectSubclass for Tooltip {
@@ -62,26 +81,44 @@ impl Tooltip {
     }
 }
 
+impl Tooltip {
+    pub(crate) fn set_props(
+        &mut self,
+        text: &str,
+        position: Point,
+        size: OptionSize,
+        styles: Option<Styles>,
+    ) {
+        self.set_fixed_x(position.x());
+        self.set_fixed_y(position.y());
+
+        if let Some(width) = size.width() {
+            self.label.width_request(width)
+        }
+        if let Some(height) = size.height() {
+            self.label.height_request(height)
+        }
+        if let Some(styles) = styles {
+            if let Some(halign) = styles.halign() {
+                self.label.set_halign(halign)
+            }
+            if let Some(valign) = styles.valign() {
+                self.label.set_valign(valign)
+            }
+            if let Some(color) = styles.color() {
+                self.label.set_color(color)
+            }
+            self.set_styles(styles);
+        }
+        self.label.set_text(text);
+    }
+}
+
 #[cfg(not(win_popup))]
 impl Tooltip {
     #[inline]
     pub(crate) fn new() -> Box<Self> {
         Object::new(&[])
-    }
-
-    #[inline]
-    pub(crate) fn set_text(&mut self, text: &str) {
-        self.label.set_text(text)
-    }
-
-    #[inline]
-    pub(crate) fn set_color(&mut self, color: Color) {
-        self.label.set_color(color)
-    }
-
-    #[inline]
-    pub(crate) fn label(&mut self) -> &mut Label {
-        self.label.as_mut()
     }
 }
 

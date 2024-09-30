@@ -46,7 +46,7 @@ impl WindowBuilder {
     }
 
     #[inline]
-    pub fn on_activate<F: 'static + Fn(&mut ApplicationWindow) + Send>(
+    pub fn on_activate<F: 'static + FnOnce(&mut ApplicationWindow) + Send>(
         mut self,
         on_activate: F,
     ) -> Self {

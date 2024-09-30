@@ -61,12 +61,12 @@ pub use crate::widget::{
     widget_ext::WidgetExt,
     win_widget::{
         CrossWinMsgHandler, CrossWinMsgHandlerInner, CrossWinMsgHandlerRequire, CrossWinMsgSender,
-        ReflectCrossWinMsgHandlerInner, ReflectWinWidget, WinWidget,
+        ReflectCrossWinMsgHandlerInner, ReflectWinWidget, WinWidget, ReflectCrossWinWidget, CrossWinWidget
     },
     ChildOp, ChildRegionAcquire, EventBubble, InnerCustomizeEventProcess, IsolatedVisibility,
     PointEffective, ReflectInnerCustomizeEventProcess, ReflectIsolatedVisibility,
     ReflectIterExecutor, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd,
-    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire,
+    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire, WidgetGenericExt
 };
 pub use tlib::tokio;
 pub use tlib::{

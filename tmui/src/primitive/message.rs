@@ -2,15 +2,14 @@ use std::{fmt::Debug, time::Instant};
 use tipc::ipc_event::IpcEvent;
 use tlib::{
     events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
-    figure::{OptionSize, Point, Rect},
+    figure::{Point, Rect},
     namespace::AsNumeric,
     object::ObjectId,
     payload::PayloadWeight,
     prelude::SystemCursorShape,
     winit::window::WindowId,
 };
-
-use crate::{application_window::ApplicationWindow, graphics::styles::Styles, window::Window};
+use crate::{application_window::ApplicationWindow, window::Window};
 
 pub(crate) enum Message {
     /// VSync signal to redraw the window
@@ -59,8 +58,6 @@ pub(crate) enum Message {
     /// Request the child window correspondent to the id change the visibility.
     WinWidgetVisibilityChangedRequest(ObjectId, bool),
 
-    /// Request window-tooltip showing.
-    WindowTooltipShowRequest(ObjectId, String, Point, OptionSize, Option<Styles>),
 }
 
 impl Debug for Message {
@@ -107,14 +104,6 @@ impl Debug for Message {
                 .debug_tuple("WinWidgetVisibilityChangedRequest")
                 .field(arg0)
                 .field(arg1)
-                .finish(),
-            Self::WindowTooltipShowRequest(arg0, arg1, arg2, arg3, arg4) => f
-                .debug_tuple("WindowTooltipShowRequest")
-                .field(arg0)
-                .field(arg1)
-                .field(arg2)
-                .field(arg3)
-                .field(arg4)
                 .finish(),
         }
     }

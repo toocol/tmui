@@ -46,7 +46,8 @@ pub(crate) static HIGH_LOAD: AtomicBool = AtomicBool::new(false);
 pub(crate) static UI_THREAD_CNT: AtomicU8 = AtomicU8::new(0);
 static ONCE: Once = Once::new();
 
-pub type FnActivate = Box<dyn Fn(&mut ApplicationWindow) + Send>;
+pub type FnActivate = Box<dyn FnOnce(&mut ApplicationWindow) + Send>;
+pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 pub type FnUserEventReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>;
 pub type FnRequestReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) -> Option<T> + Send + Sync>;
 
@@ -138,7 +139,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     /// UI components should create in here.
     pub fn connect_activate<F>(&self, f: F)
     where
-        F: Fn(&mut ApplicationWindow) + Send + Sync + 'static,
+        F: FnOnce(&mut ApplicationWindow) + Send + Sync + 'static,
     {
         *self.on_activate.borrow_mut() = Some(Box::new(f));
     }

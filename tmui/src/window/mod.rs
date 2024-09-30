@@ -35,6 +35,7 @@ impl Debug for Window {
             .field("win_cfg", &self.win_cfg)
             .field("on_activate", &self.on_activate.is_some())
             .field("parent", &self.parent)
+            .field("params", &self.params)
             .finish()
     }
 }

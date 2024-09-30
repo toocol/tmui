@@ -5,7 +5,7 @@ use crate::{
 };
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::DeriveInput;
+use syn::{spanned::Spanned, DeriveInput, Error, Meta};
 
 pub(crate) struct GeneralAttr<'a> {
     // fields about `run_after`
@@ -61,9 +61,9 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) close_handler_register_clause: TokenStream,
 
     // fields about `win_widget`
-    pub(crate) win_widget_receiver_field: Option<TokenStream>,
-    pub(crate) win_widget_receiver_impl: TokenStream,
-    pub(crate) win_widget_receiver_reflect: TokenStream,
+    pub(crate) win_widget_sink_field: Option<TokenStream>,
+    pub(crate) win_widget_sink_impl: TokenStream,
+    pub(crate) win_widget_sink_reflect: TokenStream,
     pub(crate) win_widget_corr_struct_clause: TokenStream,
 }
 
@@ -126,10 +126,12 @@ impl<'a> GeneralAttr<'a> {
                     }
                     "close_handler" => close_handler = Some(CloseHandler::parse(ast, generics)?),
                     "win_widget" => {
-                        let mut ww = if let Ok(ww) = attr.parse_args::<WinWidget>() {
-                            ww
-                        } else {
-                            WinWidget::parse(ast, generics)?
+                        let mut ww = match attr.parse_meta()? {
+                            Meta::List(_) => attr.parse_args::<WinWidget>()?,
+                            Meta::Path(_) => WinWidget::parse(ast, generics)?,
+                            Meta::NameValue(nv) => {
+                                return Err(Error::new(nv.span(), "Unsupported definition."))
+                            }
                         };
                         ww.set_info(ast, generics);
                         win_widget = Some(ww);
@@ -328,20 +330,20 @@ impl<'a> GeneralAttr<'a> {
         };
 
         // WinWidget
-        let win_widget_receiver_field = if let Some(ww) = win_widget.as_ref() {
-            ww.receiver_field_clause()
+        let win_widget_sink_field = if let Some(ww) = win_widget.as_ref() {
+            ww.sink_field_clause()
         } else {
             None
         };
 
-        let win_widget_receiver_impl = if let Some(ww) = win_widget.as_ref() {
-            ww.cross_win_msg_receiver_impl()
+        let win_widget_sink_impl = if let Some(ww) = win_widget.as_ref() {
+            ww.sink_impl()
         } else {
             proc_macro2::TokenStream::new()
         };
 
-        let win_widget_receiver_reflect = if let Some(ww)= win_widget.as_ref() {
-            ww.receiver_reflect()
+        let win_widget_sink_reflect = if let Some(ww) = win_widget.as_ref() {
+            ww.sink_reflect()
         } else {
             proc_macro2::TokenStream::new()
         };
@@ -385,9 +387,9 @@ impl<'a> GeneralAttr<'a> {
             close_handler_impl_clause,
             close_handler_reflect_clause,
             close_handler_register_clause,
-            win_widget_receiver_field,
-            win_widget_receiver_impl,
-            win_widget_receiver_reflect,
+            win_widget_sink_field,
+            win_widget_sink_impl,
+            win_widget_sink_reflect,
             win_widget_corr_struct_clause,
         })
     }

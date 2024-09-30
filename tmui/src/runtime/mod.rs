@@ -115,7 +115,6 @@ where
 
     if let Some(on_activate) = on_activate {
         on_activate(&mut window);
-        drop(on_activate);
     }
 
     board.add_element(window.as_mut());

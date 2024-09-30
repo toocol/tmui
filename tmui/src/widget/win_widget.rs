@@ -14,8 +14,11 @@ impl<T: 'static + Send + Sync> CrsWinMsgRequire for T {}
 
 #[reflect_trait]
 pub trait WinWidget: WidgetImpl + WidgetSignals {
-    fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send>;
+    fn child_process_fn(&mut self) -> Box<dyn FnOnce(&mut ApplicationWindow) + Send>;
 }
+
+#[reflect_trait]
+pub trait CrossWinWidget {}
 
 #[reflect_trait]
 pub trait CrossWinMsgHandlerInner {
@@ -36,7 +39,7 @@ pub trait CrossWinMsgSender {
     fn send_cross_win_msg(&self, msg: Self::T);
 }
 
-pub(crate) fn handle_win_widget_create(win_widget: &dyn WinWidget) {
+pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget) {
     let mut rect = win_widget.borderless_rect();
     if rect.width() == 0 {
         rect.set_width(10)

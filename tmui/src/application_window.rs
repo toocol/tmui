@@ -1,5 +1,6 @@
 use crate::{
     animation::mgr::AnimationMgr,
+    application::FnRunAfter,
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,
@@ -47,7 +48,6 @@ thread_local! {
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = const { RefCell::new(false) };
 }
 
-pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 const DEFAULT_WINDOW_BACKGROUND: Color = Color::WHITE;
 
 #[extends(Widget)]
@@ -116,8 +116,8 @@ impl ObjectImpl for ApplicationWindow {
 
         self.when_size_change(self.size());
 
-        for w in self.win_widgets.iter() {
-            let win_widget = nonnull_ref!(w);
+        for w in self.win_widgets.iter_mut() {
+            let win_widget = nonnull_mut!(w);
             handle_win_widget_create(win_widget);
         }
 
@@ -287,7 +287,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
+    pub fn register_run_after<R: 'static + FnOnce(&mut Self) + Send>(&mut self, run_after: R) {
         self.run_after = Some(Box::new(run_after));
     }
 
@@ -890,29 +890,7 @@ impl ApplicationWindow {
             TooltipStrat::Show(text, position, size, styles) => {
                 #[cfg(not(win_popup))]
                 {
-                    tooltip.set_fixed_x(position.x());
-                    tooltip.set_fixed_y(position.y());
-
-                    if let Some(width) = size.width() {
-                        tooltip.label().width_request(width)
-                    }
-                    if let Some(height) = size.height() {
-                        tooltip.label().height_request(height)
-                    }
-                    if let Some(styles) = styles {
-                        if let Some(halign) = styles.halign() {
-                            tooltip.label().set_halign(halign)
-                        }
-                        if let Some(valign) = styles.valign() {
-                            tooltip.label().set_valign(valign)
-                        }
-                        if let Some(color) = styles.color() {
-                            tooltip.set_color(color)
-                        }
-                        tooltip.set_styles(styles);
-                    }
-
-                    tooltip.set_text(text);
+                    tooltip.set_props(text, position, size, styles);
                     tooltip.calc_relative_position();
                     tooltip.show();
                     ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
@@ -920,14 +898,13 @@ impl ApplicationWindow {
 
                 #[cfg(win_popup)]
                 {
-                    let id = tooltip.id();
-                    self.send_message(Message::WindowTooltipShowRequest(
-                        id,
+                    tooltip.send_cross_win_msg(crate::tooltip::TooltipCrsMsg::Show(
                         text.to_string(),
                         position,
                         size,
                         styles,
                     ));
+                    tooltip.show();
                 }
             }
             TooltipStrat::Hide => tooltip.hide(),

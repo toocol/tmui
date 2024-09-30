@@ -54,49 +54,55 @@ impl<'a> WinWidget<'a> {
         self.generics = Some(generics);
     }
 
-    pub(crate) fn receiver_field_clause(&self) -> Option<TokenStream> {
-        if let Some(ref crs_win_msg) = self.crs_win_msg {
-            Some(quote!(
-                crs_win_receiver: Option<std::sync::mpsc::Receiver<#crs_win_msg>>
-            ))
-        } else {
-            None
-        }
+    pub(crate) fn sink_field_clause(&self) -> Option<TokenStream> {
+        self.crs_win_msg.as_ref().map(|crs_win_msg| {
+            quote!(
+                crs_sink_receiver: Option<std::sync::mpsc::Receiver<#crs_win_msg>>
+            )
+        })
     }
 
-    pub(crate) fn cross_win_msg_receiver_impl(&self) -> TokenStream {
-        if let Some(_) = self.crs_win_msg {
-            let name = self.name.as_ref().unwrap();
-            let (impl_generics, ty_generics, where_clause) = self.generics.unwrap();
+    pub(crate) fn sink_impl(&self) -> TokenStream {
+        let name = self.name.as_ref().unwrap();
+        let (impl_generics, ty_generics, where_clause) = self.generics.unwrap();
 
+        if self.crs_win_msg.is_some() {
             quote!(
+                impl #impl_generics CrossWinWidget for #name #ty_generics #where_clause {}
+
                 impl #impl_generics CrossWinMsgHandlerRequire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics CrossWinMsgHandlerInner for #name #ty_generics #where_clause {
                     fn handle_inner(&mut self) {
-                        if self.crs_win_receiver.is_none() {
+                        if self.crs_sink_receiver.is_none() {
                             return
                         }
-                        while let Ok(msg) = self.crs_win_receiver.as_ref().unwrap().recv() {
+                        while let Ok(msg) = self.crs_sink_receiver.as_ref().unwrap().try_recv() {
                             self.handle(msg)
                         }
                     }
                 }
             )
         } else {
-            TokenStream::new()
+            quote!(
+                impl #impl_generics CrossWinWidget for #name #ty_generics #where_clause {}
+            )
         }
     }
 
-    pub(crate) fn receiver_reflect(&self) -> TokenStream {
-        if let Some(_) = self.crs_win_msg.as_ref() {
-            let name = self.name.as_ref().unwrap();
-            let (_, ty_generics, _) = self.generics.unwrap();
+    pub(crate) fn sink_reflect(&self) -> TokenStream {
+        let name = self.name.as_ref().unwrap();
+        let (_, ty_generics, _) = self.generics.unwrap();
+
+        if self.crs_win_msg.is_some() {
             quote!(
+                type_registry.register::<#name #ty_generics, ReflectCrossWinWidget>();
                 type_registry.register::<#name #ty_generics, ReflectCrossWinMsgHandlerInner>();
             )
         } else {
-            TokenStream::new()
+            quote!(
+                type_registry.register::<#name #ty_generics, ReflectCrossWinWidget>();
+            )
         }
     }
 
@@ -106,8 +112,8 @@ impl<'a> WinWidget<'a> {
 
         let channel_field = if let Some(ref crs_win_msg) = self.crs_win_msg {
             quote!(
-                sender: Option<std::sync::mpsc::Sender<#crs_win_msg>>,
-                receiver: Option<std::sync::mpsc::Receiver<#crs_win_msg>>,
+                crs_sink_sender: Option<std::sync::mpsc::Sender<#crs_win_msg>>,
+                crs_sink_receiver: Option<std::sync::mpsc::Receiver<#crs_win_msg>>,
             )
         } else {
             TokenStream::new()
@@ -120,7 +126,7 @@ impl<'a> WinWidget<'a> {
 
                     #[inline]
                     fn send_cross_win_msg(&self, msg: Self::T) {
-                        if let Some(ref sender) = self.sender {
+                        if let Some(ref sender) = self.crs_sink_sender {
                             let _ = sender.send(msg);
                         }
                     }
@@ -130,11 +136,11 @@ impl<'a> WinWidget<'a> {
             TokenStream::new()
         };
 
-        let channel_set_clause = if let Some(_) = self.crs_win_msg.as_ref() {
+        let channel_set_clause = if self.crs_win_msg.is_some() {
             quote!(
                 let (s, r) = std::sync::mpsc::channel();
-                w.sender = Some(s);
-                w.receiver = Some(r);
+                w.crs_sink_sender = Some(s);
+                w.crs_sink_receiver = Some(r);
             )
         } else {
             TokenStream::new()
@@ -143,21 +149,21 @@ impl<'a> WinWidget<'a> {
         let take_receiver_fn = if let Some(msg) = self.crs_win_msg.as_ref() {
             quote!(
                 #[inline]
-                pub fn take_receiver(&mut self) -> Option<std::sync::mpsc::Receiver<#msg>> {
-                    self.receiver.take()
+                pub fn take_sink_receiver(&mut self) -> Option<std::sync::mpsc::Receiver<#msg>> {
+                    self.crs_sink_receiver.take()
                 }
             )
         } else {
             TokenStream::new()
         };
 
-        let child_proc_fn = if let Some(_) = self.crs_win_msg.as_ref() {
+        let child_proc_fn = if self.crs_win_msg.is_some() {
             quote!(
-                let receiver = self.take_receiver();
+                let receiver = self.take_sink_receiver();
                 Box::new(move |win| {
                     let mut w_widget = Object::new::<#name>(&[]);
-                    w_widget.crs_win_receiver = receiver;
-                    win.child(w_widget)
+                    w_widget.crs_sink_receiver = receiver;
+                    win.child(w_widget);
                 })
             )
         } else {
@@ -191,7 +197,7 @@ impl<'a> WinWidget<'a> {
 
             impl WinWidget for #corr_name {
                 #[inline]
-                fn child_process_fn(&self) -> Box<dyn Fn(&mut ApplicationWindow) + Send> {
+                fn child_process_fn(&mut self) -> Box<dyn FnOnce(&mut ApplicationWindow) + Send> {
                     #child_proc_fn
                 }
             }
