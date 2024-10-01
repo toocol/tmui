@@ -799,6 +799,14 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
+        if self.object_type().is_a(ApplicationWindow::static_type()) {
+            let size = self.size();
+            let window = self.downcast_mut::<ApplicationWindow>().unwrap();
+            let size = (width.unwrap_or(size.width()), height.unwrap_or(size.height()));
+            window.send_message(Message::WindowResizeRequest(window.winit_id().unwrap(), size.into()));
+            return
+        }
+
         let mut resized = false;
 
         if let Some(width) = width {

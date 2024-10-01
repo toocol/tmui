@@ -398,6 +398,14 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub fn request_outer_position(&self, position: Point) {
+        self.send_message(Message::WindowPositionRequest(
+            self.winit_id.unwrap(),
+            position,
+        ));
+    }
+
+    #[inline]
     pub fn get_param<T: FromValue + StaticType>(&self, key: &str) -> Option<T> {
         self.params.as_ref()?.get(key).map(|p| p.get::<T>())
     }
@@ -890,6 +898,8 @@ impl ApplicationWindow {
             TooltipStrat::Show(text, position, size, styles) => {
                 #[cfg(not(win_popup))]
                 {
+                    tooltip.set_fixed_x(position.x());
+                    tooltip.set_fixed_y(position.y());
                     tooltip.set_props(text, position, size, styles);
                     tooltip.calc_relative_position();
                     tooltip.show();
@@ -898,13 +908,24 @@ impl ApplicationWindow {
 
                 #[cfg(win_popup)]
                 {
+                    tooltip.set_fixed_x(position.x());
+                    tooltip.set_fixed_y(position.y());
+
+                    if let Some(width) = size.width() {
+                        tooltip.width_request(width)
+                    }
+                    if let Some(height) = size.height() {
+                        tooltip.height_request(height)
+                    }
+
                     tooltip.send_cross_win_msg(crate::tooltip::TooltipCrsMsg::Show(
                         text.to_string(),
-                        position,
                         size,
                         styles,
                     ));
+                    tooltip.calc_relative_position();
                     tooltip.show();
+                    ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
                 }
             }
             TooltipStrat::Hide => tooltip.hide(),
@@ -973,10 +994,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             let supervisor = pop.supervisor();
             window.root_ancestors.push(pop.id());
             child_ref.set_z_index(supervisor.z_index() + TOP_Z_INDEX);
-        } else {
-            let parent = child_ref
-                .get_parent_mut()
-                .expect("Fatal error: the child widget does not have parent.");
+        } else if let Some(parent) = child_ref.get_parent_mut() {
             let zindex = parent.z_index() + parent.z_index_step();
             child_ref.set_z_index(zindex);
         }

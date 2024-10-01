@@ -1,4 +1,3 @@
-use tlib::figure::OptionSize;
 use crate::{
     graphics::styles::Styles,
     label::Label,
@@ -6,9 +5,10 @@ use crate::{
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };
+use tlib::figure::OptionSize;
 
 #[cfg(not(win_popup))]
-#[extends(Popup, internal = true)]
+#[extends(Popup)]
 #[derive(Childable)]
 pub struct Tooltip {
     #[child]
@@ -18,11 +18,11 @@ pub struct Tooltip {
 #[cfg(win_popup)]
 pub enum TooltipCrsMsg {
     /// Request window-tooltip showing.
-    Show(String, Point, OptionSize, Option<Styles>),
+    Show(String, OptionSize, Option<Styles>),
 }
 
 #[cfg(win_popup)]
-#[extends(Popup, internal = true)]
+#[extends(Popup)]
 #[derive(Childable)]
 #[tlib::win_widget(TooltipCrsMsg)]
 pub struct Tooltip {
@@ -37,8 +37,10 @@ impl CrossWinMsgHandler for Tooltip {
     #[inline]
     fn handle(&mut self, msg: Self::T) {
         match msg {
-            TooltipCrsMsg::Show(text, position, size, styles) => {
-                self.set_props(text.as_str(), position, size, styles)
+            TooltipCrsMsg::Show(text, size, styles) => {
+                self.set_props(text.as_str(), size, styles);
+
+                ApplicationWindow::window().layout_change(self);
             }
         }
     }
@@ -53,8 +55,11 @@ impl ObjectImpl for Tooltip {
     fn construct(&mut self) {
         self.parent_construct();
 
-        let window = ApplicationWindow::window();
-        self.set_supervisor(window);
+        #[cfg(not(win_popup))]
+        {
+            let window = ApplicationWindow::window();
+            self.set_supervisor(window);
+        }
 
         self.label.set_auto_wrap(true);
     }
@@ -62,6 +67,7 @@ impl ObjectImpl for Tooltip {
 
 impl WidgetImpl for Tooltip {}
 
+#[cfg(not(win_popup))]
 impl PopupImpl for Tooltip {}
 
 impl Tooltip {
@@ -82,16 +88,7 @@ impl Tooltip {
 }
 
 impl Tooltip {
-    pub(crate) fn set_props(
-        &mut self,
-        text: &str,
-        position: Point,
-        size: OptionSize,
-        styles: Option<Styles>,
-    ) {
-        self.set_fixed_x(position.x());
-        self.set_fixed_y(position.y());
-
+    pub(crate) fn set_props(&mut self, text: &str, size: OptionSize, styles: Option<Styles>) {
         if let Some(width) = size.width() {
             self.label.width_request(width)
         }

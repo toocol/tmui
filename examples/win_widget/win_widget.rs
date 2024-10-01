@@ -42,10 +42,3 @@ impl ObjectImpl for MyWinWidget {
 }
 
 impl WidgetImpl for MyWinWidget {}
-
-impl MyWinWidget {
-    #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
-    }
-}

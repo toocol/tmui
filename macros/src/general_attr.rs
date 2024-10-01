@@ -7,13 +7,13 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, DeriveInput, Error, Meta};
 
-pub(crate) struct GeneralAttr<'a> {
+pub(crate) struct GeneralAttr {
     // fields about `run_after`
     pub(crate) run_after_clause: TokenStream,
 
     // fields about `animation`
     pub(crate) is_animation: bool,
-    pub(crate) animation: Option<Animation<'a>>,
+    pub(crate) animation_parse_default: TokenStream,
     pub(crate) animation_clause: TokenStream,
     pub(crate) animation_field: TokenStream,
     pub(crate) animation_reflect: TokenStream,
@@ -61,14 +61,19 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) close_handler_register_clause: TokenStream,
 
     // fields about `win_widget`
+    pub(crate) is_win_widget: bool,
     pub(crate) win_widget_sink_field: Option<TokenStream>,
     pub(crate) win_widget_sink_impl: TokenStream,
     pub(crate) win_widget_sink_reflect: TokenStream,
     pub(crate) win_widget_corr_struct_clause: TokenStream,
 }
 
-impl<'a> GeneralAttr<'a> {
-    pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
+impl GeneralAttr {
+    pub(crate) fn parse(
+        ast: &DeriveInput,
+        generics: SplitGenericsRef<'_>,
+        is_popup: bool,
+    ) -> syn::Result<Self> {
         let name = &ast.ident;
         let (_, ty_generics, _) = generics;
 
@@ -133,7 +138,7 @@ impl<'a> GeneralAttr<'a> {
                                 return Err(Error::new(nv.span(), "Unsupported definition."))
                             }
                         };
-                        ww.set_info(ast, generics);
+                        ww.set_info(ast, generics, is_popup);
                         win_widget = Some(ww);
                     }
                     _ => {}
@@ -153,6 +158,11 @@ impl<'a> GeneralAttr<'a> {
         };
 
         // Animation:
+        let animation_parse_default = if let Some(animation) = animation.as_ref() {
+            animation.parse_default()?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
         let animation_clause = if let Some(animation) = animation.as_ref() {
             animation.generate_animation(name)?
         } else {
@@ -357,7 +367,7 @@ impl<'a> GeneralAttr<'a> {
         Ok(Self {
             run_after_clause,
             is_animation,
-            animation,
+            animation_parse_default,
             animation_clause,
             animation_field,
             animation_reflect,
@@ -387,6 +397,7 @@ impl<'a> GeneralAttr<'a> {
             close_handler_impl_clause,
             close_handler_reflect_clause,
             close_handler_register_clause,
+            is_win_widget: win_widget.is_some(),
             win_widget_sink_field,
             win_widget_sink_impl,
             win_widget_sink_reflect,

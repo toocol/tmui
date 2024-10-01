@@ -16,7 +16,7 @@ use super::{
 
 #[cfg(win_popup)]
 #[tlib::win_widget]
-#[extends(Popup, Layout(Stack), internal = true)]
+#[extends(Popup, Layout(Stack))]
 #[derive(Childrenable)]
 pub struct InputDialog {
     #[children]

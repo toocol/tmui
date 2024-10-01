@@ -62,7 +62,7 @@ use tlib::connect;
 ///     list_view.add_node(&Node { name: "test".to_string() });
 /// }
 /// ```
-#[extends(Widget, Layout(ScrollArea), internal = true)]
+#[extends(Widget, Layout(ScrollArea))]
 #[popupable]
 pub struct ListView {}
 

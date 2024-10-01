@@ -1,11 +1,8 @@
 use quote::quote;
 use syn::Ident;
 
-pub(crate) fn generate_split_pane_add_child(
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
-        use #use_prefix::application_window::ApplicationWindow;
         if self.container.children.len() != 0 {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
@@ -26,15 +23,10 @@ pub(crate) fn generate_split_pane_add_child(
     })
 }
 
-pub(crate) fn generate_split_pane_impl(
-    name: &Ident,
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
     impl SizeUnifiedAdjust for #name {
         fn size_unified_adjust(&mut self) {
-            use #use_prefix::tlib::nonnull_mut;
-            use #use_prefix::split_widget;
             let parent_rect = self.contents_rect(None);
             let split_infos_getter = cast_mut!(self as SplitInfosGetter).unwrap();
             for split_info in split_infos_getter.split_infos_vec() {
@@ -80,9 +72,6 @@ pub(crate) fn generate_split_pane_impl(
         }
 
         fn close_pane(&mut self, id: ObjectId) {
-            use #use_prefix::application_window::ApplicationWindow;
-            use #use_prefix::{split_widget, split_from};
-            use #use_prefix::tlib::nonnull_mut;
             use std::ptr::NonNull;
             use std::collections::VecDeque;
 
@@ -148,9 +137,6 @@ pub(crate) fn generate_split_pane_impl(
         }
 
         fn split<T: WidgetImpl>(&mut self, id: ObjectId, mut widget: Box<T>, ty: SplitType) {
-            use #use_prefix::application_window::ApplicationWindow;
-            use #use_prefix::{split_widget, split_from};
-            use #use_prefix::tlib::nonnull_mut;
             use std::ptr::NonNull;
 
             let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {

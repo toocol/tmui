@@ -8,6 +8,7 @@ pub(crate) struct WinWidget<'a> {
     corr_name: Option<Ident>,
     crs_win_msg: Option<Ident>,
     generics: Option<SplitGenericsRef<'a>>,
+    is_popup: bool,
 }
 
 impl<'a> Parse for WinWidget<'a> {
@@ -26,6 +27,7 @@ impl<'a> Parse for WinWidget<'a> {
             corr_name: None,
             crs_win_msg: crs_win_msg.pop(),
             generics: None,
+            is_popup: false,
         })
     }
 }
@@ -41,10 +43,11 @@ impl<'a> WinWidget<'a> {
             )),
             crs_win_msg: None,
             generics: Some(generics),
+            is_popup: false,
         })
     }
 
-    pub(crate) fn set_info(&mut self, ast: &DeriveInput, generics: SplitGenericsRef<'a>) {
+    pub(crate) fn set_info(&mut self, ast: &DeriveInput, generics: SplitGenericsRef<'a>, is_popup: bool) {
         let name = &ast.ident;
         self.name = Some(ast.ident.clone());
         self.corr_name = Some(Ident::new(
@@ -52,6 +55,7 @@ impl<'a> WinWidget<'a> {
             name.span(),
         ));
         self.generics = Some(generics);
+        self.is_popup = is_popup;
     }
 
     pub(crate) fn sink_field_clause(&self) -> Option<TokenStream> {
@@ -109,6 +113,20 @@ impl<'a> WinWidget<'a> {
     pub(crate) fn corr_struct_clause(&self) -> TokenStream {
         let name = self.name.as_ref().unwrap();
         let corr_name = self.corr_name.as_ref().unwrap();
+
+        let extends_clause = if self.is_popup {
+            quote!(#[extends(Popup)])
+        } else {
+            quote!(#[extends(Widget)])
+        };
+
+        let popup_impl_clause = if self.is_popup {
+            quote!(
+                impl PopupImpl for #corr_name {}
+            )
+        } else {
+            TokenStream::new()
+        };
 
         let channel_field = if let Some(ref crs_win_msg) = self.crs_win_msg {
             quote!(
@@ -175,12 +193,14 @@ impl<'a> WinWidget<'a> {
         };
 
         quote!(
-            #[extends(Widget)]
+            #extends_clause
             pub struct #corr_name {
                 #channel_field
             }
 
             #sender_impl
+
+            #popup_impl_clause
 
             impl ObjectSubclass for #corr_name {
                 const NAME: &'static str = stringify!(#corr_name);

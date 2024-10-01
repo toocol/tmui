@@ -9,12 +9,15 @@ use syn::{parse::Parser, DeriveInput, Meta};
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     ignore_default: bool,
-    use_prefix: &Ident,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let general_attr =
+        GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause), true)?;
+    if general_attr.is_win_widget {
+        return extend_widget::expand_with_general_attr(ast, ignore_default, general_attr);
+    }
 
-    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
+    let name = &ast.ident;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -57,7 +60,7 @@ pub(crate) fn expand(
                     })?);
 
                     if general_attr.is_animation {
-                        let default = general_attr.animation.as_ref().unwrap().parse_default()?;
+                        let default = &general_attr.animation_parse_default;
                         let field = &general_attr.animation_field;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #default
@@ -193,7 +196,7 @@ pub(crate) fn expand(
                         #run_after_clause
                         self.set_property("visible", false.to_value());
                         if !self.background().is_opaque() {
-                            self.set_background(#use_prefix::tlib::figure::Color::WHITE);
+                            self.set_background(Color::WHITE);
                         }
                         #close_handler_register_clause
                     }
@@ -286,8 +289,7 @@ pub(crate) fn expand_with_layout(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
-    internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout, internal, ignore_default, true)
+    layout::expand(ast, layout_meta, layout, ignore_default, true)
 }

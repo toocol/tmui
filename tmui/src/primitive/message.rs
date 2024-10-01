@@ -1,15 +1,15 @@
+use crate::{application_window::ApplicationWindow, window::Window};
 use std::{fmt::Debug, time::Instant};
 use tipc::ipc_event::IpcEvent;
 use tlib::{
     events::{downcast_event_ref, Event, EventType::*, KeyEvent, MouseEvent, ResizeEvent},
-    figure::{Point, Rect},
+    figure::{Point, Rect, Size},
     namespace::AsNumeric,
     object::ObjectId,
     payload::PayloadWeight,
     prelude::SystemCursorShape,
     winit::window::WindowId,
 };
-use crate::{application_window::ApplicationWindow, window::Window};
 
 pub(crate) enum Message {
     /// VSync signal to redraw the window
@@ -43,6 +43,12 @@ pub(crate) enum Message {
     /// Request window the set the visibility.
     WindowVisibilityRequest(WindowId, bool),
 
+    /// Request window resize.
+    WindowResizeRequest(WindowId, Size),
+
+    /// Request window position.
+    WindowPositionRequest(WindowId, Point),
+
     /// Sub window calling response.
     WindowResponse(
         WindowId,
@@ -57,7 +63,6 @@ pub(crate) enum Message {
 
     /// Request the child window correspondent to the id change the visibility.
     WinWidgetVisibilityChangedRequest(ObjectId, bool),
-
 }
 
 impl Debug for Message {
@@ -90,6 +95,16 @@ impl Debug for Message {
             }
             Self::WindowVisibilityRequest(arg0, arg1) => f
                 .debug_tuple("WindowVisibilityRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::WindowResizeRequest(arg0, arg1) => f
+                .debug_tuple("WindowResizeRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::WindowPositionRequest(arg0, arg1) => f
+                .debug_tuple("WindowPositionRequest")
                 .field(arg0)
                 .field(arg1)
                 .finish(),

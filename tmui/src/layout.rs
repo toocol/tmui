@@ -634,12 +634,17 @@ impl LayoutMgr {
 
             widget.calc_node_size(child_size);
 
-            if widget.size() != size {
+            let cur_size = widget.size();
+            if cur_size != size {
                 if widget.repaint_when_resize() && widget.first_rendered() {
                     widget.set_resize_redraw(true)
                 }
 
                 emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
+            }
+
+            if cast!(widget as CrossWinWidget).is_some() && cur_size != window_size {
+                ApplicationWindow::window().resize(Some(cur_size.width()), Some(cur_size.height()));
             }
             widget.image_rect().size()
         }
@@ -745,7 +750,7 @@ impl LayoutMgr {
             return;
         }
 
-        Self::base_widget_position_layout_inner(widget, parent)
+        Self::base_widget_position_layout_inner(widget, parent);
     }
 
     pub(crate) fn base_widget_position_layout_inner(

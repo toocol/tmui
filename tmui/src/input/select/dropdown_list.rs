@@ -19,7 +19,7 @@ impl DropdownListSignals for DropdownList {}
 
 #[cfg(win_popup)]
 #[tlib::win_widget]
-#[extends(Popup, internal = true)]
+#[extends(Popup)]
 #[derive(Childable)]
 pub struct DropdownList {
     #[child]
@@ -27,7 +27,7 @@ pub struct DropdownList {
 }
 
 #[cfg(not(win_popup))]
-#[extends(Popup, internal = true)]
+#[extends(Popup)]
 #[derive(Childable)]
 pub struct DropdownList {
     #[child]

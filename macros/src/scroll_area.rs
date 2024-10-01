@@ -28,16 +28,14 @@ pub(crate) fn generate_scroll_area_get_children() -> syn::Result<proc_macro2::To
     ))
 }
 
-pub(crate) fn generate_scroll_area_pre_construct(
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_scroll_area_pre_construct() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         self.set_render_difference(true);
         self.container
             .children
-            .push(#use_prefix::scroll_bar::ScrollBar::new(Orientation::Vertical));
+            .push(ScrollBar::new(Orientation::Vertical));
 
-        let use_occupy = self.layout_mode == #use_prefix::scroll_area::LayoutMode::Normal;
+        let use_occupy = self.layout_mode == LayoutMode::Normal;
         self.scroll_bar_mut()
             .set_occupy_space(use_occupy);
 
@@ -46,17 +44,8 @@ pub(crate) fn generate_scroll_area_pre_construct(
     ))
 }
 
-pub(crate) fn generate_scroll_area_impl(
-    name: &Ident,
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_scroll_area_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
-        use #use_prefix::scroll_bar::{ScrollBar, ScrollBarPosition};
-        use #use_prefix::scroll_area::ScrollArea;
-        use tlib::{
-            events::{DeltaType, MouseEvent},
-            namespace::{KeyboardModifier, Orientation},
-        };
         use log::debug;
 
         impl ScrollAreaExt for #name {
@@ -115,28 +104,26 @@ pub(crate) fn generate_scroll_area_impl(
             }
 
             #[inline]
-            fn layout_mode(&self) -> #use_prefix::scroll_area::LayoutMode {
+            fn layout_mode(&self) -> LayoutMode {
                 self.layout_mode
             }
 
             #[inline]
-            fn set_layout_mode(&mut self, layout_mode: #use_prefix::scroll_area::LayoutMode) {
-                use #use_prefix::tlib::figure::rectangle::FRect;
-                use #use_prefix::scroll_area::ScrollAreaSlots;
+            fn set_layout_mode(&mut self, layout_mode: LayoutMode) {
                 self.layout_mode = layout_mode;
-                self.scroll_bar_mut().set_occupy_space(layout_mode == #use_prefix::scroll_area::LayoutMode::Normal);
-                self.scroll_bar_mut().set_overlaid(layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay);
+                self.scroll_bar_mut().set_occupy_space(layout_mode == LayoutMode::Normal);
+                self.scroll_bar_mut().set_overlaid(layout_mode == LayoutMode::Overlay);
 
                 if self.area().is_some() {
-                    if layout_mode == #use_prefix::scroll_area::LayoutMode::Normal {
-                        #use_prefix::tlib::disconnect!(self.area_mut().unwrap(), invalidated(), self, null);
-                        #use_prefix::tlib::disconnect!(self.scroll_bar_mut(), geometry_changed(), self.area_mut().unwrap(), null);
-                        #use_prefix::tlib::disconnect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), null);
+                    if layout_mode == LayoutMode::Normal {
+                        disconnect!(self.area_mut().unwrap(), invalidated(), self, null);
+                        disconnect!(self.scroll_bar_mut(), geometry_changed(), self.area_mut().unwrap(), null);
+                        disconnect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), null);
                         self.area_mut().unwrap().set_invalid_area(FRect::default());
                     } else {
-                        #use_prefix::tlib::connect!(self.area_mut().unwrap(), invalidated(), self, update_scroll_bar());
-                        #use_prefix::tlib::connect!(self.scroll_bar_mut(), geometry_changed(), self.area_mut().unwrap(), set_invalid_area(FRect));
-                        #use_prefix::tlib::connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
+                        connect!(self.area_mut().unwrap(), invalidated(), self, update_scroll_bar());
+                        connect!(self.scroll_bar_mut(), geometry_changed(), self.area_mut().unwrap(), set_invalid_area(FRect));
+                        connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
                     }
                 }
 
@@ -147,17 +134,13 @@ pub(crate) fn generate_scroll_area_impl(
         impl ScrollAreaGenericExt for #name {
             #[inline]
             fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
-                use #use_prefix::application_window::ApplicationWindow;
-                use #use_prefix::tlib::figure::rectangle::FRect;
-                use #use_prefix::scroll_area::ScrollAreaSlots;
-
                 area.set_parent(self);
                 area.set_vexpand(true);
                 area.set_hexpand(true);
-                if self.layout_mode == #use_prefix::scroll_area::LayoutMode::Overlay {
-                    #use_prefix::tlib::connect!(area, invalidated(), self, update_scroll_bar());
-                    #use_prefix::tlib::connect!(self.scroll_bar_mut(), geometry_changed(), area, set_invalid_area(FRect));
-                    #use_prefix::tlib::connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
+                if self.layout_mode == LayoutMode::Overlay {
+                    connect!(area, invalidated(), self, update_scroll_bar());
+                    connect!(self.scroll_bar_mut(), geometry_changed(), area, set_invalid_area(FRect));
+                    connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
                 }
 
                 ApplicationWindow::initialize_dynamic_component(area.as_mut());

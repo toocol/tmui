@@ -1,10 +1,10 @@
-use std::ptr::NonNull;
-use tlib::{events::MouseEvent, nonnull_mut, nonnull_ref};
 use crate::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };
+use std::ptr::NonNull;
+use tlib::{events::MouseEvent, nonnull_mut, nonnull_ref};
 
 #[extends(Widget)]
 #[cfg(win_popup)]
@@ -53,11 +53,17 @@ impl PopupExt for Popup {
 
     #[inline]
     fn supervisor(&self) -> &dyn WidgetImpl {
+        if self.supervisor.is_none() {
+            return ApplicationWindow::window();
+        }
         nonnull_ref!(self.supervisor)
     }
 
     #[inline]
     fn supervisor_mut(&mut self) -> &mut dyn WidgetImpl {
+        if self.supervisor.is_none() {
+            return ApplicationWindow::window();
+        }
         nonnull_mut!(self.supervisor)
     }
 
@@ -113,7 +119,7 @@ pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
     }
 
     /// If true, the popup widget will be a modal widget.
-    /// 
+    ///
     /// Default value is [`false`]
     #[inline]
     fn is_modal(&self) -> bool {
@@ -121,7 +127,7 @@ pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
     }
 
     /// If true, popup will hide when clicking the area outside the component.
-    /// 
+    ///
     /// Default value is [`true`]
     #[inline]
     fn hide_on_click(&self) -> bool {
@@ -129,7 +135,7 @@ pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
     }
 
     /// If true, popup will move postion by mouse dragging.
-    /// 
+    ///
     /// Default value is [`false`]
     #[inline]
     fn move_capable(&self) -> bool {

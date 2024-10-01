@@ -629,6 +629,20 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 window.winit_window().set_visible(visible);
                             }
 
+                            Message::WindowResizeRequest(window_id, size) => {
+                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                    panic!("Can not find window with id {:?}", window_id)
+                                });
+                                let _ = window.winit_window().request_inner_size(PhysicalSize::new(size.width(), size.height()));
+                            }
+
+                            Message::WindowPositionRequest(window_id, pos) => {
+                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                    panic!("Can not find window with id {:?}", window_id)
+                                });
+                                window.winit_window().set_outer_position(PhysicalPosition::new(pos.x(), pos.y()));
+                            }
+
                             Message::WindowResponse(window_id, closure) => {
                                 let window = self.windows.get(&window_id).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)

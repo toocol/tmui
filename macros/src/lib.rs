@@ -72,11 +72,6 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     let extend_str = extend_attr.extend.to_string();
-    let use_prefix = if extend_attr.internal {
-        Ident::new("crate", ast.ident.span())
-    } else {
-        Ident::new("tmui", ast.ident.span())
-    };
     match extend_str.as_str() {
         "Object" => match extend_object::expand(&mut ast, extend_attr.ignore_default) {
             Ok(tkn) => tkn.into(),
@@ -91,7 +86,6 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 &mut ast,
                 extend_attr.layout_meta.as_ref().unwrap(),
                 layout,
-                extend_attr.internal,
                 extend_attr.ignore_default,
             ) {
                 Ok(tkn) => tkn.into(),
@@ -118,7 +112,6 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                 false,
                 false,
                 LayoutType::Non,
-                &use_prefix,
                 None,
                 false,
             ) {
@@ -132,14 +125,13 @@ pub fn extends(args: TokenStream, input: TokenStream) -> TokenStream {
                     &mut ast,
                     extend_attr.layout_meta.as_ref().unwrap(),
                     layout,
-                    extend_attr.internal,
                     extend_attr.ignore_default,
                 ) {
                     Ok(tkn) => tkn.into(),
                     Err(e) => e.to_compile_error().into(),
                 }
             }
-            None => match extend_popup::expand(&mut ast, extend_attr.ignore_default, &use_prefix) {
+            None => match extend_popup::expand(&mut ast, extend_attr.ignore_default) {
                 Ok(tkn) => tkn.into(),
                 Err(e) => e.to_compile_error().into(),
             },
@@ -308,8 +300,7 @@ pub fn cast_boxed(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn split_pane_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix = Ident::new("crate", ident.span());
-    match split_pane::generate_split_pane_impl(&ident, &use_prefix) {
+    match split_pane::generate_split_pane_impl(&ident) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
@@ -318,8 +309,7 @@ pub fn split_pane_impl(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn stack_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix = Ident::new("crate", ident.span());
-    match stack::generate_stack_impl(&ident, &use_prefix) {
+    match stack::generate_stack_impl(&ident) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
@@ -328,8 +318,7 @@ pub fn stack_impl(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn pane_impl(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as Ident);
-    let use_prefix = Ident::new("crate", ident.span());
-    match pane::generate_pane_impl(&ident, &use_prefix) {
+    match pane::generate_pane_impl(&ident) {
         Ok(tkn) => tkn.into(),
         Err(e) => e.to_compile_error().into(),
     }
@@ -403,13 +392,13 @@ pub fn close_handler(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 
-/// Mark the widget as a child-window widget, 
+/// Mark the widget as a child-window widget,
 /// and the system will create a child window to display this component.
 ///
-/// When #\[win_widget\] is added, a CorrXXX structure will be automatically 
-/// generated (assuming there is a structure named Test, a CorrTest will be generated). 
-/// During UI construction in the main window, 
-/// the CorrXXX structure must be used instead of the original widget for UI building; 
+/// When #\[win_widget\] is added, a CorrXXX structure will be automatically
+/// generated (assuming there is a structure named Test, a CorrTest will be generated).
+/// During UI construction in the main window,
+/// the CorrXXX structure must be used instead of the original widget for UI building;
 /// otherwise, a new window will not be created for UI rendering, just like the normal widget.
 #[proc_macro_attribute]
 pub fn win_widget(_: TokenStream, input: TokenStream) -> TokenStream {

@@ -4,6 +4,9 @@ pub use tlib::prelude::*;
 pub type RawWindowHandle5 = raw_window_handle::RawWindowHandle;
 pub type RawWindowHandle6 = tlib::winit::raw_window_handle::RawWindowHandle;
 
+pub use tlib::{nonnull_mut, nonnull_ref, cast, cast_mut, cast_boxed, connect, disconnect};
+pub use crate::{split_widget, split_from};
+
 pub use crate::animation::{
     frame_animator::ReflectFrameAnimator,
     inner::AnimationsHolder,
@@ -16,7 +19,7 @@ pub use crate::container::{
     ChildrenRegionAcquirer, Container, ContainerAcquire, ContainerExt, ContainerImpl,
     ContainerImplExt, ContainerPointEffective, ContainerPropsAcquire, ContainerScaleCalculate,
     ReflectContainerImpl, ReflectSizeUnifiedAdjust, ReflectSpacingCapable, SizeUnifiedAdjust,
-    SpacingCapable, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust,
+    SpacingCapable, StaticContainerScaleCalculate, StaticSizeUnifiedAdjust, ContainerLayoutEnum
 };
 pub use crate::font::Font;
 pub use crate::graphics::board::Board;
@@ -45,8 +48,8 @@ pub use crate::primitive::close_handler::{
 pub use crate::primitive::global_watch::{
     GlobalWatch, GlobalWatchEvent, GlobalWatchImpl, ReflectGlobalWatch,
 };
-pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt};
-pub use crate::scroll_bar::ScrollBarSignal;
+pub use crate::scroll_area::{ReflectScrollAreaExt, ScrollAreaExt, ScrollAreaGenericExt, LayoutMode, ScrollAreaSlots, ScrollArea};
+pub use crate::scroll_bar::{ScrollBarSignal, ScrollBar, ScrollBarPosition};
 pub use crate::shared_widget::{
     ReflectSharedWidgetImpl, SharedWidget, SharedWidgetExt, SharedWidgetImpl,
 };
@@ -66,7 +69,7 @@ pub use crate::widget::{
     ChildOp, ChildRegionAcquire, EventBubble, InnerCustomizeEventProcess, IsolatedVisibility,
     PointEffective, ReflectInnerCustomizeEventProcess, ReflectIsolatedVisibility,
     ReflectIterExecutor, ReflectWidgetImpl, Transparency, Widget, WidgetAcquire, WidgetHnd,
-    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire, WidgetGenericExt
+    WidgetImpl, WidgetPropsAcquire, WidgetSignals, WindowAcquire, WidgetGenericExt, InnerEventProcess
 };
 pub use tlib::tokio;
 pub use tlib::{
