@@ -113,6 +113,12 @@ impl ObjectImpl for ApplicationWindow {
         let window_id = self.id();
         self.root_ancestors.push(window_id);
         child_initialize(self.get_child_mut(), window_id);
+        if let Some(input_dialog) = self.input_dialog.as_mut() {
+            child_initialize(Some(input_dialog.as_mut()), window_id);
+        }
+        if let Some(tooltip) = self.tooltip.as_mut() {
+            child_initialize(Some(tooltip.as_mut()), window_id);
+        }
 
         self.when_size_change(self.size());
 
@@ -846,7 +852,7 @@ impl ApplicationWindow {
     pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
         if self.input_dialog.is_none() {
             let mut input_dialog = InputDialog::new();
-            child_initialize(Some(input_dialog.as_widget_impl_mut()), self.id());
+            Self::initialize_dynamic_component(input_dialog.as_widget_impl_mut());
             self.input_dialog = Some(input_dialog);
         }
 
@@ -868,19 +874,17 @@ impl ApplicationWindow {
             #[cfg(not(win_popup))]
             let tooltip = {
                 let mut tooltip = crate::tooltip::Tooltip::new();
-                child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
+                Self::initialize_dynamic_component(tooltip.as_mut());
                 tooltip
             };
 
             #[cfg(win_popup)]
             let tooltip = {
                 let mut tooltip = crate::tooltip::CorrTooltip::new();
-                child_initialize(Some(tooltip.as_mut()), self.id());
-                handle_win_widget_create(tooltip.as_mut());
+                Self::initialize_dynamic_component(tooltip.as_mut());
                 tooltip
             };
 
-            self.board().shuffle();
             self.tooltip = Some(tooltip);
         }
 
@@ -921,6 +925,7 @@ impl ApplicationWindow {
                 }
             }
             TooltipStrat::Hide => tooltip.hide(),
+            TooltipStrat::HideOnWindowReisze(on) => tooltip.set_hide_on_win_change(on),
         }
     }
 

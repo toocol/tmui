@@ -674,7 +674,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 debug!("Receive child-window widget visibility changed.");
                             }
 
-                            Message::WinWidgetGeometryReverseRequest(win_id, rect) => {
+                            Message::WinWidgetSizeReverseRequest(win_id, size) => {
                                 let w_id = self.win_widget_map.iter().find_map(|(k, v)| {
                                     if v.eq(&win_id) {
                                         return Some(*k)
@@ -686,7 +686,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     let parent_window = self.windows.get(parent_win_id).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", win_id)
                                     });
-                                    parent_window.send_input(Message::WinWidgetGeometryChanged(id, rect));
+                                    parent_window.send_input(Message::WinWidgetSizeChanged(id, size));
                                 } else {
                                     warn!("Cannot find correspondent widget id with window id {:?}", win_id);
                                 }

@@ -651,9 +651,9 @@ impl LayoutMgr {
                 debug!("Cross window widget trigger window size change.");
                 let window = ApplicationWindow::window();
                 window.resize(Some(cur_size.width()), Some(cur_size.height()));
-                window.send_message(Message::WinWidgetGeometryReverseRequest(
+                window.send_message(Message::WinWidgetSizeReverseRequest(
                     window.winit_id().unwrap(),
-                    widget.rect(),
+                    cur_size,
                 ));
             }
             widget.image_rect().size()

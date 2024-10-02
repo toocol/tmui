@@ -1478,7 +1478,7 @@ impl<T: WidgetAcquire> Layout for T {
 
     #[inline]
     fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
-        LayoutMgr::base_widget_position_layout(self, parent)
+        LayoutMgr::base_widget_position_layout(self, parent);
     }
 }
 

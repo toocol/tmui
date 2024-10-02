@@ -65,13 +65,13 @@ pub(crate) enum Message {
     WinWidgetGeometryChangedRequest(ObjectId, Rect),
 
     /// Child window's geometry has changed, notify correspondent WinWidget change the size.
-    WinWidgetGeometryReverseRequest(WindowId, Rect),
+    WinWidgetSizeReverseRequest(WindowId, Size),
 
     /// Request the child window correspondent to the id change the visibility.
     WinWidgetVisibilityChangedRequest(ObjectId, bool),
 
-    /// @see [`WinWidgetGeometryReverseRequest`](Message::WinWidgetGeometryReverseRequest)
-    WinWidgetGeometryChanged(ObjectId, Rect),
+    /// @see [`WinWidgetSizeReverseRequest`](Message::WinWidgetSizeReverseRequest)
+    WinWidgetSizeChanged(ObjectId, Size),
 }
 
 impl Debug for Message {
@@ -128,8 +128,8 @@ impl Debug for Message {
                 .field(arg0)
                 .field(arg1)
                 .finish(),
-            Self::WinWidgetGeometryReverseRequest(arg0, arg1) => f
-                .debug_tuple("WinWidgetGeometryReverseRequest")
+            Self::WinWidgetSizeReverseRequest(arg0, arg1) => f
+                .debug_tuple("WinWidgetGeometrySizeRequest")
                 .field(arg0)
                 .field(arg1)
                 .finish(),
@@ -138,8 +138,8 @@ impl Debug for Message {
                 .field(arg0)
                 .field(arg1)
                 .finish(),
-            Self::WinWidgetGeometryChanged(arg0, arg1) => f
-                .debug_tuple("WinWidgetGeometryChanged")
+            Self::WinWidgetSizeChanged(arg0, arg1) => f
+                .debug_tuple("WinWidgetSizeChanged")
                 .field(arg0)
                 .field(arg1)
                 .finish(),

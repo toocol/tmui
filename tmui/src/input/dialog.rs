@@ -1,5 +1,3 @@
-use tlib::connect;
-
 use crate::{
     graphics::styles::Styles,
     prelude::*,
@@ -27,9 +25,6 @@ pub struct InputDialog {
 
     #[children]
     number: Box<Number>,
-
-    // Other properties:
-    hide_on_win_changed: bool,
 }
 
 #[cfg(not(win_popup))]
@@ -60,8 +55,6 @@ impl ObjectImpl for InputDialog {
 
         let window = ApplicationWindow::window();
         self.set_supervisor(window);
-
-        connect!(window, size_changed(), self, on_window_size_changed(Size));
     }
 }
 
@@ -127,7 +120,7 @@ impl InputDialog {
     pub fn hide_on_win_changed(hide_on_win_changed: bool) {
         ApplicationWindow::window()
             .input_dialog()
-            .hide_on_win_changed = hide_on_win_changed;
+            .set_hide_on_win_change(hide_on_win_changed);
     }
 
     /// Get the casted reference of input element within [`InputDialog`].
@@ -147,13 +140,6 @@ impl InputDialog {
     #[inline]
     pub(crate) fn new() -> Box<Self> {
         Object::new(&[])
-    }
-
-    #[inline]
-    fn on_window_size_changed(&mut self, _: Size) {
-        if self.hide_on_win_changed {
-            self.hide()
-        }
     }
 
     fn set_type(&mut self, input_type: InputType, geometry: Rect, styles: Option<Styles>) {

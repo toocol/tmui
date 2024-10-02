@@ -12,6 +12,7 @@ use tlib::{events::MouseEvent, nonnull_mut, nonnull_ref};
 pub struct Popup {
     supervisor: WidgetHnd,
     offsets: (i32, i32),
+    hide_on_win_change: bool,
 }
 
 #[extends(Widget)]
@@ -19,6 +20,7 @@ pub struct Popup {
 pub struct Popup {
     supervisor: WidgetHnd,
     offsets: (i32, i32),
+    hide_on_win_change: bool,
 }
 
 impl ObjectSubclass for Popup {
@@ -83,6 +85,23 @@ impl PopupExt for Popup {
         self.set_fixed_x(supervisor_rect.x() + self.offsets.0);
         self.set_fixed_y(supervisor_rect.y() + self.offsets.1);
     }
+
+    #[inline]
+    fn is_hide_on_win_change(&self) -> bool {
+        self.hide_on_win_change
+    }
+
+    #[inline]
+    fn set_hide_on_win_change(&mut self, on: bool) {
+        self.hide_on_win_change = on
+    }
+
+    #[inline]
+    fn on_win_size_change(&mut self, _: Size) {
+        if self.hide_on_win_change {
+            self.hide();
+        }
+    }
 }
 
 impl PopupImpl for Popup {}
@@ -103,6 +122,12 @@ pub trait PopupExt {
     fn calc_relative_position(&mut self);
 
     fn layout_relative_position(&mut self);
+
+    fn is_hide_on_win_change(&self) -> bool;
+
+    fn set_hide_on_win_change(&mut self, on: bool);
+
+    fn on_win_size_change(&mut self, _: Size);
 }
 
 #[reflect_trait]

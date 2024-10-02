@@ -204,6 +204,8 @@ pub(crate) fn expand(
                     #[inline]
                     fn pretreat_construct(&mut self) {
                         #child_ref_clause
+                        let window = ApplicationWindow::window();
+                        connect!(window, size_changed(), self, on_win_size_change(Size));
                     }
                 }
 
@@ -279,6 +281,21 @@ pub(crate) fn gen_popup_trait_impl_clause(
             #[inline]
             fn layout_relative_position(&mut self) {
                 self.#(#popup_path).*.layout_relative_position()
+            }
+
+            #[inline]
+            fn is_hide_on_win_change(&self) -> bool {
+                self.#(#popup_path).*.is_hide_on_win_change()
+            }
+
+            #[inline]
+            fn set_hide_on_win_change(&mut self, on: bool) {
+                self.#(#popup_path).*.set_hide_on_win_change(on)
+            }
+
+            #[inline]
+            fn on_win_size_change(&mut self, size: Size) {
+                self.#(#popup_path).*.on_win_size_change(size)
             }
         }
     ))

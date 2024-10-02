@@ -10,7 +10,6 @@ use crate::{
 use log::warn;
 use std::ptr::NonNull;
 use tlib::{
-    cast_mut,
     events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
     namespace::KeyCode,
     nonnull_mut,
@@ -451,16 +450,10 @@ pub(crate) fn message_handle(window: &mut ApplicationWindow, msg: Message) {
             window.window_layout_change();
         }
 
-        Message::WinWidgetGeometryChanged(id, rect) => {
+        Message::WinWidgetSizeChanged(id, size) => {
             if let Some(w) = window.find_id_mut(id) {
-                w.set_fixed_x(rect.x());
-                w.set_fixed_y(rect.y());
-                w.width_request(rect.width());
-                w.height_request(rect.height());
-
-                if let Some(popup) = cast_mut!(w as PopupImpl) {
-                    popup.calc_relative_position();
-                }
+                w.width_request(size.width());
+                w.height_request(size.height());
             } else {
                 warn!(
                     "`ApplicationWindow` finds widget by id get `None`, id = {}",

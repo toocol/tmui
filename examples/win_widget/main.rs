@@ -43,6 +43,7 @@ fn build_ui(window: &mut ApplicationWindow) {
             );
         }
     });
+    Tooltip::hide_on_window_resize(true);
 
     win_widget.set_hexpand(true);
     win_widget.set_vexpand(true);

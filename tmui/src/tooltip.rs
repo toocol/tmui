@@ -85,6 +85,11 @@ impl Tooltip {
     pub fn visible() -> bool {
         ApplicationWindow::window().tooltip_visible()
     }
+
+    #[inline]
+    pub fn hide_on_window_resize(on: bool) {
+        ApplicationWindow::window().tooltip(TooltipStrat::HideOnWindowReisze(on));
+    }
 }
 
 impl Tooltip {
@@ -122,4 +127,5 @@ impl Tooltip {
 pub(crate) enum TooltipStrat<'a> {
     Show(&'a str, Point, OptionSize, Option<Styles>),
     Hide,
+    HideOnWindowReisze(bool),
 }
