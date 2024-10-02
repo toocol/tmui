@@ -1,7 +1,10 @@
 mod win_widget;
 
-use tlib::figure::OptionSize;
-use tmui::{application::Application, application_window::ApplicationWindow, prelude::*, tooltip::Tooltip, widget::callbacks::CallbacksRegister};
+use tlib::{figure::OptionSize, namespace::MouseButton};
+use tmui::{
+    application::Application, application_window::ApplicationWindow, prelude::*, tooltip::Tooltip,
+    widget::callbacks::CallbacksRegister,
+};
 use win_widget::{CorrMyWinWidget, CrsWinMsg};
 
 fn main() {
@@ -31,7 +34,14 @@ fn build_ui(window: &mut ApplicationWindow) {
     widget.set_hscale(0.5);
     widget.set_background(Color::RED);
     widget.register_mouse_released(|_, e| {
-        Tooltip::show("Windowed tooltip content.", e.position().into(), OptionSize::none(), None);
+        if e.mouse_button() == MouseButton::RightButton {
+            Tooltip::show(
+                "Windowed tooltip content.",
+                e.position().into(),
+                OptionSize::none(),
+                None,
+            );
+        }
     });
 
     win_widget.set_hexpand(true);

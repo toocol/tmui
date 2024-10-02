@@ -58,11 +58,20 @@ pub(crate) enum Message {
     /// Window has moved.
     WindowMoved(Point),
 
+    /// Window's visibility has changed.
+    WindowVisibilityChanged(bool),
+
     /// Request the child window correspondent to the id change the size and location.
     WinWidgetGeometryChangedRequest(ObjectId, Rect),
 
+    /// Child window's geometry has changed, notify correspondent WinWidget change the size.
+    WinWidgetGeometryReverseRequest(WindowId, Rect),
+
     /// Request the child window correspondent to the id change the visibility.
     WinWidgetVisibilityChangedRequest(ObjectId, bool),
+
+    /// @see [`WinWidgetGeometryReverseRequest`](Message::WinWidgetGeometryReverseRequest)
+    WinWidgetGeometryChanged(ObjectId, Rect),
 }
 
 impl Debug for Message {
@@ -110,13 +119,27 @@ impl Debug for Message {
                 .finish(),
             Self::WindowResponse(arg0, _) => f.debug_tuple("WindowResponse").field(arg0).finish(),
             Self::WindowMoved(arg0) => f.debug_tuple("WindowMoved").field(arg0).finish(),
+            Self::WindowVisibilityChanged(arg0) => f
+                .debug_tuple("WindowVisibilityChanged")
+                .field(arg0)
+                .finish(),
             Self::WinWidgetGeometryChangedRequest(arg0, arg1) => f
                 .debug_tuple("WinWidgetGeometryChangedRequest")
                 .field(arg0)
                 .field(arg1)
                 .finish(),
+            Self::WinWidgetGeometryReverseRequest(arg0, arg1) => f
+                .debug_tuple("WinWidgetGeometryReverseRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
             Self::WinWidgetVisibilityChangedRequest(arg0, arg1) => f
                 .debug_tuple("WinWidgetVisibilityChangedRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::WinWidgetGeometryChanged(arg0, arg1) => f
+                .debug_tuple("WinWidgetGeometryChanged")
                 .field(arg0)
                 .field(arg1)
                 .finish(),

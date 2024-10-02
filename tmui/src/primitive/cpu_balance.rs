@@ -1,5 +1,8 @@
 use once_cell::sync::Lazy;
-use std::{ptr::addr_of_mut, time::{Duration, Instant}};
+use std::{
+    ptr::addr_of_mut,
+    time::{Duration, Instant},
+};
 
 const DEFAULT_PAYLOAD_THRESHOLD: usize = 40;
 const PAYLOAD_INTERVAL: usize = 1;

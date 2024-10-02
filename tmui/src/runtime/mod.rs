@@ -6,7 +6,10 @@ pub(crate) mod windows_process;
 
 use self::frame_mgr::FrameMgr;
 use crate::{
-    application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, IS_UI_THREAD, SHARED_CHANNEL, UI_THREAD_CNT},
+    application::{
+        self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, IS_UI_THREAD, SHARED_CHANNEL,
+        UI_THREAD_CNT,
+    },
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
@@ -163,8 +166,6 @@ where
                         }
 
                         evt = resize_evt;
-
-                        application::request_high_load(true);
                     }
 
                     cpu_balance.add_payload(evt.payload_wieght());
@@ -175,14 +176,10 @@ where
                         }
                     }
                 }
-                Message::WindowResponse(_, closure) => {
-                    closure(&mut window);
-                }
                 Message::WindowClosed => {
                     break;
                 }
-                Message::WindowMoved(position) => window.set_outer_position(position),
-                _ => {}
+                _ => wed::message_handle(&mut window, event),
             }
         }
 

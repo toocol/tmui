@@ -15,7 +15,7 @@ use crate::{
         event::{Event, WindowEvent},
     },
 };
-use log::error;
+use log::{debug, error, warn};
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -225,11 +225,10 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             panic!("Can not find window with id {:?}", window_id)
                         });
 
-                        target.set_control_flow(ControlFlow::Poll);
-
                         match event {
                             // Window redraw event.
                             WindowEvent::RedrawRequested => {
+                                debug!("Window redraw requested");
                                 let _track = Tracker::start("physical_window_redraw");
                                 #[cfg(macos_platform)]
                                 self.windows
@@ -490,8 +489,10 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             WindowEvent::Focused(focus) => {
-                                window.send_input(Message::Event(Box::new(FocusEvent::new(focus))))
+                                window.send_input(Message::Event(Box::new(FocusEvent::new(focus))));
                             }
+
+                            WindowEvent::Ime(_ime) => {}
 
                             _ => {}
                         }
@@ -659,6 +660,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 let winit_window = window.winit_window();
                                 winit_window.set_outer_position(PhysicalPosition::new(rect.x(), rect.y()));
                                 let _ = winit_window.request_inner_size(PhysicalSize::new(rect.width(), rect.height()));
+                                debug!("Receive child-window widget geometry changed.");
                             }
 
                             Message::WinWidgetVisibilityChangedRequest(id, visible) => {
@@ -668,6 +670,26 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 });
 
                                 window.winit_window().set_visible(visible);
+                                window.send_input(Message::WindowVisibilityChanged(visible));
+                                debug!("Receive child-window widget visibility changed.");
+                            }
+
+                            Message::WinWidgetGeometryReverseRequest(win_id, rect) => {
+                                let w_id = self.win_widget_map.iter().find_map(|(k, v)| {
+                                    if v.eq(&win_id) {
+                                        return Some(*k)
+                                    }
+                                    None
+                                });
+                                if let Some(id) = w_id {
+                                    let parent_win_id = self.parent_map.get(&win_id).unwrap_or_else(|| panic!("Find parent window with child window id `{:?}` failed", win_id));
+                                    let parent_window = self.windows.get(parent_win_id).unwrap_or_else(|| {
+                                        panic!("Can not find window with id {:?}", win_id)
+                                    });
+                                    parent_window.send_input(Message::WinWidgetGeometryChanged(id, rect));
+                                } else {
+                                    warn!("Cannot find correspondent widget id with window id {:?}", win_id);
+                                }
                             }
 
                             _ => {}

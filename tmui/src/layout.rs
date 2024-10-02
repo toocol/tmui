@@ -2,6 +2,7 @@ use crate::{
     container::{Container, ContainerImpl, ReflectSizeUnifiedAdjust, ScaleMeasure, SpacingSize},
     opti::tracker::Tracker,
     prelude::*,
+    primitive::Message,
     widget::{widget_inner::WidgetInnerExt, ScaleCalculate, WidgetImpl, WidgetSignals},
 };
 use log::debug;
@@ -643,8 +644,17 @@ impl LayoutMgr {
                 emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
             }
 
-            if cast!(widget as CrossWinWidget).is_some() && cur_size != window_size {
-                ApplicationWindow::window().resize(Some(cur_size.width()), Some(cur_size.height()));
+            if widget.visible()
+                && cast!(widget as CrossWinWidget).is_some()
+                && cur_size != window_size
+            {
+                debug!("Cross window widget trigger window size change.");
+                let window = ApplicationWindow::window();
+                window.resize(Some(cur_size.width()), Some(cur_size.height()));
+                window.send_message(Message::WinWidgetGeometryReverseRequest(
+                    window.winit_id().unwrap(),
+                    widget.rect(),
+                ));
             }
             widget.image_rect().size()
         }

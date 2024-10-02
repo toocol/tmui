@@ -142,14 +142,6 @@ impl WidgetImpl for ApplicationWindow {
         }
         self.run_afters.clear();
     }
-
-    #[inline]
-    fn on_visibility_changed(&mut self, visible: bool) {
-        self.send_message(Message::WindowVisibilityRequest(
-            self.winit_id().unwrap(),
-            visible,
-        ))
-    }
 }
 
 type ApplicationWindowContext = (ThreadId, Option<NonNull<ApplicationWindow>>);

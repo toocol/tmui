@@ -695,6 +695,13 @@ impl<T: WidgetImpl> WidgetExt for T {
             snapshot.start(false);
         }
 
+        if let Some(window) = self.downcast_ref::<ApplicationWindow>() {
+            window.send_message(Message::WindowVisibilityRequest(
+                window.winit_id().unwrap(),
+                false,
+            ));
+        }
+
         self.set_property("visible", false.to_value());
         self.set_first_rendered(false);
 
@@ -731,6 +738,13 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
         if let Some(snapshot) = cast_mut!(self as Snapshot) {
             snapshot.start(true);
+        }
+
+        if let Some(window) = self.downcast_ref::<ApplicationWindow>() {
+            window.send_message(Message::WindowVisibilityRequest(
+                window.winit_id().unwrap(),
+                true,
+            ));
         }
 
         self.set_property("visible", true.to_value());
@@ -802,9 +816,15 @@ impl<T: WidgetImpl> WidgetExt for T {
         if self.object_type().is_a(ApplicationWindow::static_type()) {
             let size = self.size();
             let window = self.downcast_mut::<ApplicationWindow>().unwrap();
-            let size = (width.unwrap_or(size.width()), height.unwrap_or(size.height()));
-            window.send_message(Message::WindowResizeRequest(window.winit_id().unwrap(), size.into()));
-            return
+            let size = (
+                width.unwrap_or(size.width()),
+                height.unwrap_or(size.height()),
+            );
+            window.send_message(Message::WindowResizeRequest(
+                window.winit_id().unwrap(),
+                size.into(),
+            ));
+            return;
         }
 
         let mut resized = false;
