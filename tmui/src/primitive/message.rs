@@ -55,8 +55,8 @@ pub(crate) enum Message {
         Box<dyn FnOnce(&mut ApplicationWindow) + 'static + Send + Sync>,
     ),
 
-    /// Window has moved.
-    WindowMoved(Point),
+    /// Window has moved(OuterPosition, InnerPosition).
+    WindowMoved(Point, Point),
 
     /// Window's visibility has changed.
     WindowVisibilityChanged(bool),
@@ -118,7 +118,11 @@ impl Debug for Message {
                 .field(arg1)
                 .finish(),
             Self::WindowResponse(arg0, _) => f.debug_tuple("WindowResponse").field(arg0).finish(),
-            Self::WindowMoved(arg0) => f.debug_tuple("WindowMoved").field(arg0).finish(),
+            Self::WindowMoved(arg0, arg1) => f
+                .debug_tuple("WindowMoved")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
             Self::WindowVisibilityChanged(arg0) => f
                 .debug_tuple("WindowVisibilityChanged")
                 .field(arg0)

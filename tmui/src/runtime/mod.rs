@@ -109,7 +109,9 @@ where
     window.set_board(board.as_mut());
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());
-    window.set_outer_position(logic_window.initial_position);
+    let init_pos = logic_window.initial_position;
+    window.set_outer_position(init_pos.0);
+    window.set_client_position(init_pos.1);
     window.set_params(logic_window.params.take());
 
     if let Some(window_id) = logic_window.window_id() {

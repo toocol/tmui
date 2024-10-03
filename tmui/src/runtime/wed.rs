@@ -439,7 +439,10 @@ pub(crate) fn message_handle(window: &mut ApplicationWindow, msg: Message) {
             closure(window);
         }
 
-        Message::WindowMoved(position) => window.set_outer_position(position),
+        Message::WindowMoved(outer_position, inner_position) => {
+            window.set_outer_position(outer_position);
+            window.set_client_position(inner_position);
+        }
 
         Message::WindowVisibilityChanged(bool) => {
             if !bool {

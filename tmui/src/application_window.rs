@@ -60,7 +60,10 @@ pub struct ApplicationWindow {
     shared_widget_size_changed: bool,
     high_load_request: bool,
     show_on_ready: bool,
+    /// Position include the tile bar on the screen coordinate.
     outer_position: Point,
+    /// Position to the client area on the screen coordinate.
+    client_position: Point,
     params: Option<HashMap<String, Value>>,
 
     board: Option<NonNull<Board>>,
@@ -124,7 +127,8 @@ impl ObjectImpl for ApplicationWindow {
 
         for w in self.win_widgets.iter_mut() {
             let win_widget = nonnull_mut!(w);
-            handle_win_widget_create(win_widget);
+            let inner = cast!(win_widget as PopupImpl).is_none();
+            handle_win_widget_create(win_widget, inner);
         }
 
         self.set_initialized(true);
@@ -304,7 +308,7 @@ impl ApplicationWindow {
         let mut window = window_bld.build();
         window.set_parent(self.winit_id.unwrap());
 
-        if window.is_child_window() {
+        if window.is_inner_window() {
             if let Some(rwh) = self.raw_window_handle {
                 window.set_parent_window_rwh(rwh)
             }
@@ -396,7 +400,45 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn request_outer_position(&self, position: Point) {
+    pub fn map_to_outer(&self, pos: &Point) -> Point {
+        Point::new(
+            pos.x() + self.outer_position.x(),
+            pos.y() + self.outer_position.y(),
+        )
+    }
+
+    #[inline]
+    pub fn map_to_outer_f(&self, pos: &FPoint) -> FPoint {
+        FPoint::new(
+            pos.x() + self.outer_position.x() as f32,
+            pos.y() + self.outer_position.y() as f32,
+        )
+    }
+
+    /// Get the outer position of window.
+    #[inline]
+    pub fn client_position(&self) -> Point {
+        self.client_position
+    }
+
+    #[inline]
+    pub fn map_to_client(&self, pos: &Point) -> Point {
+        Point::new(
+            pos.x() + self.client_position.x(),
+            pos.y() + self.client_position.y(),
+        )
+    }
+
+    #[inline]
+    pub fn map_to_client_f(&self, pos: &FPoint) -> FPoint {
+        FPoint::new(
+            pos.x() + self.client_position.x() as f32,
+            pos.y() + self.client_position.y() as f32,
+        )
+    }
+
+    #[inline]
+    pub fn request_win_position(&self, position: Point) {
         self.send_message(Message::WindowPositionRequest(
             self.winit_id.unwrap(),
             position,
@@ -839,6 +881,11 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_client_position(&mut self, position: Point) {
+        self.client_position = position
+    }
+
+    #[inline]
     pub(crate) fn root_ancestors(&self) -> &[ObjectId] {
         &self.root_ancestors
     }
@@ -941,11 +988,19 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn handle_win_widget_geometry_changed(&self, rect: FRect) {
+    pub(crate) fn handle_win_widget_geometry_changed(&self, mut rect: FRect) {
         if !self.initialized() {
             return;
         }
         let id = self.get_signal_source().unwrap();
+
+        let w = self.find_id(id).unwrap();
+        let is_popup = cast!(w as PopupImpl).is_some();
+        if is_popup {
+            let outer = self.map_to_client_f(&rect.top_left());
+            rect.set_point(&outer);
+        }
+
         self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect.into()))
     }
 

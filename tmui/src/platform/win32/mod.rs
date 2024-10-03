@@ -124,7 +124,12 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         self.main_win_create.set(false);
 
-        let init_position = if let Ok(pos) = window.outer_position() {
+        let init_outer = if let Ok(pos) = window.outer_position() {
+            Point::new(pos.x, pos.y)
+        } else {
+            Point::new(0, 0)
+        };
+        let init_inner = if let Ok(pos) = window.inner_position() {
             Point::new(pos.x, pos.y)
         } else {
             Point::new(0, 0)
@@ -144,7 +149,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     output_sender: OutputSender::EventLoopProxy(event_loop_proxy),
                     input_receiver: InputReceiver(input_receiver),
                 },
-                init_position,
+                (init_outer, init_inner),
             ),
             PhysicalWindow::Win32(Win32Window::new(
                 window_id,

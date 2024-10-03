@@ -319,8 +319,11 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             // Window moved event.
                             WindowEvent::Moved(pos) => {
-                                let position = Point::new(pos.x, pos.y);
-                                window.send_input(Message::WindowMoved(position))
+                                let outer_position = Point::new(pos.x, pos.y);
+
+                                let inner = window.winit_window().inner_position().expect("Get window inner_position failed.");
+                                let inner_position = Point::new(inner.x, inner.y);
+                                window.send_input(Message::WindowMoved(outer_position, inner_position))
                             }
 
                             // Modifier change event.
@@ -531,7 +534,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             Message::CreateWindow(parent_win_id, mut win) => {
                                 let win_cfg = win.take_config();
-                                let is_decoration = win_cfg.decoration();
+                                let (is_decoration, is_inner) = (win_cfg.decoration(), win.is_inner_window());
                                 let (mut logic_window, physical_window) = self
                                     .platform_context
                                     .create_window(win_cfg, Some(target), Some(self.proxy()));
@@ -543,19 +546,17 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 let phys_window = physical_window.into_phys_window();
                                 let win_id = phys_window.window_id();
 
-                                if win.is_child_window() {
-                                    self.parent_map.insert(win_id, parent_win_id);
-                                    self.child_windows
-                                        .entry(parent_win_id)
-                                        .or_default()
-                                        .push(win_id);
-                                    if win.win_widget_id() != 0 {
-                                        self.win_widget_map.insert(win.win_widget_id(), win_id);
-                                    }
+                                self.parent_map.insert(win_id, parent_win_id);
+                                self.child_windows
+                                    .entry(parent_win_id)
+                                    .or_default()
+                                    .push(win_id);
+                                if let Some(id) = win.win_widget_id() {
+                                    self.win_widget_map.insert(id, win_id);
+                                }
 
-                                    if !is_decoration {
-                                        set_undecoration_window(phys_window.winit_window());
-                                    }
+                                if !is_decoration && is_inner {
+                                    set_undecoration_window(phys_window.winit_window());
                                 }
 
                                 if win.is_modal() {

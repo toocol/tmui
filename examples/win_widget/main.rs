@@ -35,12 +35,9 @@ fn build_ui(window: &mut ApplicationWindow) {
     widget.set_background(Color::RED);
     widget.register_mouse_released(|_, e| {
         if e.mouse_button() == MouseButton::RightButton {
-            Tooltip::show(
-                "Windowed tooltip content.",
-                e.position().into(),
-                OptionSize::none(),
-                None,
-            );
+            let mut pos: Point = e.position().into();
+            pos.offset(1, 0);
+            Tooltip::show("Windowed tooltip content.", pos, OptionSize::none(), None);
         }
     });
     Tooltip::hide_on_window_resize(true);

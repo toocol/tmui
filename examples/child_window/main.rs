@@ -36,7 +36,7 @@ fn build_ui(window: &mut ApplicationWindow) {
                         .decoration(false)
                         .build(),
                 )
-                .child_window(true)
+                .inner_window(true)
                 .on_activate(|win| {
                     win.set_transparency(180);
                     win.set_background(Color::GREY_LIGHT);

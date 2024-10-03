@@ -39,7 +39,7 @@ pub trait CrossWinMsgSender {
     fn send_cross_win_msg(&self, msg: Self::T);
 }
 
-pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget) {
+pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bool) {
     let mut rect = win_widget.borderless_rect();
     if rect.width() == 0 {
         rect.set_width(10)
@@ -48,19 +48,26 @@ pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget) {
         rect.set_height(10)
     }
 
+    let window = ApplicationWindow::window();
+    let pos = if inner {
+        rect.top_left()
+    } else {
+        window.map_to_client(&rect.top_left())
+    };
+
     let child_proc_fn = win_widget.child_process_fn();
-    ApplicationWindow::window().create_window(
+    window.create_window(
         WindowBuilder::new()
             .config(
                 WindowConfig::builder()
-                    .position(rect.top_left())
+                    .position(pos)
                     .width(rect.width() as u32)
                     .height(rect.height() as u32)
                     .decoration(false)
                     .visible(win_widget.visible())
                     .build(),
             )
-            .child_window(true)
+            .inner_window(inner)
             .win_widget_id(win_widget.id())
             .on_activate(move |win| child_proc_fn(win)),
     )

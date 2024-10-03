@@ -15,8 +15,8 @@ static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 pub(crate) struct Window {
     index: usize,
     modal: bool,
-    child_window: bool,
-    win_widget_id: ObjectId,
+    inner_window: bool,
+    win_widget_id: Option<ObjectId>,
     win_cfg: Option<WindowConfig>,
     on_activate: Option<FnActivate>,
     parent: Option<WindowId>,
@@ -30,7 +30,7 @@ impl Debug for Window {
         f.debug_struct("Window")
             .field("index", &self.index)
             .field("modal", &self.modal)
-            .field("child_window", &self.child_window)
+            .field("inner_window", &self.inner_window)
             .field("win_widget_id", &self.win_widget_id)
             .field("win_cfg", &self.win_cfg)
             .field("on_activate", &self.on_activate.is_some())
@@ -46,8 +46,8 @@ impl Window {
         Self {
             index: WINDOW_COUNTER.fetch_add(1, Ordering::Acquire),
             modal: false,
-            child_window: false,
-            win_widget_id: 0,
+            inner_window: false,
+            win_widget_id: None,
             win_cfg: None,
             on_activate: None,
             parent: None,
@@ -93,8 +93,8 @@ impl Window {
     }
 
     #[inline]
-    pub(crate) fn is_child_window(&self) -> bool {
-        self.child_window
+    pub(crate) fn is_inner_window(&self) -> bool {
+        self.inner_window
     }
 
     #[inline]
@@ -103,7 +103,7 @@ impl Window {
     }
 
     #[inline]
-    pub(crate) fn win_widget_id(&self) -> ObjectId {
+    pub(crate) fn win_widget_id(&self) -> Option<ObjectId> {
         self.win_widget_id
     }
 }

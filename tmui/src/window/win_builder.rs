@@ -6,9 +6,9 @@ use tlib::{object::ObjectId, values::ToValue, Value};
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
-    /// Os level child window or not.
-    child_window: bool,
-    win_widget_id: ObjectId,
+    /// The window is a inner child window of parent window or not.
+    inner_window: bool,
+    win_widget_id: Option<ObjectId>,
     modal: bool,
     on_activate: Option<FnActivate>,
     params: HashMap<String, Value>,
@@ -40,8 +40,8 @@ impl WindowBuilder {
     ///
     /// The default value was [`false`]
     #[inline]
-    pub fn child_window(mut self, is_child_window: bool) -> Self {
-        self.child_window = is_child_window;
+    pub fn inner_window(mut self, is: bool) -> Self {
+        self.inner_window = is;
         self
     }
 
@@ -62,7 +62,7 @@ impl WindowBuilder {
 
     #[inline]
     pub(crate) fn win_widget_id(mut self, id: ObjectId) -> Self {
-        self.win_widget_id = id;
+        self.win_widget_id = Some(id);
         self
     }
 
@@ -76,9 +76,9 @@ impl WindowBuilder {
         );
         window.on_activate = self.on_activate;
         window.modal = self.modal;
-        window.child_window = self.child_window;
         window.win_widget_id = self.win_widget_id;
         window.params = Some(self.params);
+        window.inner_window = self.inner_window;
 
         window
     }
