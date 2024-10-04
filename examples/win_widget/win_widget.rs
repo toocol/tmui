@@ -1,4 +1,4 @@
-use tlib::win_widget;
+use tlib::{run_after, win_widget};
 use tmui::{
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
@@ -11,20 +11,37 @@ pub enum CrsWinMsg {
 }
 
 #[extends(Widget)]
-#[win_widget(CrsWinMsg)]
+#[win_widget(CrsWinMsg, CrsWinMsg)]
+#[run_after]
 pub struct MyWinWidget {}
 
 impl CrossWinMsgHandler for MyWinWidget {
     type T = CrsWinMsg;
 
     fn handle(&mut self, msg: Self::T) {
-        println!("[{}] Receive cross window msg {:?}", std::thread::current().name().unwrap(), msg);
+        println!(
+            "[{}] Receive cross window msg {:?}",
+            std::thread::current().name().unwrap(),
+            msg
+        );
         match msg {
             CrsWinMsg::Test(a, b) => {
                 assert_eq!(a, 122);
                 assert_eq!(b, 290);
             }
         }
+    }
+}
+
+impl CrossWinMsgHandler for CorrMyWinWidget {
+    type T = CrsWinMsg;
+
+    fn handle(&mut self, msg: Self::T) {
+        println!(
+            "[{}] Receive cross window msg {:?}",
+            std::thread::current().name().unwrap(),
+            msg
+        );
     }
 }
 
@@ -41,4 +58,9 @@ impl ObjectImpl for MyWinWidget {
     }
 }
 
-impl WidgetImpl for MyWinWidget {}
+impl WidgetImpl for MyWinWidget {
+    #[inline]
+    fn run_after(&mut self) {
+        self.send_cross_win_msg(CrsWinMsg::Test(100, 100));
+    }
+}

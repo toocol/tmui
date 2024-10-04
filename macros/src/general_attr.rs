@@ -62,7 +62,7 @@ pub(crate) struct GeneralAttr {
 
     // fields about `win_widget`
     pub(crate) is_win_widget: bool,
-    pub(crate) win_widget_sink_field: Option<TokenStream>,
+    pub(crate) win_widget_sink_field: Vec<TokenStream>,
     pub(crate) win_widget_sink_impl: TokenStream,
     pub(crate) win_widget_sink_reflect: TokenStream,
     pub(crate) win_widget_corr_struct_clause: TokenStream,
@@ -343,7 +343,7 @@ impl GeneralAttr {
         let win_widget_sink_field = if let Some(ww) = win_widget.as_ref() {
             ww.sink_field_clause()
         } else {
-            None
+            vec![]
         };
 
         let win_widget_sink_impl = if let Some(ww) = win_widget.as_ref() {

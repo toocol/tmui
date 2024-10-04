@@ -157,7 +157,7 @@ pub(crate) fn expand(
                         }
                     }
 
-                    if let Some(field) = win_widget_sink_field {
+                    for field in win_widget_sink_field.iter() {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
