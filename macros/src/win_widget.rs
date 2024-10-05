@@ -1,7 +1,7 @@
 use crate::SplitGenericsRef;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{parse::Parse, punctuated::Punctuated, DeriveInput, Error, Token};
+use syn::{parse::Parse, punctuated::Punctuated, DeriveInput, Error, Meta, Token};
 
 pub(crate) struct WinWidget<'a> {
     name: Option<Ident>,
@@ -16,20 +16,146 @@ pub(crate) struct WinWidget<'a> {
 
 impl<'a> Parse for WinWidget<'a> {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let crs_win_msg: Punctuated<Ident, Token![,]> = input.parse_terminated(Ident::parse)?;
-        let mut crs_win_msg: Vec<Ident> = crs_win_msg.into_iter().collect();
-        if crs_win_msg.len() > 2 {
-            return Err(Error::new(
-                input.span(),
-                "The maximum count of cross window message is 2.",
-            ));
+        let mut crs_o2s_msg = None;
+        let mut crs_s2o_msg = None;
+        let metas: Punctuated<Meta, Token![,]> = input.parse_terminated(Meta::parse)?;
+        let metas: Vec<Meta> = metas.into_iter().collect();
+
+        for meta in metas.into_iter() {
+            match meta {
+                Meta::Path(path) => {
+                    if let Some(ident) = path.get_ident() {
+                        if crs_o2s_msg.is_none() {
+                            crs_o2s_msg = Some(ident.clone())
+                        } else if crs_s2o_msg.is_none() {
+                            crs_s2o_msg = Some(ident.clone())
+                        } else {
+                            return Err(Error::new(
+                                input.span(),
+                                "Can noly set 2 cross window message.",
+                            ));
+                        }
+                    } else {
+                        return Err(Error::new(
+                            input.span(),
+                            "Unsupported WinWidget configuration.",
+                        ));
+                    }
+                }
+
+                Meta::NameValue(syn::MetaNameValue {
+                    ref path, ref lit, ..
+                }) => {
+                    let ident = path.get_ident().unwrap();
+
+                    match ident.to_string().as_str() {
+                        "o2s" => match lit {
+                            syn::Lit::Str(lit_str) => {
+                                if crs_o2s_msg.is_some() {
+                                    return Err(Error::new(
+                                        input.span(),
+                                        "o2s Message have been setted.",
+                                    ));
+                                }
+                                crs_o2s_msg = Some(Ident::new(&lit_str.value(), input.span()))
+                            }
+                            _ => {
+                                return Err(Error::new(
+                                    input.span(),
+                                    "Value of `o2s` should be string.",
+                                ))
+                            }
+                        },
+                        "s2o" => match lit {
+                            syn::Lit::Str(lit_str) => {
+                                if crs_s2o_msg.is_some() {
+                                    return Err(Error::new(
+                                        input.span(),
+                                        "s2o Message have been setted.",
+                                    ));
+                                }
+                                crs_s2o_msg = Some(Ident::new(&lit_str.value(), input.span()))
+                            }
+                            _ => {
+                                return Err(Error::new(
+                                    input.span(),
+                                    "Value of `s2o` should be string.",
+                                ))
+                            }
+                        },
+                        s => {
+                            return Err(Error::new(
+                                input.span(),
+                                format!("Unsupported WinWidget configuration: {}", s),
+                            ))
+                        }
+                    }
+                }
+
+                Meta::List(syn::MetaList {
+                    ref path,
+                    ref nested,
+                    ..
+                }) => {
+                    if let Some(ident) = path.get_ident() {
+                        if *ident != "o2s" && *ident != "s2o" {
+                            return Err(Error::new(
+                            input.span(),
+                            "Unsupported WinWidget configuration, Unkonwn config, only o2s(xx), s2o(xx) is supported.",
+                            ));
+                        }
+
+                        if nested.len() != 1 {
+                            return Err(Error::new(
+                            input.span(),
+                            "Unsupported WinWidget configuration, two many args, only o2s(xx), s2o(xx) is supported.",
+                            ));
+                        }
+
+                        if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) = nested.first() {
+                            if let Some(attr_ident) = path.get_ident() {
+                                if *ident == "o2s" {
+                                    if crs_o2s_msg.is_some() {
+                                        return Err(Error::new(
+                                            input.span(),
+                                            "o2s Message have been setted.",
+                                        ));
+                                    }
+
+                                    crs_o2s_msg = Some(attr_ident.clone())
+                                }
+
+                                if *ident == "s2o" {
+                                    if crs_s2o_msg.is_some() {
+                                        return Err(Error::new(
+                                            input.span(),
+                                            "s2o Message have been setted.",
+                                        ));
+                                    }
+                                    crs_s2o_msg = Some(attr_ident.clone())
+                                }
+                            }
+                        } else {
+                            return Err(Error::new(
+                            input.span(),
+                            "Unsupported WinWidget configuration, nested meta is None, only o2s(xx), s2o(xx) is supported.",
+                            ));
+                        }
+                    } else {
+                        return Err(Error::new(
+                            input.span(),
+                            "Unsupported WinWidget configuration.",
+                        ));
+                    }
+                }
+            }
         }
 
         Ok(Self {
             name: None,
             corr_name: None,
-            crs_o2s_msg: crs_win_msg.pop(),
-            crs_s2o_msg: crs_win_msg.pop(),
+            crs_o2s_msg,
+            crs_s2o_msg,
             generics: None,
             is_popup: false,
         })

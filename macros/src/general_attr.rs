@@ -135,7 +135,7 @@ impl GeneralAttr {
                             Meta::List(_) => attr.parse_args::<WinWidget>()?,
                             Meta::Path(_) => WinWidget::parse(ast, generics)?,
                             Meta::NameValue(nv) => {
-                                return Err(Error::new(nv.span(), "Unsupported definition."))
+                                return Err(Error::new(nv.span(), "Unsupported definition."));
                             }
                         };
                         ww.set_info(ast, generics, is_popup);
