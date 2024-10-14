@@ -12,7 +12,7 @@ pub trait DropdownListSignals: ActionExt {
         /// Emit when list value's selected value chaged.
         ///
         /// @param [`String`]
-        value_changed();
+        value_changed(String);
     );
 }
 impl DropdownListSignals for DropdownList {}
@@ -56,7 +56,7 @@ impl ObjectImpl for DropdownList {
                 .unwrap()
                 .downcast_mut::<DropdownList>()
                 .unwrap();
-            emit!(dropdown_list.value_changed(), val);
+            emit!(dropdown_list, value_changed(val));
             dropdown_list.trans_focus_take(FocusStrat::Restore);
             dropdown_list.hide();
         });

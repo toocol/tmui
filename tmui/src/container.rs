@@ -66,7 +66,7 @@ impl ObjectImpl for Container {
             }
             "visible" => {
                 let visible = value.get::<bool>();
-                emit!(self.visibility_changed(), visible);
+                emit!(self, visibility_changed(visible));
                 self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
 

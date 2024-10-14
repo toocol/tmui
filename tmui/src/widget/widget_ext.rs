@@ -847,7 +847,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         if resized {
-            emit!(self.size_changed(), self.size())
+            emit!(self, size_changed(self.size()))
         }
 
         if self.id() != self.window_id() {
@@ -1190,7 +1190,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_background(&mut self, color: Color) {
         self.set_render_styles(true);
         self.widget_props_mut().styles.set_background(color);
-        emit!(Widget::set_background => self.background_changed(), color);
+        emit!(Widget::set_background => self, background_changed(color));
 
         self.set_whole_styles_render(true);
         self.notify_update();
@@ -1799,7 +1799,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_invalid_area(&mut self, rect: FRect) {
         self.widget_props_mut().invalid_area = rect;
-        emit!(self.invalid_area_changed(), rect);
+        emit!(self, invalid_area_changed(rect));
     }
 
     #[inline]

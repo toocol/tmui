@@ -25,3 +25,4 @@ widestring = { workspace = true }
 skia-safe = { workspace = true }
 winit = { workspace = true }
 tokio = { workspace = true }
+paste = { workspace = true}

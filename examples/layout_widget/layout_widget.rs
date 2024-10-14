@@ -50,7 +50,7 @@ impl ObjectImpl for LayoutWidget {
         self.width_request(500);
         self.height_request(300);
 
-        connect!(self.label, text_changed(), self, text_changed(String:0, String:1));
+        connect!(self.label, text_changed(), self, text_changed(String, String));
         connect!(self.timer, timeout(), self, change_text());
         self.timer.start(Duration::from_millis(10));
     }

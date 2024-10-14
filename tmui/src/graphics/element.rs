@@ -245,7 +245,7 @@ pub(crate) fn element_update(el: &mut impl ElementImpl, mut upd_code: u8, propag
 
     if code == UPD_VALIDATE {
         Board::notify_update();
-        emit!(el.invalidated());
+        emit!(el, invalidated());
     }
 }
 

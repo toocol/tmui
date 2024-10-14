@@ -43,13 +43,13 @@ pub trait TreeStoreSignals: ActionExt {
         notify_update();
 
         /// @param [`usize`]
-        notify_update_rect();
+        notify_update_rect(usize);
 
         /// @param [`usize`]
-        buffer_len_changed();
+        buffer_len_changed(usize);
 
         /// @param [`i32`]
-        internal_scroll_value_changed();
+        internal_scroll_value_changed(i32);
     );
 }
 impl TreeStoreSignals for TreeStore {}
@@ -330,8 +330,8 @@ impl TreeStore {
 
         self.nodes_buffer.splice(idx..idx, insert);
 
-        emit!(self.buffer_len_changed(), self.nodes_buffer.len());
-        emit!(self.notify_update_rect(), idx);
+        emit!(self, buffer_len_changed(self.nodes_buffer.len()));
+        emit!(self, notify_update_rect(idx));
 
         // Calculate the index of added node in nodes buffer:
         let mut added_idx = usize::MAX;
@@ -378,8 +378,8 @@ impl TreeStore {
             self.nodes_buffer.drain(idx..idx + 1);
         }
 
-        emit!(self.buffer_len_changed(), self.nodes_buffer.len());
-        emit!(self.notify_update_rect(), idx);
+        emit!(self, buffer_len_changed(self.nodes_buffer.len()));
+        emit!(self, notify_update_rect(idx));
     }
 
     pub(crate) fn node_expanded(&mut self, node: &TreeNode) {
@@ -425,8 +425,8 @@ impl TreeStore {
             self.nodes_buffer.drain(idx..idx + children.len());
         }
 
-        emit!(self.buffer_len_changed(), self.nodes_buffer.len());
-        emit!(self.notify_update_rect(), start_idx);
+        emit!(self, buffer_len_changed(self.nodes_buffer.len()));
+        emit!(self, notify_update_rect(start_idx));
     }
 
     pub(crate) fn node_updated(
@@ -456,7 +456,7 @@ impl TreeStore {
 
         let update_len = update.len();
         self.nodes_buffer.splice(idx..idx + update_len, update);
-        emit!(self.notify_update_rect(), idx);
+        emit!(self, notify_update_rect(idx));
 
         focus.map(|focus| {
             for i in idx..idx + update_len {
@@ -487,7 +487,7 @@ impl TreeStore {
                 if node.is_hovered() {
                     node.remove_status(Status::Hovered);
 
-                    emit!(self.notify_update());
+                    emit!(self, notify_update());
                 }
             }
             return;
@@ -507,7 +507,7 @@ impl TreeStore {
         node.add_status(Status::Hovered);
         self.hovered_node = node_ptr;
 
-        emit!(self.notify_update());
+        emit!(self, notify_update());
     }
 
     pub(crate) fn click_node(&mut self, idx: usize, mouse_button: MouseButton) {
@@ -517,7 +517,7 @@ impl TreeStore {
                 let node = nonnull_mut!(old_select);
                 node.remove_status(Status::Selected);
 
-                emit!(self.notify_update());
+                emit!(self, notify_update());
             }
             return;
         }
@@ -537,7 +537,7 @@ impl TreeStore {
             node.shuffle_expand();
         }
 
-        emit!(self.notify_update());
+        emit!(self, notify_update());
     }
 
     /// @param `internal`
@@ -566,7 +566,7 @@ impl TreeStore {
         self.current_line = move_to;
 
         if internal {
-            emit!(self.internal_scroll_value_changed(), value);
+            emit!(self, internal_scroll_value_changed(value));
         }
 
         true

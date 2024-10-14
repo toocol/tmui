@@ -160,7 +160,7 @@ impl TreeNode {
     #[inline]
     pub fn notify_update(&self) {
         let store = TreeStore::store_ref(self.store).unwrap();
-        emit!(store.notify_update())
+        emit!(store, notify_update())
     }
 
     #[inline]

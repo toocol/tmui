@@ -460,7 +460,7 @@ impl Number {
             };
 
         if !res {
-            emit!(self.value_invalid());
+            emit!(self, value_invalid());
         }
 
         res

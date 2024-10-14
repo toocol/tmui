@@ -653,7 +653,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
-        emit!(self.size_changed(), size);
+        emit!(self, size_changed(size));
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
 

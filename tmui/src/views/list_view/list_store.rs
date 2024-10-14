@@ -147,10 +147,10 @@ pub trait ListStoreSignals: ActionExt {
         ListStore:
 
         /// @param [`i32`]
-        internal_scroll_value_changed();
+        internal_scroll_value_changed(i32);
 
         /// @param [`usize`]
-        items_len_changed();
+        items_len_changed(usize);
     );
 }
 impl ListStoreSignals for ListStore {}
@@ -166,7 +166,7 @@ impl ListStore {
         let mut mutex = self.concurrent_store.lock();
         let idx = mutex.add_node(obj);
 
-        emit!(self.items_len_changed(), mutex.len());
+        emit!(self, items_len_changed(mutex.len()));
         idx
     }
 
@@ -175,7 +175,7 @@ impl ListStore {
         let mut mutex = self.concurrent_store.lock();
         let idx = mutex.add_group(group);
 
-        emit!(self.items_len_changed(), mutex.len());
+        emit!(self, items_len_changed(mutex.len()));
         idx
     }
 
@@ -183,7 +183,7 @@ impl ListStore {
     pub fn clear(&mut self) {
         self.concurrent_store.lock().clear();
 
-        emit!(self.items_len_changed(), 0);
+        emit!(self, items_len_changed(0));
     }
 
     #[inline]
@@ -398,7 +398,7 @@ impl ListStore {
         let scrolled = self.scroll_to(scroll_to);
 
         if scrolled {
-            emit!(self.internal_scroll_value_changed(), scroll_to)
+            emit!(self, internal_scroll_value_changed(scroll_to))
         }
     }
 
@@ -411,7 +411,7 @@ impl ListStore {
 
             if self.len_rec != new_len {
                 self.len_rec = new_len;
-                emit!(self.items_len_changed(), new_len);
+                emit!(self, items_len_changed(new_len));
 
                 f = true;
             }

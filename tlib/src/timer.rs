@@ -153,7 +153,7 @@ impl Timer {
     pub fn check_timer(&self) -> bool {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike.get()) {
             if duration > self.duration.get() {
-                emit!(Timer::check_timer => self.timeout());
+                emit!(Timer::check_timer => self, timeout());
                 self.last_strike.set(SystemTime::now());
 
                 if self.single_shoot.get() {

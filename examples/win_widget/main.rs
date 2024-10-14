@@ -2,8 +2,7 @@ mod win_widget;
 
 use tlib::{figure::OptionSize, namespace::MouseButton};
 use tmui::{
-    application::Application, application_window::ApplicationWindow, prelude::*, tooltip::Tooltip,
-    widget::callbacks::CallbacksRegister,
+    application::Application, application_window::ApplicationWindow, prelude::*, tooltip::Tooltip, widget::callbacks::CallbacksRegister
 };
 use win_widget::{CorrMyWinWidget, CrsWinMsg};
 
@@ -38,7 +37,8 @@ fn build_ui(window: &mut ApplicationWindow) {
             let mut pos: Point = e.position().into();
             pos.offset(1, 0);
             Tooltip::show("Windowed tooltip content.", pos, OptionSize::none(), None);
-        }
+        } else if e.mouse_button() == MouseButton::MiddleButton {
+        }   
     });
     Tooltip::hide_on_window_resize(true);
 

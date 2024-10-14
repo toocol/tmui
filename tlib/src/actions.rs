@@ -35,7 +35,7 @@
 //!
 //!     let mut widget: Box<Widget> = Object::new(&[]);
 //!     connect!(widget, action_test(), widget, slot());
-//!     emit!(widget.action_test());
+//!     emit!(widget, action_test());
 //! }
 //! ```
 use crate::prelude::*;
@@ -43,7 +43,8 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fmt::Display,
-    sync::atomic::{AtomicPtr, Ordering}, ptr::null_mut,
+    ptr::null_mut,
+    sync::atomic::{AtomicPtr, Ordering},
 };
 
 type ActionsMap = Box<
@@ -51,7 +52,7 @@ type ActionsMap = Box<
         ObjectId,
         (
             HashSet<ObjectId>,
-            HashMap<String, HashMap<ObjectId, Vec<Box<dyn Fn(&Option<Value>)>>>>,
+            HashMap<String, HashMap<ObjectId, Vec<Box<dyn Fn(&Option<Vec<Value>>)>>>>,
         ),
     >,
 >;
@@ -75,9 +76,7 @@ impl ActionHub {
 
     pub fn initialize() {
         INSTANCE.with(|ins| {
-            INSTANCE_PTR.with(|ptr| {
-                ptr.store(ins.borrow_mut().as_mut(), Ordering::Release)
-            })
+            INSTANCE_PTR.with(|ptr| ptr.store(ins.borrow_mut().as_mut(), Ordering::Release))
         });
     }
 
@@ -92,7 +91,7 @@ impl ActionHub {
         })
     }
 
-    pub fn connect_action<F: Fn(&Option<Value>) + 'static>(
+    pub fn connect_action<F: Fn(&Option<Vec<Value>>) + 'static>(
         &mut self,
         signal: Signal,
         target: ObjectId,
@@ -169,7 +168,7 @@ impl ActionHub {
         }
     }
 
-    pub fn activate_action(&self, signal: Signal, param: Option<Value>) {
+    pub fn activate_action(&self, signal: Signal, param: Option<Vec<Value>>) {
         let name = signal.signal();
         let from_type = signal.from_type();
         let emit_type = signal.emit_type();
@@ -184,25 +183,19 @@ impl ActionHub {
     }
 }
 
-pub type FnHandleValue = Box<dyn Fn(&Option<Value>)>;
+pub type FnHandleValue = Box<dyn Fn(&Option<Vec<Value>>)>;
 
 pub trait ActionExt: ObjectOperation {
     fn connect(&self, signal: Signal, target: ObjectId, f: FnHandleValue) {
-        ActionHub::with(|hub| {
-            hub.connect_action(signal, target, f)
-        });
+        ActionHub::with(|hub| hub.connect_action(signal, target, f));
     }
 
     fn disconnect(&self, emiter: Option<ObjectId>, signal: Option<&str>, target: Option<ObjectId>) {
-        ActionHub::with(|hub| {
-            hub.disconnect_action(emiter, signal, target)
-        });
+        ActionHub::with(|hub| hub.disconnect_action(emiter, signal, target));
     }
 
     fn disconnect_all(&self) {
-        ActionHub::with(|hub| {
-            hub.disconnect_action(Some(self.id()), None, None)
-        });
+        ActionHub::with(|hub| hub.disconnect_action(Some(self.id()), None, None));
     }
 
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
@@ -227,6 +220,7 @@ pub struct Signal {
     signal: String,
     from_type: Option<String>,
     emit_type: Option<String>,
+    types: Vec<std::any::TypeId>,
 }
 impl Signal {
     #[inline]
@@ -236,6 +230,7 @@ impl Signal {
             signal,
             from_type: None,
             emit_type: None,
+            types: vec![],
         }
     }
 
@@ -286,32 +281,28 @@ pub fn ptr_address<T>(obj: &T) -> usize {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! emit {
-    ( $emit_type:expr => $signal:expr ) => {{
-        let mut signal = $signal;
+    ( $emit_type:expr => $call:expr, $signal:ident($($x:expr),*) ) => {{
+        let value = vec![$($x.to_value()),*];
+        let mut signal = $call.$signal();
+        paste::paste! {$call.[<_ $signal _check>]($($x),*)};
         signal.set_emit_type(stringify!($emit_type).to_string());
         ActionHub::with(|hub| {
-            hub.activate_action(signal, None);
+            hub.activate_action(signal, if value.is_empty() { None } else { Some(value) });
         });
     }};
-    ( $emit_type:expr => $signal:expr, $($x:expr),+ ) => {{
-        let tuple = ($($x),+);
-        let value = tuple.to_value();
-        let mut signal = $signal;
-        signal.set_emit_type(stringify!($emit_type).to_string());
+    ( $call:expr, $signal:ident($($x:expr),*) ) => {{
+        let value = vec![$($x.to_value()),*];
+        let str = stringify!($signal);
+        paste::paste! {$call.[<_ $signal _check>]($($x),*)};
         ActionHub::with(|hub| {
-            hub.activate_action(signal, Some(value));
+            hub.activate_action($call.$signal(), if value.is_empty() { None } else { Some(value) });
         });
     }};
-    ( $signal:expr ) => {{
+}
+macro_rules! emit_with_values {
+    ( $signal:expr, $val:expr ) => {{
         ActionHub::with(|hub| {
-            hub.activate_action($signal, None);
-        });
-    }};
-    ( $signal:expr, $($x:expr),+ ) => {{
-        let tuple = ($($x),+);
-        let value = tuple.to_value();
-        ActionHub::with(|hub| {
-            hub.activate_action($signal, Some(value));
+            hub.activate_action($signal, Some($val));
         });
     }};
 }
@@ -324,6 +315,7 @@ macro_rules! connect {
         let id = $target.id();
         let signal_source = $emiter.id();
         let signal = $emiter.$signal();
+        paste::paste! {$emiter.[<_ $signal _check>]()};
         $emiter.connect(signal, id, Box::new(move |_| {
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
             target.set_signal_source(Some(signal_source));
@@ -339,13 +331,13 @@ macro_rules! connect {
         $emiter.connect(signal, id, Box::new(move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
-            let param = val.get::<$param>();
+            let param = val.first().unwrap().get::<$param>();
             target.set_signal_source(Some(signal_source));
             target.$slot(param);
             target.set_signal_source(None);
         }))
     };
-    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident:$index:tt),+) ) => {
+    ( $emiter:expr, $signal:ident(), $target:expr, $slot:ident($($param:ident),+) ) => {
         let target_ptr = $target.as_mut_ptr();
         let id = $target.id();
         let signal_source = $emiter.id();
@@ -353,9 +345,11 @@ macro_rules! connect {
         $emiter.connect(signal, id, Box::new(move |param| {
             let val = param.as_ref().expect("Param is None.");
             let target = unsafe { target_ptr.as_mut().expect("Target is None.") };
-            let param = val.get::<($($param),+)>();
+            let mut iter = val.iter();
             target.set_signal_source(Some(signal_source));
-            target.$slot($(param.$index),+);
+            target.$slot($(
+                iter.next().expect("Not enough parameters").get::<$param>()
+            ),+);
             target.set_signal_source(None);
         }))
     };
@@ -380,11 +374,7 @@ macro_rules! disconnect {
         let signal = $emiter.$signal();
         let emiter_id = $emiter.id();
         let target_id = $target.id();
-        $emiter.disconnect(
-            Some(emiter_id),
-            Some(signal.signal()),
-            Some(target_id),
-        );
+        $emiter.disconnect(Some(emiter_id), Some(signal.signal()), Some(target_id));
     };
     ( $emiter:expr, null, $target:expr, null ) => {
         let emiter_id = $emiter.id();
@@ -409,13 +399,19 @@ macro_rules! signal {
 #[allow(unused_macros)]
 #[macro_export]
 macro_rules! signals {
-    ( $from_type:ident : $($(#[$($attrss:tt)*])* $name:ident();)* ) => {
+    ( $from_type:ident : $($(#[$($attrss:tt)*])* $name:ident($($param:ty),*);)* ) => {
         $(
             $(#[$($attrss)*])*
             #[allow(dead_code)]
             #[inline]
             fn $name(&self) -> Signal {
                 signal!(self, stringify!($name), stringify!($from_type))
+            }
+
+            paste::item!{
+                #[inline]
+                fn [<_ $name _check>](&self, $(_: $param),*) {
+                }
             }
         )*
     };
@@ -424,7 +420,7 @@ macro_rules! signals {
 /// Struct represents an action which can emit specified action.
 pub struct Action {
     signal: Signal,
-    param: Option<Box<dyn ToValue>>,
+    param: Option<Vec<Value>>,
 }
 impl Action {
     pub fn with_no_param(signal: Signal) -> Self {
@@ -434,18 +430,20 @@ impl Action {
         }
     }
 
-    pub fn with_param<T: ToValue + 'static>(signal: Signal, param: T) -> Self {
+    pub fn with_param(signal: Signal, param: Vec<Value>) -> Self {
         Self {
             signal,
-            param: Some(Box::new(param)),
+            param: Some(param),
         }
     }
 
-    pub fn emit(&self) {
-        if let Some(param) = self.param.as_ref() {
-            emit!(self.signal.clone(), param)
+    pub fn emit(&mut self) {
+        if let Some(param) = self.param.take() {
+            emit_with_values!(self.signal.clone(), param)
         } else {
-            emit!(self.signal.clone())
+            ActionHub::with(|hub| {
+                hub.activate_action(self.signal.clone(), self.param.take());
+            });
         }
     }
 }
@@ -473,10 +471,10 @@ mod tests {
             Widget:
 
             /// Signal: action to test.
-            action_test();
+            action_test(i32, &str);
 
             /// Signal: action to demo.
-            action_demo();
+            action_demo(i32);
 
             /// Signal: action with no param.
             action_no_param();
@@ -487,7 +485,7 @@ mod tests {
         }
 
         pub fn reg_action(&mut self) {
-            connect!(self, action_test(), self, slot_test(i32:0, String:1));
+            connect!(self, action_test(), self, slot_test(i32, String));
             connect!(self, action_demo(), self, slot_demo(i32));
             connect!(self, action_no_param(), self, slot_no_param());
         }
@@ -510,9 +508,9 @@ mod tests {
         pub fn emit(&self) {
             let param = 1;
             let desc = "desc";
-            emit!(self.action_test(), param, desc);
-            emit!(self.action_demo(), param);
-            emit!(self.action_no_param());
+            emit!(self, action_test(param, desc));
+            emit!(self, action_demo(param));
+            emit!(self, action_no_param());
         }
     }
 
@@ -525,7 +523,8 @@ mod tests {
         let rc = Rc::new(widget);
         rc.emit();
 
-        let action = Action::with_param(rc.action_test(), (1, "desc"));
+        let mut action =
+            Action::with_param(rc.action_test(), vec![1.to_value(), "desc".to_value()]);
         action.emit();
 
         disconnect!(null, null, rc, null);

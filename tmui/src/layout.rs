@@ -553,7 +553,7 @@ impl LayoutMgr {
             widget.calc_leaf_size(window_size, parent_size);
 
             if widget.size() != size {
-                emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
+                emit!(LayoutManager::child_size_probe => widget, size_changed(widget.size()))
             }
             widget.image_rect().size()
         } else {
@@ -641,7 +641,7 @@ impl LayoutMgr {
                     widget.set_resize_redraw(true)
                 }
 
-                emit!(LayoutManager::child_size_probe => widget.size_changed(), widget.size())
+                emit!(LayoutManager::child_size_probe => widget, size_changed(widget.size()))
             }
 
             if widget.visible()
@@ -703,7 +703,7 @@ impl LayoutMgr {
             // Emit `geometry_changed()` when widget's position or size has changed.
             let new_rect = widget_ref.rect_f();
             if widget_ref.rect_record() != new_rect {
-                emit!(widget_ref.geometry_changed(), new_rect);
+                emit!(widget_ref, geometry_changed(new_rect));
             }
 
             // Determine whether the widget is a container.

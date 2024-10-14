@@ -2,6 +2,7 @@ pub use macros::{
     animatable, cast, cast_boxed, cast_mut, extends, reflect_trait, async_do, async_task, popupable, loadable, Childable, Childrenable,
 };
 
+pub use paste;
 pub use crate::actions::{ptr_address, Action, ActionExt, ActionHub, AsMutPtr, Signal};
 pub use crate::{emit, signal, reflect_bound};
 pub use crate::figure::color::Color;

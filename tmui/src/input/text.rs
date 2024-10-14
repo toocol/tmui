@@ -467,7 +467,7 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
             }
 
             if !cp.is_empty() {
-                emit!(self.value_changed());
+                emit!(self, value_changed());
             }
             self.update();
         }
@@ -486,7 +486,7 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
             let mem_val = mem.value;
             if !mem_val.eq(self.value_ref().as_str()) {
                 self.input_wrapper().set_value(mem_val);
-                emit!(self.value_changed())
+                emit!(self, value_changed())
             }
 
             self.update();
@@ -506,7 +506,7 @@ pub trait TextExt: TextPropsAcquire + WidgetImpl + TextInnerExt {
             let mem_val = mem.value;
             if !mem_val.eq(self.value_ref().as_str()) {
                 self.input_wrapper().set_value(mem_val);
-                emit!(self.value_changed())
+                emit!(self, value_changed())
             }
 
             self.update();
@@ -990,7 +990,7 @@ pub(crate) trait TextInnerExt:
                 let idx = self.map(self.props().cursor_index);
                 self.input_wrapper().value_mut().remove(idx);
 
-                emit!(self.value_changed());
+                emit!(self, value_changed());
             }
             KeyCode::KeyLeft => {
                 self.clear_selection();
@@ -1051,7 +1051,7 @@ pub(crate) trait TextInnerExt:
                 self.input_wrapper().value_mut().insert_str(idx, text);
                 self.props_mut().cursor_index += 1;
 
-                emit!(self.value_changed());
+                emit!(self, value_changed());
             }
         }
 
@@ -1233,7 +1233,7 @@ pub(crate) trait TextInnerExt:
                 self.props_mut().selection_end = end;
                 changed = true;
 
-                emit!(self.selection_changed());
+                emit!(self, selection_changed());
             }
         }
 
@@ -1382,7 +1382,7 @@ pub(crate) trait TextInnerExt:
             .value_mut()
             .replace_range(start..end, "");
         if start != end {
-            emit!(self.value_changed());
+            emit!(self, value_changed());
         }
 
         let text_window = self.props().text_window;
