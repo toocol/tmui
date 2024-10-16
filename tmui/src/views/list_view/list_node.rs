@@ -28,6 +28,18 @@ pub struct ListNode {
 
 impl ListNode {
     #[inline]
+    pub fn from(obj: &dyn ListViewObject) -> Self {
+        Self {
+            store: 0,
+            id: 0,
+            status: Status::empty(),
+            group_managed: false,
+            cells: obj.cells(),
+            node_render: obj.node_render(),
+        }
+    }
+
+    #[inline]
     pub fn id(&self) -> ObjectId {
         self.id
     }
@@ -141,18 +153,6 @@ impl ListNode {
 }
 
 impl ListNode {
-    #[inline]
-    pub(crate) fn create_from_obj(obj: &dyn ListViewObject) -> Self {
-        Self {
-            store: 0,
-            id: 0,
-            status: Status::empty(),
-            group_managed: false,
-            cells: obj.cells(),
-            node_render: obj.node_render(),
-        }
-    }
-
     #[inline]
     pub(crate) fn set_store_id(&mut self, id: ObjectId) {
         self.store = id;

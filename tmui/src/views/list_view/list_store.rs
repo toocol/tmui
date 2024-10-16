@@ -67,7 +67,27 @@ impl ConcurrentStore {
             }
         }
 
-        let mut node = ListNode::create_from_obj(obj).boxed();
+        let mut node = ListNode::from(obj).boxed();
+        node.set_store_id(self.id);
+        node.set_id(self.next_id());
+        self.items.push(node);
+        self.items.len() - 1
+    }
+
+    /// @return the index of added node
+    pub fn add_node_directly(&mut self, node: ListNode) -> usize {
+        if let Some(last) = self.items.last() {
+            if let Some(node) = last.downcast_ref::<ListNode>() {
+                if node.is_group_managed() {
+                    let separator = self.separator.clone().boxed();
+                    self.items.push(separator.as_list_item());
+                    self.separator_cnt += 1;
+                    self.separator_pos.push(self.items.len() - 1);
+                }
+            }
+        }
+
+        let mut node = node.boxed();
         node.set_store_id(self.id);
         node.set_id(self.next_id());
         self.items.push(node);
@@ -171,6 +191,15 @@ impl ListStore {
     }
 
     #[inline]
+    pub fn add_node_directly(&mut self, node: ListNode) -> usize {
+        let mut mutex = self.concurrent_store.lock();
+        let idx = mutex.add_node_directly(node);
+
+        emit!(self, items_len_changed(mutex.len()));
+        idx
+    }
+
+    #[inline]
     pub fn add_group(&mut self, group: ListGroup) -> Option<usize> {
         let mut mutex = self.concurrent_store.lock();
         let idx = mutex.add_group(group);
@@ -183,7 +212,7 @@ impl ListStore {
     pub fn clear(&mut self) {
         self.concurrent_store.lock().clear();
 
-        emit!(self, items_len_changed(0));
+        emit!(self, items_len_changed(0usize));
     }
 
     #[inline]

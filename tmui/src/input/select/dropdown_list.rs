@@ -1,10 +1,16 @@
 use crate::{
-    graphics::box_shadow::BoxShadow, prelude::*, scroll_area::LayoutMode, tlib::object::{ObjectImpl, ObjectSubclass}, views::list_view::{list_view_object::ListViewObject, ListView}, widget::{widget_ext::FocusStrat, WidgetImpl}
+    graphics::box_shadow::BoxShadow,
+    prelude::*,
+    scroll_area::LayoutMode,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    views::list_view::{list_node::ListNode, list_view_object::ListViewObject, ListView},
+    widget::{widget_ext::FocusStrat, WidgetImpl},
 };
 use tlib::signals;
 
 const MAX_VISIBLE_ITEMS: i32 = 20;
 
+#[cfg(not(win_popup))]
 pub trait DropdownListSignals: ActionExt {
     signals!(
         DropdownListSignals:
@@ -15,12 +21,13 @@ pub trait DropdownListSignals: ActionExt {
         value_changed(String);
     );
 }
+#[cfg(not(win_popup))]
 impl DropdownListSignals for DropdownList {}
 
 #[cfg(win_popup)]
-#[tlib::win_widget]
 #[extends(Popup)]
 #[derive(Childable)]
+#[tlib::win_widget(o2s(DropdownListCrsMsg), s2o(DropdownListCrsMsg))]
 pub struct DropdownList {
     #[child]
     list: Box<ListView>,
@@ -45,6 +52,9 @@ impl ObjectImpl for DropdownList {
         self.set_border_color(Color::GREY_LIGHT);
         self.set_box_shadow(BoxShadow::new(6., Color::BLACK, None, None, None));
 
+        #[cfg(win_popup)]
+        self.set_hexpand(true);
+
         self.list.set_layout_mode(LayoutMode::Overlay);
         self.list.set_hexpand(true);
         self.list.set_vexpand(true);
@@ -56,7 +66,12 @@ impl ObjectImpl for DropdownList {
                 .unwrap()
                 .downcast_mut::<DropdownList>()
                 .unwrap();
+
+            #[cfg(not(win_popup))]
             emit!(dropdown_list, value_changed(val));
+            #[cfg(win_popup)]
+            dropdown_list.send_cross_win_msg(DropdownListCrsMsg::ValueChanged(val));
+
             dropdown_list.trans_focus_take(FocusStrat::Restore);
             dropdown_list.hide();
         });
@@ -73,6 +88,7 @@ impl WidgetImpl for DropdownList {
     }
 }
 
+#[cfg(not(win_popup))]
 impl PopupImpl for DropdownList {
     fn calculate_position(&self, base_rect: Rect, _: Point) -> Point {
         let (tl, bl) = (base_rect.top_left(), base_rect.bottom_left());
@@ -92,6 +108,7 @@ impl PopupImpl for DropdownList {
 }
 
 impl DropdownList {
+    #[cfg(not(win_popup))]
     #[inline]
     pub(crate) fn new() -> Box<Self> {
         Object::new(&[])
@@ -102,6 +119,7 @@ impl DropdownList {
         self.list.clear();
     }
 
+    #[cfg(not(win_popup))]
     #[inline]
     pub(crate) fn add_option(&mut self, option: &dyn ListViewObject) {
         self.list.add_node(option);
@@ -128,5 +146,94 @@ impl DropdownList {
     #[inline]
     pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
         self.list.take_over_focus(strat);
+    }
+}
+
+#[cfg(win_popup)]
+pub trait CorrDropdownListSignals: ActionExt {
+    signals!(
+        CorrDropdownListSignals:
+
+        value_changed(String);
+    );
+}
+#[cfg(win_popup)]
+impl CorrDropdownListSignals for CorrDropdownList {}
+
+#[cfg(win_popup)]
+impl CorrDropdownList {
+    #[inline]
+    pub(crate) fn clear_options(&mut self) {
+        self.send_cross_win_msg(DropdownListCrsMsg::ClearOptions);
+    }
+
+    #[inline]
+    pub(crate) fn add_option(&mut self, option: &dyn ListViewObject) {
+        self.send_cross_win_msg(DropdownListCrsMsg::AddOption(ListNode::from(option)));
+    }
+
+    #[inline]
+    pub(crate) fn scroll_to(&mut self, idx: usize) {
+        self.send_cross_win_msg(DropdownListCrsMsg::ScrollTo(idx));
+    }
+
+    #[inline]
+    pub(crate) fn calc_height(&mut self) {
+        self.send_cross_win_msg(DropdownListCrsMsg::CalcHeight);
+    }
+
+    #[inline]
+    pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
+        self.send_cross_win_msg(DropdownListCrsMsg::TransFocusTake(strat));
+    }
+}
+
+////////////////////////////// Cross window message define/handle
+#[cfg(win_popup)]
+pub enum DropdownListCrsMsg {
+    // Origin to sink:
+    ClearOptions,
+    AddOption(ListNode),
+    ScrollTo(usize),
+    CalcHeight,
+    TransFocusTake(FocusStrat),
+
+    // Sink to origin:
+    ValueChanged(String),
+}
+
+impl CrossWinMsgHandler for CorrDropdownList {
+    type T = DropdownListCrsMsg;
+
+    fn handle(&mut self, msg: Self::T) {
+        match msg {
+            DropdownListCrsMsg::ValueChanged(val) => emit!(self, value_changed(val)),
+            _ => (),
+        }
+    }
+}
+
+impl CrossWinMsgHandler for DropdownList {
+    type T = DropdownListCrsMsg;
+
+    fn handle(&mut self, msg: Self::T) {
+        match msg {
+            DropdownListCrsMsg::ClearOptions => {
+                self.clear_options();
+            }
+            DropdownListCrsMsg::AddOption(node) => {
+                self.list.add_node_directly(node);
+            }
+            DropdownListCrsMsg::ScrollTo(to) => {
+                self.scroll_to(to);
+            }
+            DropdownListCrsMsg::CalcHeight => {
+                self.calc_height();
+            }
+            DropdownListCrsMsg::TransFocusTake(strat) => {
+                self.trans_focus_take(strat);
+            }
+            _ => (),
+        }
     }
 }

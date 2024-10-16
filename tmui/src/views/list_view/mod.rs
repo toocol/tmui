@@ -119,6 +119,12 @@ impl ListView {
         self.get_store_mut().add_node(obj)
     }
 
+    /// @return the index of added node.
+    #[inline]
+    pub fn add_node_directly(&mut self, node: ListNode) -> usize {
+        self.get_store_mut().add_node_directly(node)
+    }
+
     /// @return
     /// - Some: the index of last node in items.
     /// - None: if group is empty.

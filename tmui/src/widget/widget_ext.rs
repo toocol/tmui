@@ -883,7 +883,11 @@ impl<T: WidgetImpl> WidgetExt for T {
                 return;
             }
 
-            self.widget_props_mut().fixed_width_ration = width as f32 / parent_size.width() as f32;
+            if width == 0 {
+                self.widget_props_mut().fixed_width_ration = 1.;
+            } else {
+                self.widget_props_mut().fixed_width_ration = (width as f32 / parent_size.width() as f32).min(1.);
+            }
         }
     }
 
@@ -915,8 +919,12 @@ impl<T: WidgetImpl> WidgetExt for T {
                 return;
             }
 
-            self.widget_props_mut().fixed_height_ration =
-                height as f32 / parent_size.height() as f32;
+            if height == 0 {
+                self.widget_props_mut().fixed_height_ration = 1.;
+            } else {
+                self.widget_props_mut().fixed_height_ration =
+                    (height as f32 / parent_size.height() as f32).min(1.);
+            }
         }
     }
 
@@ -1024,10 +1032,15 @@ impl<T: WidgetImpl> WidgetExt for T {
         let (top, right, bottom, left) = self.borders().ceil();
         let (top, right, bottom, left) = (top as i32, right as i32, bottom as i32, left as i32);
 
-        rect.set_x(rect.x() + left);
-        rect.set_y(rect.y() + top);
-        rect.set_width(rect.width() - (left + right));
-        rect.set_height(rect.height() - (top + bottom));
+        if rect.width() >= (right + left) {
+            rect.set_x(rect.x() + left);
+            rect.set_width(rect.width() - (left + right));
+        }
+
+        if rect.height() >= (top + bottom) {
+            rect.set_y(rect.y() + top);
+            rect.set_height(rect.height() - (top + bottom));
+        }
 
         rect
     }

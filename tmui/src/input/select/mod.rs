@@ -5,7 +5,10 @@ use super::{Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInp
 use crate::{
     asset::Asset, font::FontCalculation, input::INPUT_DEFAULT_BORDER_COLOR, input_ele_impl, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_ext::FocusStrat, widget_inner::WidgetInnerExt, WidgetImpl}
 };
+#[cfg(not(win_popup))]
 use dropdown_list::{DropdownList, DropdownListSignals};
+#[cfg(win_popup)]
+use dropdown_list::{CorrDropdownList, CorrDropdownListSignals};
 use select_option::SelectOption;
 use tlib::{
     connect, events::MouseEvent, global::PrecisionOps, namespace::MouseButton, run_after,
@@ -45,15 +48,31 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
 
         self.input_wrapper.init(self.id());
 
-        let mut dropdown_list = DropdownList::new();
-        dropdown_list.width_request(MINIMUN_WIDTH);
-        connect!(
-            dropdown_list,
-            value_changed(),
-            self,
-            dropdown_list_value_changed(String)
-        );
-        self.add_popup(dropdown_list);
+        #[cfg(not(win_popup))]
+        {
+            let mut dropdown_list = DropdownList::new();
+            dropdown_list.width_request(MINIMUN_WIDTH);
+            connect!(
+                dropdown_list,
+                value_changed(),
+                self,
+                dropdown_list_value_changed(String)
+            );
+            self.add_popup(dropdown_list);
+        }
+
+        #[cfg(win_popup)]
+        {
+            let mut dropdown_list = crate::input::select::dropdown_list::CorrDropdownList::new();
+            dropdown_list.width_request(MINIMUN_WIDTH);
+            connect!(
+                dropdown_list,
+                value_changed(),
+                self,
+                dropdown_list_value_changed(String)
+            );
+            self.add_popup(dropdown_list);
+        }
 
         let size = ARROW_SIZE as u32;
         let arrow = SvgStr::get::<Asset>(
@@ -193,6 +212,7 @@ impl<T: SelectBounds> Select<T> {
         self.update();
     }
 
+    #[cfg(not(win_popup))]
     #[inline]
     pub fn dropdown_list(&self) -> &DropdownList {
         self.get_popup_ref()
@@ -202,12 +222,32 @@ impl<T: SelectBounds> Select<T> {
             .unwrap()
     }
 
+    #[cfg(not(win_popup))]
     #[inline]
     pub fn dropdown_list_mut(&mut self) -> &mut DropdownList {
         self.get_popup_mut()
             .unwrap()
             .as_any_mut()
             .downcast_mut::<DropdownList>()
+            .unwrap()
+    }
+
+    #[cfg(win_popup)]
+    #[inline]
+    pub fn dropdown_list(&self) -> &CorrDropdownList {
+        self.get_popup_ref()
+            .unwrap()
+            .as_any()
+            .downcast_ref::<CorrDropdownList>()
+            .unwrap()
+    }
+
+    #[cfg(win_popup)]
+    pub fn dropdown_list_mut(&mut self) -> &mut CorrDropdownList {
+        self.get_popup_mut()
+            .unwrap()
+            .as_any_mut()
+            .downcast_mut::<CorrDropdownList>()
             .unwrap()
     }
 }

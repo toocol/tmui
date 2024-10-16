@@ -1,7 +1,4 @@
-use super::{
-    list_node::ListNode,
-    list_view_object::ListViewObject,
-};
+use super::{list_node::ListNode, list_view_object::ListViewObject};
 use derivative::Derivative;
 
 #[derive(Derivative)]
@@ -19,10 +16,7 @@ impl ListGroup {
 
     #[inline]
     pub fn add_node(&mut self, obj: &dyn ListViewObject) {
-        self.nodes
-            .as_mut()
-            .unwrap()
-            .push(ListNode::create_from_obj(obj))
+        self.nodes.as_mut().unwrap().push(ListNode::from(obj))
     }
 
     #[inline]

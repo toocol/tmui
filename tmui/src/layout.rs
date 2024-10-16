@@ -148,8 +148,12 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
 
                 if self.fixed_width_ration() <= 0. {
-                    let ration = self.get_width_request() as f32 / parent_size.width() as f32;
-                    self.set_fixed_width_ration(ration);
+                    if parent_size.width() == 0 || self.size().width() == 0 {
+                        self.set_fixed_width_ration(1.);
+                    } else {
+                        let ration = self.get_width_request() as f32 / parent_size.width() as f32;
+                        self.set_fixed_width_ration(ration.min(1.));
+                    }
                 }
 
                 self.set_fixed_width(
@@ -201,8 +205,12 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
 
                 if self.fixed_height_ration() <= 0. {
-                    let ration = self.get_height_request() as f32 / parent_size.height() as f32;
-                    self.set_fixed_height_ration(ration);
+                    if parent_size.height() == 0 || self.size().height() == 0 {
+                        self.set_fixed_height_ration(1.);
+                    } else {
+                        let ration = self.get_height_request() as f32 / parent_size.height() as f32;
+                        self.set_fixed_height_ration(ration.min(1.));
+                    }
                 }
 
                 self.set_fixed_height(
@@ -228,9 +236,11 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
                 if parent_vscale.is_adaption() {
                     let ration = self.vscale().min(1.) / 1.;
+                    println!("adaption ration={}", ration);
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
+                    println!("dismis ration={}", ration);
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 }
             } else {
@@ -332,8 +342,12 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
 
                 if self.fixed_width_ration() <= 0. {
-                    let ration = self.get_width_request() as f32 / parent_size.width() as f32;
-                    self.set_fixed_width_ration(ration);
+                    if parent_size.width() == 0 || self.size().width() == 0{
+                        self.set_fixed_width_ration(1.);
+                    } else {
+                        let ration = self.get_width_request() as f32 / parent_size.width() as f32;
+                        self.set_fixed_width_ration(ration.min(1.));
+                    }
                 }
 
                 self.set_fixed_width(
@@ -383,8 +397,12 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
 
                 if self.fixed_height_ration() <= 0. {
-                    let ration = self.get_height_request() as f32 / parent_size.height() as f32;
-                    self.set_fixed_height_ration(ration);
+                    if parent_size.height() == 0 || self.size().height() == 0 {
+                        self.set_fixed_height_ration(1.);
+                    } else {
+                        let ration = self.get_height_request() as f32 / parent_size.height() as f32;
+                        self.set_fixed_height_ration(ration.min(1.));
+                    }
                 }
 
                 self.set_fixed_height(
@@ -515,9 +533,10 @@ impl LayoutMgr {
         widget: &mut dyn WidgetImpl,
     ) -> Size {
         debug!(
-            "Widget {} size probe, parent_size: {:?}, visible: {}",
+            "Widget {} size probe, parent_size: {:?}, self_size: {:?}, visible: {}",
             widget.name(),
             parent_size,
+            widget.size(),
             widget.visible(),
         );
 
@@ -644,12 +663,12 @@ impl LayoutMgr {
                 emit!(LayoutManager::child_size_probe => widget, size_changed(widget.size()))
             }
 
-            if widget.visible()
+            let window = ApplicationWindow::window();
+            if window.initialized() && widget.visible()
                 && cast!(widget as CrossWinWidget).is_some()
                 && cur_size != window_size
             {
                 debug!("Cross window widget trigger window size change.");
-                let window = ApplicationWindow::window();
                 window.resize(Some(cur_size.width()), Some(cur_size.height()));
                 window.send_message(Message::WinWidgetSizeReverseRequest(
                     window.winit_id().unwrap(),
