@@ -32,7 +32,7 @@ impl Animation {
         match self {
             Animation::Linear => AnimationsHolder::Linear { start, end, hold },
             Animation::EaseIn => AnimationsHolder::EaseIn { start, end, hold },
-            Animation::EaseOut => AnimationsHolder::EaseIn { start, end, hold },
+            Animation::EaseOut => AnimationsHolder::EaseOut { start, end, hold },
             _ => panic!("Unexpected `Animation` type for creating rect holder."),
         }
     }
@@ -47,7 +47,7 @@ impl Animation {
         match self {
             Animation::FadeLinear => AnimationsHolder::FadeLinear { start, end, hold },
             Animation::FadeEaseIn => AnimationsHolder::FadeEaseIn { start, end, hold },
-            Animation::FadeEaseOut => AnimationsHolder::FadeEaseIn { start, end, hold },
+            Animation::FadeEaseOut => AnimationsHolder::FadeEaseOut { start, end, hold },
             _ => panic!("Unexpected `Animation` type for creating color holder."),
         }
     }
