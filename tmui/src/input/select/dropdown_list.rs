@@ -1,10 +1,12 @@
+#[cfg(not(win_popup))]
+use crate::widget::widget_ext::FocusStrat;
 use crate::{
     graphics::box_shadow::BoxShadow,
     prelude::*,
     scroll_area::LayoutMode,
     tlib::object::{ObjectImpl, ObjectSubclass},
     views::list_view::{list_node::ListNode, list_view_object::ListViewObject, ListView},
-    widget::{widget_ext::FocusStrat, WidgetImpl},
+    widget::WidgetImpl,
 };
 use tlib::signals;
 
@@ -72,7 +74,9 @@ impl ObjectImpl for DropdownList {
             #[cfg(win_popup)]
             dropdown_list.send_cross_win_msg(DropdownListCrsMsg::ValueChanged(val));
 
+            #[cfg(not(win_popup))]
             dropdown_list.trans_focus_take(FocusStrat::Restore);
+
             dropdown_list.hide();
         });
 
@@ -143,6 +147,7 @@ impl DropdownList {
         }
     }
 
+    #[cfg(not(win_popup))]
     #[inline]
     pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
         self.list.take_over_focus(strat);
@@ -181,11 +186,6 @@ impl CorrDropdownList {
     pub(crate) fn calc_height(&mut self) {
         self.send_cross_win_msg(DropdownListCrsMsg::CalcHeight);
     }
-
-    #[inline]
-    pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
-        self.send_cross_win_msg(DropdownListCrsMsg::TransFocusTake(strat));
-    }
 }
 
 ////////////////////////////// Cross window message define/handle
@@ -196,7 +196,6 @@ pub enum DropdownListCrsMsg {
     AddOption(ListNode),
     ScrollTo(usize),
     CalcHeight,
-    TransFocusTake(FocusStrat),
 
     // Sink to origin:
     ValueChanged(String),
@@ -206,9 +205,8 @@ impl CrossWinMsgHandler for CorrDropdownList {
     type T = DropdownListCrsMsg;
 
     fn handle(&mut self, msg: Self::T) {
-        match msg {
-            DropdownListCrsMsg::ValueChanged(val) => emit!(self, value_changed(val)),
-            _ => (),
+        if let DropdownListCrsMsg::ValueChanged(val) = msg {
+            emit!(self, value_changed(val))
         }
     }
 }
@@ -229,9 +227,6 @@ impl CrossWinMsgHandler for DropdownList {
             }
             DropdownListCrsMsg::CalcHeight => {
                 self.calc_height();
-            }
-            DropdownListCrsMsg::TransFocusTake(strat) => {
-                self.trans_focus_take(strat);
             }
             _ => (),
         }

@@ -27,5 +27,4 @@ fn main() {
 
 fn build_ui(window: &mut ApplicationWindow) {
     window.child(View::new());
-    window.show_on_ready();
 }

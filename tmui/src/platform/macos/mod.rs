@@ -75,6 +75,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+        let defer_display = win_config.defer_display();
         let inner_agent = if self.master.is_some() {
             let master = self.master.as_ref().unwrap().clone();
             Some(InnerAgent::master(master))
@@ -162,6 +163,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     input_receiver: InputReceiver(input_receiver),
                 },
                 (init_outer, init_inner),
+                defer_display,
             ),
             PhysicalWindow::Macos(MacosWindow::new(
                 window_id,

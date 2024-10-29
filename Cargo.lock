@@ -1563,6 +1563,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "nohash-hasher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
+
+[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2677,6 +2683,7 @@ dependencies = [
  "libc",
  "log",
  "macros",
+ "nohash-hasher",
  "num_cpus",
  "once_cell",
  "paste",
@@ -2709,6 +2716,7 @@ dependencies = [
  "lazy_static",
  "log",
  "log4rs",
+ "nohash-hasher",
  "objc",
  "once_cell",
  "raw-window-handle 0.5.2",

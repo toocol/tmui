@@ -453,6 +453,16 @@ pub(crate) fn message_handle(window: &mut ApplicationWindow, msg: Message) {
             window.window_layout_change();
         }
 
+        Message::WinWidgetVisibilityReverseRequest(id, visible) => {
+            if let Some(widget) = window.find_id_mut(id) {
+                if visible {
+                    widget.show();
+                } else {
+                    widget.hide();
+                }
+            }
+        }
+
         Message::WinWidgetSizeChanged(id, size) => {
             if let Some(w) = window.find_id_mut(id) {
                 w.width_request(size.width());

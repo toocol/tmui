@@ -67,8 +67,13 @@ pub(crate) enum Message {
     /// Child window's geometry has changed, notify correspondent WinWidget change the size.
     WinWidgetSizeReverseRequest(WindowId, Size),
 
-    /// Request the child window correspondent to the id change the visibility.
+    /// Request the child window correspondent to the id change the visibility,
+    /// because of the window widget in parent has visibility changed.
     WinWidgetVisibilityChangedRequest(ObjectId, bool),
+
+    /// Request the window widget in parent window to change the visibility,
+    /// because of the child window has visibility changed.
+    WinWidgetVisibilityReverseRequest(ObjectId, bool),
 
     /// @see [`WinWidgetSizeReverseRequest`](Message::WinWidgetSizeReverseRequest)
     WinWidgetSizeChanged(ObjectId, Size),
@@ -139,6 +144,11 @@ impl Debug for Message {
                 .finish(),
             Self::WinWidgetVisibilityChangedRequest(arg0, arg1) => f
                 .debug_tuple("WinWidgetVisibilityChangedRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::WinWidgetVisibilityReverseRequest(arg0, arg1) => f
+                .debug_tuple("WinWidgetVisibilityReverseRequest")
                 .field(arg0)
                 .field(arg1)
                 .finish(),

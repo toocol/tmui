@@ -629,6 +629,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     #[inline]
     pub fn defer_display(mut self, defer_display: bool) -> Self {
         self.win_cfg_bld = self.win_cfg_bld.visible(!defer_display);
+        self.win_cfg_bld = self.win_cfg_bld.defer_display(defer_display);
         self
     }
 }

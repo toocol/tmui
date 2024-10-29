@@ -28,6 +28,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
     ptr::{addr_of_mut, NonNull},
+    sync::Once,
     thread::{self, ThreadId},
 };
 use tlib::{
@@ -46,6 +47,7 @@ use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
 thread_local! {
     pub(crate) static WINDOW_ID: RefCell<ObjectId> = const { RefCell::new(0) };
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = const { RefCell::new(false) };
+    static WINDOW_PREPARED_ONCE: Once = const { Once::new() };
 }
 
 const DEFAULT_WINDOW_BACKGROUND: Color = Color::WHITE;
@@ -59,7 +61,7 @@ pub struct ApplicationWindow {
     ipc_bridge: Option<Box<dyn IpcBridge>>,
     shared_widget_size_changed: bool,
     high_load_request: bool,
-    show_on_ready: bool,
+    defer_display: bool,
     /// Position include the tile bar on the screen coordinate.
     outer_position: Point,
     /// Position to the client area on the screen coordinate.
@@ -448,11 +450,6 @@ impl ApplicationWindow {
     #[inline]
     pub fn get_param<T: FromValue + StaticType>(&self, key: &str) -> Option<T> {
         self.params.as_ref()?.get(key).map(|p| p.get::<T>())
-    }
-
-    #[inline]
-    pub fn show_on_ready(&mut self) {
-        self.show_on_ready = true;
     }
 
     /// Should set the parent of widget before use this function.
@@ -977,13 +974,21 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn check_show_on_ready(&mut self) {
-        if self.show_on_ready {
-            self.show_on_ready = false;
-            self.send_message(Message::WindowVisibilityRequest(
-                self.winit_id().unwrap(),
-                true,
-            ));
+    pub(crate) fn set_defer_display(&mut self, defer_display: bool) {
+        self.defer_display = defer_display
+    }
+
+    #[inline]
+    pub(crate) fn window_prepared(&self) {
+        if self.defer_display {
+            WINDOW_PREPARED_ONCE.with(|once| {
+                once.call_once(|| {
+                    self.send_message(Message::WindowVisibilityRequest(
+                        self.winit_id().unwrap(),
+                        true,
+                    ));
+                })
+            });
         }
     }
 

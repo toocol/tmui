@@ -11,6 +11,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("Input Elements")
+        .defer_display(true)
         .build();
 
     app.connect_activate(build_ui);
@@ -19,5 +20,5 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    window.child(Holder::new())
+    window.child(Holder::new());
 }

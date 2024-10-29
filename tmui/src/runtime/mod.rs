@@ -113,6 +113,7 @@ where
     window.set_outer_position(init_pos.0);
     window.set_client_position(init_pos.1);
     window.set_params(logic_window.params.take());
+    window.set_defer_display(logic_window.defer_display);
 
     if let Some(window_id) = logic_window.window_id() {
         window.set_winit_id(window_id)
@@ -218,7 +219,7 @@ where
         }
 
         window.iter_execute();
-        window.check_show_on_ready();
+        window.window_prepared();
 
         cpu_balance.payload_check();
         if window.is_high_load_requested() {

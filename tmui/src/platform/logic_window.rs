@@ -30,6 +30,7 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     shared_widget_id: Option<&'static str>,
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
 
+    pub defer_display: bool,
     pub platform_type: PlatformType,
     pub backend_type: BackendType,
     pub ipc_type: IpcType,
@@ -63,6 +64,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         shared_channel: Option<SharedChannel<T, M>>,
         context: LogicWindowContext,
         initial_position: (Point, Point),
+        defer_display: bool,
     ) -> Self {
         let lock = master.as_ref().map(|m| m.read().buffer_lock());
         Self {
@@ -74,6 +76,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             lock,
             shared_widget_id: None,
             slave: None,
+            defer_display,
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
             ipc_type: IpcType::Master,
@@ -105,6 +108,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             lock,
             shared_widget_id: Some(shared_widget_id),
             slave: Some(slave),
+            defer_display: false,
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
             ipc_type: IpcType::Slave,

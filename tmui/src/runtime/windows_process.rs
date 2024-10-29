@@ -534,7 +534,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             Message::CreateWindow(parent_win_id, mut win) => {
                                 let win_cfg = win.take_config();
-                                let (is_decoration, is_inner) = (win_cfg.decoration(), win.is_inner_window());
+                                let is_decoration = win_cfg.decoration();
                                 let (mut logic_window, physical_window) = self
                                     .platform_context
                                     .create_window(win_cfg, Some(target), Some(self.proxy()));
@@ -555,7 +555,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     self.win_widget_map.insert(id, win_id);
                                 }
 
-                                if !is_decoration && is_inner {
+                                if !is_decoration {
                                     set_undecoration_window(phys_window.winit_window());
                                 }
 
@@ -629,6 +629,23 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 window.winit_window().set_visible(visible);
+
+                                if let Some(parent_id) = self.parent_map.get(&window_id) {
+                                    let parent = self.windows.get(parent_id).unwrap_or_else(|| {
+                                        panic!("Can not find parent window with id {:?}", parent_id)
+                                    });
+                                    let mut object_id = None;
+                                    for (&k, &v) in self.win_widget_map.iter() {
+                                        if v == window_id {
+                                            object_id = Some(k);
+                                            break;
+                                        }
+                                    }
+
+                                    if let Some(object_id) = object_id {
+                                        parent.send_input(Message::WinWidgetVisibilityReverseRequest(object_id, visible));
+                                    }
+                                }
                             }
 
                             Message::WindowResizeRequest(window_id, size) => {
@@ -669,6 +686,10 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 let window = self.windows.get(win_id).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", win_id)
                                 });
+                                if let Some(parent) = self.parent_map.get(win_id) {
+                                    let parent = self.windows.get(parent).unwrap_or_else(|| panic!("Can not find parent window with id {:?}, child window id {:?}", parent, win_id));
+                                    parent.winit_window().focus_window();
+                                }
 
                                 window.winit_window().set_visible(visible);
                                 window.send_input(Message::WindowVisibilityChanged(visible));

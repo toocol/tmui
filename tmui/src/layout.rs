@@ -236,11 +236,9 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
                 if parent_vscale.is_adaption() {
                     let ration = self.vscale().min(1.) / 1.;
-                    println!("adaption ration={}", ration);
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
-                    println!("dismis ration={}", ration);
                     self.set_fixed_height((parent_size.height() as f32 * ration) as i32);
                 }
             } else {

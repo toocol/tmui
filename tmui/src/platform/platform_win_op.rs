@@ -36,7 +36,7 @@ pub(crate) fn set_undecoration_window(window: &WinitWindow) {
         use raw_window_handle::HasRawWindowHandle;
         use windows::Win32::UI::WindowsAndMessaging::{
             GetWindowLongW, SetWindowLongW, GWL_EXSTYLE, GWL_STYLE, WINDOW_EX_STYLE, WINDOW_STYLE,
-            WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_OVERLAPPEDWINDOW,
+            WS_EX_TOOLWINDOW, WS_OVERLAPPEDWINDOW
         };
 
         let hwnd = window.raw_window_handle().hwnd();
@@ -46,11 +46,7 @@ pub(crate) fn set_undecoration_window(window: &WinitWindow) {
             let ex_style = WINDOW_EX_STYLE(GetWindowLongW(hwnd, GWL_EXSTYLE) as u32);
 
             SetWindowLongW(hwnd, GWL_STYLE, (style & !WS_OVERLAPPEDWINDOW).0 as i32);
-            SetWindowLongW(
-                hwnd,
-                GWL_EXSTYLE,
-                (ex_style | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_TOPMOST).0 as i32,
-            );
+            SetWindowLongW(hwnd, GWL_EXSTYLE, (ex_style | WS_EX_TOOLWINDOW).0 as i32);
         }
     }
 }

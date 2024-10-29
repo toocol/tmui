@@ -37,6 +37,7 @@ strum_macros = { workspace = true }
 usvg = { workspace = true }
 regex = { workspace = true }
 rust_decimal = { workspace = true }
+nohash-hasher = { workspace = true}
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.43.0", features = [

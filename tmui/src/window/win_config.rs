@@ -4,10 +4,7 @@ use tlib::{
     figure::{Point, Size},
     typedef::{WinitIcon, WinitPosition, WinitWindowBuilder},
     winit::{
-        dpi::{PhysicalPosition, PhysicalSize},
-        error::OsError,
-        event_loop::EventLoopWindowTarget,
-        window::{Window, WindowButtons, WindowLevel},
+        dpi::{PhysicalPosition, PhysicalSize}, error::OsError, event_loop::EventLoopWindowTarget, platform::windows::WindowBuilderExtWindows, window::{Window, WindowButtons, WindowLevel}
     },
 };
 
@@ -55,6 +52,10 @@ pub struct WindowConfig {
     parent_window: Option<RawWindowHandle6>,
     /// Window level of new window
     win_level: WindowLevel,
+    /// Window defer display or not.
+    defer_display: bool,
+    /// Skip the taskbar setting or not.
+    skip_taskbar: bool,
 }
 
 impl WindowConfig {
@@ -78,6 +79,8 @@ impl WindowConfig {
             position: Default::default(),
             parent_window: Default::default(),
             win_level: Default::default(),
+            defer_display: Default::default(),
+            skip_taskbar: Default::default(),
         }
     }
 
@@ -162,6 +165,16 @@ impl WindowConfig {
     }
 
     #[inline]
+    pub fn defer_display(&self) -> bool {
+        self.defer_display
+    }
+
+    #[inline]
+    pub fn skip_taskbar(&self) -> bool {
+        self.skip_taskbar
+    }
+
+    #[inline]
     pub(crate) fn set_parent_window_rwh(&mut self, rwh: RawWindowHandle6) {
         self.parent_window = Some(rwh)
     }
@@ -179,6 +192,7 @@ impl WindowConfig {
             .with_maximized(self.maximized)
             .with_active(self.active)
             .with_enabled_buttons(self.enable_buttons)
+            .with_skip_taskbar(self.skip_taskbar)
             .with_window_level(self.win_level);
 
         if let Some(max_size) = self.max_size {
@@ -239,6 +253,8 @@ pub struct WindowConfigBuilder {
     enable_buttons: WindowButtons,
     position: Option<Point>,
     win_level: WindowLevel,
+    defer_display: bool,
+    skip_taskbar: bool,
 }
 
 impl WindowConfigBuilder {
@@ -383,6 +399,24 @@ impl WindowConfigBuilder {
         self
     }
 
+    /// Set the window defer display or not.
+    /// 
+    /// The default value was [`false`]
+    #[inline]
+    pub fn defer_display(mut self, defer_display: bool) -> Self {
+        self.defer_display = defer_display;
+        self
+    }
+
+    /// Set the window register on the taskbar or not.
+    /// 
+    /// The default value was [`false`]
+    #[inline]
+    pub fn skip_taskbar(mut self, skip_taskbar: bool) -> Self {
+        self.skip_taskbar = skip_taskbar;
+        self
+    }
+
     #[inline]
     pub fn build(self) -> WindowConfig {
         let mut cfg = WindowConfig::new();
@@ -405,6 +439,8 @@ impl WindowConfigBuilder {
         cfg.enable_buttons = self.enable_buttons;
         cfg.position = self.position;
         cfg.win_level = self.win_level;
+        cfg.defer_display = self.defer_display;
+        cfg.skip_taskbar = self.skip_taskbar;
 
         cfg
     }

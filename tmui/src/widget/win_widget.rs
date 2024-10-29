@@ -4,7 +4,7 @@ use crate::{
     window::{win_builder::WindowBuilder, win_config::WindowConfig},
 };
 use std::ptr::NonNull;
-use tlib::{prelude::*, reflect_trait};
+use tlib::{prelude::*, reflect_trait, winit::window::WindowLevel};
 
 pub(crate) type WinWidgetHnd = Option<NonNull<dyn WinWidget>>;
 pub(crate) type CrsWinMsgHnd = Option<NonNull<dyn CrossWinMsgHandlerInner>>;
@@ -64,7 +64,9 @@ pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bo
                     .width(rect.width() as u32)
                     .height(rect.height() as u32)
                     .decoration(false)
+                    .skip_taskbar(true)
                     .visible(win_widget.visible())
+                    .win_level(WindowLevel::AlwaysOnTop)
                     .build(),
             )
             .inner_window(inner)

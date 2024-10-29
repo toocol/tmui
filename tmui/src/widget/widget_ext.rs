@@ -15,6 +15,7 @@ use crate::{
     popup::ReflectPopupImpl,
     primitive::Message,
     widget::WidgetSignals,
+    prelude::*,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -22,7 +23,6 @@ use tlib::{
     global::PrecisionOps,
     namespace::{Align, BorderStyle, Coordinate, Overflow, SystemCursorShape},
     object::ObjectId,
-    prelude::*,
     ptr_mut,
 };
 
@@ -723,6 +723,10 @@ impl<T: WidgetImpl> WidgetExt for T {
                 self.set_focus(false);
             }
         }
+
+        if cast!(self as CrossWinWidget).is_some() {
+            self.window().hide()
+        }
     }
 
     #[inline]
@@ -765,6 +769,10 @@ impl<T: WidgetImpl> WidgetExt for T {
             }
         } else if self.initialized() {
             self.window().layout_change(self)
+        }
+
+        if cast!(self as CrossWinWidget).is_some() {
+            self.window().show()
         }
     }
 
