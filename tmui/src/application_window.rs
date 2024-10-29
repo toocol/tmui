@@ -23,6 +23,7 @@ use crate::{
     window::win_builder::WindowBuilder,
 };
 use log::{debug, error, warn};
+use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
@@ -71,7 +72,7 @@ pub struct ApplicationWindow {
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_mgr: LayoutMgr,
-    widgets: HashMap<ObjectId, WidgetHnd>,
+    widgets: IntMap<ObjectId, WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
     shadow_mouse_watch: Vec<WidgetHnd>,
     crs_win_handlers: Vec<CrsWinMsgHnd>,
@@ -85,8 +86,8 @@ pub struct ApplicationWindow {
 
     run_after: Option<FnRunAfter>,
     run_afters: Vec<WidgetHnd>,
-    watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
-    overlaids: HashMap<ObjectId, WidgetHnd>,
+    watch_map: IntMap<GlobalWatchEvent, HashSet<ObjectId>>,
+    overlaids: IntMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
     win_widgets: Vec<WinWidgetHnd>,
 
@@ -175,14 +176,14 @@ impl ApplicationWindow {
     /// # Safety
     /// `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
-    pub(crate) fn windows() -> &'static mut HashMap<ObjectId, ApplicationWindowContext> {
-        static mut WINDOWS: Lazy<HashMap<ObjectId, ApplicationWindowContext>> =
-            Lazy::new(HashMap::new);
+    pub(crate) fn windows() -> &'static mut IntMap<ObjectId, ApplicationWindowContext> {
+        static mut WINDOWS: Lazy<IntMap<ObjectId, ApplicationWindowContext>> =
+            Lazy::new(IntMap::default);
         unsafe { addr_of_mut!(WINDOWS).as_mut().unwrap() }
     }
 
     #[inline]
-    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<ObjectId, WidgetHnd> {
+    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut IntMap<ObjectId, WidgetHnd> {
         let window = Self::window_of(id);
         &mut window.widgets
     }
@@ -691,12 +692,12 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn overlaids(&self) -> &HashMap<ObjectId, WidgetHnd> {
+    pub(crate) fn overlaids(&self) -> &IntMap<ObjectId, WidgetHnd> {
         &self.overlaids
     }
 
     #[inline]
-    pub(crate) fn overlaids_mut(&mut self) -> &mut HashMap<ObjectId, WidgetHnd> {
+    pub(crate) fn overlaids_mut(&mut self) -> &mut IntMap<ObjectId, WidgetHnd> {
         &mut self.overlaids
     }
 

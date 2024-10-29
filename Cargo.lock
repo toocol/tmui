@@ -187,6 +187,7 @@ name = "benchmark"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "nohash-hasher",
  "regex",
  "tipc",
  "tlib",
@@ -2662,6 +2663,7 @@ dependencies = [
  "libc",
  "log",
  "nix 0.27.1",
+ "nohash-hasher",
  "parking_lot",
  "rand",
  "raw_sync",

@@ -1,12 +1,11 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
-use tlib::object::ObjectId;
-
 use super::{InputBounds, InputWrapper};
+use nohash_hasher::IntMap;
+use std::{cell::RefCell, rc::Rc};
+use tlib::object::ObjectId;
 
 pub struct RadioControl<T: InputBounds> {
     selected: RefCell<Option<Rc<InputWrapper<T>>>>,
-    wrappers: RefCell<HashMap<ObjectId, Rc<InputWrapper<T>>>>,
+    wrappers: RefCell<IntMap<ObjectId, Rc<InputWrapper<T>>>>,
 }
 
 impl<T: InputBounds> RadioControl<T> {
@@ -14,16 +13,13 @@ impl<T: InputBounds> RadioControl<T> {
     pub fn new() -> Rc<Self> {
         Rc::new(Self {
             selected: RefCell::new(None),
-            wrappers: RefCell::new(HashMap::new()),
+            wrappers: RefCell::new(IntMap::default()),
         })
     }
 
     #[inline]
     pub fn value(&self) -> Option<T> {
-        self.selected
-            .borrow()
-            .as_ref()
-            .map(|s| s.value())
+        self.selected.borrow().as_ref().map(|s| s.value())
     }
 
     #[inline]

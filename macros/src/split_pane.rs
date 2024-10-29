@@ -41,7 +41,7 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
     }
 
     impl SplitInfosGetter for #name {
-        fn split_infos(&mut self) -> &mut std::collections::HashMap<ObjectId, Box<SplitInfo>> {
+        fn split_infos(&mut self) -> &mut nohash_hasher::IntMap<ObjectId, Box<SplitInfo>> {
             &mut self.split_infos
         }
 

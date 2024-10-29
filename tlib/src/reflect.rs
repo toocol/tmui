@@ -1,8 +1,8 @@
-use crate::prelude::AsAny;
+use crate::{prelude::AsAny, typedef::WrappedTypeId};
+use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
     any::{Any, TypeId},
-    collections::HashMap,
     ptr::addr_of_mut,
 };
 
@@ -52,11 +52,12 @@ use std::{
 /// }
 /// ```
 pub struct TypeRegistry {
-    registers: HashMap<TypeId, TypeRegistration>,
+    registers: IntMap<WrappedTypeId, TypeRegistration>,
 }
 
 impl TypeRegistry {
     /// Create a boxed TypeRegistry.
+    #[inline]
     fn new() -> Box<Self> {
         Box::new(Self {
             registers: Default::default(),
@@ -64,36 +65,39 @@ impl TypeRegistry {
     }
 
     /// Get the single instance of Registry.
+    #[inline]
     pub fn instance() -> &'static mut TypeRegistry {
         static mut TYPE_REGISTRY: Lazy<Box<TypeRegistry>> = Lazy::new(TypeRegistry::new);
         unsafe { addr_of_mut!(TYPE_REGISTRY).as_mut().unwrap().as_mut() }
     }
 
+    #[inline]
     pub fn register<T: Reflect, RT: FromType<T> + ReflectTrait>(&mut self) {
         self.registers
-            .entry(TypeId::of::<T>())
+            .entry(TypeId::of::<T>().into())
             .or_insert(TypeRegistration {
                 data: Default::default(),
             })
             .data
-            .insert(TypeId::of::<RT>(), Box::new(RT::from_type()));
+            .insert(TypeId::of::<RT>().into(), Box::new(RT::from_type()));
     }
 
+    #[inline]
     pub fn get_type_data<T: ReflectTrait>(obj: &dyn Reflect) -> Option<&T> {
         Self::instance()
             .registers
-            .get(&obj.type_id())
+            .get(&obj.type_id().into())
             .and_then(|registration| {
                 registration
                     .data
-                    .get(&TypeId::of::<T>())
+                    .get(&TypeId::of::<T>().into())
                     .and_then(|reflect| reflect.as_any().downcast_ref::<T>())
             })
     }
 }
 
 pub struct TypeRegistration {
-    data: HashMap<TypeId, Box<dyn ReflectTrait>>,
+    data: IntMap<WrappedTypeId, Box<dyn ReflectTrait>>,
 }
 
 /// Auto implemented by defined [`extends`](macros::extends) on struct. <br>

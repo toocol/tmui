@@ -13,13 +13,14 @@ use crate::{
     widget::WidgetImpl,
 };
 use log::debug;
-use std::{collections::HashMap, mem::size_of, ptr::NonNull};
+use nohash_hasher::IntMap;
+use std::{mem::size_of, ptr::NonNull};
 use tlib::{implements_enum_value, namespace::AsNumeric, nonnull_mut, split_pane_impl};
 
 #[extends(Container)]
 pub struct SplitPane {
     /// The HashMap to hold all the ownership of SplitInfo.
-    split_infos: HashMap<ObjectId, Box<SplitInfo>>,
+    split_infos: IntMap<ObjectId, Box<SplitInfo>>,
     /// The vector to hold all the raw pointer of SplitInfo, ensure execution order.
     split_infos_vec: Vec<Option<NonNull<SplitInfo>>>,
 }
@@ -135,7 +136,7 @@ impl ContainerLayout for SplitPane {
 #[reflect_trait]
 pub trait SplitInfosGetter {
     /// Get the split infos map.
-    fn split_infos(&mut self) -> &mut HashMap<ObjectId, Box<SplitInfo>>;
+    fn split_infos(&mut self) -> &mut IntMap<ObjectId, Box<SplitInfo>>;
 
     /// Get the plit infos deque.
     fn split_infos_vec(&mut self) -> &mut Vec<Option<NonNull<SplitInfo>>>;

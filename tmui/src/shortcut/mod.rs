@@ -2,6 +2,7 @@ pub mod mgr;
 
 use self::mgr::ShortcutMgr;
 use crate::widget::WidgetImpl;
+use nohash_hasher::IsEnabled;
 use tlib::{
     bitflags::bitflags,
     events::KeyEvent,
@@ -84,6 +85,7 @@ bitflags! {
         const Down = 1 << 61;
     }
 }
+impl IsEnabled for Shortcut {}
 
 pub trait ShortcutRegister: WidgetImpl + Sized {
     /// Widget register the shortcut handdle. <br>

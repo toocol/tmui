@@ -1,3 +1,7 @@
+use std::any::TypeId;
+
+use nohash_hasher::IsEnabled;
+
 use crate::skia_safe;
 use crate::winit;
 
@@ -32,3 +36,23 @@ pub type WinitIcon = winit::window::Icon;
 pub type WinitKeyCode = winit::keyboard::KeyCode;
 pub type WinitMouseButton = winit::event::MouseButton;
 pub type WinitPosition = winit::dpi::Position;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct WrappedWindowId(winit::window::WindowId);
+impl From<winit::window::WindowId> for WrappedWindowId {
+    #[inline]
+    fn from(value: winit::window::WindowId) -> Self {
+        Self(value)
+    }
+}
+impl IsEnabled for WrappedWindowId {}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct WrappedTypeId(TypeId);
+impl From<TypeId> for WrappedTypeId {
+    #[inline]
+    fn from(value: TypeId) -> Self {
+        WrappedTypeId(value)
+    }
+}
+impl IsEnabled for WrappedTypeId {}

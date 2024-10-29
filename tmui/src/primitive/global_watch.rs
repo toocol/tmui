@@ -1,9 +1,11 @@
 use crate::{application_window::ApplicationWindow, widget::WidgetImpl};
+use nohash_hasher::IsEnabled;
 use tlib::{
     events::{KeyEvent, MouseEvent},
     prelude::*,
 };
 
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GlobalWatchEvent {
     MousePressed,
@@ -13,6 +15,7 @@ pub enum GlobalWatchEvent {
     KeyPressed,
     KeyReleased,
 }
+impl IsEnabled for GlobalWatchEvent {}
 
 #[reflect_trait]
 pub trait GlobalWatch: WidgetImpl + GlobalWatchImpl {

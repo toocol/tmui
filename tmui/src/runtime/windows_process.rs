@@ -16,8 +16,8 @@ use crate::{
     },
 };
 use log::{debug, error, warn};
+use nohash_hasher::IntMap;
 use std::{
-    collections::HashMap,
     marker::PhantomData,
     ops::Add,
     sync::atomic::Ordering,
@@ -36,6 +36,7 @@ use tlib::{
     object::ObjectId,
     payload::PayloadWeight,
     prelude::SystemCursorShape,
+    typedef::WrappedWindowId,
     winit::{
         dpi::{PhysicalPosition, PhysicalSize},
         event::{ElementState, MouseScrollDelta},
@@ -59,20 +60,20 @@ pub(crate) struct WindowsProcess<
     ui_stack_size: usize,
     platform_context: &'a dyn PlatformContext<T, M>,
 
-    windows: HashMap<WindowId, PhysWindow<T, M>>,
+    windows: IntMap<WrappedWindowId, PhysWindow<T, M>>,
 
     /// Window has maximize/minimize
-    window_extremed: HashMap<WindowId, bool>,
+    window_extremed: IntMap<WrappedWindowId, bool>,
 
     /// Key: parent window's id
     /// Val: array of child windows' id
-    child_windows: HashMap<WindowId, Vec<WindowId>>,
+    child_windows: IntMap<WrappedWindowId, Vec<WindowId>>,
     /// Key: child window's id
     /// Val: parent window's id
-    parent_map: HashMap<WindowId, WindowId>,
+    parent_map: IntMap<WrappedWindowId, WindowId>,
     /// Key: windowed widget's id
     /// Val: child window's id
-    win_widget_map: HashMap<ObjectId, WindowId>,
+    win_widget_map: IntMap<ObjectId, WindowId>,
 
     main_window_id: Option<WindowId>,
     proxy: Option<EventLoopProxy<Message>>,
@@ -89,11 +90,11 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
             _holdm: PhantomData,
             ui_stack_size,
             platform_context,
-            windows: HashMap::new(),
-            window_extremed: HashMap::new(),
-            child_windows: HashMap::new(),
-            parent_map: HashMap::new(),
-            win_widget_map: HashMap::new(),
+            windows: IntMap::default(),
+            window_extremed: IntMap::default(),
+            child_windows: IntMap::default(),
+            parent_map: IntMap::default(),
+            win_widget_map: IntMap::default(),
             main_window_id: None,
             proxy: None,
             modal_windows: vec![],
@@ -177,7 +178,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
         self.main_window_id = Some(window.window_id());
         self.proxy = Some(event_loop.create_proxy());
-        self.windows.insert(window.window_id(), window);
+        self.windows.insert(window.window_id().into(), window);
 
         event_loop
             .run(|event, target| {
@@ -221,7 +222,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                 match event {
                     Event::WindowEvent { window_id, event } => {
                         let main_window_id = self.main_window_id();
-                        let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                        let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                             panic!("Can not find window with id {:?}", window_id)
                         });
 
@@ -232,7 +233,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 let _track = Tracker::start("physical_window_redraw");
                                 #[cfg(macos_platform)]
                                 self.windows
-                                    .get_mut(&window_id)
+                                    .get_mut(&window_id.into())
                                     .unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", window_id)
                                     })
@@ -248,24 +249,25 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     return;
                                 }
 
+                                let wrapped_window_id = window_id.into();
                                 if window.winit_window().is_maximized() {
-                                    self.window_extremed.insert(window_id, true);
+                                    self.window_extremed.insert(wrapped_window_id, true);
                                     window.send_input(Message::Event(Box::new(
                                         WindowMaximized::new(),
                                     )));
                                 } else if window.winit_window().is_minimized().unwrap_or_default() {
-                                    self.window_extremed.insert(window_id, true);
+                                    self.window_extremed.insert(wrapped_window_id, true);
                                     window.send_input(Message::Event(Box::new(
                                         WindowMinimized::new(),
                                     )));
                                 } else {
                                     let is_extremed = self
                                         .window_extremed
-                                        .get(&window_id)
+                                        .get(&wrapped_window_id)
                                         .copied()
                                         .unwrap_or_default();
                                     if is_extremed {
-                                        self.window_extremed.insert(window_id, false);
+                                        self.window_extremed.insert(wrapped_window_id, false);
                                         window.send_input(Message::Event(Box::new(
                                             WindowRestored::new(),
                                         )));
@@ -295,7 +297,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 }
 
                                 let window =
-                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                    self.windows.get_mut(&window_id.into()).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", window_id)
                                     });
 
@@ -304,17 +306,17 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             // Window destroy event.
                             WindowEvent::Destroyed => {
-                                if let Some(parent) = self.parent_map.remove(&window_id) {
-                                    if let Some(child_windows) = self.child_windows.get_mut(&parent)
+                                if let Some(parent) = self.parent_map.remove(&window_id.into()) {
+                                    if let Some(child_windows) = self.child_windows.get_mut(&parent.into())
                                     {
                                         child_windows.retain(|id| *id != window_id);
 
                                         if child_windows.is_empty() {
-                                            self.child_windows.remove(&parent);
+                                            self.child_windows.remove(&parent.into());
                                         }
                                     }
                                 }
-                                self.windows.remove(&window_id);
+                                self.windows.remove(&window_id.into());
                             }
 
                             // Window moved event.
@@ -503,7 +505,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                     // VSync event.
                     Event::UserEvent(Message::VSync(window_id, _)) => {
-                        let window = self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                        let window = self.windows.get_mut(&window_id.into()).unwrap_or_else(|| {
                             panic!("Can not find window with id {:?}", window_id)
                         });
 
@@ -517,7 +519,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                         match evt {
                             Message::SetCursorShape(cursor, window_id) => {
-                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
 
@@ -546,9 +548,9 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 let phys_window = physical_window.into_phys_window();
                                 let win_id = phys_window.window_id();
 
-                                self.parent_map.insert(win_id, parent_win_id);
+                                self.parent_map.insert(win_id.into(), parent_win_id);
                                 self.child_windows
-                                    .entry(parent_win_id)
+                                    .entry(parent_win_id.into())
                                     .or_default()
                                     .push(win_id);
                                 if let Some(id) = win.win_widget_id() {
@@ -566,7 +568,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                         .iter()
                                         .for_each(|(_, w)| w.winit_window().set_enable(false))
                                 }
-                                self.windows.insert(win_id, phys_window);
+                                self.windows.insert(win_id.into(), phys_window);
 
                                 ui_joins.push(super::start_ui_runtime(
                                     win.index(),
@@ -591,7 +593,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 }
 
                                 let window =
-                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                    self.windows.get_mut(&window_id.into()).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", window_id)
                                     });
 
@@ -600,7 +602,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             Message::WindowMaximizeRequest(window_id) => {
                                 let window =
-                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                    self.windows.get_mut(&window_id.into()).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", window_id)
                                     });
                                 window.winit_window().set_maximized(true);
@@ -609,7 +611,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                             Message::WindowMinimizeRequest(window_id) => {
                                 let window =
-                                    self.windows.get_mut(&window_id).unwrap_or_else(|| {
+                                    self.windows.get_mut(&window_id.into()).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", window_id)
                                     });
                                 window.winit_window().set_maximized(false);
@@ -617,7 +619,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             Message::WindowRestoreRequest(window_id) => {
-                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 window.winit_window().set_maximized(false);
@@ -625,13 +627,13 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             Message::WindowVisibilityRequest(window_id, visible) => {
-                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 window.winit_window().set_visible(visible);
 
-                                if let Some(parent_id) = self.parent_map.get(&window_id) {
-                                    let parent = self.windows.get(parent_id).unwrap_or_else(|| {
+                                if let Some(&parent_id) = self.parent_map.get(&window_id.into()) {
+                                    let parent = self.windows.get(&parent_id.into()).unwrap_or_else(|| {
                                         panic!("Can not find parent window with id {:?}", parent_id)
                                     });
                                     let mut object_id = None;
@@ -649,29 +651,29 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             Message::WindowResizeRequest(window_id, size) => {
-                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 let _ = window.winit_window().request_inner_size(PhysicalSize::new(size.width(), size.height()));
                             }
 
                             Message::WindowPositionRequest(window_id, pos) => {
-                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 window.winit_window().set_outer_position(PhysicalPosition::new(pos.x(), pos.y()));
                             }
 
                             Message::WindowResponse(window_id, closure) => {
-                                let window = self.windows.get(&window_id).unwrap_or_else(|| {
+                                let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
                                 window.send_input(Message::WindowResponse(window_id, closure))
                             }
 
                             Message::WinWidgetGeometryChangedRequest(id, rect) => {
-                                let win_id = self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
-                                let window = self.windows.get(win_id).unwrap_or_else(|| {
+                                let win_id = *self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
+                                let window = self.windows.get(&win_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", win_id)
                                 });
 
@@ -682,12 +684,13 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                             }
 
                             Message::WinWidgetVisibilityChangedRequest(id, visible) => {
-                                let win_id = self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
-                                let window = self.windows.get(win_id).unwrap_or_else(|| {
+                                let win_id = *self.win_widget_map.get(&id).unwrap_or_else(|| panic!("WinWidget with id {} does not has correspondent child window", id));
+                                let wrapped_win_id = win_id.into();
+                                let window = self.windows.get(&wrapped_win_id).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", win_id)
                                 });
-                                if let Some(parent) = self.parent_map.get(win_id) {
-                                    let parent = self.windows.get(parent).unwrap_or_else(|| panic!("Can not find parent window with id {:?}, child window id {:?}", parent, win_id));
+                                if let Some(&parent) = self.parent_map.get(&wrapped_win_id) {
+                                    let parent = self.windows.get(&parent.into()).unwrap_or_else(|| panic!("Can not find parent window with id {:?}, child window id {:?}", parent, win_id));
                                     parent.winit_window().focus_window();
                                 }
 
@@ -704,8 +707,8 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     None
                                 });
                                 if let Some(id) = w_id {
-                                    let parent_win_id = self.parent_map.get(&win_id).unwrap_or_else(|| panic!("Find parent window with child window id `{:?}` failed", win_id));
-                                    let parent_window = self.windows.get(parent_win_id).unwrap_or_else(|| {
+                                    let parent_win_id = *self.parent_map.get(&win_id.into()).unwrap_or_else(|| panic!("Find parent window with child window id `{:?}` failed", win_id));
+                                    let parent_window = self.windows.get(&parent_win_id.into()).unwrap_or_else(|| {
                                         panic!("Can not find window with id {:?}", win_id)
                                     });
                                     parent_window.send_input(Message::WinWidgetSizeChanged(id, size));

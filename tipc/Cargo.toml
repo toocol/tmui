@@ -16,6 +16,7 @@ raw_sync = { workspace = true }
 rand = { workspace = true }
 sha2 = { workspace = true }
 
+nohash-hasher = { workspace = true}
 nix = { workspace = true }
 winapi = { version = "0.3.9" }
 

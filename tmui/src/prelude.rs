@@ -6,6 +6,7 @@ pub type RawWindowHandle6 = tlib::winit::raw_window_handle::RawWindowHandle;
 
 pub use tlib::{nonnull_mut, nonnull_ref, cast, cast_mut, cast_boxed, connect, disconnect};
 pub use crate::{split_widget, split_from};
+pub use nohash_hasher;
 
 pub use crate::animation::{
     frame_animator::ReflectFrameAnimator,

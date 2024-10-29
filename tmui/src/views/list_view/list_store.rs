@@ -7,9 +7,9 @@ use super::{
     WidgetHnd,
 };
 use crate::{views::list_view::list_item::ListItemCast, widget::WidgetImpl};
+use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
-    collections::HashMap,
     ptr::{addr_of_mut, NonNull},
     sync::{atomic::Ordering, Arc},
 };
@@ -236,9 +236,9 @@ impl ListStore {
 
 impl ListStore {
     #[inline]
-    pub(crate) fn store_map() -> &'static mut HashMap<ObjectId, Option<NonNull<ListStore>>> {
-        static mut STORE_MAP: Lazy<HashMap<ObjectId, Option<NonNull<ListStore>>>> =
-            Lazy::new(HashMap::new);
+    pub(crate) fn store_map() -> &'static mut IntMap<ObjectId, Option<NonNull<ListStore>>> {
+        static mut STORE_MAP: Lazy<IntMap<ObjectId, Option<NonNull<ListStore>>>> =
+            Lazy::new(IntMap::default);
         unsafe { addr_of_mut!(STORE_MAP).as_mut().unwrap() }
     }
 

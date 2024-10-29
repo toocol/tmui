@@ -88,7 +88,7 @@ pub(crate) fn expand(
                     }
                     if layout == LayoutType::SplitPane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            split_infos: std::collections::HashMap<ObjectId, Box<SplitInfo>>
+                            split_infos: nohash_hasher::IntMap<ObjectId, Box<SplitInfo>>
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>

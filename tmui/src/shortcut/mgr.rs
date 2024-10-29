@@ -1,6 +1,7 @@
 use super::{Shortcut, ShortcutTrigger};
 use crate::widget::{WidgetHnd, WidgetImpl};
-use std::{cell::RefCell, collections::HashMap, ptr::NonNull};
+use std::{cell::RefCell, ptr::NonNull};
+use nohash_hasher::IntMap;
 use tlib::{
     events::{EventTrait, EventType, KeyEvent},
     nonnull_mut,
@@ -11,7 +12,7 @@ thread_local! {
     static INSTANCE: RefCell<ShortcutMgr> = RefCell::new(ShortcutMgr::new());
 }
 
-type ShortcutMap = HashMap<Shortcut, Vec<(WidgetHnd, Box<dyn Fn(&mut dyn WidgetImpl)>)>>;
+type ShortcutMap = IntMap<Shortcut, Vec<(WidgetHnd, Box<dyn Fn(&mut dyn WidgetImpl)>)>>;
 
 pub(crate) struct ShortcutMgr {
     shortcut: Shortcut,
