@@ -42,10 +42,10 @@ pub trait CrossWinMsgSender {
 pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bool) {
     let mut rect = win_widget.borderless_rect();
     if rect.width() == 0 {
-        rect.set_width(10)
+        rect.set_width(100)
     }
     if rect.height() == 0 {
-        rect.set_height(10)
+        rect.set_height(100)
     }
 
     let window = ApplicationWindow::window();

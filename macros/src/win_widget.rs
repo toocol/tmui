@@ -314,6 +314,8 @@ impl<'a> WinWidget<'a> {
                     fn send_cross_win_msg(&self, msg: Self::T) {
                         if let Some(ref sender) = self.crs_sink_sender {
                             let _ = sender.send(msg);
+                        } else {
+                            log::warn!("The cross window message sender is None. {}", self.name());
                         }
                     }
                 }

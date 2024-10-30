@@ -666,7 +666,7 @@ impl LayoutMgr {
                 && cast!(widget as CrossWinWidget).is_some()
                 && cur_size != window_size
             {
-                debug!("Cross window widget trigger window size change.");
+                debug!("Cross window widget trigger window size change, size = {:?}", cur_size);
                 window.resize(Some(cur_size.width()), Some(cur_size.height()));
                 window.send_message(Message::WinWidgetSizeReverseRequest(
                     window.winit_id().unwrap(),

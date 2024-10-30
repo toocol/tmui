@@ -5,10 +5,16 @@ use crate::{
     prelude::*,
     scroll_area::LayoutMode,
     tlib::object::{ObjectImpl, ObjectSubclass},
-    views::list_view::{list_node::ListNode, list_view_object::ListViewObject, ListView},
+    views::list_view::{list_view_object::ListViewObject, ListView},
     widget::WidgetImpl,
 };
 use tlib::signals;
+#[cfg(win_popup)]
+use crate::views::list_view::list_node::ListNode;
+#[cfg(win_popup)]
+use strum_macros::Display;
+#[cfg(win_popup)]
+use super::MINIMUN_HEIGHT;
 
 const MAX_VISIBLE_ITEMS: i32 = 20;
 
@@ -184,12 +190,14 @@ impl CorrDropdownList {
 
     #[inline]
     pub(crate) fn calc_height(&mut self) {
+        self.height_request(MINIMUN_HEIGHT);
         self.send_cross_win_msg(DropdownListCrsMsg::CalcHeight);
     }
 }
 
 ////////////////////////////// Cross window message define/handle
 #[cfg(win_popup)]
+#[derive(Display)]
 pub enum DropdownListCrsMsg {
     // Origin to sink:
     ClearOptions,
@@ -201,6 +209,7 @@ pub enum DropdownListCrsMsg {
     ValueChanged(String),
 }
 
+#[cfg(win_popup)]
 impl CrossWinMsgHandler for CorrDropdownList {
     type T = DropdownListCrsMsg;
 
@@ -211,6 +220,7 @@ impl CrossWinMsgHandler for CorrDropdownList {
     }
 }
 
+#[cfg(win_popup)]
 impl CrossWinMsgHandler for DropdownList {
     type T = DropdownListCrsMsg;
 

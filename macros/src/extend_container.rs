@@ -357,6 +357,15 @@ pub(crate) fn expand(
             } else {
                 proc_macro2::TokenStream::new()
             };
+
+            let popup_pretreat_construct = if is_popup {
+                quote!(
+                    let window = ApplicationWindow::window();
+                    connect!(window, size_changed(), self, on_win_size_change(Size));
+                )
+            } else {
+                proc_macro2::TokenStream::new()
+            };
             // Popup related end.
 
             let inner_on_property_set_clause = if layout.is(LayoutType::Stack) {
@@ -446,6 +455,7 @@ pub(crate) fn expand(
                     fn pretreat_construct(&mut self) {
                         #scroll_area_pre_construct
                         #layout_prepare_children_ref
+                        #popup_pretreat_construct
                     }
 
                     #[inline]

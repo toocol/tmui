@@ -28,7 +28,7 @@ pub struct InputDialog {
 }
 
 #[cfg(not(win_popup))]
-#[extends(Popup, Layout(Stack), internal = true)]
+#[extends(Popup, Layout(Stack))]
 #[derive(Childrenable)]
 pub struct InputDialog {
     #[children]
@@ -39,9 +39,6 @@ pub struct InputDialog {
 
     #[children]
     number: Box<Number>,
-
-    // Other properties:
-    hide_on_win_changed: bool,
 }
 
 impl ObjectSubclass for InputDialog {

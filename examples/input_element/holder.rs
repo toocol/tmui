@@ -185,7 +185,6 @@ impl WidgetImpl for Holder {
                 println!("InputDialog {} visibility changed, {}", w.name(), visible)
             });
             assert!(dialog.input_mut::<Text>().is_some());
-            assert!(dialog.input_mut::<Number>().is_none());
         }
     }
 }

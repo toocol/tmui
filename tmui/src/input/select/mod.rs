@@ -18,6 +18,8 @@ use tlib::{
 };
 
 const MINIMUN_WIDTH: i32 = 25;
+#[cfg(win_popup)]
+const MINIMUN_HEIGHT: i32 = 10;
 const TEXT_MARGIN: i32 = 3;
 
 const ARROW_PADDING: f32 = 2.;
@@ -200,8 +202,6 @@ impl<T: SelectBounds> Select<T> {
             }
         }
 
-        self.dropdown_list_mut().scroll_to(idx);
-
         let width = max_width + ARROW_SIZE.ceil() as i32 + ARROW_PADDING as i32 * 2 + TEXT_MARGIN;
         self.set_fixed_width(width);
         self.set_detecting_width(width);
@@ -209,6 +209,8 @@ impl<T: SelectBounds> Select<T> {
         let dropdown_list = self.dropdown_list_mut();
         dropdown_list.width_request(width);
         dropdown_list.calc_height();
+
+        self.dropdown_list_mut().scroll_to(idx);
 
         self.window().layout_change(self);
 

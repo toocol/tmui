@@ -941,7 +941,7 @@ impl ApplicationWindow {
                 {
                     tooltip.set_fixed_x(position.x());
                     tooltip.set_fixed_y(position.y());
-                    tooltip.set_props(text, position, size, styles);
+                    tooltip.set_props(text, size, styles);
                     tooltip.calc_relative_position();
                     tooltip.show();
                     ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
@@ -1007,6 +1007,7 @@ impl ApplicationWindow {
             rect.set_point(&outer);
         }
 
+        debug!("Window correspondent widget geometry changed {:?}, rect record {:?}", rect, w.rect_record());
         self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect.into()))
     }
 

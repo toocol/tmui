@@ -7,7 +7,7 @@ use crate::{
     primitive::{global_watch::GlobalWatchEvent, Message},
     shortcut::mgr::ShortcutMgr,
 };
-use log::warn;
+use log::{debug, warn};
 use std::ptr::NonNull;
 use tlib::{
     events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
@@ -467,6 +467,7 @@ pub(crate) fn message_handle(window: &mut ApplicationWindow, msg: Message) {
             if let Some(w) = window.find_id_mut(id) {
                 w.width_request(size.width());
                 w.height_request(size.height());
+                debug!("Correspondent window widget `{}` reverse set size {:?}", w.name(), size);
             } else {
                 warn!(
                     "`ApplicationWindow` finds widget by id get `None`, id = {}",

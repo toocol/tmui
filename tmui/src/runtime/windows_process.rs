@@ -249,35 +249,12 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     return;
                                 }
 
-                                let wrapped_window_id = window_id.into();
-                                if window.winit_window().is_maximized() {
-                                    self.window_extremed.insert(wrapped_window_id, true);
-                                    window.send_input(Message::Event(Box::new(
-                                        WindowMaximized::new(),
-                                    )));
-                                } else if window.winit_window().is_minimized().unwrap_or_default() {
-                                    self.window_extremed.insert(wrapped_window_id, true);
-                                    window.send_input(Message::Event(Box::new(
-                                        WindowMinimized::new(),
-                                    )));
-                                } else {
-                                    let is_extremed = self
-                                        .window_extremed
-                                        .get(&wrapped_window_id)
-                                        .copied()
-                                        .unwrap_or_default();
-                                    if is_extremed {
-                                        self.window_extremed.insert(wrapped_window_id, false);
-                                        window.send_input(Message::Event(Box::new(
-                                            WindowRestored::new(),
-                                        )));
-                                    }
+                                // Due to occasional strange window size changes in child windows corresponding to windowed widgets, 
+                                // events are dispatched only to child windows that do not correspond to windowed widgets.
+                                if !self.is_windowed_widget_window(window_id) {
+                                    debug!("{:?} Detected widnow resize event, size = {:?}", window_id, size);
+                                    self.send_resize_event(window_id, size);
                                 }
-
-                                let evt = ResizeEvent::new(size.width as i32, size.height as i32);
-                                window.send_input(Message::Event(Box::new(evt)));
-
-                                application::request_high_load(true);
                             }
 
                             // Window close requested event.
@@ -654,7 +631,15 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                 let window = self.windows.get(&window_id.into()).unwrap_or_else(|| {
                                     panic!("Can not find window with id {:?}", window_id)
                                 });
-                                let _ = window.winit_window().request_inner_size(PhysicalSize::new(size.width(), size.height()));
+
+                                let winit_window = window.winit_window();
+                                let old_size = winit_window.inner_size();
+                                let _ = winit_window.request_inner_size(PhysicalSize::new(size.width(), size.height()));
+                                if self.is_windowed_widget_window(window_id) {
+                                    self.send_resize_event(window_id, winit_window.inner_size());
+                                }
+
+                                debug!("Receive window resize request, window id = {:?}, new size = {:?}, old size = {:?}", window_id, size, old_size);
                             }
 
                             Message::WindowPositionRequest(window_id, pos) => {
@@ -677,10 +662,30 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                     panic!("Can not find window with id {:?}", win_id)
                                 });
 
+                                debug!("[o2s] Receive child-window widget geometry changed, request inner size. Correspondent widget id = {}, child window id = {:?}, rect = {:?}", id, win_id, rect);
                                 let winit_window = window.winit_window();
                                 winit_window.set_outer_position(PhysicalPosition::new(rect.x(), rect.y()));
-                                let _ = winit_window.request_inner_size(PhysicalSize::new(rect.width(), rect.height()));
-                                debug!("Receive child-window widget geometry changed.");
+
+                                let window_size = winit_window.inner_size();
+                                let width = rect.width();
+                                let width = if width == 0 {
+                                    window_size.width
+                                } else {
+                                    width as u32
+                                };
+                                let height = rect.height();
+                                let height = if height == 0 {
+                                    window_size.height
+                                } else {
+                                    height as u32
+                                };
+                                let new_win_size = PhysicalSize::new(width, height);
+
+                                if window_size != new_win_size {
+                                    debug!("[o2s] Request window inner size, new size = {:?}, old size = {:?}", new_win_size, window_size);
+                                    let _ = winit_window.request_inner_size(new_win_size);
+                                    self.send_resize_event(win_id, winit_window.inner_size());
+                                }
                             }
 
                             Message::WinWidgetVisibilityChangedRequest(id, visible) => {
@@ -696,7 +701,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
 
                                 window.winit_window().set_visible(visible);
                                 window.send_input(Message::WindowVisibilityChanged(visible));
-                                debug!("Receive child-window widget visibility changed.");
+                                debug!("[o2s] Receive child-window widget visibility changed. Correspondent widget id = {}, child window id = {:?}, visible = {}", id, win_id, visible);
                             }
 
                             Message::WinWidgetSizeReverseRequest(win_id, size) => {
@@ -712,6 +717,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                                         panic!("Can not find window with id {:?}", win_id)
                                     });
                                     parent_window.send_input(Message::WinWidgetSizeChanged(id, size));
+                                    debug!("[s2o] Receive child-window widget size reversed changed. child window id = {:?}, size = {:?}", win_id, size);
                                 } else {
                                     warn!("Cannot find correspondent widget id with window id {:?}", win_id);
                                 }
@@ -797,6 +803,53 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
         }
 
         window.slave.read().signal();
+    }
+
+    pub fn send_resize_event(
+        &mut self,
+        window_id: WindowId,
+        size: PhysicalSize<u32>,
+    ) {
+        let window = self
+            .windows
+            .get(&window_id.into())
+            .unwrap_or_else(|| panic!("Can not find window with id {:?}", window_id));
+        let wrapped_window_id = window_id.into();
+        if window.winit_window().is_maximized() {
+            self.window_extremed.insert(wrapped_window_id, true);
+            window.send_input(Message::Event(Box::new(WindowMaximized::new())));
+        } else if window.winit_window().is_minimized().unwrap_or_default() {
+            self.window_extremed.insert(wrapped_window_id, true);
+            window.send_input(Message::Event(Box::new(WindowMinimized::new())));
+        } else {
+            let is_extremed = self
+                .window_extremed
+                .get(&wrapped_window_id)
+                .copied()
+                .unwrap_or_default();
+            if is_extremed {
+                self.window_extremed.insert(wrapped_window_id, false);
+                window.send_input(Message::Event(Box::new(WindowRestored::new())));
+            }
+        }
+
+        let evt = ResizeEvent::new(size.width as i32, size.height as i32);
+        window.send_input(Message::Event(Box::new(evt)));
+
+        application::request_high_load(true);
+    }
+
+    #[inline]
+    fn is_windowed_widget_window(&self, window_id: WindowId) -> bool {
+        if window_id == self.main_window_id.unwrap() {
+            return false
+        }
+        for (_, &id) in self.win_widget_map.iter() {
+            if window_id == id {
+                return true
+            }
+        }
+        false
     }
 }
 

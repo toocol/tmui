@@ -95,13 +95,6 @@ impl PopupExt for Popup {
     fn set_hide_on_win_change(&mut self, on: bool) {
         self.hide_on_win_change = on
     }
-
-    #[inline]
-    fn on_win_size_change(&mut self, _: Size) {
-        if self.hide_on_win_change {
-            self.hide();
-        }
-    }
 }
 
 impl PopupImpl for Popup {}
@@ -126,8 +119,6 @@ pub trait PopupExt {
     fn is_hide_on_win_change(&self) -> bool;
 
     fn set_hide_on_win_change(&mut self, on: bool);
-
-    fn on_win_size_change(&mut self, _: Size);
 }
 
 #[reflect_trait]
@@ -184,6 +175,13 @@ pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
 
     #[inline]
     fn on_mouse_click_hide(&mut self) {}
+
+    #[inline]
+    fn on_win_size_change(&mut self, _: Size) {
+        if self.is_hide_on_win_change() {
+            self.hide()
+        }
+    }
 }
 
 #[reflect_trait]
