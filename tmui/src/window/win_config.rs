@@ -4,9 +4,11 @@ use tlib::{
     figure::{Point, Size},
     typedef::{WinitIcon, WinitPosition, WinitWindowBuilder},
     winit::{
-        dpi::{PhysicalPosition, PhysicalSize}, error::OsError, event_loop::EventLoopWindowTarget, platform::windows::WindowBuilderExtWindows, window::{Window, WindowButtons, WindowLevel}
+        dpi::{PhysicalPosition, PhysicalSize}, error::OsError, event_loop::EventLoopWindowTarget, window::{Window, WindowButtons, WindowLevel}
     },
 };
+#[cfg(windows_platform)]
+use tlib::winit::platform::windows::WindowBuilderExtWindows;
 
 type WinitSize = tlib::winit::dpi::Size;
 
@@ -192,8 +194,12 @@ impl WindowConfig {
             .with_maximized(self.maximized)
             .with_active(self.active)
             .with_enabled_buttons(self.enable_buttons)
-            .with_skip_taskbar(self.skip_taskbar)
             .with_window_level(self.win_level);
+
+        #[cfg(windows_platform)]
+        {
+            window_bld = window_bld.with_skip_taskbar(self.skip_taskbar);
+        }
 
         if let Some(max_size) = self.max_size {
             window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(
