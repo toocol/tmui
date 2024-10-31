@@ -994,13 +994,14 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn handle_win_widget_geometry_changed(&self, mut rect: FRect) {
+    pub(crate) fn handle_win_widget_geometry_changed(&self, _: FRect) {
         if !self.initialized() {
             return;
         }
         let id = self.get_signal_source().unwrap();
 
         let w = self.find_id(id).unwrap();
+        let mut rect = w.visual_image_rect();
         let is_popup = cast!(w as PopupImpl).is_some();
         if is_popup {
             let outer = self.map_to_client_f(&rect.top_left());

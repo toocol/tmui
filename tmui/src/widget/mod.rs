@@ -486,6 +486,11 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             info!(
                 "[on_renderer({}:{})] {} check return, visible={}, is_animation_progressing={}", frame.id(), frame.nth(), self.name(), self.visible(), self.is_animation_progressing()
             );
+            if self.object_type().is_a(ApplicationWindow::static_type()) {
+                let mut background = self.background();
+                background.set_transparency(self.transparency());
+                cr.canvas().clear(background);
+            }
             return;
         }
 

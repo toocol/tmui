@@ -262,6 +262,27 @@ impl FSize {
     pub fn is_valid(&self) -> bool {
         self.width != 0. && self.height != 0.
     }
+
+    #[inline]
+    pub fn floor(mut self) -> Self {
+        self.width = self.width.floor();
+        self.height = self.height.floor();
+        self
+    }
+
+    #[inline]
+    pub fn ceil(mut self) -> Self {
+        self.width = self.width.ceil();
+        self.height = self.height.ceil();
+        self
+    }
+
+    #[inline]
+    pub fn round(mut self) -> Self {
+        self.width = self.width.round();
+        self.height = self.height.round();
+        self
+    }
 }
 
 impl From<(f32, f32)> for FSize {

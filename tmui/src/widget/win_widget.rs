@@ -1,4 +1,4 @@
-use super::{WidgetImpl, WidgetSignals};
+use super::{WidgetExt, WidgetImpl, WidgetSignals};
 use crate::{
     prelude::ApplicationWindow,
     window::{win_builder::WindowBuilder, win_config::WindowConfig},
@@ -65,12 +65,16 @@ pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bo
                     .height(rect.height() as u32)
                     .decoration(false)
                     .skip_taskbar(true)
+                    .transparent(true)
                     .visible(win_widget.visible())
                     .win_level(WindowLevel::AlwaysOnTop)
                     .build(),
             )
             .inner_window(inner)
             .win_widget_id(win_widget.id())
-            .on_activate(move |win| child_proc_fn(win)),
+            .on_activate(move |win| { 
+                win.set_transparency(0);
+                child_proc_fn(win);
+            }),
     )
 }

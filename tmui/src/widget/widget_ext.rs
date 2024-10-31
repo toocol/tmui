@@ -225,6 +225,18 @@ pub trait WidgetExt {
     /// Get the left margin of the Widget.
     fn margin_left(&self) -> i32;
 
+    /// The max value between top margin and top shadow blur
+    fn outer_top(&self) -> i32;
+
+    /// The max value between right margin and right shadow blur
+    fn outer_right(&self) -> i32;
+
+    /// The max value between bottom margin and bottom shadow blur
+    fn outer_bottom(&self) -> i32;
+
+    /// The max value between left margin and left shadow blur
+    fn outer_left(&self) -> i32;
+
     /// Set the margins of the Widget.
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32);
 
@@ -504,6 +516,18 @@ pub trait WidgetExt {
 
     /// Set the box shadow of widget.
     fn set_box_shadow(&mut self, shadow: BoxShadow);
+
+    /// Get the top blur of shadow box.
+    fn shadow_top(&self) -> f32;
+
+    /// Get the right blur of shadow box.
+    fn shadow_right(&self) -> f32;
+
+    /// Get the bottom blur of shadow box.
+    fn shadow_bottom(&self) -> f32;
+
+    /// Get the left blur of shadow box.
+    fn shadow_left(&self) -> f32;
 
     /// Get the rect record of widget.
     ///
@@ -1249,6 +1273,26 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
+    fn outer_top(&self) -> i32 {
+        self.margin_top().max(self.shadow_top() as i32)
+    }
+
+    #[inline]
+    fn outer_right(&self) -> i32 {
+        self.margin_right().max(self.shadow_right() as i32)
+    }
+
+    #[inline]
+    fn outer_bottom(&self) -> i32 {
+        self.margin_bottom().max(self.shadow_bottom() as i32)
+    }
+
+    #[inline]
+    fn outer_left(&self) -> i32 {
+        self.margin_left().max(self.shadow_left() as i32)
+    }
+
+    #[inline]
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32) {
         let props = self.widget_props_mut();
         props.margins[0] = top;
@@ -1800,6 +1844,62 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_box_shadow(&mut self, shadow: BoxShadow) {
         self.widget_props_mut().styles.set_box_shadow(shadow);
+    }
+
+    #[inline]
+    fn shadow_top(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::TOP) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    }
+
+    #[inline]
+    fn shadow_right(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::RIGHT) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    } 
+
+    #[inline]
+    fn shadow_bottom(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::BOTTOM) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    }
+
+    #[inline]
+    fn shadow_left(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::LEFT) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
     }
 
     #[inline]
