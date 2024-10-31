@@ -1,6 +1,13 @@
+use ahash::AHashMap;
 use once_cell::sync::Lazy;
 use std::{
-    collections::{BTreeMap, HashMap}, fs::File, io::Write, ptr::addr_of_mut, sync::atomic::{AtomicBool, Ordering}, thread::ThreadId, time::Instant
+    collections::BTreeMap,
+    fs::File,
+    io::Write,
+    ptr::addr_of_mut,
+    sync::atomic::{AtomicBool, Ordering},
+    thread::ThreadId,
+    time::Instant,
 };
 
 const TRACK_FILE_NAME: &str = "track_file";
@@ -12,7 +19,7 @@ pub(crate) fn set_tracked() {
 }
 
 pub struct Tracker {
-    tracks: HashMap<ThreadId, BTreeMap<String, Vec<u128>>>,
+    tracks: AHashMap<ThreadId, BTreeMap<String, Vec<u128>>>,
     instant: Instant,
 }
 
@@ -20,7 +27,7 @@ impl Tracker {
     #[inline]
     fn instance() -> &'static mut Self {
         static mut INSTANCE: Lazy<Tracker> = Lazy::new(|| Tracker {
-            tracks: HashMap::new(),
+            tracks: AHashMap::default(),
             instant: Instant::now(),
         });
         unsafe { addr_of_mut!(INSTANCE).as_mut().unwrap() }
@@ -44,7 +51,9 @@ impl Tracker {
 
         let tracker = Self::instance();
         let total_runtime = tracker.instant.elapsed().as_millis() as f64 / 1000.;
-        file.write_all(format!("Application total runtime: {}s.\r\n\r\n", total_runtime).as_bytes())?;
+        file.write_all(
+            format!("Application total runtime: {}s.\r\n\r\n", total_runtime).as_bytes(),
+        )?;
 
         for (id, map) in tracker.tracks.iter_mut() {
             file.write_all(format!("[{:?}]\r\n", id).as_bytes())?;
@@ -78,7 +87,9 @@ impl Tracker {
 
                 file.write_all(format!("{}:\r\n", name).as_bytes())?;
                 file.write_all(format!("median time spend         = {}ms\r\n", median).as_bytes())?;
-                file.write_all(format!("average time spend        = {:.3}ms\r\n", average).as_bytes())?;
+                file.write_all(
+                    format!("average time spend        = {:.3}ms\r\n", average).as_bytes(),
+                )?;
                 file.write_all(format!("maximum time spend        = {}ms\r\n", max).as_bytes())?;
                 file.write_all(format!("minimum time spend        = {}ms\r\n", min).as_bytes())?;
                 file.write_all(

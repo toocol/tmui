@@ -412,6 +412,7 @@ impl<'a> WinWidget<'a> {
             token.extend(quote!(
                 Box::new(move |win| {
                     let mut w_widget = Object::new::<#name>(&[]);
+                    w_widget.set_background(Color::WHITE);
                     #set_receiver_clause
                     #set_sender_clause
                     win.child(w_widget);

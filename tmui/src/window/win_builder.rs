@@ -1,6 +1,6 @@
 use super::{win_config::WindowConfig, Window};
 use crate::{application::FnActivate, application_window::ApplicationWindow};
-use std::collections::HashMap;
+use ahash::AHashMap;
 use tlib::{object::ObjectId, values::ToValue, Value};
 
 #[derive(Default)]
@@ -11,7 +11,7 @@ pub struct WindowBuilder {
     win_widget_id: Option<ObjectId>,
     modal: bool,
     on_activate: Option<FnActivate>,
-    params: HashMap<String, Value>,
+    params: AHashMap<String, Value>,
 }
 
 impl WindowBuilder {

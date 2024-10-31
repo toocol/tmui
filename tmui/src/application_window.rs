@@ -22,12 +22,13 @@ use crate::{
     },
     window::win_builder::WindowBuilder,
 };
+use ahash::AHashMap;
 use log::{debug, error, warn};
 use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashSet, VecDeque},
     ptr::{addr_of_mut, NonNull},
     sync::Once,
     thread::{self, ThreadId},
@@ -67,7 +68,7 @@ pub struct ApplicationWindow {
     outer_position: Point,
     /// Position to the client area on the screen coordinate.
     client_position: Point,
-    params: Option<HashMap<String, Value>>,
+    params: Option<AHashMap<String, Value>>,
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
@@ -889,7 +890,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn set_params(&mut self, params: Option<HashMap<String, Value>>) {
+    pub(crate) fn set_params(&mut self, params: Option<AHashMap<String, Value>>) {
         self.params = params
     }
 
@@ -1008,7 +1009,11 @@ impl ApplicationWindow {
             rect.set_point(&outer);
         }
 
-        debug!("Window correspondent widget geometry changed {:?}, rect record {:?}", rect, w.rect_record());
+        debug!(
+            "Window correspondent widget geometry changed {:?}, rect record {:?}",
+            rect,
+            w.rect_record()
+        );
         self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect.into()))
     }
 

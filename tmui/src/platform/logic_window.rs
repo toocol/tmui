@@ -10,8 +10,9 @@ use crate::{
     primitive::{bitmap::Bitmap, shared_channel::SharedChannel},
     runtime::window_context::LogicWindowContext,
 };
+use ahash::AHashMap;
 use glutin::config::Config;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
     IpcNode, IpcType,
@@ -45,7 +46,7 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
 
     /// (Outer, Inner)
     pub initial_position: (Point, Point),
-    pub params: Option<HashMap<String, Value>>,
+    pub params: Option<AHashMap<String, Value>>,
 }
 
 unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Send

@@ -3,8 +3,8 @@ pub mod win_config;
 
 use self::win_config::WindowConfig;
 use crate::{application::FnActivate, prelude::RawWindowHandle6};
+use ahash::AHashMap;
 use std::{
-    collections::HashMap,
     fmt::Debug,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -20,7 +20,7 @@ pub(crate) struct Window {
     win_cfg: Option<WindowConfig>,
     on_activate: Option<FnActivate>,
     parent: Option<WindowId>,
-    params: Option<HashMap<String, Value>>,
+    params: Option<AHashMap<String, Value>>,
 }
 
 unsafe impl Send for Window {}
@@ -83,7 +83,7 @@ impl Window {
     }
 
     #[inline]
-    pub(crate) fn take_params(&mut self) -> Option<HashMap<String, Value>> {
+    pub(crate) fn take_params(&mut self) -> Option<AHashMap<String, Value>> {
         self.params.take()
     }
 

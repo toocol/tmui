@@ -38,12 +38,12 @@
 //!     emit!(widget, action_test());
 //! }
 //! ```
+use ahash::AHashMap;
 use nohash_hasher::{IntMap, IntSet};
 
 use crate::prelude::*;
 use std::{
     cell::RefCell,
-    collections::HashMap,
     fmt::Display,
     ptr::null_mut,
     sync::atomic::{AtomicPtr, Ordering},
@@ -54,7 +54,7 @@ type ActionsMap = Box<
         ObjectId,
         (
             IntSet<ObjectId>,
-            HashMap<String, IntMap<ObjectId, Vec<Box<dyn Fn(&Option<Vec<Value>>)>>>>,
+            AHashMap<String, IntMap<ObjectId, Vec<Box<dyn Fn(&Option<Vec<Value>>)>>>>,
         ),
     >,
 >;
@@ -102,7 +102,7 @@ impl ActionHub {
         let map_ref = self.map.as_mut();
         let (target_set, signal_map) = map_ref
             .entry(signal.emiter_id)
-            .or_insert((IntSet::default(), HashMap::new()));
+            .or_insert((IntSet::default(), AHashMap::default()));
         let actions = signal_map
             .entry(signal.signal)
             .or_insert(IntMap::default())

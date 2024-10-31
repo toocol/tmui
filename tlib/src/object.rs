@@ -4,10 +4,10 @@ use crate::{
     types::{IsA, ObjectType, StaticType, Type, TypeDowncast},
     values::{ToValue, Value},
 };
+use ahash::AHashMap;
 use macros::reflect_trait;
 use std::{
     any::Any,
-    collections::HashMap,
     sync::atomic::{AtomicU32, Ordering},
 };
 
@@ -41,7 +41,7 @@ static ID_INCREMENT: IdGenerator = IdGenerator::new(1);
 #[derive(Debug)]
 pub struct Object {
     id: ObjectId,
-    properties: HashMap<String, Box<Value>>,
+    properties: AHashMap<String, Box<Value>>,
     constructed: bool,
     signal_source: Option<ObjectId>,
 }
@@ -50,7 +50,7 @@ impl Default for Object {
     fn default() -> Self {
         Self {
             id: ID_INCREMENT.fetch_add(1, Ordering::SeqCst),
-            properties: HashMap::new(),
+            properties: AHashMap::default(),
             constructed: false,
             signal_source: None,
         }
@@ -224,7 +224,7 @@ pub trait InnerInitializer {
     fn pretreat_construct(&mut self) {}
 
     /// Inner handle the property setting processing.
-    /// 
+    ///
     /// Retrun `true` if need prevent the `on_property_set` handle.
     #[allow(unused_variables)]
     #[inline]
