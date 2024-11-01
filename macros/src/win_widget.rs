@@ -30,13 +30,13 @@ impl<'a> Parse for WinWidget<'a> {
         let metas: Punctuated<Meta, Token![,]> = input.parse_terminated(Meta::parse)?;
         let metas: Vec<Meta> = metas.into_iter().collect();
 
-    let mut calculate_position: Option<TokenStream> = None;
-    let mut is_modal: Option<TokenStream> = None;
-    let mut hide_on_click: Option<TokenStream> = None;
-    let mut move_capable: Option<TokenStream> = None;
-    let mut handle_global_mouse_pressed: Option<TokenStream> = None;
-    let mut on_mouse_click_hide: Option<TokenStream> = None;
-    let mut on_win_size_change: Option<TokenStream> = None;
+        let mut calculate_position: Option<TokenStream> = None;
+        let mut is_modal: Option<TokenStream> = None;
+        let mut hide_on_click: Option<TokenStream> = None;
+        let mut move_capable: Option<TokenStream> = None;
+        let mut handle_global_mouse_pressed: Option<TokenStream> = None;
+        let mut on_mouse_click_hide: Option<TokenStream> = None;
+        let mut on_win_size_change: Option<TokenStream> = None;
 
         for meta in metas.into_iter() {
             match meta {
@@ -128,16 +128,22 @@ impl<'a> Parse for WinWidget<'a> {
                                 "Unsupported WinWidget configuration, two many args, only o2s(xx), s2o(xx) is supported.",
                             ));
                         }
-                        
+
                         if *ident == "PopupImpl" {
                             for meta in nested.iter() {
                                 if let syn::NestedMeta::Meta(Meta::List(meta_list)) = meta {
                                     let fn_ident = meta_list.path.get_ident().unwrap();
-                                    let fn_call = if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) = meta_list.nested.first() {
-                                        path.get_ident().unwrap().clone()
-                                    } else {
-                                        return Err(Error::new(input.span(), "PopupImpl function call only support literal string."))
-                                    };
+                                    let fn_call =
+                                        if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) =
+                                            meta_list.nested.first()
+                                        {
+                                            path.get_ident().unwrap().clone()
+                                        } else {
+                                            return Err(Error::new(
+                                            input.span(),
+                                            "PopupImpl function call only support literal string.",
+                                        ));
+                                        };
 
                                     match fn_ident.to_string().as_str() {
                                         "calculate_position" => {
@@ -147,7 +153,7 @@ impl<'a> Parse for WinWidget<'a> {
                                                     #fn_call(self, base_rect, point)
                                                 }
                                             ))
-                                        },
+                                        }
                                         "is_modal" => {
                                             is_modal = Some(quote!(
                                                 #[inline]
@@ -196,7 +202,12 @@ impl<'a> Parse for WinWidget<'a> {
                                                 }
                                             ))
                                         }
-                                        _ => return Err(Error::new(input.span(), "Unkown function name in PopupImpl"))
+                                        _ => {
+                                            return Err(Error::new(
+                                                input.span(),
+                                                "Unkown function name in PopupImpl",
+                                            ))
+                                        }
                                     }
                                 }
                             }
@@ -391,7 +402,8 @@ impl<'a> WinWidget<'a> {
             let is_modal = self.is_modal.take().unwrap_or_default();
             let hide_on_click = self.hide_on_click.take().unwrap_or_default();
             let move_capable = self.move_capable.take().unwrap_or_default();
-            let handle_global_mouse_pressed = self.handle_global_mouse_pressed.take().unwrap_or_default();
+            let handle_global_mouse_pressed =
+                self.handle_global_mouse_pressed.take().unwrap_or_default();
             let on_mouse_click_hide = self.on_mouse_click_hide.take().unwrap_or_default();
             let on_win_size_change = self.on_win_size_change.take().unwrap_or_default();
             quote!(

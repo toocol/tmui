@@ -805,11 +805,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
         window.slave.read().signal();
     }
 
-    pub fn send_resize_event(
-        &mut self,
-        window_id: WindowId,
-        size: PhysicalSize<u32>,
-    ) {
+    pub fn send_resize_event(&mut self, window_id: WindowId, size: PhysicalSize<u32>) {
         let window = self
             .windows
             .get(&window_id.into())
@@ -842,11 +838,11 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
     #[inline]
     fn is_windowed_widget_window(&self, window_id: WindowId) -> bool {
         if window_id == self.main_window_id.unwrap() {
-            return false
+            return false;
         }
         for (_, &id) in self.win_widget_map.iter() {
             if window_id == id {
-                return true
+                return true;
             }
         }
         false

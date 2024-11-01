@@ -13,9 +13,9 @@ use crate::{
         styles::Styles,
     },
     popup::ReflectPopupImpl,
+    prelude::*,
     primitive::Message,
     widget::WidgetSignals,
-    prelude::*,
 };
 use std::ptr::NonNull;
 use tlib::{
@@ -918,7 +918,8 @@ impl<T: WidgetImpl> WidgetExt for T {
             if width == 0 {
                 self.widget_props_mut().fixed_width_ration = 1.;
             } else {
-                self.widget_props_mut().fixed_width_ration = (width as f32 / parent_size.width() as f32).min(1.);
+                self.widget_props_mut().fixed_width_ration =
+                    (width as f32 / parent_size.width() as f32).min(1.);
             }
         }
     }
@@ -1872,7 +1873,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         } else {
             0.
         }
-    } 
+    }
 
     #[inline]
     fn shadow_bottom(&self) -> f32 {
