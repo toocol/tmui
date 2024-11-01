@@ -682,7 +682,9 @@ fn handle_global_overlaid(
 
         // Clip the overliad widget area.
         if widget.z_index() < overlaid.z_index() && !widget.descendant_of(id) && widget.id() != id {
-            painter.clip_rect_global(overlaid.rect(), ClipOp::Difference);
+            if cast!(overlaid as WinWidget).is_none() {
+                painter.clip_rect_global(overlaid.rect(), ClipOp::Difference);
+            }
         } else {
             continue;
         }

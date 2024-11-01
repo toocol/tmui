@@ -358,7 +358,7 @@ impl GeneralAttr {
             proc_macro2::TokenStream::new()
         };
 
-        let win_widget_corr_struct_clause = if let Some(ww) = win_widget.as_ref() {
+        let win_widget_corr_struct_clause = if let Some(ww) = win_widget.as_mut() {
             ww.corr_struct_clause()
         } else {
             proc_macro2::TokenStream::new()

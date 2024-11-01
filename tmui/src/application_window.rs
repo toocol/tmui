@@ -1002,7 +1002,7 @@ impl ApplicationWindow {
         let id = self.get_signal_source().unwrap();
 
         let w = self.find_id(id).unwrap();
-        let mut rect = w.visual_image_rect();
+        let mut rect = w.visual_rect();
         let is_popup = cast!(w as PopupImpl).is_some();
         if is_popup {
             let outer = self.map_to_client_f(&rect.top_left());
@@ -1010,7 +1010,8 @@ impl ApplicationWindow {
         }
 
         debug!(
-            "Window correspondent widget geometry changed {:?}, rect record {:?}",
+            "Window correspondent widget `{}` geometry changed {:?}, rect record {:?}",
+            w.name(),
             rect,
             w.rect_record()
         );

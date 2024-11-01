@@ -12,6 +12,15 @@ pub(crate) struct WinWidget<'a> {
     crs_s2o_msg: Option<Ident>,
     generics: Option<SplitGenericsRef<'a>>,
     is_popup: bool,
+
+    // PopupImpl functions define:
+    calculate_position: Option<TokenStream>,
+    is_modal: Option<TokenStream>,
+    hide_on_click: Option<TokenStream>,
+    move_capable: Option<TokenStream>,
+    handle_global_mouse_pressed: Option<TokenStream>,
+    on_mouse_click_hide: Option<TokenStream>,
+    on_win_size_change: Option<TokenStream>,
 }
 
 impl<'a> Parse for WinWidget<'a> {
@@ -20,6 +29,14 @@ impl<'a> Parse for WinWidget<'a> {
         let mut crs_s2o_msg = None;
         let metas: Punctuated<Meta, Token![,]> = input.parse_terminated(Meta::parse)?;
         let metas: Vec<Meta> = metas.into_iter().collect();
+
+    let mut calculate_position: Option<TokenStream> = None;
+    let mut is_modal: Option<TokenStream> = None;
+    let mut hide_on_click: Option<TokenStream> = None;
+    let mut move_capable: Option<TokenStream> = None;
+    let mut handle_global_mouse_pressed: Option<TokenStream> = None;
+    let mut on_mouse_click_hide: Option<TokenStream> = None;
+    let mut on_win_size_change: Option<TokenStream> = None;
 
         for meta in metas.into_iter() {
             match meta {
@@ -98,18 +115,91 @@ impl<'a> Parse for WinWidget<'a> {
                     ..
                 }) => {
                     if let Some(ident) = path.get_ident() {
-                        if *ident != "o2s" && *ident != "s2o" {
+                        if *ident != "o2s" && *ident != "s2o" && *ident != "PopupImpl" {
                             return Err(Error::new(
-                            input.span(),
-                            "Unsupported WinWidget configuration, Unkonwn config, only o2s(xx), s2o(xx) is supported.",
+                                input.span(),
+                                "Unsupported WinWidget configuration, Unkonwn config, only o2s(xx), s2o(xx) is supported.",
                             ));
                         }
 
-                        if nested.len() != 1 {
+                        if *ident != "PopupImpl" && nested.len() != 1 {
                             return Err(Error::new(
-                            input.span(),
-                            "Unsupported WinWidget configuration, two many args, only o2s(xx), s2o(xx) is supported.",
+                                input.span(),
+                                "Unsupported WinWidget configuration, two many args, only o2s(xx), s2o(xx) is supported.",
                             ));
+                        }
+                        
+                        if *ident == "PopupImpl" {
+                            for meta in nested.iter() {
+                                if let syn::NestedMeta::Meta(Meta::List(meta_list)) = meta {
+                                    let fn_ident = meta_list.path.get_ident().unwrap();
+                                    let fn_call = if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) = meta_list.nested.first() {
+                                        path.get_ident().unwrap().clone()
+                                    } else {
+                                        return Err(Error::new(input.span(), "PopupImpl function call only support literal string."))
+                                    };
+
+                                    match fn_ident.to_string().as_str() {
+                                        "calculate_position" => {
+                                            calculate_position = Some(quote!(
+                                                #[inline]
+                                                fn calculate_position(&self, base_rect: Rect, mut point: Point) -> Point {
+                                                    #fn_call(self, base_rect, point)
+                                                }
+                                            ))
+                                        },
+                                        "is_modal" => {
+                                            is_modal = Some(quote!(
+                                                #[inline]
+                                                fn is_modal(&self) -> bool {
+                                                    #fn_call(self)
+                                                }
+                                            ))
+                                        }
+                                        "hide_on_click" => {
+                                            hide_on_click = Some(quote!(
+                                                #[inline]
+                                                fn hide_on_click(&self) -> bool {
+                                                    #fn_call(self)
+                                                }
+                                            ))
+                                        }
+                                        "move_capable" => {
+                                            move_capable = Some(quote!(
+                                                #[inline]
+                                                fn move_capable(&self) -> bool {
+                                                    #fn_call(self)
+                                                }
+                                            ))
+                                        }
+                                        "handle_global_mouse_pressed" => {
+                                            handle_global_mouse_pressed = Some(quote!(
+                                                #[inline]
+                                                fn handle_global_mouse_pressed(&mut self, evt: &MouseEvent) -> bool {
+                                                    #fn_call(self, evt)
+                                                }
+                                            ))
+                                        }
+                                        "on_mouse_click_hide" => {
+                                            on_mouse_click_hide = Some(quote!(
+                                                #[inline]
+                                                fn on_mouse_click_hide(&mut self) -> bool {
+                                                    #fn_call(self)
+                                                }
+                                            ))
+                                        }
+                                        "on_win_size_change" => {
+                                            on_win_size_change = Some(quote!(
+                                                #[inline]
+                                                fn on_win_size_change(&mut self, size: Size) -> bool {
+                                                    #fn_call(self, size)
+                                                }
+                                            ))
+                                        }
+                                        _ => return Err(Error::new(input.span(), "Unkown function name in PopupImpl"))
+                                    }
+                                }
+                            }
                         }
 
                         if let Some(syn::NestedMeta::Meta(syn::Meta::Path(path))) = nested.first() {
@@ -135,9 +225,9 @@ impl<'a> Parse for WinWidget<'a> {
                                     crs_s2o_msg = Some(attr_ident.clone())
                                 }
                             }
-                        } else {
+                        } else if *ident != "PopupImpl" {
                             return Err(Error::new(
-                            input.span(),
+                                input.span(),
                             "Unsupported WinWidget configuration, nested meta is None, only o2s(xx), s2o(xx) is supported.",
                             ));
                         }
@@ -158,6 +248,13 @@ impl<'a> Parse for WinWidget<'a> {
             crs_s2o_msg,
             generics: None,
             is_popup: false,
+            calculate_position,
+            is_modal,
+            hide_on_click,
+            move_capable,
+            handle_global_mouse_pressed,
+            on_mouse_click_hide,
+            on_win_size_change,
         })
     }
 }
@@ -175,6 +272,13 @@ impl<'a> WinWidget<'a> {
             crs_s2o_msg: None,
             generics: Some(generics),
             is_popup: false,
+            calculate_position: None,
+            is_modal: None,
+            hide_on_click: None,
+            move_capable: None,
+            handle_global_mouse_pressed: None,
+            on_mouse_click_hide: None,
+            on_win_size_change: None,
         })
     }
 
@@ -271,7 +375,7 @@ impl<'a> WinWidget<'a> {
         }
     }
 
-    pub(crate) fn corr_struct_clause(&self) -> TokenStream {
+    pub(crate) fn corr_struct_clause(&mut self) -> TokenStream {
         let name = self.name.as_ref().unwrap();
         let corr_name = self.corr_name.as_ref().unwrap();
 
@@ -281,9 +385,31 @@ impl<'a> WinWidget<'a> {
             quote!(#[extends(Widget)])
         };
 
+        // PopupImpl function override:
         let popup_impl_clause = if self.is_popup {
+            let calculate_position = self.calculate_position.take().unwrap_or_default();
+            let is_modal = self.is_modal.take().unwrap_or_default();
+            let hide_on_click = self.hide_on_click.take().unwrap_or_default();
+            let move_capable = self.move_capable.take().unwrap_or_default();
+            let handle_global_mouse_pressed = self.handle_global_mouse_pressed.take().unwrap_or_default();
+            let on_mouse_click_hide = self.on_mouse_click_hide.take().unwrap_or_default();
+            let on_win_size_change = self.on_win_size_change.take().unwrap_or_default();
             quote!(
-                impl PopupImpl for #corr_name {}
+                impl PopupImpl for #corr_name {
+                    #calculate_position
+
+                    #is_modal
+
+                    #hide_on_click
+
+                    #move_capable
+
+                    #handle_global_mouse_pressed
+
+                    #on_mouse_click_hide
+
+                    #on_win_size_change
+                }
             )
         } else {
             TokenStream::new()

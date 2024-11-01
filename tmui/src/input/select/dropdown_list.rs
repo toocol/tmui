@@ -1,3 +1,7 @@
+#[cfg(win_popup)]
+use super::MINIMUN_HEIGHT;
+#[cfg(win_popup)]
+use crate::views::list_view::list_node::ListNode;
 #[cfg(not(win_popup))]
 use crate::widget::widget_ext::FocusStrat;
 use crate::{
@@ -8,13 +12,9 @@ use crate::{
     views::list_view::{list_view_object::ListViewObject, ListView},
     widget::WidgetImpl,
 };
-use tlib::signals;
-#[cfg(win_popup)]
-use crate::views::list_view::list_node::ListNode;
 #[cfg(win_popup)]
 use strum_macros::Display;
-#[cfg(win_popup)]
-use super::MINIMUN_HEIGHT;
+use tlib::signals;
 
 const MAX_VISIBLE_ITEMS: i32 = 20;
 
@@ -35,7 +35,11 @@ impl DropdownListSignals for DropdownList {}
 #[cfg(win_popup)]
 #[extends(Popup)]
 #[derive(Childable)]
-#[tlib::win_widget(o2s(DropdownListCrsMsg), s2o(DropdownListCrsMsg))]
+#[tlib::win_widget(
+    o2s(DropdownListCrsMsg),
+    s2o(DropdownListCrsMsg),
+    PopupImpl(calculate_position(popup_position_calculate))
+)]
 pub struct DropdownList {
     #[child]
     list: Box<ListView>,
@@ -100,20 +104,25 @@ impl WidgetImpl for DropdownList {
 
 #[cfg(not(win_popup))]
 impl PopupImpl for DropdownList {
-    fn calculate_position(&self, base_rect: Rect, _: Point) -> Point {
-        let (tl, bl) = (base_rect.top_left(), base_rect.bottom_left());
-        let win_size = self.window().size();
-        let vr = self.visual_rect();
-        if bl.y() as f32 + vr.height() > win_size.height() as f32 {
-            Point::new(tl.x(), tl.y() - self.rect().height())
-        } else {
-            Point::new(bl.x(), bl.y())
-        }
+    #[inline]
+    fn calculate_position(&self, base_rect: Rect, point: Point) -> Point {
+        popup_position_calculate(self, base_rect, point)
     }
 
     #[inline]
     fn on_mouse_click_hide(&mut self) {
         self.trans_focus_take(FocusStrat::Restore);
+    }
+}
+
+fn popup_position_calculate(widget: &dyn WidgetImpl, base_rect: Rect, _: Point) -> Point {
+    let (tl, bl) = (base_rect.top_left(), base_rect.bottom_left());
+    let win_size = widget.window().size();
+    let vr = widget.visual_rect();
+    if bl.y() as f32 + vr.height() > win_size.height() as f32 {
+        Point::new(tl.x(), tl.y() - widget.rect().height())
+    } else {
+        Point::new(bl.x(), bl.y())
     }
 }
 
@@ -151,6 +160,7 @@ impl DropdownList {
             // Add the height of borders.
             self.height_request(height + 2)
         }
+        ApplicationWindow::window().layout_change(self);
     }
 
     #[cfg(not(win_popup))]
