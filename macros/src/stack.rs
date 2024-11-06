@@ -1,11 +1,8 @@
 use quote::quote;
 use syn::Ident;
 
-pub(crate) fn generate_stack_add_child(
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
-        use #use_prefix::application_window::ApplicationWindow;
         child.set_parent(self);
         if self.current_index == self.container.children.len() {
             child.show()
@@ -29,13 +26,12 @@ pub(crate) fn generate_stack_inner_initial() -> syn::Result<proc_macro2::TokenSt
     })
 }
 
-pub(crate) fn generate_stack_inner_on_property_set(use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_stack_inner_on_property_set() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!{
-        use #use_prefix::widget::InnerEventProcess;
         match name {
             "visible" => {
                 let visible = value.get::<bool>();
-                emit!(self.visibility_changed(), visible);
+                emit!(self, visibility_changed(visible));
                 self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
                 if visible {
@@ -64,10 +60,7 @@ pub(crate) fn generate_stack_inner_on_property_set(use_prefix: &Ident) -> syn::R
     })
 }
 
-pub(crate) fn generate_stack_impl(
-    name: &Ident,
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_stack_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         impl StackImpl for #name {
             fn current_child(&self) -> Option<&dyn WidgetImpl> {
@@ -94,7 +87,6 @@ pub(crate) fn generate_stack_impl(
 
             #[inline]
             fn switch(&mut self) {
-                use #use_prefix::application_window::ApplicationWindow;
                 let last_index = self.current_index;
 
                 self.current_index += 1;
@@ -117,7 +109,6 @@ pub(crate) fn generate_stack_impl(
 
             #[inline]
             fn switch_index(&mut self, index: usize) {
-                use #use_prefix::application_window::ApplicationWindow;
                 if index >= self.children().len() {
                     log::warn!("`index` overrange, skip the `switch_index()`, children len {}, get index {}", self.children().len(), index);
                     return

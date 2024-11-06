@@ -3,9 +3,14 @@ pub mod select_option;
 
 use super::{Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle, INPUT_FOCUSED_BORDER_COLOR};
 use crate::{
-    asset::Asset, font::FontCalculation, input::INPUT_DEFAULT_BORDER_COLOR, input_ele_impl, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_ext::FocusStrat, widget_inner::WidgetInnerExt, WidgetImpl}
+    asset::Asset, font::FontCalculation, input::INPUT_DEFAULT_BORDER_COLOR, input_ele_impl, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_inner::WidgetInnerExt, WidgetImpl}
 };
+#[cfg(not(win_select))]
+use crate::widget::widget_ext::FocusStrat;
+#[cfg(not(win_select))]
 use dropdown_list::{DropdownList, DropdownListSignals};
+#[cfg(win_select)]
+use dropdown_list::{CorrDropdownList, CorrDropdownListSignals};
 use select_option::SelectOption;
 use tlib::{
     connect, events::MouseEvent, global::PrecisionOps, namespace::MouseButton, run_after,
@@ -13,6 +18,8 @@ use tlib::{
 };
 
 const MINIMUN_WIDTH: i32 = 25;
+#[cfg(win_select)]
+const MINIMUN_HEIGHT: i32 = 10;
 const TEXT_MARGIN: i32 = 3;
 
 const ARROW_PADDING: f32 = 2.;
@@ -45,15 +52,31 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
 
         self.input_wrapper.init(self.id());
 
-        let mut dropdown_list = DropdownList::new();
-        dropdown_list.width_request(MINIMUN_WIDTH);
-        connect!(
-            dropdown_list,
-            value_changed(),
-            self,
-            dropdown_list_value_changed(String)
-        );
-        self.add_popup(dropdown_list);
+        #[cfg(not(win_select))]
+        {
+            let mut dropdown_list = DropdownList::new();
+            dropdown_list.width_request(MINIMUN_WIDTH);
+            connect!(
+                dropdown_list,
+                value_changed(),
+                self,
+                dropdown_list_value_changed(String)
+            );
+            self.add_popup(dropdown_list);
+        }
+
+        #[cfg(win_select)]
+        {
+            let mut dropdown_list = crate::input::select::dropdown_list::CorrDropdownList::new();
+            dropdown_list.width_request(MINIMUN_WIDTH);
+            connect!(
+                dropdown_list,
+                value_changed(),
+                self,
+                dropdown_list_value_changed(String)
+            );
+            self.add_popup(dropdown_list);
+        }
 
         let size = ARROW_SIZE as u32;
         let arrow = SvgStr::get::<Asset>(
@@ -103,6 +126,7 @@ impl<T: SelectBounds> WidgetImpl for Select<T> {
         }
 
         self.show_popup(event.position().into());
+        #[cfg(not(win_select))]
         self.dropdown_list_mut()
             .trans_focus_take(FocusStrat::TakeOver);
     }
@@ -178,8 +202,6 @@ impl<T: SelectBounds> Select<T> {
             }
         }
 
-        self.dropdown_list_mut().scroll_to(idx);
-
         let width = max_width + ARROW_SIZE.ceil() as i32 + ARROW_PADDING as i32 * 2 + TEXT_MARGIN;
         self.set_fixed_width(width);
         self.set_detecting_width(width);
@@ -188,11 +210,14 @@ impl<T: SelectBounds> Select<T> {
         dropdown_list.width_request(width);
         dropdown_list.calc_height();
 
+        self.dropdown_list_mut().scroll_to(idx);
+
         self.window().layout_change(self);
 
         self.update();
     }
 
+    #[cfg(not(win_select))]
     #[inline]
     pub fn dropdown_list(&self) -> &DropdownList {
         self.get_popup_ref()
@@ -202,12 +227,32 @@ impl<T: SelectBounds> Select<T> {
             .unwrap()
     }
 
+    #[cfg(not(win_select))]
     #[inline]
     pub fn dropdown_list_mut(&mut self) -> &mut DropdownList {
         self.get_popup_mut()
             .unwrap()
             .as_any_mut()
             .downcast_mut::<DropdownList>()
+            .unwrap()
+    }
+
+    #[cfg(win_select)]
+    #[inline]
+    pub fn dropdown_list(&self) -> &CorrDropdownList {
+        self.get_popup_ref()
+            .unwrap()
+            .as_any()
+            .downcast_ref::<CorrDropdownList>()
+            .unwrap()
+    }
+
+    #[cfg(win_select)]
+    pub fn dropdown_list_mut(&mut self) -> &mut CorrDropdownList {
+        self.get_popup_mut()
+            .unwrap()
+            .as_any_mut()
+            .downcast_mut::<CorrDropdownList>()
             .unwrap()
     }
 }

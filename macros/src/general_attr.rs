@@ -1,16 +1,19 @@
+use crate::{
+    animation::Animation, async_task::AsyncTask, close_handler::CloseHandler,
+    global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable,
+    popupable::Popupable, win_widget::WinWidget, SplitGenericsRef,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::DeriveInput;
+use syn::{spanned::Spanned, DeriveInput, Error, Meta};
 
-use crate::{animation::Animation, async_task::AsyncTask, close_handler::CloseHandler, global_watch::GlobalWatch, isolated_visibility::IsolatedVisibility, loadable::Loadable, popupable::Popupable, SplitGenericsRef};
-
-pub(crate) struct GeneralAttr<'a> {
+pub(crate) struct GeneralAttr {
     // fields about `run_after`
     pub(crate) run_after_clause: TokenStream,
 
     // fields about `animation`
     pub(crate) is_animation: bool,
-    pub(crate) animation: Option<Animation<'a>>,
+    pub(crate) animation_parse_default: TokenStream,
     pub(crate) animation_clause: TokenStream,
     pub(crate) animation_field: TokenStream,
     pub(crate) animation_reflect: TokenStream,
@@ -56,10 +59,21 @@ pub(crate) struct GeneralAttr<'a> {
     pub(crate) close_handler_impl_clause: TokenStream,
     pub(crate) close_handler_reflect_clause: TokenStream,
     pub(crate) close_handler_register_clause: TokenStream,
+
+    // fields about `win_widget`
+    pub(crate) is_win_widget: bool,
+    pub(crate) win_widget_sink_field: Vec<TokenStream>,
+    pub(crate) win_widget_sink_impl: TokenStream,
+    pub(crate) win_widget_sink_reflect: TokenStream,
+    pub(crate) win_widget_corr_struct_clause: TokenStream,
 }
 
-impl<'a> GeneralAttr<'a> {
-    pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
+impl GeneralAttr {
+    pub(crate) fn parse(
+        ast: &DeriveInput,
+        generics: SplitGenericsRef<'_>,
+        is_popup: bool,
+    ) -> syn::Result<Self> {
         let name = &ast.ident;
         let (_, ty_generics, _) = generics;
 
@@ -85,9 +99,11 @@ impl<'a> GeneralAttr<'a> {
 
         let mut close_handler = None;
 
+        let mut win_widget = None;
+
         for attr in ast.attrs.iter() {
-            if let Some(attr_ident) = attr.path.get_ident() {
-                let attr_str = attr_ident.to_string();
+            if let Some(seg) = attr.path.segments.last() {
+                let attr_str = seg.ident.to_string();
 
                 match attr_str.as_str() {
                     "run_after" => is_run_after = true,
@@ -107,11 +123,24 @@ impl<'a> GeneralAttr<'a> {
                         let mut gw = attr.parse_args::<GlobalWatch>()?;
                         gw.set_generics(generics);
                         global_watch = Some(gw);
-                    },
+                    }
                     "iter_executor" => iter_executor = true,
                     "frame_animator" => frame_animator = true,
-                    "isolated_visibility" => isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?),
+                    "isolated_visibility" => {
+                        isolated_visibility = Some(IsolatedVisibility::parse(ast, generics)?)
+                    }
                     "close_handler" => close_handler = Some(CloseHandler::parse(ast, generics)?),
+                    "win_widget" => {
+                        let mut ww = match attr.parse_meta()? {
+                            Meta::List(_) => attr.parse_args::<WinWidget>()?,
+                            Meta::Path(_) => WinWidget::parse(ast, generics)?,
+                            Meta::NameValue(nv) => {
+                                return Err(Error::new(nv.span(), "Unsupported definition."));
+                            }
+                        };
+                        ww.set_info(ast, generics, is_popup);
+                        win_widget = Some(ww);
+                    }
                     _ => {}
                 }
             }
@@ -129,6 +158,11 @@ impl<'a> GeneralAttr<'a> {
         };
 
         // Animation:
+        let animation_parse_default = if let Some(animation) = animation.as_ref() {
+            animation.parse_default()?
+        } else {
+            proc_macro2::TokenStream::new()
+        };
         let animation_clause = if let Some(animation) = animation.as_ref() {
             animation.generate_animation(name)?
         } else {
@@ -215,7 +249,7 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
-        // Loadable 
+        // Loadable
         let loadable_field_clause = if let Some(loadable) = loadable.as_ref() {
             loadable.loadable_field()
         } else {
@@ -271,7 +305,7 @@ impl<'a> GeneralAttr<'a> {
         let isolated_visibility_field_clause = if let Some(iv) = isolated_visibility.as_ref() {
             iv.isolated_visibility_field()
         } else {
-           vec![] 
+            vec![]
         };
 
         let isolated_visibility_impl_clause = if let Some(iv) = isolated_visibility.as_ref() {
@@ -305,10 +339,35 @@ impl<'a> GeneralAttr<'a> {
             proc_macro2::TokenStream::new()
         };
 
+        // WinWidget
+        let win_widget_sink_field = if let Some(ww) = win_widget.as_ref() {
+            ww.sink_field_clause()
+        } else {
+            vec![]
+        };
+
+        let win_widget_sink_impl = if let Some(ww) = win_widget.as_ref() {
+            ww.sink_impl()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let win_widget_sink_reflect = if let Some(ww) = win_widget.as_ref() {
+            ww.sink_reflect()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
+        let win_widget_corr_struct_clause = if let Some(ww) = win_widget.as_mut() {
+            ww.corr_struct_clause()
+        } else {
+            proc_macro2::TokenStream::new()
+        };
+
         Ok(Self {
             run_after_clause,
             is_animation,
-            animation,
+            animation_parse_default,
             animation_clause,
             animation_field,
             animation_reflect,
@@ -338,6 +397,11 @@ impl<'a> GeneralAttr<'a> {
             close_handler_impl_clause,
             close_handler_reflect_clause,
             close_handler_register_clause,
+            is_win_widget: win_widget.is_some(),
+            win_widget_sink_field,
+            win_widget_sink_impl,
+            win_widget_sink_reflect,
+            win_widget_corr_struct_clause,
         })
     }
 }

@@ -7,9 +7,9 @@ use super::{
     WidgetHnd,
 };
 use crate::{views::list_view::list_item::ListItemCast, widget::WidgetImpl};
+use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
-    collections::HashMap,
     ptr::{addr_of_mut, NonNull},
     sync::{atomic::Ordering, Arc},
 };
@@ -67,7 +67,27 @@ impl ConcurrentStore {
             }
         }
 
-        let mut node = ListNode::create_from_obj(obj).boxed();
+        let mut node = ListNode::from(obj).boxed();
+        node.set_store_id(self.id);
+        node.set_id(self.next_id());
+        self.items.push(node);
+        self.items.len() - 1
+    }
+
+    /// @return the index of added node
+    pub fn add_node_directly(&mut self, node: ListNode) -> usize {
+        if let Some(last) = self.items.last() {
+            if let Some(node) = last.downcast_ref::<ListNode>() {
+                if node.is_group_managed() {
+                    let separator = self.separator.clone().boxed();
+                    self.items.push(separator.as_list_item());
+                    self.separator_cnt += 1;
+                    self.separator_pos.push(self.items.len() - 1);
+                }
+            }
+        }
+
+        let mut node = node.boxed();
         node.set_store_id(self.id);
         node.set_id(self.next_id());
         self.items.push(node);
@@ -147,10 +167,10 @@ pub trait ListStoreSignals: ActionExt {
         ListStore:
 
         /// @param [`i32`]
-        internal_scroll_value_changed();
+        internal_scroll_value_changed(i32);
 
         /// @param [`usize`]
-        items_len_changed();
+        items_len_changed(usize);
     );
 }
 impl ListStoreSignals for ListStore {}
@@ -166,7 +186,16 @@ impl ListStore {
         let mut mutex = self.concurrent_store.lock();
         let idx = mutex.add_node(obj);
 
-        emit!(self.items_len_changed(), mutex.len());
+        emit!(self, items_len_changed(mutex.len()));
+        idx
+    }
+
+    #[inline]
+    pub fn add_node_directly(&mut self, node: ListNode) -> usize {
+        let mut mutex = self.concurrent_store.lock();
+        let idx = mutex.add_node_directly(node);
+
+        emit!(self, items_len_changed(mutex.len()));
         idx
     }
 
@@ -175,7 +204,7 @@ impl ListStore {
         let mut mutex = self.concurrent_store.lock();
         let idx = mutex.add_group(group);
 
-        emit!(self.items_len_changed(), mutex.len());
+        emit!(self, items_len_changed(mutex.len()));
         idx
     }
 
@@ -183,7 +212,7 @@ impl ListStore {
     pub fn clear(&mut self) {
         self.concurrent_store.lock().clear();
 
-        emit!(self.items_len_changed(), 0);
+        emit!(self, items_len_changed(0usize));
     }
 
     #[inline]
@@ -207,9 +236,9 @@ impl ListStore {
 
 impl ListStore {
     #[inline]
-    pub(crate) fn store_map() -> &'static mut HashMap<ObjectId, Option<NonNull<ListStore>>> {
-        static mut STORE_MAP: Lazy<HashMap<ObjectId, Option<NonNull<ListStore>>>> =
-            Lazy::new(HashMap::new);
+    pub(crate) fn store_map() -> &'static mut IntMap<ObjectId, Option<NonNull<ListStore>>> {
+        static mut STORE_MAP: Lazy<IntMap<ObjectId, Option<NonNull<ListStore>>>> =
+            Lazy::new(IntMap::default);
         unsafe { addr_of_mut!(STORE_MAP).as_mut().unwrap() }
     }
 
@@ -398,7 +427,7 @@ impl ListStore {
         let scrolled = self.scroll_to(scroll_to);
 
         if scrolled {
-            emit!(self.internal_scroll_value_changed(), scroll_to)
+            emit!(self, internal_scroll_value_changed(scroll_to))
         }
     }
 
@@ -411,7 +440,7 @@ impl ListStore {
 
             if self.len_rec != new_len {
                 self.len_rec = new_len;
-                emit!(self.items_len_changed(), new_len);
+                emit!(self, items_len_changed(new_len));
 
                 f = true;
             }

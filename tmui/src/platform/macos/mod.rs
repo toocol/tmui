@@ -26,7 +26,10 @@ use std::{
 use tipc::{ipc_master::IpcMaster, parking_lot::RwLock, WithIpcMaster};
 use tlib::{
     figure::Point,
-    winit::event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+    winit::{
+        event_loop::{EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget},
+        raw_window_handle::HasWindowHandle,
+    },
 };
 
 use self::macos_window::MacosWindow;
@@ -72,6 +75,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         target: Option<&EventLoopWindowTarget<Message>>,
         proxy: Option<EventLoopProxy<Message>>,
     ) -> (LogicWindow<T, M>, PhysicalWindow<T, M>) {
+        let defer_display = win_config.defer_display();
         let inner_agent = if self.master.is_some() {
             let master = self.master.as_ref().unwrap().clone();
             Some(InnerAgent::master(master))
@@ -133,13 +137,22 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
 
         self.main_win_create.set(false);
 
-        let init_position = if let Ok(pos) = window.outer_position() {
+        let init_outer = if let Ok(pos) = window.outer_position() {
+            Point::new(pos.x, pos.y)
+        } else {
+            Point::new(0, 0)
+        };
+        let init_inner = if let Ok(pos) = window.inner_position() {
             Point::new(pos.x, pos.y)
         } else {
             Point::new(0, 0)
         };
         let (mut logic_window, physical_window) = (
             LogicWindow::master(
+                window
+                    .window_handle()
+                    .expect("Get window handle failed,")
+                    .as_raw(),
                 window_id,
                 gl_env.clone(),
                 bitmap.clone(),
@@ -149,7 +162,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                     output_sender: OutputSender::EventLoopProxy(event_loop_proxy),
                     input_receiver: InputReceiver(input_receiver),
                 },
-                init_position,
+                (init_outer, init_inner),
+                defer_display,
             ),
             PhysicalWindow::Macos(MacosWindow::new(
                 window_id,

@@ -106,7 +106,7 @@ pub trait Input: InputSignals {
     fn disable(&mut self) {
         self.input_wrapper().disable();
 
-        emit!(self.available_changed(), false)
+        emit!(self, available_changed(false))
     }
 
     /// Enable the input widget, make it able to interact.
@@ -114,7 +114,7 @@ pub trait Input: InputSignals {
     fn enable(&mut self) {
         self.input_wrapper().enable();
 
-        emit!(self.available_changed(), true)
+        emit!(self, available_changed(true))
     }
 
     /// Whether the widget is enabled or not.
@@ -143,7 +143,7 @@ pub trait Input: InputSignals {
         }
         self.input_wrapper().set_value(val);
 
-        emit!(self.value_changed())
+        emit!(self, value_changed())
     }
 
     /// @return
@@ -207,7 +207,7 @@ pub trait InputSignals: ActionExt {
         /// Emit when input elements were enabled/disabled.
         ///
         /// @param [`bool`]
-        available_changed();
+        available_changed(bool);
     }
 }
 

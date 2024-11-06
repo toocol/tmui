@@ -12,9 +12,9 @@ use tmui::{
 #[extends(Popup)]
 #[async_task(name = "TestAsyncTask", value = "&'static str")]
 #[animatable(
-    ty = "Linear",
+    ty = "EaseOut",
     direction = "BottomToTop",
-    duration = 150,
+    duration = 1000,
     mode = "Flex",
     effect = "Slide"
 )]

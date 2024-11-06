@@ -100,7 +100,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                     if reset_expand {
                         first.set_hexpand(false);
                     }
-                    emit!(first.size_changed(), first.size());
+                    emit!(first, size_changed(first.size()));
 
                     self.window().layout_change(self);
 
@@ -135,7 +135,7 @@ impl<T: PaneExt> InnerCustomizeEventProcess for T {
                     if reset_expand {
                         first.set_vexpand(false);
                     }
-                    emit!(first.size_changed(), first.size());
+                    emit!(first, size_changed(first.size()));
 
                     self.window().layout_change(self);
 

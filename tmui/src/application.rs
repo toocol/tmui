@@ -24,7 +24,7 @@ use std::{
     cell::RefCell,
     marker::PhantomData,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU8, Ordering},
         Once,
     },
 };
@@ -33,6 +33,7 @@ use tlib::{events::Event, figure::Size, winit::window::WindowButtons};
 
 thread_local! {
     pub(crate) static IS_UI_MAIN_THREAD: RefCell<bool> = const { RefCell::new(false) };
+    pub(crate) static IS_UI_THREAD: RefCell<bool> = const { RefCell::new(false) };
     pub(crate) static SHARED_CHANNEL: RefCell<Option<Box<dyn Any>>> = RefCell::new(None);
 }
 
@@ -42,9 +43,11 @@ pub(crate) static APP_STARTED: AtomicBool = AtomicBool::new(false);
 pub(crate) static APP_STOPPED: AtomicBool = AtomicBool::new(false);
 pub(crate) static IS_SHARED: AtomicBool = AtomicBool::new(false);
 pub(crate) static HIGH_LOAD: AtomicBool = AtomicBool::new(false);
+pub(crate) static UI_THREAD_CNT: AtomicU8 = AtomicU8::new(0);
 static ONCE: Once = Once::new();
 
-pub type FnActivate = Box<dyn Fn(&mut ApplicationWindow) + Send + Sync>;
+pub type FnActivate = Box<dyn FnOnce(&mut ApplicationWindow) + Send>;
+pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 pub type FnUserEventReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) + Send + Sync>;
 pub type FnRequestReceive<T> = Box<dyn Fn(&mut ApplicationWindow, T) -> Option<T> + Send + Sync>;
 
@@ -136,7 +139,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     /// UI components should create in here.
     pub fn connect_activate<F>(&self, f: F)
     where
-        F: Fn(&mut ApplicationWindow) + Send + Sync + 'static,
+        F: FnOnce(&mut ApplicationWindow) + Send + Sync + 'static,
     {
         *self.on_activate.borrow_mut() = Some(Box::new(f));
     }
@@ -332,10 +335,22 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     }
 }
 
-/// Determine whether the current thread is the UI main thread.
+/// Determine whether the current thread is the UI thread.
 #[inline]
 pub fn is_ui_thread() -> bool {
+    IS_UI_THREAD.with(|is_ui| *is_ui.borrow())
+}
+
+/// Determine whether the current thread is the UI main thread.
+#[inline]
+pub fn is_ui_main_thread() -> bool {
     IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow())
+}
+
+/// Get the count of ui threads.
+#[inline]
+pub fn ui_thread_count() -> u8 {
+    UI_THREAD_CNT.load(Ordering::Relaxed)
 }
 
 /// Is shared memory application or not.
@@ -509,6 +524,8 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     /// Set whether the application main window will support transparency.
     ///
     /// The default value was `false`.
+    ///
+    /// The child window create from main window will follow the transparency strategy.
     #[inline]
     pub fn transparent(mut self, transparent: bool) -> Self {
         self.win_cfg_bld = self.win_cfg_bld.transparent(transparent);
@@ -612,6 +629,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
     #[inline]
     pub fn defer_display(mut self, defer_display: bool) -> Self {
         self.win_cfg_bld = self.win_cfg_bld.visible(!defer_display);
+        self.win_cfg_bld = self.win_cfg_bld.defer_display(defer_display);
         self
     }
 }

@@ -6,7 +6,10 @@ pub(crate) mod windows_process;
 
 use self::frame_mgr::FrameMgr;
 use crate::{
-    application::{self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, SHARED_CHANNEL},
+    application::{
+        self, Application, APP_STOPPED, IS_UI_MAIN_THREAD, IS_UI_THREAD, SHARED_CHANNEL,
+        UI_THREAD_CNT,
+    },
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
     graphics::board::Board,
@@ -63,7 +66,10 @@ where
     }
 
     // Set the UI thread to the `Main` thread.
-    IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+    IS_UI_THREAD.with(|is_ui| *is_ui.borrow_mut() = true);
+    if UI_THREAD_CNT.fetch_add(1, Ordering::Release) == 0 {
+        IS_UI_MAIN_THREAD.with(|is_main| *is_main.borrow_mut() = true);
+    }
 
     // Setup the tokio async runtime
     let _guard = tokio_runtime().enter();
@@ -97,11 +103,17 @@ where
     if let Some(parent_win) = logic_window.get_parent_window() {
         window.set_parent_window(parent_win);
     }
+    if let Some(rwh) = logic_window.raw_window_handle() {
+        window.set_raw_window_handle(rwh)
+    }
     window.set_board(board.as_mut());
     window.register_output(output_sender);
     window.set_ipc_bridge(logic_window.create_ipc_bridge());
-    window.set_outer_position(logic_window.initial_position);
+    let init_pos = logic_window.initial_position;
+    window.set_outer_position(init_pos.0);
+    window.set_client_position(init_pos.1);
     window.set_params(logic_window.params.take());
+    window.set_defer_display(logic_window.defer_display);
 
     if let Some(window_id) = logic_window.window_id() {
         window.set_winit_id(window_id)
@@ -109,7 +121,6 @@ where
 
     if let Some(on_activate) = on_activate {
         on_activate(&mut window);
-        drop(on_activate);
     }
 
     board.add_element(window.as_mut());
@@ -158,8 +169,6 @@ where
                         }
 
                         evt = resize_evt;
-
-                        application::request_high_load(true);
                     }
 
                     cpu_balance.add_payload(evt.payload_wieght());
@@ -170,14 +179,10 @@ where
                         }
                     }
                 }
-                Message::WindowResponse(_, closure) => {
-                    closure(&mut window);
-                }
                 Message::WindowClosed => {
                     break;
                 }
-                Message::WindowMoved(position) => window.set_outer_position(position),
-                _ => {}
+                _ => wed::message_handle(&mut window, event),
             }
         }
 
@@ -214,7 +219,7 @@ where
         }
 
         window.iter_execute();
-        window.check_show_on_ready();
+        window.window_prepared();
 
         cpu_balance.payload_check();
         if window.is_high_load_requested() {

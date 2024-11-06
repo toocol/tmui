@@ -68,14 +68,12 @@ pub(crate) fn expand(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
-    internal: bool,
     ignore_default: bool,
     is_popup: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     gen_layout_clause(
         ast,
         LayoutType::from(layout_meta, layout)?,
-        internal,
         ignore_default,
         is_popup
     )
@@ -108,7 +106,6 @@ fn get_childrened_fields(ast: &DeriveInput) -> Vec<Ident> {
 fn gen_layout_clause(
     ast: &mut DeriveInput,
     layout: LayoutType,
-    internal: bool,
     ignore_default: bool,
     is_popup: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
@@ -122,9 +119,6 @@ fn gen_layout_clause(
     let is_scroll_area = layout == ScrollArea;
     let is_pane = layout == Pane;
 
-    let use_prefix = if internal { "crate" } else { "tmui" };
-    let use_prefix = Ident::new(use_prefix, ast.ident.span());
-
     let children_fields = get_childrened_fields(ast);
 
     let mut token = extend_container::expand(
@@ -134,7 +128,6 @@ fn gen_layout_clause(
         has_content_alignment,
         has_size_unified_adjust,
         layout,
-        &use_prefix,
         Some(&children_fields),
         is_popup,
     )?;
@@ -225,8 +218,8 @@ fn gen_layout_clause(
         quote!(
             impl SpacingCapable for #name {
                 #[inline]
-                fn orientation(&self) -> #use_prefix::tlib::namespace::Orientation {
-                    #use_prefix::tlib::namespace::Orientation::Vertical
+                fn orientation(&self) -> Orientation {
+                    Orientation::Vertical
                 }
             }
         )
@@ -234,8 +227,8 @@ fn gen_layout_clause(
         quote!(
             impl SpacingCapable for #name {
                 #[inline]
-                fn orientation(&self) -> #use_prefix::tlib::namespace::Orientation {
-                    #use_prefix::tlib::namespace::Orientation::Horizontal
+                fn orientation(&self) -> Orientation {
+                    Orientation::Horizontal
                 }
             }
         )
@@ -246,17 +239,16 @@ fn gen_layout_clause(
     let add_child_clause = match (is_split_pane, is_stack, is_scroll_area, is_pane) {
         (false, false, false, false) => {
             quote! {
-                use #use_prefix::application_window::ApplicationWindow;
                 child.set_parent(self);
                 ApplicationWindow::initialize_dynamic_component(child.as_mut());
                 self.container.children.push(child);
                 self.update();
             }
         }
-        (true, _, _, _) => generate_split_pane_add_child(&use_prefix)?,
-        (_, true, _, _) => generate_stack_add_child(&use_prefix)?,
+        (true, _, _, _) => generate_split_pane_add_child()?,
+        (_, true, _, _) => generate_stack_add_child()?,
         (_, _, true, _) => generate_scroll_area_add_child(name)?,
-        (_, _, _, true) => generate_pane_add_child(&use_prefix)?,
+        (_, _, _, true) => generate_pane_add_child()?,
     };
 
     let children_clause = if is_scroll_area {
@@ -282,25 +274,25 @@ fn gen_layout_clause(
     };
 
     let impl_split_pane = if is_split_pane {
-        generate_split_pane_impl(name, &use_prefix)?
+        generate_split_pane_impl(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
 
     let impl_stack_trait = if is_stack {
-        generate_stack_impl(name, &use_prefix)?
+        generate_stack_impl(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
 
     let impl_scroll_area = if is_scroll_area {
-        generate_scroll_area_impl(name, &use_prefix)?
+        generate_scroll_area_impl(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
 
     let impl_pane = if is_pane {
-        generate_pane_impl(name, &use_prefix)?
+        generate_pane_impl(name)?
     } else {
         proc_macro2::TokenStream::new()
     };
@@ -310,8 +302,8 @@ fn gen_layout_clause(
             #children_clause
 
             #[inline]
-            fn container_layout(&self) -> #use_prefix::container::ContainerLayoutEnum {
-                #use_prefix::container::ContainerLayoutEnum::#layout_ident
+            fn container_layout(&self) -> ContainerLayoutEnum {
+                ContainerLayoutEnum::#layout_ident
             }
         }
 

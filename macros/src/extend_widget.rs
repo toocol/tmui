@@ -10,10 +10,20 @@ pub(crate) fn expand(
     ast: &mut DeriveInput,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let general_attr =
+        GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause), false)?;
+
+    expand_with_general_attr(ast, ignore_default, general_attr)
+}
+
+pub(crate) fn expand_with_general_attr(
+    ast: &mut DeriveInput,
+    ignore_default: bool,
+    general_attr: GeneralAttr,
+) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-
-    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -46,6 +56,11 @@ pub(crate) fn expand(
     let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
     let close_handler_register_clause = &general_attr.close_handler_register_clause;
 
+    let win_widget_sink_field = &general_attr.win_widget_sink_field;
+    let win_widget_sink_impl = &general_attr.win_widget_sink_impl;
+    let win_widget_sink_reflect = &general_attr.win_widget_sink_reflect;
+    let win_widget_corr_struct_clause = &general_attr.win_widget_corr_struct_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -57,7 +72,7 @@ pub(crate) fn expand(
                     })?);
 
                     if general_attr.is_animation {
-                        let default = general_attr.animation.as_ref().unwrap().parse_default()?;
+                        let default = &general_attr.animation_parse_default;
                         let field = &general_attr.animation_field;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #default
@@ -97,6 +112,12 @@ pub(crate) fn expand(
                                 #field
                             })?);
                         }
+                    }
+
+                    for field in win_widget_sink_field.iter() {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
                     }
 
                     childable.parse_childable(fields)?;
@@ -144,6 +165,8 @@ pub(crate) fn expand(
                 #default_clause
                 #ast
 
+                #win_widget_corr_struct_clause
+
                 #object_trait_impl_clause
 
                 #element_trait_impl_clause
@@ -164,6 +187,8 @@ pub(crate) fn expand(
                 #isolated_visibility_impl_clause
 
                 #close_handler_impl_clause
+
+                #win_widget_sink_impl
 
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
@@ -187,6 +212,7 @@ pub(crate) fn expand(
                         #frame_animator_reflect_clause
                         #isolated_visibility_reflect_clause
                         #close_handler_reflect_clause
+                        #win_widget_sink_reflect
                     }
 
                     #[inline]
@@ -232,10 +258,9 @@ pub(crate) fn expand_with_layout(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
-    internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout, internal, ignore_default, false)
+    layout::expand(ast, layout_meta, layout, ignore_default, false)
 }
 
 pub(crate) fn gen_widget_trait_impl_clause(

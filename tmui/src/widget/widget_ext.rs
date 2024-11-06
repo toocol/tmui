@@ -13,6 +13,7 @@ use crate::{
         styles::Styles,
     },
     popup::ReflectPopupImpl,
+    prelude::*,
     primitive::Message,
     widget::WidgetSignals,
 };
@@ -22,7 +23,6 @@ use tlib::{
     global::PrecisionOps,
     namespace::{Align, BorderStyle, Coordinate, Overflow, SystemCursorShape},
     object::ObjectId,
-    prelude::*,
     ptr_mut,
 };
 
@@ -224,6 +224,18 @@ pub trait WidgetExt {
 
     /// Get the left margin of the Widget.
     fn margin_left(&self) -> i32;
+
+    /// The max value between top margin and top shadow blur
+    fn outer_top(&self) -> i32;
+
+    /// The max value between right margin and right shadow blur
+    fn outer_right(&self) -> i32;
+
+    /// The max value between bottom margin and bottom shadow blur
+    fn outer_bottom(&self) -> i32;
+
+    /// The max value between left margin and left shadow blur
+    fn outer_left(&self) -> i32;
 
     /// Set the margins of the Widget.
     fn set_margins(&mut self, top: i32, right: i32, bottom: i32, left: i32);
@@ -505,6 +517,18 @@ pub trait WidgetExt {
     /// Set the box shadow of widget.
     fn set_box_shadow(&mut self, shadow: BoxShadow);
 
+    /// Get the top blur of shadow box.
+    fn shadow_top(&self) -> f32;
+
+    /// Get the right blur of shadow box.
+    fn shadow_right(&self) -> f32;
+
+    /// Get the bottom blur of shadow box.
+    fn shadow_bottom(&self) -> f32;
+
+    /// Get the left blur of shadow box.
+    fn shadow_left(&self) -> f32;
+
     /// Get the rect record of widget.
     ///
     /// The widget rect recorded during the `last render`.
@@ -695,6 +719,13 @@ impl<T: WidgetImpl> WidgetExt for T {
             snapshot.start(false);
         }
 
+        if let Some(window) = self.downcast_ref::<ApplicationWindow>() {
+            window.send_message(Message::WindowVisibilityRequest(
+                window.winit_id().unwrap(),
+                false,
+            ));
+        }
+
         self.set_property("visible", false.to_value());
         self.set_first_rendered(false);
 
@@ -716,6 +747,10 @@ impl<T: WidgetImpl> WidgetExt for T {
                 self.set_focus(false);
             }
         }
+
+        if cast!(self as CrossWinWidget).is_some() {
+            self.window().hide()
+        }
     }
 
     #[inline]
@@ -731,6 +766,13 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
         if let Some(snapshot) = cast_mut!(self as Snapshot) {
             snapshot.start(true);
+        }
+
+        if let Some(window) = self.downcast_ref::<ApplicationWindow>() {
+            window.send_message(Message::WindowVisibilityRequest(
+                window.winit_id().unwrap(),
+                true,
+            ));
         }
 
         self.set_property("visible", true.to_value());
@@ -751,6 +793,10 @@ impl<T: WidgetImpl> WidgetExt for T {
             }
         } else if self.initialized() {
             self.window().layout_change(self)
+        }
+
+        if cast!(self as CrossWinWidget).is_some() {
+            self.window().show()
         }
     }
 
@@ -799,6 +845,20 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
+        if self.object_type().is_a(ApplicationWindow::static_type()) {
+            let size = self.size();
+            let window = self.downcast_mut::<ApplicationWindow>().unwrap();
+            let size = (
+                width.unwrap_or(size.width()),
+                height.unwrap_or(size.height()),
+            );
+            window.send_message(Message::WindowResizeRequest(
+                window.winit_id().unwrap(),
+                size.into(),
+            ));
+            return;
+        }
+
         let mut resized = false;
 
         if let Some(width) = width {
@@ -819,7 +879,7 @@ impl<T: WidgetImpl> WidgetExt for T {
         }
 
         if resized {
-            emit!(self.size_changed(), self.size())
+            emit!(self, size_changed(self.size()))
         }
 
         if self.id() != self.window_id() {
@@ -855,7 +915,12 @@ impl<T: WidgetImpl> WidgetExt for T {
                 return;
             }
 
-            self.widget_props_mut().fixed_width_ration = width as f32 / parent_size.width() as f32;
+            if width == 0 {
+                self.widget_props_mut().fixed_width_ration = 1.;
+            } else {
+                self.widget_props_mut().fixed_width_ration =
+                    (width as f32 / parent_size.width() as f32).min(1.);
+            }
         }
     }
 
@@ -887,8 +952,12 @@ impl<T: WidgetImpl> WidgetExt for T {
                 return;
             }
 
-            self.widget_props_mut().fixed_height_ration =
-                height as f32 / parent_size.height() as f32;
+            if height == 0 {
+                self.widget_props_mut().fixed_height_ration = 1.;
+            } else {
+                self.widget_props_mut().fixed_height_ration =
+                    (height as f32 / parent_size.height() as f32).min(1.);
+            }
         }
     }
 
@@ -996,10 +1065,15 @@ impl<T: WidgetImpl> WidgetExt for T {
         let (top, right, bottom, left) = self.borders().ceil();
         let (top, right, bottom, left) = (top as i32, right as i32, bottom as i32, left as i32);
 
-        rect.set_x(rect.x() + left);
-        rect.set_y(rect.y() + top);
-        rect.set_width(rect.width() - (left + right));
-        rect.set_height(rect.height() - (top + bottom));
+        if rect.width() >= (right + left) {
+            rect.set_x(rect.x() + left);
+            rect.set_width(rect.width() - (left + right));
+        }
+
+        if rect.height() >= (top + bottom) {
+            rect.set_y(rect.y() + top);
+            rect.set_height(rect.height() - (top + bottom));
+        }
 
         rect
     }
@@ -1162,7 +1236,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     fn set_background(&mut self, color: Color) {
         self.set_render_styles(true);
         self.widget_props_mut().styles.set_background(color);
-        emit!(Widget::set_background => self.background_changed(), color);
+        emit!(Widget::set_background => self, background_changed(color));
 
         self.set_whole_styles_render(true);
         self.notify_update();
@@ -1197,6 +1271,26 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn margin_left(&self) -> i32 {
         self.widget_props().margins[3]
+    }
+
+    #[inline]
+    fn outer_top(&self) -> i32 {
+        self.margin_top().max(self.shadow_top() as i32)
+    }
+
+    #[inline]
+    fn outer_right(&self) -> i32 {
+        self.margin_right().max(self.shadow_right() as i32)
+    }
+
+    #[inline]
+    fn outer_bottom(&self) -> i32 {
+        self.margin_bottom().max(self.shadow_bottom() as i32)
+    }
+
+    #[inline]
+    fn outer_left(&self) -> i32 {
+        self.margin_left().max(self.shadow_left() as i32)
     }
 
     #[inline]
@@ -1754,6 +1848,62 @@ impl<T: WidgetImpl> WidgetExt for T {
     }
 
     #[inline]
+    fn shadow_top(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::TOP) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    }
+
+    #[inline]
+    fn shadow_right(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::RIGHT) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    }
+
+    #[inline]
+    fn shadow_bottom(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::BOTTOM) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    }
+
+    #[inline]
+    fn shadow_left(&self) -> f32 {
+        if let Some(box_shadow) = self.box_shadow() {
+            let side = box_shadow.side();
+            if side.contains(ShadowSide::LEFT) {
+                box_shadow.blur()
+            } else {
+                0.
+            }
+        } else {
+            0.
+        }
+    }
+
+    #[inline]
     fn rect_record(&self) -> FRect {
         self.widget_props().old_rect
     }
@@ -1771,7 +1921,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn set_invalid_area(&mut self, rect: FRect) {
         self.widget_props_mut().invalid_area = rect;
-        emit!(self.invalid_area_changed(), rect);
+        emit!(self, invalid_area_changed(rect));
     }
 
     #[inline]

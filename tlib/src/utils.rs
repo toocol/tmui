@@ -242,16 +242,17 @@ impl FromValue for Timestamp {
 
 #[cfg(test)]
 mod tests {
+    use nohash_hasher::IntMap;
+
     use super::*;
     use std::{
-        collections::HashMap,
         sync::{Arc, Mutex},
         thread,
     };
 
     #[test]
     fn test_snowflake_guid_generator() {
-        let map: HashMap<u64, bool> = HashMap::new();
+        let map: IntMap<u64, bool> = IntMap::default();
         let mut vec = vec![];
         let arc = Arc::new(Mutex::new(map));
 

@@ -3,8 +3,9 @@ use ipc_master::IpcMaster;
 use ipc_slave::IpcSlave;
 use lazy_static::lazy_static;
 use mem::{mem_queue::MemQueueError, mem_rw_lock::MemRwLock};
+use nohash_hasher::IntMap;
 use raw_sync::Timeout;
-use std::{collections::HashMap, error::Error, ffi::c_void, marker::PhantomData, sync::Arc};
+use std::{error::Error, ffi::c_void, marker::PhantomData, sync::Arc};
 use tlib::figure::Rect;
 
 pub mod ipc_event;
@@ -160,8 +161,8 @@ pub trait IpcNode<T: 'static + Copy, M: 'static + Copy> {
 }
 
 lazy_static! {
-    static ref CHARCTER_MAP: HashMap<u8, u8> = {
-        let mut mapping = HashMap::new();
+    static ref CHARCTER_MAP: IntMap<u8, u8> = {
+        let mut mapping = IntMap::default();
         let mut cur = 0;
 
         for c in b'0'..=b'9' {

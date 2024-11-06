@@ -246,7 +246,7 @@ impl Password {
         }
         self.password_visible = password_visible;
         self.update();
-        emit!(self.password_visible_changed(), self.password_visible);
+        emit!(self, password_visible_changed(self.password_visible));
     }
 
     /// Is the input element `Password`'s text is visible or not.
@@ -271,7 +271,7 @@ pub trait PasswordSignals: ActionExt {
         /// Emit when component's password visible was changed.
         ///
         /// @param [`bool`]
-        password_visible_changed();
+        password_visible_changed(bool);
     }
 }
 impl PasswordSignals for Password {}

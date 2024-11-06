@@ -1,14 +1,17 @@
 use super::{win_config::WindowConfig, Window};
 use crate::{application::FnActivate, application_window::ApplicationWindow};
-use std::collections::HashMap;
-use tlib::{values::ToValue, Value};
+use ahash::AHashMap;
+use tlib::{object::ObjectId, values::ToValue, Value};
 
 #[derive(Default)]
 pub struct WindowBuilder {
     win_cfg: Option<WindowConfig>,
+    /// The window is a inner child window of parent window or not.
+    inner_window: bool,
+    win_widget_id: Option<ObjectId>,
     modal: bool,
     on_activate: Option<FnActivate>,
-    params: HashMap<String, Value>,
+    params: AHashMap<String, Value>,
 }
 
 impl WindowBuilder {
@@ -33,8 +36,17 @@ impl WindowBuilder {
         self
     }
 
+    /// Set the new window is os level child window of current window or not.
+    ///
+    /// The default value was [`false`]
     #[inline]
-    pub fn on_activate<F: 'static + Fn(&mut ApplicationWindow) + Send + Sync>(
+    pub fn inner_window(mut self, is: bool) -> Self {
+        self.inner_window = is;
+        self
+    }
+
+    #[inline]
+    pub fn on_activate<F: 'static + FnOnce(&mut ApplicationWindow) + Send>(
         mut self,
         on_activate: F,
     ) -> Self {
@@ -49,7 +61,13 @@ impl WindowBuilder {
     }
 
     #[inline]
-    pub fn build(self) -> Window {
+    pub(crate) fn win_widget_id(mut self, id: ObjectId) -> Self {
+        self.win_widget_id = Some(id);
+        self
+    }
+
+    #[inline]
+    pub(crate) fn build(self) -> Window {
         let mut window = Window::new();
 
         window.win_cfg = Some(
@@ -58,7 +76,9 @@ impl WindowBuilder {
         );
         window.on_activate = self.on_activate;
         window.modal = self.modal;
+        window.win_widget_id = self.win_widget_id;
         window.params = Some(self.params);
+        window.inner_window = self.inner_window;
 
         window
     }

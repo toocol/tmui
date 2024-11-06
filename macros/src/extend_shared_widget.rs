@@ -7,12 +7,13 @@ use syn::{parse::Parser, DeriveInput, Ident};
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     id: Option<&String>,
-    ignore_default: bool
+    ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let general_attr =
+        GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause), false)?;
 
-    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
+    let name = &ast.ident;
 
     let async_task_clause = &general_attr.async_task_impl_clause;
     let async_method_clause = &general_attr.async_task_method_clause;

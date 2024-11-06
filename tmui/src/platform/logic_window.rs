@@ -6,11 +6,13 @@ use super::{
 use crate::{
     application::{FnActivate, FnRequestReceive, FnUserEventReceive},
     backend::BackendType,
+    prelude::RawWindowHandle6,
     primitive::{bitmap::Bitmap, shared_channel::SharedChannel},
     runtime::window_context::LogicWindowContext,
 };
+use ahash::AHashMap;
 use glutin::config::Config;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
     IpcNode, IpcType,
@@ -18,6 +20,7 @@ use tipc::{
 use tlib::{figure::Point, winit::window::WindowId, Value};
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
+    raw_window_handle: Option<RawWindowHandle6>,
     window_id: Option<WindowId>,
     parent_window: Option<WindowId>,
     gl_env: Option<Arc<GlEnv>>,
@@ -28,6 +31,7 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     shared_widget_id: Option<&'static str>,
     slave: Option<Arc<RwLock<IpcSlave<T, M>>>>,
 
+    pub defer_display: bool,
     pub platform_type: PlatformType,
     pub backend_type: BackendType,
     pub ipc_type: IpcType,
@@ -40,8 +44,9 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     pub on_user_event_receive: Option<FnUserEventReceive<T>>,
     pub on_request_receive: Option<FnRequestReceive<M>>,
 
-    pub initial_position: Point,
-    pub params: Option<HashMap<String, Value>>,
+    /// (Outer, Inner)
+    pub initial_position: (Point, Point),
+    pub params: Option<AHashMap<String, Value>>,
 }
 
 unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Send
@@ -50,24 +55,29 @@ unsafe impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Se
 }
 
 impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWindow<T, M> {
+    #[allow(clippy::too_many_arguments)]
     pub fn master(
+        raw_window_handle: RawWindowHandle6,
         window_id: WindowId,
         gl_env: Option<Arc<GlEnv>>,
         bitmap: Arc<RwLock<Bitmap>>,
         master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
         shared_channel: Option<SharedChannel<T, M>>,
         context: LogicWindowContext,
-        initial_position: Point,
+        initial_position: (Point, Point),
+        defer_display: bool,
     ) -> Self {
         let lock = master.as_ref().map(|m| m.read().buffer_lock());
         Self {
+            raw_window_handle: Some(raw_window_handle),
             window_id: Some(window_id),
-            parent_window: None, 
+            parent_window: None,
             gl_env,
             bitmap,
             lock,
             shared_widget_id: None,
             slave: None,
+            defer_display,
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
             ipc_type: IpcType::Master,
@@ -91,6 +101,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
     ) -> Self {
         let lock = Some(slave.read().buffer_lock());
         Self {
+            raw_window_handle: None,
             window_id: None,
             parent_window: None,
             gl_env: None,
@@ -98,6 +109,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             lock,
             shared_widget_id: Some(shared_widget_id),
             slave: Some(slave),
+            defer_display: false,
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
             ipc_type: IpcType::Slave,
@@ -107,7 +119,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             on_activate: None,
             on_user_event_receive: None,
             on_request_receive: None,
-            initial_position: Point::default(),
+            initial_position: (Point::default(), Point::default()),
             params: None,
         }
     }
@@ -122,6 +134,10 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         self.parent_window
     }
 
+    #[inline]
+    pub fn raw_window_handle(&self) -> Option<RawWindowHandle6> {
+        self.raw_window_handle
+    }
 
     #[inline]
     pub fn window_id(&self) -> Option<WindowId> {

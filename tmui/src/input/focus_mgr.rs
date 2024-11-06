@@ -1,7 +1,8 @@
 use super::InputEle;
 use derivative::Derivative;
 use log::warn;
-use std::{cell::RefCell, collections::HashMap, ptr::NonNull};
+use nohash_hasher::IntMap;
+use std::{cell::RefCell, ptr::NonNull};
 use tlib::{nonnull_mut, nonnull_ref, object::ObjectId};
 
 type InputEleHnd = Option<NonNull<dyn InputEle>>;
@@ -13,7 +14,7 @@ thread_local! {
 #[derive(Derivative)]
 #[derivative(Default)]
 pub(crate) struct FocusMgr {
-    eles: HashMap<ObjectId, Vec<InputEleHnd>>,
+    eles: IntMap<ObjectId, Vec<InputEleHnd>>,
     current: Option<usize>,
     cur_root: ObjectId,
 }

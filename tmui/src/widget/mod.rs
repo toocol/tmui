@@ -1,6 +1,7 @@
 pub mod callbacks;
 pub mod widget_ext;
 pub mod widget_inner;
+pub mod win_widget;
 
 use self::{callbacks::Callbacks, widget_inner::WidgetInnerExt};
 use crate::{
@@ -185,95 +186,95 @@ pub trait WidgetSignals: ActionExt {
         /// Emit when widget's size changed.
         ///
         /// @param [`Size`]
-        size_changed();
+        size_changed(Size);
 
         /// Emit when widget's geometry(size or position) changed.
         ///
         /// @param [`FRect`]
-        geometry_changed();
+        geometry_changed(FRect);
 
         /// Emit when widget's receive mouse pressed event.
         ///
         /// @param [`MouseEvent`]
-        mouse_pressed();
+        mouse_pressed(&MouseEvent);
 
         /// Emit when widget's receive mouse released event.
         ///
         /// @param [`MouseEvent`]
-        mouse_released();
+        mouse_released(&MouseEvent);
 
         /// Emit when widget's receive mouse double click event.
         ///
         /// @param [`MouseEvent`]
-        mouse_double_click();
+        mouse_double_click(&MouseEvent);
 
         /// Emit when widget's receive mouse move event.
         ///
         /// @param [`MouseEvent`]
-        mouse_move();
+        mouse_move(&MouseEvent);
 
         /// Emit when widget's receive mouse wheel event.
         ///
         /// @param [`MouseEvent`]
-        mouse_wheel();
+        mouse_wheel(&MouseEvent);
 
         /// Emit when widget's receive mouse enter event.
         ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
-        mouse_enter();
+        mouse_enter(&MouseEvent);
 
         /// Emit when widget's receive mouse leave event.
         ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
-        mouse_leave();
+        mouse_leave(&MouseEvent);
 
         /// Emit when widget's receive mouse over event.
         ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
-        mouse_over();
+        mouse_over(&MouseEvent);
 
         /// Emit when widget's receive mouse out event.
         ///
         /// @see [`MouseEnterLeaveOverOutDesc`]
         ///
         /// @param [`MouseEvent`]
-        mouse_out();
+        mouse_out(&MouseEvent);
 
         /// Emit when widget's receive key pressed event.
         ///
         /// @param [`KeyEvent`]
-        key_pressed();
+        key_pressed(&KeyEvent);
 
         /// Emit when widget's receive key released event.
         ///
         /// @param [`KeyEvent`]
-        key_released();
+        key_released(&KeyEvent);
 
         /// Emit when widget's receive character event.
         ///
         /// @param [`ReceiveCharacterEvent`]
-        receive_character();
+        receive_character(&ReceiveCharacterEvent);
 
         /// Emit when widget's background changed.
         ///
         /// @param [`Color`]
-        background_changed();
+        background_changed(Color);
 
         /// Emit when widget's visibility changed.
         ///
         /// @param [`bool`]
-        visibility_changed();
+        visibility_changed(bool);
 
         /// Emit when widget's invalid area has changed.
         ///
         /// @param [`FRect`]
-        invalid_area_changed();
+        invalid_area_changed(FRect);
     }
 }
 
@@ -424,7 +425,7 @@ impl ObjectImpl for Widget {
             }
             "visible" => {
                 let visible = value.get::<bool>();
-                emit!(self.visibility_changed(), visible);
+                emit!(self, visibility_changed(visible));
                 self.inner_visibility_changed(visible);
                 self.on_visibility_changed(visible);
                 self.notify_visible(visible)
@@ -475,17 +476,25 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         #[cfg(verbose_logging)]
         let frame = cr.frame();
 
+        if cast!(self as WinWidget).is_some() {
+            return;
+        }
+
         if !self.visible() && !self.is_animation_progressing() {
             #[cfg(verbose_logging)]
             #[rustfmt::skip]
             info!(
                 "[on_renderer({}:{})] {} check return, visible={}, is_animation_progressing={}", frame.id(), frame.nth(), self.name(), self.visible(), self.is_animation_progressing()
             );
+            if self.object_type().is_a(ApplicationWindow::static_type()) {
+                let mut background = self.background();
+                background.set_transparency(self.transparency());
+                cr.canvas().clear(background);
+            }
             return;
         }
 
         let mut geometry = self.rect();
-
         if !geometry.is_valid() {
             #[cfg(verbose_logging)]
             #[rustfmt::skip]
@@ -673,7 +682,9 @@ fn handle_global_overlaid(
 
         // Clip the overliad widget area.
         if widget.z_index() < overlaid.z_index() && !widget.descendant_of(id) && widget.id() != id {
-            painter.clip_rect_global(overlaid.rect(), ClipOp::Difference);
+            if cast!(overlaid as WinWidget).is_none() {
+                painter.clip_rect_global(overlaid.rect(), ClipOp::Difference);
+            }
         } else {
             continue;
         }
@@ -931,7 +942,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_pressed(event)
         }
 
-        emit!(Widget::inner_mouse_pressed => self.mouse_pressed(), event);
+        emit!(Widget::inner_mouse_pressed => self, mouse_pressed(event));
 
         let mut pos: Point = event.position().into();
         pos = self.map_to_global(&pos);
@@ -965,7 +976,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_released(event)
         }
 
-        emit!(Widget::inner_mouse_released => self.mouse_released(), event);
+        emit!(Widget::inner_mouse_released => self, mouse_released(event));
 
         let mut pos: Point = event.position().into();
         pos = self.map_to_global(&pos);
@@ -995,7 +1006,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_move(event)
         }
 
-        emit!(Widget::inner_mouse_move => self.mouse_move(), event);
+        emit!(Widget::inner_mouse_move => self, mouse_move(event));
 
         let mut pos: Point = event.position().into();
         pos = self.map_to_global(&pos);
@@ -1025,7 +1036,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_wheel(event)
         }
 
-        emit!(Widget::inner_mouse_wheel => self.mouse_wheel(), event);
+        emit!(Widget::inner_mouse_wheel => self, mouse_wheel(event));
 
         let mut pos: Point = event.position().into();
         pos = self.map_to_global(&pos);
@@ -1054,7 +1065,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_enter(event)
         }
 
-        emit!(Widget::inner_mouse_enter => self.mouse_enter(), event);
+        emit!(Widget::inner_mouse_enter => self, mouse_enter(event));
     }
 
     #[inline]
@@ -1067,7 +1078,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_leave(event)
         }
 
-        emit!(Widget::inner_mouse_leave => self.mouse_leave(), event);
+        emit!(Widget::inner_mouse_leave => self, mouse_leave(event));
     }
 
     #[inline]
@@ -1076,7 +1087,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_over(event)
         }
 
-        emit!(Widget::inner_mouse_enter => self.mouse_over(), event);
+        emit!(Widget::inner_mouse_enter => self, mouse_over(event));
 
         let mut pos: Point = event.position().into();
         pos = self.map_to_global(&pos);
@@ -1100,7 +1111,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_mouse_out(event)
         }
 
-        emit!(Widget::inner_mouse_enter => self.mouse_out(), event);
+        emit!(Widget::inner_mouse_enter => self, mouse_out(event));
 
         let mut pos: Point = event.position().into();
         pos = self.map_to_global(&pos);
@@ -1129,7 +1140,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_key_pressed(event)
         }
 
-        emit!(Widget::inner_key_pressed => self.key_pressed(), event);
+        emit!(Widget::inner_key_pressed => self, key_pressed(event));
 
         if let Some(parent) = self.get_parent_mut() {
             if !parent.is_event_bubbled(EventBubble::KEY_PRESSED) {
@@ -1152,7 +1163,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_key_released(event)
         }
 
-        emit!(Widget::inner_key_released => self.key_released(), event);
+        emit!(Widget::inner_key_released => self, key_released(event));
 
         if let Some(parent) = self.get_parent_mut() {
             if !parent.is_event_bubbled(EventBubble::KEY_RELEASED) {
@@ -1170,7 +1181,7 @@ impl<T: WidgetImpl + WidgetSignals> InnerEventProcess for T {
             inner_customize_process.inner_customize_receive_character(event)
         }
 
-        emit!(Widget::inner_receive_character => self.receive_character(), event);
+        emit!(Widget::inner_receive_character => self, receive_character(event));
     }
 
     #[inline]
@@ -1474,7 +1485,7 @@ impl<T: WidgetAcquire> Layout for T {
 
     #[inline]
     fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
-        LayoutMgr::base_widget_position_layout(self, parent)
+        LayoutMgr::base_widget_position_layout(self, parent);
     }
 }
 

@@ -1,15 +1,14 @@
-use crate::{graphics::icon::Icon, primitive::Message};
+use crate::{graphics::icon::Icon, prelude::RawWindowHandle6, primitive::Message};
 use derivative::Derivative;
 use tlib::{
     figure::{Point, Size},
     typedef::{WinitIcon, WinitPosition, WinitWindowBuilder},
     winit::{
-        dpi::{PhysicalPosition, PhysicalSize},
-        error::OsError,
-        event_loop::EventLoopWindowTarget,
-        window::{Window, WindowButtons},
+        dpi::{PhysicalPosition, PhysicalSize}, error::OsError, event_loop::EventLoopWindowTarget, window::{Window, WindowButtons, WindowLevel}
     },
 };
+#[cfg(windows_platform)]
+use tlib::winit::platform::windows::WindowBuilderExtWindows;
 
 type WinitSize = tlib::winit::dpi::Size;
 
@@ -51,6 +50,14 @@ pub struct WindowConfig {
     enable_buttons: WindowButtons,
     /// The initial position of new window.
     position: Option<Point>,
+    /// The `RawWindowHandle` of system level parent window.
+    parent_window: Option<RawWindowHandle6>,
+    /// Window level of new window
+    win_level: WindowLevel,
+    /// Window defer display or not.
+    defer_display: bool,
+    /// Skip the taskbar setting or not.
+    skip_taskbar: bool,
 }
 
 impl WindowConfig {
@@ -72,6 +79,10 @@ impl WindowConfig {
             active: Default::default(),
             enable_buttons: WindowButtons::all(),
             position: Default::default(),
+            parent_window: Default::default(),
+            win_level: Default::default(),
+            defer_display: Default::default(),
+            skip_taskbar: Default::default(),
         }
     }
 
@@ -150,6 +161,26 @@ impl WindowConfig {
         self.position
     }
 
+    #[inline]
+    pub fn win_level(&self) -> WindowLevel {
+        self.win_level
+    }
+
+    #[inline]
+    pub fn defer_display(&self) -> bool {
+        self.defer_display
+    }
+
+    #[inline]
+    pub fn skip_taskbar(&self) -> bool {
+        self.skip_taskbar
+    }
+
+    #[inline]
+    pub(crate) fn set_parent_window_rwh(&mut self, rwh: RawWindowHandle6) {
+        self.parent_window = Some(rwh)
+    }
+
     pub(crate) fn create_window_builder(self) -> WinitWindowBuilder {
         let (width, height) = self.size();
 
@@ -157,13 +188,18 @@ impl WindowConfig {
             .with_title(&self.title)
             .with_inner_size(WinitSize::Physical(PhysicalSize::new(width, height)))
             .with_decorations(self.decoration)
-            .with_transparent(self.transparent)
             .with_blur(self.blur)
             .with_visible(self.visible)
             .with_resizable(self.resizable)
             .with_maximized(self.maximized)
             .with_active(self.active)
-            .with_enabled_buttons(self.enable_buttons);
+            .with_enabled_buttons(self.enable_buttons)
+            .with_window_level(self.win_level);
+
+        #[cfg(windows_platform)]
+        {
+            window_bld = window_bld.with_skip_taskbar(self.skip_taskbar);
+        }
 
         if let Some(max_size) = self.max_size {
             window_bld = window_bld.with_max_inner_size(WinitSize::Physical(PhysicalSize::new(
@@ -186,6 +222,12 @@ impl WindowConfig {
         if let Some(pos) = self.position {
             let position = WinitPosition::Physical(PhysicalPosition::new(pos.x(), pos.y()));
             window_bld = window_bld.with_position(position);
+        }
+
+        if let Some(rwh) = self.parent_window {
+            window_bld = unsafe { window_bld.with_parent_window(Some(rwh)) };
+        } else {
+            window_bld = window_bld.with_transparent(self.transparent);
         }
 
         window_bld
@@ -216,6 +258,9 @@ pub struct WindowConfigBuilder {
     #[derivative(Default(value = "WindowButtons::all()"))]
     enable_buttons: WindowButtons,
     position: Option<Point>,
+    win_level: WindowLevel,
+    defer_display: bool,
+    skip_taskbar: bool,
 }
 
 impl WindowConfigBuilder {
@@ -228,8 +273,8 @@ impl WindowConfigBuilder {
     ///
     /// The default value was "Tmui Window".
     #[inline]
-    pub fn title(mut self, title: String) -> Self {
-        self.title = title;
+    pub fn title(mut self, title: impl ToString) -> Self {
+        self.title = title.to_string();
         self
     }
 
@@ -280,6 +325,8 @@ impl WindowConfigBuilder {
     /// Set whether the window will support transparency.
     ///
     /// The default value was `false`.
+    ///
+    /// [` No need set for child window, it will follow parent window's transparency strategy. `]
     #[inline]
     pub fn transparent(mut self, transparent: bool) -> Self {
         self.transparent = transparent;
@@ -349,6 +396,33 @@ impl WindowConfigBuilder {
         self
     }
 
+    /// Set the window level of new window.
+    ///
+    /// The default value was [WindowLevel::Normal]
+    #[inline]
+    pub fn win_level(mut self, win_level: WindowLevel) -> Self {
+        self.win_level = win_level;
+        self
+    }
+
+    /// Set the window defer display or not.
+    /// 
+    /// The default value was [`false`]
+    #[inline]
+    pub fn defer_display(mut self, defer_display: bool) -> Self {
+        self.defer_display = defer_display;
+        self
+    }
+
+    /// Set the window register on the taskbar or not.
+    /// 
+    /// The default value was [`false`]
+    #[inline]
+    pub fn skip_taskbar(mut self, skip_taskbar: bool) -> Self {
+        self.skip_taskbar = skip_taskbar;
+        self
+    }
+
     #[inline]
     pub fn build(self) -> WindowConfig {
         let mut cfg = WindowConfig::new();
@@ -370,6 +444,9 @@ impl WindowConfigBuilder {
         cfg.active = self.active;
         cfg.enable_buttons = self.enable_buttons;
         cfg.position = self.position;
+        cfg.win_level = self.win_level;
+        cfg.defer_display = self.defer_display;
+        cfg.skip_taskbar = self.skip_taskbar;
 
         cfg
     }

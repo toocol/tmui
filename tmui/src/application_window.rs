@@ -1,32 +1,40 @@
 use crate::{
     animation::mgr::AnimationMgr,
+    application::FnRunAfter,
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
     },
-    input::{dialog::InputDialog, focus_mgr::FocusMgr, ReflectInputEle},
+    input::{dialog::TyInputDialog, focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
     loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
-    tooltip::{Tooltip, TooltipStrat},
+    tooltip::TooltipStrat,
     widget::{
-        index_children, widget_inner::WidgetInnerExt, IterExecutorHnd, WidgetImpl, ZIndexStep,
+        index_children,
+        widget_inner::WidgetInnerExt,
+        win_widget::{handle_win_widget_create, CrsWinMsgHnd, WinWidgetHnd},
+        IterExecutorHnd, WidgetImpl, ZIndexStep,
     },
     window::win_builder::WindowBuilder,
 };
+use ahash::AHashMap;
 use log::{debug, error, warn};
+use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashSet, VecDeque},
     ptr::{addr_of_mut, NonNull},
+    sync::Once,
     thread::{self, ThreadId},
 };
 use tlib::{
+    connect,
     events::{DeltaType, Event, EventType, MouseEvent},
     figure::Size,
     namespace::{KeyboardModifier, MouseButton},
@@ -41,29 +49,34 @@ use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
 thread_local! {
     pub(crate) static WINDOW_ID: RefCell<ObjectId> = const { RefCell::new(0) };
     pub(crate) static INTIALIZE_PHASE: RefCell<bool> = const { RefCell::new(false) };
+    static WINDOW_PREPARED_ONCE: Once = const { Once::new() };
 }
 
-pub type FnRunAfter = Box<dyn FnOnce(&mut ApplicationWindow)>;
 const DEFAULT_WINDOW_BACKGROUND: Color = Color::WHITE;
 
 #[extends(Widget)]
 pub struct ApplicationWindow {
+    raw_window_handle: Option<RawWindowHandle6>,
     parent_window: Option<WindowId>,
     winit_id: Option<WindowId>,
     platform_type: PlatformType,
     ipc_bridge: Option<Box<dyn IpcBridge>>,
     shared_widget_size_changed: bool,
     high_load_request: bool,
-    show_on_ready: bool,
+    defer_display: bool,
+    /// Position include the tile bar on the screen coordinate.
     outer_position: Point,
-    params: Option<HashMap<String, Value>>,
+    /// Position to the client area on the screen coordinate.
+    client_position: Point,
+    params: Option<AHashMap<String, Value>>,
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
     layout_mgr: LayoutMgr,
-    widgets: HashMap<ObjectId, WidgetHnd>,
+    widgets: IntMap<ObjectId, WidgetHnd>,
     iter_executors: Vec<IterExecutorHnd>,
     shadow_mouse_watch: Vec<WidgetHnd>,
+    crs_win_handlers: Vec<CrsWinMsgHnd>,
 
     focused_widget: ObjectId,
     focused_widget_mem: Vec<ObjectId>,
@@ -74,12 +87,19 @@ pub struct ApplicationWindow {
 
     run_after: Option<FnRunAfter>,
     run_afters: Vec<WidgetHnd>,
-    watch_map: HashMap<GlobalWatchEvent, HashSet<ObjectId>>,
-    overlaids: HashMap<ObjectId, WidgetHnd>,
+    watch_map: IntMap<GlobalWatchEvent, HashSet<ObjectId>>,
+    overlaids: IntMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
+    win_widgets: Vec<WinWidgetHnd>,
 
-    input_dialog: Option<Box<InputDialog>>,
-    tooltip: Option<Box<Tooltip>>,
+    #[cfg(not(win_dialog))]
+    input_dialog: Option<Box<crate::input::dialog::InputDialog>>,
+    #[cfg(win_dialog)]
+    input_dialog: Option<Box<crate::input::dialog::CorrInputDialog>>,
+    #[cfg(not(win_tooltip))]
+    tooltip: Option<Box<crate::tooltip::Tooltip>>,
+    #[cfg(win_tooltip)]
+    tooltip: Option<Box<crate::tooltip::CorrTooltip>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -103,10 +123,24 @@ impl ObjectImpl for ApplicationWindow {
         let window_id = self.id();
         self.root_ancestors.push(window_id);
         child_initialize(self.get_child_mut(), window_id);
+        if let Some(input_dialog) = self.input_dialog.as_mut() {
+            child_initialize(Some(input_dialog.as_mut()), window_id);
+        }
+        if let Some(tooltip) = self.tooltip.as_mut() {
+            child_initialize(Some(tooltip.as_mut()), window_id);
+        }
 
         self.when_size_change(self.size());
+
+        for w in self.win_widgets.iter_mut() {
+            let win_widget = nonnull_mut!(w);
+            let inner = cast!(win_widget as PopupImpl).is_none();
+            handle_win_widget_create(win_widget, inner);
+        }
+
         self.set_initialized(true);
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = false);
+
         debug!("Initialize-phase end.");
     }
 }
@@ -124,14 +158,6 @@ impl WidgetImpl for ApplicationWindow {
             log::info!("[run_after] `{}` executed run after.", widget.name());
         }
         self.run_afters.clear();
-    }
-
-    #[inline]
-    fn on_visibility_changed(&mut self, visible: bool) {
-        self.send_message(Message::WindowVisibilityRequest(
-            self.winit_id().unwrap(),
-            visible,
-        ))
     }
 }
 
@@ -154,14 +180,14 @@ impl ApplicationWindow {
     /// # Safety
     /// `ApplicationWidnow` and `LayoutManager` can only get and execute in they own ui thread.
     #[inline]
-    pub(crate) fn windows() -> &'static mut HashMap<ObjectId, ApplicationWindowContext> {
-        static mut WINDOWS: Lazy<HashMap<ObjectId, ApplicationWindowContext>> =
-            Lazy::new(HashMap::new);
+    pub(crate) fn windows() -> &'static mut IntMap<ObjectId, ApplicationWindowContext> {
+        static mut WINDOWS: Lazy<IntMap<ObjectId, ApplicationWindowContext>> =
+            Lazy::new(IntMap::default);
         unsafe { addr_of_mut!(WINDOWS).as_mut().unwrap() }
     }
 
     #[inline]
-    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut HashMap<ObjectId, WidgetHnd> {
+    pub(crate) fn widgets_of(id: ObjectId) -> &'static mut IntMap<ObjectId, WidgetHnd> {
         let window = Self::window_of(id);
         &mut window.widgets
     }
@@ -270,7 +296,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
+    pub fn register_run_after<R: 'static + FnOnce(&mut Self) + Send>(&mut self, run_after: R) {
         self.run_after = Some(Box::new(run_after));
     }
 
@@ -289,7 +315,13 @@ impl ApplicationWindow {
         let mut window = window_bld.build();
         window.set_parent(self.winit_id.unwrap());
 
-        self.send_message(Message::CreateWindow(window));
+        if window.is_inner_window() {
+            if let Some(rwh) = self.raw_window_handle {
+                window.set_parent_window_rwh(rwh)
+            }
+        }
+
+        self.send_message(Message::CreateWindow(self.winit_id().unwrap(), window));
     }
 
     #[inline]
@@ -340,14 +372,14 @@ impl ApplicationWindow {
     #[inline]
     pub fn layout_change(&self, mut widget: &mut dyn WidgetImpl) {
         if !self.initialized() || !widget.initialized() {
-            return
+            return;
         }
 
         // Layout changes should be based on its parent widget.
         if let Some(parent) = widget.get_raw_parent_mut() {
             let parent = unsafe { parent.as_mut().unwrap() };
             if !parent.initialized() {
-                return
+                return;
             }
             widget = parent;
         }
@@ -375,13 +407,54 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn get_param<T: FromValue + StaticType>(&self, key: &str) -> Option<T> {
-        self.params.as_ref()?.get(key).map(|p| p.get::<T>())
+    pub fn map_to_outer(&self, pos: &Point) -> Point {
+        Point::new(
+            pos.x() + self.outer_position.x(),
+            pos.y() + self.outer_position.y(),
+        )
     }
 
     #[inline]
-    pub fn show_on_ready(&mut self) {
-        self.show_on_ready = true;
+    pub fn map_to_outer_f(&self, pos: &FPoint) -> FPoint {
+        FPoint::new(
+            pos.x() + self.outer_position.x() as f32,
+            pos.y() + self.outer_position.y() as f32,
+        )
+    }
+
+    /// Get the outer position of window.
+    #[inline]
+    pub fn client_position(&self) -> Point {
+        self.client_position
+    }
+
+    #[inline]
+    pub fn map_to_client(&self, pos: &Point) -> Point {
+        Point::new(
+            pos.x() + self.client_position.x(),
+            pos.y() + self.client_position.y(),
+        )
+    }
+
+    #[inline]
+    pub fn map_to_client_f(&self, pos: &FPoint) -> FPoint {
+        FPoint::new(
+            pos.x() + self.client_position.x() as f32,
+            pos.y() + self.client_position.y() as f32,
+        )
+    }
+
+    #[inline]
+    pub fn request_win_position(&self, position: Point) {
+        self.send_message(Message::WindowPositionRequest(
+            self.winit_id.unwrap(),
+            position,
+        ));
+    }
+
+    #[inline]
+    pub fn get_param<T: FromValue + StaticType>(&self, key: &str) -> Option<T> {
+        self.params.as_ref()?.get(key).map(|p| p.get::<T>())
     }
 
     /// Should set the parent of widget before use this function.
@@ -413,6 +486,13 @@ impl ApplicationWindow {
         child_initialize(Some(widget), window_id);
 
         window.board().shuffle();
+
+        window.layout_change(widget);
+
+        if let Some(win_widget) = cast_mut!(widget as WinWidget) {
+            let inner = cast!(win_widget as PopupImpl).is_none();
+            handle_win_widget_create(win_widget, inner);
+        }
     }
 }
 
@@ -580,7 +660,7 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
-        emit!(self.size_changed(), size);
+        emit!(self, size_changed(size));
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
 
@@ -613,16 +693,20 @@ impl ApplicationWindow {
     pub(crate) fn iter_execute(&mut self) {
         self.iter_executors
             .iter_mut()
-            .for_each(|hnd| nonnull_mut!(hnd).iter_execute())
+            .for_each(|hnd| nonnull_mut!(hnd).iter_execute());
+
+        self.crs_win_handlers
+            .iter_mut()
+            .for_each(|hnd| nonnull_mut!(hnd).handle_inner());
     }
 
     #[inline]
-    pub(crate) fn overlaids(&self) -> &HashMap<ObjectId, WidgetHnd> {
+    pub(crate) fn overlaids(&self) -> &IntMap<ObjectId, WidgetHnd> {
         &self.overlaids
     }
 
     #[inline]
-    pub(crate) fn overlaids_mut(&mut self) -> &mut HashMap<ObjectId, WidgetHnd> {
+    pub(crate) fn overlaids_mut(&mut self) -> &mut IntMap<ObjectId, WidgetHnd> {
         &mut self.overlaids
     }
 
@@ -662,6 +746,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_parent_window(&mut self, parent: WindowId) {
         self.parent_window = Some(parent)
+    }
+
+    #[inline]
+    pub(crate) fn set_raw_window_handle(&mut self, rwh: RawWindowHandle6) {
+        self.raw_window_handle = Some(rwh)
     }
 
     #[inline]
@@ -748,13 +837,16 @@ impl ApplicationWindow {
     /// @param id: the id of the widget that affected the others.
     pub(crate) fn invalid_effected_widgets(&mut self, dirty_rect: FRect, id: ObjectId) {
         if !self.initialized() {
-            return
+            return;
         }
 
         let find = self.find_id(id);
         if find.is_none() {
-            warn!("[invalid_effected_widgets()] find widget by id failed, id = {}", id);
-            return
+            warn!(
+                "[invalid_effected_widgets()] find widget by id failed, id = {}",
+                id
+            );
+            return;
         }
 
         let z_index = find.unwrap().z_index();
@@ -796,20 +888,30 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn set_client_position(&mut self, position: Point) {
+        self.client_position = position
+    }
+
+    #[inline]
     pub(crate) fn root_ancestors(&self) -> &[ObjectId] {
         &self.root_ancestors
     }
 
     #[inline]
-    pub(crate) fn set_params(&mut self, params: Option<HashMap<String, Value>>) {
+    pub(crate) fn set_params(&mut self, params: Option<AHashMap<String, Value>>) {
         self.params = params
     }
 
     #[inline]
-    pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
+    pub(crate) fn input_dialog(&mut self) -> &mut TyInputDialog {
         if self.input_dialog.is_none() {
-            let mut input_dialog = InputDialog::new();
-            child_initialize(Some(input_dialog.as_widget_impl_mut()), self.id());
+            #[cfg(not(win_dialog))]
+            let mut input_dialog = crate::input::dialog::InputDialog::new();
+
+            #[cfg(win_dialog)]
+            let mut input_dialog = crate::input::dialog::CorrInputDialog::new();
+
+            Self::initialize_dynamic_component(input_dialog.as_mut());
             self.input_dialog = Some(input_dialog);
         }
 
@@ -817,11 +919,24 @@ impl ApplicationWindow {
     }
 
     #[inline]
+    pub(crate) fn tooltip_visible(&self) -> bool {
+        if let Some(ref tooltip) = self.tooltip {
+            tooltip.visible()
+        } else {
+            false
+        }
+    }
+
+    #[inline]
     pub(crate) fn tooltip(&mut self, tooltip_strat: TooltipStrat) {
         if self.tooltip.is_none() {
-            let mut tooltip = Tooltip::new();
-            child_initialize(Some(tooltip.as_widget_impl_mut()), self.id());
-            self.board().shuffle();
+            #[cfg(not(win_tooltip))]
+            let mut tooltip = crate::tooltip::Tooltip::new();
+
+            #[cfg(win_tooltip)]
+            let mut tooltip = crate::tooltip::CorrTooltip::new();
+
+            Self::initialize_dynamic_component(tooltip.as_mut());
             self.tooltip = Some(tooltip);
         }
 
@@ -829,46 +944,93 @@ impl ApplicationWindow {
 
         match tooltip_strat {
             TooltipStrat::Show(text, position, size, styles) => {
-                tooltip.set_fixed_x(position.x());
-                tooltip.set_fixed_y(position.y());
-
-                if let Some(width) = size.width() {
-                    tooltip.label().width_request(width)
-                }
-                if let Some(height) = size.height() {
-                    tooltip.label().height_request(height)
-                }
-                if let Some(styles) = styles {
-                    if let Some(halign) = styles.halign() {
-                        tooltip.label().set_halign(halign)
-                    }
-                    if let Some(valign) = styles.valign() {
-                        tooltip.label().set_valign(valign)
-                    }
-                    if let Some(color) = styles.color() {
-                        tooltip.set_color(color)
-                    }
-                    tooltip.set_styles(styles);
+                #[cfg(not(win_tooltip))]
+                {
+                    tooltip.set_fixed_x(position.x());
+                    tooltip.set_fixed_y(position.y());
+                    tooltip.set_props(text, size, styles);
+                    tooltip.calc_relative_position();
+                    tooltip.show();
+                    ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
                 }
 
-                tooltip.set_text(text);
-                tooltip.calc_relative_position();
-                tooltip.show();
-                ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
+                #[cfg(win_tooltip)]
+                {
+                    tooltip.set_fixed_x(position.x());
+                    tooltip.set_fixed_y(position.y());
+
+                    if let Some(width) = size.width() {
+                        tooltip.width_request(width)
+                    }
+                    if let Some(height) = size.height() {
+                        tooltip.height_request(height)
+                    }
+
+                    tooltip.send_cross_win_msg(crate::tooltip::TooltipCrsMsg::Show(
+                        text.to_string(),
+                        size,
+                        styles,
+                    ));
+                    tooltip.calc_relative_position();
+                    tooltip.show();
+                    ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
+                }
             }
             TooltipStrat::Hide => tooltip.hide(),
+            TooltipStrat::HideOnWindowReisze(on) => tooltip.set_hide_on_win_change(on),
         }
     }
 
     #[inline]
-    pub(crate) fn check_show_on_ready(&mut self) {
-        if self.show_on_ready {
-            self.show_on_ready = false;
-            self.send_message(Message::WindowVisibilityRequest(
-                self.winit_id().unwrap(),
-                true,
-            ));
+    pub(crate) fn set_defer_display(&mut self, defer_display: bool) {
+        self.defer_display = defer_display
+    }
+
+    #[inline]
+    pub(crate) fn window_prepared(&self) {
+        if self.defer_display {
+            WINDOW_PREPARED_ONCE.with(|once| {
+                once.call_once(|| {
+                    self.send_message(Message::WindowVisibilityRequest(
+                        self.winit_id().unwrap(),
+                        true,
+                    ));
+                })
+            });
         }
+    }
+
+    #[inline]
+    pub(crate) fn handle_win_widget_geometry_changed(&self, _: FRect) {
+        if !self.initialized() {
+            return;
+        }
+        let id = self.get_signal_source().unwrap();
+
+        let w = self.find_id(id).unwrap();
+        let mut rect = w.visual_rect();
+        let is_popup = cast!(w as PopupImpl).is_some();
+        if is_popup {
+            let outer = self.map_to_client_f(&rect.top_left());
+            rect.set_point(&outer);
+        }
+
+        debug!(
+            "Window correspondent widget `{}` geometry changed {:?}, rect record {:?}",
+            w.name(),
+            rect,
+            w.rect_record()
+        );
+        self.send_message(Message::WinWidgetGeometryChangedRequest(id, rect.into()))
+    }
+
+    #[inline]
+    pub(crate) fn handle_win_widget_visibility_changed(&self, visible: bool) {
+        if !self.initialized() {
+            return;
+        }
+        let id = self.get_signal_source().unwrap();
+        self.send_message(Message::WinWidgetVisibilityChangedRequest(id, visible))
     }
 }
 
@@ -904,10 +1066,7 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             let supervisor = pop.supervisor();
             window.root_ancestors.push(pop.id());
             child_ref.set_z_index(supervisor.z_index() + TOP_Z_INDEX);
-        } else {
-            let parent = child_ref
-                .get_parent_mut()
-                .expect("Fatal error: the child widget does not have parent.");
+        } else if let Some(parent) = child_ref.get_parent_mut() {
             let zindex = parent.z_index() + parent.z_index_step();
             child_ref.set_z_index(zindex);
         }
@@ -963,6 +1122,24 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
         }
         if let Some(input_ele) = cast_mut!(child_ref as InputEle) {
             FocusMgr::with(|m| m.borrow_mut().add(input_ele.root_ancestor(), input_ele))
+        }
+        if let Some(win_widget) = cast_mut!(child_ref as WinWidget) {
+            window.win_widgets.push(NonNull::new(win_widget));
+            connect!(
+                win_widget,
+                geometry_changed(),
+                window,
+                handle_win_widget_geometry_changed(FRect)
+            );
+            connect!(
+                win_widget,
+                visibility_changed(),
+                window,
+                handle_win_widget_visibility_changed(bool)
+            );
+        }
+        if let Some(crs_win_hnd) = cast_mut!(child_ref as CrossWinMsgHandlerInner) {
+            window.crs_win_handlers.push(NonNull::new(crs_win_hnd));
         }
 
         // Determine whether the widget is a container.

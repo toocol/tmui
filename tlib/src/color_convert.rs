@@ -48,14 +48,16 @@ pub fn rgba_to_argb_convert(pixels: &mut [u8]) {
             .par_chunks_mut(1.max(pixels_u32.len() / *cpu_nums()))
             .for_each(|chunk| {
                 for pixel in chunk.iter_mut() {
-                    *pixel = (*pixel << 8) | (*pixel >> 24);
+                    // *pixel = (*pixel << 8) | (*pixel >> 24);
+                    *pixel = (*pixel).rotate_left(8);
                 }
             });
     } else {
         for p in pixels_u32.iter_mut().take(len / 4) {
             let pixel = *p;
 
-            *p = (pixel << 8) | (pixel >> 24);
+            // *p = (pixel << 8) | (pixel >> 24);
+            *p = pixel.rotate_left(8);
         }
     }
 }

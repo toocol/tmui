@@ -1,8 +1,13 @@
 use crate::{
-    application_window::ApplicationWindow, graphics::element::HierachyZ,
-    input::focus_mgr::FocusMgr, prelude::SharedWidget, primitive::global_watch::GlobalWatchEvent,
+    application,
+    application_window::ApplicationWindow,
+    graphics::element::HierachyZ,
+    input::focus_mgr::FocusMgr,
+    prelude::*,
+    primitive::{global_watch::GlobalWatchEvent, Message},
     shortcut::mgr::ShortcutMgr,
 };
+use log::{debug, warn};
 use std::ptr::NonNull;
 use tlib::{
     events::{downcast_event, Event, EventType, KeyEvent, MouseEvent, ResizeEvent},
@@ -10,10 +15,14 @@ use tlib::{
     nonnull_mut,
     object::ObjectOperation,
     types::StaticType,
+    values::ToValue,
 };
 
 use super::ElementExt;
 
+//////////////////////////////////////////////////////////////////////////////////////////////
+/// [`Event`] dispatch
+//////////////////////////////////////////////////////////////////////////////////////////////
 pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Option<Event> {
     let mut event: Option<Event> = None;
     match evt.event_type() {
@@ -33,9 +42,10 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
 
             let overlaids_prevent = window.handle_overlaids_global_mouse_click(&evt);
 
-            let global_watch_prevent = window.handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
-                handle.on_global_mouse_pressed(&evt)
-            });
+            let global_watch_prevent = window
+                .handle_global_watch(GlobalWatchEvent::MousePressed, |handle| {
+                    handle.on_global_mouse_pressed(&evt)
+                });
             if overlaids_prevent || global_watch_prevent {
                 return event;
             }
@@ -418,4 +428,54 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
     }
 
     event
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+/// [`Message`] handle
+//////////////////////////////////////////////////////////////////////////////////////////////
+pub(crate) fn message_handle(window: &mut ApplicationWindow, msg: Message) {
+    match msg {
+        Message::WindowResponse(_, closure) => {
+            closure(window);
+        }
+
+        Message::WindowMoved(outer_position, inner_position) => {
+            window.set_outer_position(outer_position);
+            window.set_client_position(inner_position);
+        }
+
+        Message::WindowVisibilityChanged(bool) => {
+            if !bool {
+                application::request_high_load(false);
+            }
+
+            window.set_property("visible", bool.to_value());
+            window.window_layout_change();
+        }
+
+        Message::WinWidgetVisibilityReverseRequest(id, visible) => {
+            if let Some(widget) = window.find_id_mut(id) {
+                if visible {
+                    widget.show();
+                } else {
+                    widget.hide();
+                }
+            }
+        }
+
+        Message::WinWidgetSizeChanged(id, size) => {
+            if let Some(w) = window.find_id_mut(id) {
+                w.width_request(size.width());
+                w.height_request(size.height());
+                debug!("Correspondent window widget `{}` reverse set size {:?}", w.name(), size);
+            } else {
+                warn!(
+                    "`ApplicationWindow` finds widget by id get `None`, id = {}",
+                    id
+                )
+            }
+        }
+
+        _ => {}
+    }
 }

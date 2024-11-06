@@ -16,6 +16,11 @@ x11 = []
 font_awesome = []
 verbose_logging = []
 
+win_popup = ["win_tooltip", "win_dialog", "win_select"]
+win_tooltip = []
+win_dialog = []
+win_select = []
+
 [dependencies]
 tipc = { path = "../tipc/" }
 tlib = { path = "../tlib/" }
@@ -36,6 +41,8 @@ strum_macros = { workspace = true }
 usvg = { workspace = true }
 regex = { workspace = true }
 rust_decimal = { workspace = true }
+nohash-hasher = { workspace = true }
+ahash = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.43.0", features = [
@@ -73,6 +80,10 @@ unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(orbital_platform)',
     'cfg(font_awesome)',
     'cfg(verbose_logging)',
+    'cfg(win_popup)',
+    'cfg(win_tooltip)',
+    'cfg(win_dialog)',
+    'cfg(win_select)',
 ] }
 
 [patch.crates-io]

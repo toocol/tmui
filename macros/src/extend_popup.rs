@@ -1,5 +1,6 @@
 use crate::{
-    childable::Childable, extend_element, extend_object, extend_widget, general_attr::GeneralAttr, layout, SplitGenericsRef
+    childable::Childable, extend_element, extend_object, extend_widget, general_attr::GeneralAttr,
+    layout, SplitGenericsRef,
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -8,12 +9,15 @@ use syn::{parse::Parser, DeriveInput, Meta};
 pub(crate) fn expand(
     ast: &mut DeriveInput,
     ignore_default: bool,
-    use_prefix: &Ident,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let general_attr =
+        GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause), true)?;
+    if general_attr.is_win_widget {
+        return extend_widget::expand_with_general_attr(ast, ignore_default, general_attr);
+    }
 
-    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
+    let name = &ast.ident;
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -40,6 +44,11 @@ pub(crate) fn expand(
     let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
     let close_handler_register_clause = &general_attr.close_handler_register_clause;
 
+    let win_widget_sink_field = &general_attr.win_widget_sink_field;
+    let win_widget_sink_impl = &general_attr.win_widget_sink_impl;
+    let win_widget_sink_reflect = &general_attr.win_widget_sink_reflect;
+    let win_widget_corr_struct_clause = &general_attr.win_widget_corr_struct_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             let mut childable = Childable::new();
@@ -51,7 +60,7 @@ pub(crate) fn expand(
                     })?);
 
                     if general_attr.is_animation {
-                        let default = general_attr.animation.as_ref().unwrap().parse_default()?;
+                        let default = &general_attr.animation_parse_default;
                         let field = &general_attr.animation_field;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #default
@@ -72,6 +81,12 @@ pub(crate) fn expand(
 
                     if general_attr.is_popupable {
                         let field = &general_attr.popupable_field_clause;
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
+                    }
+
+                    for field in win_widget_sink_field.iter() {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #field
                         })?);
@@ -128,6 +143,8 @@ pub(crate) fn expand(
                 #default_clause
                 #ast
 
+                #win_widget_corr_struct_clause
+
                 #object_trait_impl_clause
 
                 #element_trait_impl_clause
@@ -146,6 +163,8 @@ pub(crate) fn expand(
                 #global_watch_impl_clause
 
                 #close_handler_impl_clause
+
+                #win_widget_sink_impl
 
                 impl #impl_generics WidgetAcquire for #name #ty_generics #where_clause {}
 
@@ -169,6 +188,7 @@ pub(crate) fn expand(
                         #iter_executor_reflect_clause
                         #frame_animator_reflect_clause
                         #close_handler_reflect_clause
+                        #win_widget_sink_reflect
                     }
 
                     #[inline]
@@ -176,7 +196,7 @@ pub(crate) fn expand(
                         #run_after_clause
                         self.set_property("visible", false.to_value());
                         if !self.background().is_opaque() {
-                            self.set_background(#use_prefix::tlib::figure::Color::WHITE);
+                            self.set_background(Color::WHITE);
                         }
                         #close_handler_register_clause
                     }
@@ -184,6 +204,8 @@ pub(crate) fn expand(
                     #[inline]
                     fn pretreat_construct(&mut self) {
                         #child_ref_clause
+                        let window = ApplicationWindow::window();
+                        connect!(window, size_changed(), self, on_win_size_change(Size));
                     }
                 }
 
@@ -260,6 +282,16 @@ pub(crate) fn gen_popup_trait_impl_clause(
             fn layout_relative_position(&mut self) {
                 self.#(#popup_path).*.layout_relative_position()
             }
+
+            #[inline]
+            fn is_hide_on_win_change(&self) -> bool {
+                self.#(#popup_path).*.is_hide_on_win_change()
+            }
+
+            #[inline]
+            fn set_hide_on_win_change(&mut self, on: bool) {
+                self.#(#popup_path).*.set_hide_on_win_change(on)
+            }
         }
     ))
 }
@@ -269,8 +301,7 @@ pub(crate) fn expand_with_layout(
     ast: &mut DeriveInput,
     layout_meta: &Meta,
     layout: &str,
-    internal: bool,
     ignore_default: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
-    layout::expand(ast, layout_meta, layout, internal, ignore_default, true)
+    layout::expand(ast, layout_meta, layout, ignore_default, true)
 }

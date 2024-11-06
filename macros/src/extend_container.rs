@@ -1,5 +1,11 @@
 use crate::{
-    extend_element, extend_object, extend_popup, extend_widget, general_attr::GeneralAttr, layout::LayoutType, pane::{generate_pane_inner_init, generate_pane_type_register}, scroll_area::generate_scroll_area_pre_construct, stack::{generate_stack_inner_initial, generate_stack_inner_on_property_set}, SplitGenericsRef
+    extend_element, extend_object, extend_popup, extend_widget,
+    general_attr::GeneralAttr,
+    layout::LayoutType,
+    pane::{generate_pane_inner_init, generate_pane_type_register},
+    scroll_area::generate_scroll_area_pre_construct,
+    stack::{generate_stack_inner_initial, generate_stack_inner_on_property_set},
+    SplitGenericsRef,
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -16,14 +22,17 @@ pub(crate) fn expand(
     has_content_alignment: bool,
     has_size_unified_adjust: bool,
     layout: LayoutType,
-    use_prefix: &Ident,
     children_fields: Option<&Vec<Ident>>,
-    is_popup: bool,
+    mut is_popup: bool,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &ast.ident;
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let general_attr = GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause))?;
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let general_attr =
+        GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause), is_popup)?;
+    if general_attr.is_win_widget {
+        is_popup = false;
+    }
 
     let run_after_clause = &general_attr.run_after_clause;
 
@@ -53,6 +62,11 @@ pub(crate) fn expand(
     let close_handler_reflect_clause = &general_attr.close_handler_reflect_clause;
     let close_handler_register_clause = &general_attr.close_handler_register_clause;
 
+    let win_widget_sink_field = &general_attr.win_widget_sink_field;
+    let win_widget_sink_impl = &general_attr.win_widget_sink_impl;
+    let win_widget_sink_reflect = &general_attr.win_widget_sink_reflect;
+    let win_widget_corr_struct_clause = &general_attr.win_widget_corr_struct_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -74,7 +88,7 @@ pub(crate) fn expand(
                     }
                     if layout == LayoutType::SplitPane {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            split_infos: std::collections::HashMap<ObjectId, Box<SplitInfo>>
+                            split_infos: nohash_hasher::IntMap<ObjectId, Box<SplitInfo>>
                         })?);
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             split_infos_vec: Vec<std::option::Option<std::ptr::NonNull<SplitInfo>>>
@@ -87,7 +101,7 @@ pub(crate) fn expand(
                     }
                     if layout == LayoutType::ScrollArea {
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
-                            layout_mode: #use_prefix::scroll_area::LayoutMode
+                            layout_mode: LayoutMode
                         })?);
                     }
                     if layout == LayoutType::Pane {
@@ -108,7 +122,7 @@ pub(crate) fn expand(
                     }
 
                     if general_attr.is_animation {
-                        let default = general_attr.animation.as_ref().unwrap().parse_default()?;
+                        let default = &general_attr.animation_parse_default;
                         let field = &general_attr.animation_field;
                         fields.named.push(syn::Field::parse_named.parse2(quote! {
                             #default
@@ -141,6 +155,12 @@ pub(crate) fn expand(
                                 #field
                             })?);
                         }
+                    }
+
+                    for field in win_widget_sink_field.iter() {
+                        fields.named.push(syn::Field::parse_named.parse2(quote! {
+                            #field
+                        })?);
                     }
 
                     // If field with attribute `#[children]`,
@@ -285,7 +305,7 @@ pub(crate) fn expand(
             };
 
             let scroll_area_pre_construct = if layout.is(LayoutType::ScrollArea) {
-                generate_scroll_area_pre_construct(use_prefix)?
+                generate_scroll_area_pre_construct()?
             } else {
                 proc_macro2::TokenStream::new()
             };
@@ -331,16 +351,25 @@ pub(crate) fn expand(
                 quote!(
                     self.set_property("visible", false.to_value());
                     if !self.background().is_opaque() {
-                        self.set_background(#use_prefix::tlib::figure::Color::WHITE);
+                        self.set_background(Color::WHITE);
                     }
                 )
             } else {
                 proc_macro2::TokenStream::new()
             };
-            // Popup related end. 
+
+            let popup_pretreat_construct = if is_popup {
+                quote!(
+                    let window = ApplicationWindow::window();
+                    connect!(window, size_changed(), self, on_win_size_change(Size));
+                )
+            } else {
+                proc_macro2::TokenStream::new()
+            };
+            // Popup related end.
 
             let inner_on_property_set_clause = if layout.is(LayoutType::Stack) {
-                generate_stack_inner_on_property_set(use_prefix)?
+                generate_stack_inner_on_property_set()?
             } else {
                 quote!(false)
             };
@@ -348,6 +377,8 @@ pub(crate) fn expand(
             Ok(quote!(
                 #default_clause
                 #ast
+
+                #win_widget_corr_struct_clause
 
                 #object_trait_impl_clause
 
@@ -373,6 +404,8 @@ pub(crate) fn expand(
                 #popup_trait_impl_clause
 
                 #close_handler_impl_clause
+
+                #win_widget_sink_impl
 
                 impl #impl_generics ContainerAcquire for #name #ty_generics #where_clause {}
 
@@ -406,6 +439,7 @@ pub(crate) fn expand(
                         #isolated_visibility_reflect_clause
                         #popup_type_register
                         #close_handler_reflect_clause
+                        #win_widget_sink_reflect
                     }
 
                     #[inline]
@@ -421,6 +455,7 @@ pub(crate) fn expand(
                     fn pretreat_construct(&mut self) {
                         #scroll_area_pre_construct
                         #layout_prepare_children_ref
+                        #popup_pretreat_construct
                     }
 
                     #[inline]

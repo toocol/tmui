@@ -58,7 +58,7 @@ use super::node::MouseEffect;
 ///                         .add_node(&Content { val: "test".to_string() });
 /// }
 /// ```
-#[extends(Widget, Layout(ScrollArea), internal = true)]
+#[extends(Widget, Layout(ScrollArea))]
 #[popupable]
 pub struct TreeView {}
 

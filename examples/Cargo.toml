@@ -38,6 +38,10 @@ name = "child_attr_widget"
 path = "child_attr_widget/main.rs"
 
 [[bin]]
+name = "child_window"
+path = "child_window/main.rs"
+
+[[bin]]
 name = "complex_layout"
 path = "complex_layout/main.rs"
 
@@ -136,6 +140,10 @@ path = "split_pane_layout/main.rs"
 [[bin]]
 name = "tree_view"
 path = "tree_view/main.rs"
+
+[[bin]]
+name = "win_widget"
+path = "win_widget/main.rs"
 
 [[bin]]
 name = "window"

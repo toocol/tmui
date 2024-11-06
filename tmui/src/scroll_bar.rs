@@ -134,7 +134,7 @@ impl WidgetImpl for ScrollBar {
         }
 
         if self.overlaid {
-            emit!(self.need_update());
+            emit!(self, need_update());
         } else {
             self.update();
         }
@@ -325,14 +325,14 @@ pub trait ScrollBarSignal: ActionExt {
 
         /// Emitted when ScrollBar's value has changed.
         /// @param value(i32)
-        value_changed();
+        value_changed(i32);
 
         /// Emitted when ScrollBar's slider has pressed.
         slider_pressed();
 
         /// Emitted when ScrollBar's slider has moved.
         /// @param position(i32)
-        slider_moved();
+        slider_moved(i32);
 
         /// Emitted when ScrollBar's slider has released.
         slider_released();
@@ -340,11 +340,11 @@ pub trait ScrollBarSignal: ActionExt {
         /// Emitted when ScrollBar's range has changed.
         /// @param min(i32)
         /// @param max(i32)
-        range_changed();
+        range_changed(i32, i32);
 
         /// Emitted when ScrollBar triggered action.
         /// @param action(SliderAction)
-        action_triggered();
+        action_triggered(SliderAction);
 
         /// Emitted when ScrollBar need update when under overlaid mode.
         need_update();
@@ -419,9 +419,9 @@ impl ScrollBar {
             self.position = value;
         }
         if self.pressed {
-            emit!(ScrollBar::set_value => self.slider_moved(), self.position)
+            emit!(ScrollBar::set_value => self, slider_moved(self.position))
         }
-        emit!(ScrollBar::set_value => self.value_changed(), value);
+        emit!(ScrollBar::set_value => self, value_changed(value));
         self.notify_update();
     }
     /// Getter of property `value`.
@@ -465,7 +465,7 @@ impl ScrollBar {
             } else {
                 self.value
             });
-            emit!(ScrollBar::set_range => self.range_changed(), self.minimum, self.maximum);
+            emit!(ScrollBar::set_range => self, range_changed(self.minimum, self.maximum));
 
             if self.minimum != self.maximum && self.visible_in_valid && !self.auto_hide {
                 self.show()
@@ -535,7 +535,7 @@ impl ScrollBar {
         self.position = position;
         self.notify_update();
         if self.pressed {
-            emit!(ScrollBar::set_slider_position => self.slider_moved(), self.position)
+            emit!(ScrollBar::set_slider_position => self, slider_moved(self.position))
         }
         self.trigger_action(SliderAction::SliderMove);
     }
@@ -566,7 +566,7 @@ impl ScrollBar {
             SliderAction::SliderMove | SliderAction::SliderNoAction => {}
         }
         self.set_value(self.position);
-        emit!(ScrollBar::trigger_action => self.action_triggered(), action);
+        emit!(ScrollBar::trigger_action => self, action_triggered(action));
     }
 
     /// Scroll the ScrollBar. </br>

@@ -45,7 +45,7 @@ pub trait LabelSignal: ActionExt {
         /// Emitted when text was changed.
         /// @param old(String)
         /// @param new(String)
-        text_changed();
+        text_changed(&str, &str);
     }
 }
 impl LabelSignal for Label {}
@@ -206,7 +206,7 @@ impl Label {
     pub fn set_text(&mut self, text: &str) {
         let old = self.label.clone();
         self.label = text.to_string();
-        emit!(Label::set_text => self.text_changed(), old, text);
+        emit!(Label::set_text => self, text_changed(old.as_str(), text));
         self.font_changed();
         self.set_render_styles(true);
         self.update()

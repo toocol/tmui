@@ -44,7 +44,7 @@ impl InnerAnimations {
         match self {
             Self::Linear => start + t * (end - start),
             Self::EaseIn => {
-                let ft = t * t * (P::from(3.) + P::from(2.) * t);
+                let ft = t * t * t;
                 start + ft * (end - start)
             }
             Self::EaseOut => {

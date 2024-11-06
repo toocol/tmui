@@ -19,5 +19,9 @@ fn main() {
         // Others:
         font_awesome: { feature = "font_awesome" },
         verbose_logging: { feature = "verbose_logging" },
+        win_popup: { feature = "win_popup" },
+        win_tooltip: { feature = "win_tooltip" },
+        win_dialog: { feature = "win_dialog" },
+        win_select: { feature = "win_select" },
     }
 }

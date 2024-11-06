@@ -344,7 +344,7 @@ impl StaticSizeUnifiedAdjust for VBox {
                 }
 
                 c.set_fixed_height(ch);
-                emit!(c.size_changed(), c.size());
+                emit!(c, size_changed(c.size()));
             });
     }
 }

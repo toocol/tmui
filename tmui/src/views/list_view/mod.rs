@@ -62,7 +62,7 @@ use tlib::connect;
 ///     list_view.add_node(&Node { name: "test".to_string() });
 /// }
 /// ```
-#[extends(Widget, Layout(ScrollArea), internal = true)]
+#[extends(Widget, Layout(ScrollArea))]
 #[popupable]
 pub struct ListView {}
 
@@ -117,6 +117,12 @@ impl ListView {
     #[inline]
     pub fn add_node(&mut self, obj: &dyn ListViewObject) -> usize {
         self.get_store_mut().add_node(obj)
+    }
+
+    /// @return the index of added node.
+    #[inline]
+    pub fn add_node_directly(&mut self, node: ListNode) -> usize {
+        self.get_store_mut().add_node_directly(node)
     }
 
     /// @return

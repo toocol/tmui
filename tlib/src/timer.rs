@@ -6,9 +6,9 @@ use crate::{
     signal, signals,
 };
 use log::warn;
+use nohash_hasher::IntMap;
 use std::{
     cell::{Cell, Ref, RefCell},
-    collections::HashMap,
     time::{Duration, SystemTime},
 };
 
@@ -18,15 +18,15 @@ thread_local! {
 
 /// `TimerHub` hold all raw pointer of [`Timer`]
 pub struct TimerHub {
-    timers: RefCell<HashMap<ObjectId, *const Timer>>,
-    once_timers: RefCell<HashMap<ObjectId, Box<Timer>>>,
+    timers: RefCell<IntMap<ObjectId, *const Timer>>,
+    once_timers: RefCell<IntMap<ObjectId, Box<Timer>>>,
 }
 
 impl TimerHub {
     pub(crate) fn new() -> Box<Self> {
         Box::new(Self {
-            timers: RefCell::new(HashMap::new()),
-            once_timers: RefCell::new(HashMap::new()),
+            timers: RefCell::new(IntMap::default()),
+            once_timers: RefCell::new(IntMap::default()),
         })
     }
 
@@ -153,7 +153,7 @@ impl Timer {
     pub fn check_timer(&self) -> bool {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike.get()) {
             if duration > self.duration.get() {
-                emit!(Timer::check_timer => self.timeout());
+                emit!(Timer::check_timer => self, timeout());
                 self.last_strike.set(SystemTime::now());
 
                 if self.single_shoot.get() {

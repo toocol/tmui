@@ -24,39 +24,41 @@ impl ObjectImpl for Widget {}
 
 impl Widget {
     signals! {
-        Widget: 
+        Widget:
 
         /// Sginal to action benchmark tuple test.
-        action_benchmark_tuple();
+        action_benchmark_tuple(&str, &str, i32, i32, f64, &str, f64);
         /// Signal to action benchmark string test.
-        action_benchmark_string();
+        action_benchmark_string(&str);
     }
 }
 
 fn test_action_tuple(widget: &Widget) {
     emit!(
-        widget.action_benchmark_tuple(),
-        "Bench mark param 1",
-        "Bench mark param 2",
-        i32::MAX,
-        i32::MIN,
-        f64::MAX,
-        "Bench mark param 6",
-        f64::MIN
+        widget,
+        action_benchmark_tuple(
+            "Bench mark param 1",
+            "Bench mark param 2",
+            i32::MAX,
+            i32::MIN,
+            f64::MAX,
+            "Bench mark param 6",
+            f64::MIN
+        )
     )
 }
 
 fn test_action_string(widget: &Widget) {
     emit!(
-        widget.action_benchmark_string(),
-        "action benchmark string param"
+        widget,
+        action_benchmark_string("action benchmark string param")
     )
 }
 
 fn test_emit_action(widget: &[Box<Widget>], idx: usize) {
     emit!(
-        widget[idx].action_benchmark_string(),
-        "action benchmark string param"
+        widget[idx],
+        action_benchmark_string("action benchmark string param")
     )
 }
 
@@ -71,28 +73,12 @@ fn criterion_values(c: &mut Criterion) {
     widget.connect(
         widget.action_benchmark_tuple(),
         widget.id(),
-        Box::new(|param| {
-            let (p1, p2, p3, p4, p5, p6, p7) =
-                param
-                    .as_ref()
-                    .unwrap()
-                    .get::<(String, String, i32, i32, f64, String, f64)>();
-            assert_eq!(p1, "Bench mark param 1");
-            assert_eq!(p2, "Bench mark param 2");
-            assert_eq!(p3, i32::MAX);
-            assert_eq!(p4, i32::MIN);
-            assert_eq!(p5, f64::MAX);
-            assert_eq!(p6, "Bench mark param 6");
-            assert_eq!(p7, f64::MIN);
-        }),
+        Box::new(|_param| {}),
     );
     widget.connect(
         widget.action_benchmark_string(),
         widget.id(),
-        Box::new(|param| {
-            let param = param.as_ref().unwrap().get::<String>();
-            assert_eq!(param, "action benchmark string param");
-        }),
+        Box::new(|_param| {}),
     );
 
     let mut widgets = vec![];

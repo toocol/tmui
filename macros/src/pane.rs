@@ -1,10 +1,8 @@
 use proc_macro2::Ident;
 use quote::quote;
 
-pub(crate) fn generate_pane_add_child(use_prefix: &Ident) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_pane_add_child() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
-        use #use_prefix::application_window::ApplicationWindow;
-
         if self.container.children.len() >= 2 {
             tlib::log::error!("`Pane` can only have two child component.");
             return;
@@ -37,19 +35,16 @@ pub(crate) fn generate_pane_inner_init() -> syn::Result<proc_macro2::TokenStream
     ))
 }
 
-pub(crate) fn generate_pane_impl(
-    name: &Ident,
-    use_prefix: &Ident,
-) -> syn::Result<proc_macro2::TokenStream> {
+pub(crate) fn generate_pane_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         impl PaneExt for #name {
             #[inline]
-            fn orientation(&self) -> #use_prefix::tlib::namespace::Orientation {
+            fn orientation(&self) -> Orientation {
                 self.orientation
             }
 
             #[inline]
-            fn set_orientation(&mut self, orientation: #use_prefix::tlib::namespace::Orientation) {
+            fn set_orientation(&mut self, orientation: Orientation) {
                 self.orientation = orientation;
 
                 self.window().layout_change(self)

@@ -1,6 +1,7 @@
+use ahash::AHashMap;
 use derivative::Derivative;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, io::Read};
+use std::io::Read;
 use tipc::parking_lot::{
     lock_api::{RwLockReadGuard, RwLockWriteGuard},
     RawRwLock, RwLock,
@@ -36,7 +37,7 @@ struct FontAsset;
 #[derivative(Default)]
 pub struct FontManager {
     system_mgr: FontMgr,
-    fonts: HashMap<String, SkiaTypeface>,
+    fonts: AHashMap<String, SkiaTypeface>,
 }
 
 static mut MGR: Lazy<RwLock<FontManager>> = Lazy::new(|| RwLock::new(FontManager::default()));
@@ -85,7 +86,8 @@ impl FontManager {
 
     #[inline]
     pub fn load_file(path: &str) {
-        let mut file = std::fs::File::open(path).unwrap_or_else(|_| panic!("Open file `{}` failed.", path));
+        let mut file =
+            std::fs::File::open(path).unwrap_or_else(|_| panic!("Open file `{}` failed.", path));
 
         let mut data = vec![];
         file.read_to_end(&mut data)
@@ -96,10 +98,7 @@ impl FontManager {
         let tf = manager
             .system_mgr
             .new_from_data(&data, None)
-            .unwrap_or_else(|| panic!(
-                "Make customize font typeface failed, ttf file: {}.",
-                path
-            ));
+            .unwrap_or_else(|| panic!("Make customize font typeface failed, ttf file: {}.", path));
 
         manager.fonts.insert(tf.family_name(), tf);
     }
