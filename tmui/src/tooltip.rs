@@ -7,7 +7,7 @@ use crate::{
 };
 use tlib::figure::OptionSize;
 
-#[cfg(not(win_popup))]
+#[cfg(not(win_tooltip))]
 #[extends(Popup)]
 #[derive(Childable)]
 pub struct Tooltip {
@@ -15,13 +15,13 @@ pub struct Tooltip {
     label: Box<Label>,
 }
 
-#[cfg(win_popup)]
+#[cfg(win_tooltip)]
 pub enum TooltipCrsMsg {
     /// Request window-tooltip showing.
     Show(String, OptionSize, Option<Styles>),
 }
 
-#[cfg(win_popup)]
+#[cfg(win_tooltip)]
 #[extends(Popup)]
 #[derive(Childable)]
 #[tlib::win_widget(TooltipCrsMsg)]
@@ -30,7 +30,7 @@ pub struct Tooltip {
     label: Box<Label>,
 }
 
-#[cfg(win_popup)]
+#[cfg(win_tooltip)]
 impl CrossWinMsgHandler for Tooltip {
     type T = TooltipCrsMsg;
 
@@ -55,7 +55,7 @@ impl ObjectImpl for Tooltip {
     fn construct(&mut self) {
         self.parent_construct();
 
-        #[cfg(not(win_popup))]
+        #[cfg(not(win_tooltip))]
         {
             let window = ApplicationWindow::window();
             self.set_supervisor(window);
@@ -67,7 +67,7 @@ impl ObjectImpl for Tooltip {
 
 impl WidgetImpl for Tooltip {}
 
-#[cfg(not(win_popup))]
+#[cfg(not(win_tooltip))]
 impl PopupImpl for Tooltip {}
 
 impl Tooltip {
@@ -116,7 +116,7 @@ impl Tooltip {
     }
 }
 
-#[cfg(not(win_popup))]
+#[cfg(not(win_tooltip))]
 impl Tooltip {
     #[inline]
     pub(crate) fn new() -> Box<Self> {

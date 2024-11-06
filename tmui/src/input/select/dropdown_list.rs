@@ -1,8 +1,8 @@
-#[cfg(win_popup)]
+#[cfg(win_select)]
 use super::MINIMUN_HEIGHT;
-#[cfg(win_popup)]
+#[cfg(win_select)]
 use crate::views::list_view::list_node::ListNode;
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 use crate::widget::widget_ext::FocusStrat;
 use crate::{
     graphics::box_shadow::BoxShadow,
@@ -12,13 +12,13 @@ use crate::{
     views::list_view::{list_view_object::ListViewObject, ListView},
     widget::WidgetImpl,
 };
-#[cfg(win_popup)]
+#[cfg(win_select)]
 use strum_macros::Display;
 use tlib::signals;
 
 const MAX_VISIBLE_ITEMS: i32 = 20;
 
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 pub trait DropdownListSignals: ActionExt {
     signals!(
         DropdownListSignals:
@@ -29,10 +29,10 @@ pub trait DropdownListSignals: ActionExt {
         value_changed(String);
     );
 }
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 impl DropdownListSignals for DropdownList {}
 
-#[cfg(win_popup)]
+#[cfg(win_select)]
 #[extends(Popup)]
 #[derive(Childable)]
 #[tlib::win_widget(
@@ -45,7 +45,7 @@ pub struct DropdownList {
     list: Box<ListView>,
 }
 
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 #[extends(Popup)]
 #[derive(Childable)]
 pub struct DropdownList {
@@ -64,7 +64,7 @@ impl ObjectImpl for DropdownList {
         self.set_border_color(Color::GREY_LIGHT);
         self.set_box_shadow(BoxShadow::new(6., Color::BLACK, None, None, None));
 
-        #[cfg(win_popup)]
+        #[cfg(win_select)]
         self.set_hexpand(true);
 
         self.list.set_layout_mode(LayoutMode::Overlay);
@@ -79,12 +79,12 @@ impl ObjectImpl for DropdownList {
                 .downcast_mut::<DropdownList>()
                 .unwrap();
 
-            #[cfg(not(win_popup))]
+            #[cfg(not(win_select))]
             emit!(dropdown_list, value_changed(val));
-            #[cfg(win_popup)]
+            #[cfg(win_select)]
             dropdown_list.send_cross_win_msg(DropdownListCrsMsg::ValueChanged(val));
 
-            #[cfg(not(win_popup))]
+            #[cfg(not(win_select))]
             dropdown_list.trans_focus_take(FocusStrat::Restore);
 
             dropdown_list.hide();
@@ -102,7 +102,7 @@ impl WidgetImpl for DropdownList {
     }
 }
 
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 impl PopupImpl for DropdownList {
     #[inline]
     fn calculate_position(&self, base_rect: Rect, point: Point) -> Point {
@@ -127,7 +127,7 @@ fn popup_position_calculate(widget: &dyn WidgetImpl, base_rect: Rect, _: Point) 
 }
 
 impl DropdownList {
-    #[cfg(not(win_popup))]
+    #[cfg(not(win_select))]
     #[inline]
     pub(crate) fn new() -> Box<Self> {
         Object::new(&[])
@@ -138,7 +138,7 @@ impl DropdownList {
         self.list.clear();
     }
 
-    #[cfg(not(win_popup))]
+    #[cfg(not(win_select))]
     #[inline]
     pub(crate) fn add_option(&mut self, option: &dyn ListViewObject) {
         self.list.add_node(option);
@@ -163,14 +163,14 @@ impl DropdownList {
         ApplicationWindow::window().layout_change(self);
     }
 
-    #[cfg(not(win_popup))]
+    #[cfg(not(win_select))]
     #[inline]
     pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
         self.list.take_over_focus(strat);
     }
 }
 
-#[cfg(win_popup)]
+#[cfg(win_select)]
 pub trait CorrDropdownListSignals: ActionExt {
     signals!(
         CorrDropdownListSignals:
@@ -178,10 +178,10 @@ pub trait CorrDropdownListSignals: ActionExt {
         value_changed(String);
     );
 }
-#[cfg(win_popup)]
+#[cfg(win_select)]
 impl CorrDropdownListSignals for CorrDropdownList {}
 
-#[cfg(win_popup)]
+#[cfg(win_select)]
 impl CorrDropdownList {
     #[inline]
     pub(crate) fn clear_options(&mut self) {
@@ -206,7 +206,7 @@ impl CorrDropdownList {
 }
 
 ////////////////////////////// Cross window message define/handle
-#[cfg(win_popup)]
+#[cfg(win_select)]
 #[derive(Display)]
 pub enum DropdownListCrsMsg {
     // Origin to sink:
@@ -219,7 +219,7 @@ pub enum DropdownListCrsMsg {
     ValueChanged(String),
 }
 
-#[cfg(win_popup)]
+#[cfg(win_select)]
 impl CrossWinMsgHandler for CorrDropdownList {
     type T = DropdownListCrsMsg;
 
@@ -230,7 +230,7 @@ impl CrossWinMsgHandler for CorrDropdownList {
     }
 }
 
-#[cfg(win_popup)]
+#[cfg(win_select)]
 impl CrossWinMsgHandler for DropdownList {
     type T = DropdownListCrsMsg;
 

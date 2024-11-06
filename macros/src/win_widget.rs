@@ -1,7 +1,10 @@
 use crate::SplitGenericsRef;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{parse::Parse, punctuated::Punctuated, DeriveInput, Error, Meta, Token};
+use syn::{
+    parse::Parse, punctuated::Punctuated, spanned::Spanned, DeriveInput, Error, Lit, Meta,
+    MetaNameValue, Token, Type,
+};
 
 pub(crate) struct WinWidget<'a> {
     name: Option<Ident>,
@@ -21,6 +24,9 @@ pub(crate) struct WinWidget<'a> {
     handle_global_mouse_pressed: Option<TokenStream>,
     on_mouse_click_hide: Option<TokenStream>,
     on_win_size_change: Option<TokenStream>,
+
+    // Correspondent widget fields:
+    fields: TokenStream,
 }
 
 impl<'a> Parse for WinWidget<'a> {
@@ -37,6 +43,8 @@ impl<'a> Parse for WinWidget<'a> {
         let mut handle_global_mouse_pressed: Option<TokenStream> = None;
         let mut on_mouse_click_hide: Option<TokenStream> = None;
         let mut on_win_size_change: Option<TokenStream> = None;
+
+        let mut fields = TokenStream::new();
 
         for meta in metas.into_iter() {
             match meta {
@@ -115,18 +123,52 @@ impl<'a> Parse for WinWidget<'a> {
                     ..
                 }) => {
                     if let Some(ident) = path.get_ident() {
-                        if *ident != "o2s" && *ident != "s2o" && *ident != "PopupImpl" {
+                        if *ident != "o2s"
+                            && *ident != "s2o"
+                            && *ident != "PopupImpl"
+                            && *ident != "fields"
+                        {
                             return Err(Error::new(
                                 input.span(),
                                 "Unsupported WinWidget configuration, Unkonwn config, only o2s(xx), s2o(xx) is supported.",
                             ));
                         }
 
-                        if *ident != "PopupImpl" && nested.len() != 1 {
+                        if *ident != "PopupImpl" && *ident != "fields" && nested.len() != 1 {
                             return Err(Error::new(
                                 input.span(),
                                 "Unsupported WinWidget configuration, two many args, only o2s(xx), s2o(xx) is supported.",
                             ));
+                        }
+
+                        if *ident == "fields" {
+                            for meta in nested.iter() {
+                                if let syn::NestedMeta::Meta(Meta::NameValue(MetaNameValue {
+                                    path,
+                                    lit,
+                                    ..
+                                })) = meta
+                                {
+                                    let field_ident = path;
+                                    let field_ty = if let Lit::Str(lit_str) = lit {
+                                        syn::parse_str::<Type>(&lit_str.value())?
+                                    } else {
+                                        return Err(Error::new(
+                                            input.span(),
+                                            "Unsupported WinWidget configuration, field type can only be LitStr.",
+                                        ));
+                                    };
+
+                                    fields.extend(quote!(
+                                        #field_ident: #field_ty,
+                                    ));
+                                } else {
+                                    return Err(Error::new(
+                                        meta.span(),
+                                        "Unsupported WinWidget configuration, field config format is `some_field = \"SomeType\"`.",
+                                    ));
+                                }
+                            }
                         }
 
                         if *ident == "PopupImpl" {
@@ -236,7 +278,7 @@ impl<'a> Parse for WinWidget<'a> {
                                     crs_s2o_msg = Some(attr_ident.clone())
                                 }
                             }
-                        } else if *ident != "PopupImpl" {
+                        } else if *ident != "PopupImpl" && *ident != "fields" {
                             return Err(Error::new(
                                 input.span(),
                             "Unsupported WinWidget configuration, nested meta is None, only o2s(xx), s2o(xx) is supported.",
@@ -266,6 +308,7 @@ impl<'a> Parse for WinWidget<'a> {
             handle_global_mouse_pressed,
             on_mouse_click_hide,
             on_win_size_change,
+            fields,
         })
     }
 }
@@ -290,6 +333,7 @@ impl<'a> WinWidget<'a> {
             handle_global_mouse_pressed: None,
             on_mouse_click_hide: None,
             on_win_size_change: None,
+            fields: TokenStream::new(),
         })
     }
 
@@ -573,10 +617,14 @@ impl<'a> WinWidget<'a> {
             TokenStream::new()
         };
 
+        let corr_fields = &self.fields;
+
         quote!(
             #extends_clause
             pub struct #corr_name {
                 #channel_field
+
+                #corr_fields
             }
 
             #sender_impl

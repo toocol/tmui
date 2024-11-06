@@ -10,12 +10,16 @@ build = "build.rs"
 cfg_aliases = "0.2.0"
 
 [features]
-default = ["x11", "win_popup"]
+default = ["x11"]
 wayland = []
 x11 = []
 font_awesome = []
 verbose_logging = []
-win_popup = []
+
+win_popup = ["win_tooltip", "win_dialog", "win_select"]
+win_tooltip = []
+win_dialog = []
+win_select = []
 
 [dependencies]
 tipc = { path = "../tipc/" }
@@ -77,6 +81,9 @@ unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(font_awesome)',
     'cfg(verbose_logging)',
     'cfg(win_popup)',
+    'cfg(win_tooltip)',
+    'cfg(win_dialog)',
+    'cfg(win_select)',
 ] }
 
 [patch.crates-io]

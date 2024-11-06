@@ -6,7 +6,7 @@ use crate::{
         board::Board,
         element::{HierachyZ, TOP_Z_INDEX},
     },
-    input::{dialog::InputDialog, focus_mgr::FocusMgr, ReflectInputEle},
+    input::{dialog::TyInputDialog, focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
     loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
@@ -92,10 +92,13 @@ pub struct ApplicationWindow {
     root_ancestors: Vec<ObjectId>,
     win_widgets: Vec<WinWidgetHnd>,
 
-    input_dialog: Option<Box<InputDialog>>,
-    #[cfg(not(win_popup))]
+    #[cfg(not(win_dialog))]
+    input_dialog: Option<Box<crate::input::dialog::InputDialog>>,
+    #[cfg(win_dialog)]
+    input_dialog: Option<Box<crate::input::dialog::CorrInputDialog>>,
+    #[cfg(not(win_tooltip))]
     tooltip: Option<Box<crate::tooltip::Tooltip>>,
-    #[cfg(win_popup)]
+    #[cfg(win_tooltip)]
     tooltip: Option<Box<crate::tooltip::CorrTooltip>>,
 }
 
@@ -485,6 +488,11 @@ impl ApplicationWindow {
         window.board().shuffle();
 
         window.layout_change(widget);
+
+        if let Some(win_widget) = cast_mut!(widget as WinWidget) {
+            let inner = cast!(win_widget as PopupImpl).is_none();
+            handle_win_widget_create(win_widget, inner);
+        }
     }
 }
 
@@ -895,10 +903,15 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub(crate) fn input_dialog(&mut self) -> &mut InputDialog {
+    pub(crate) fn input_dialog(&mut self) -> &mut TyInputDialog {
         if self.input_dialog.is_none() {
-            let mut input_dialog = InputDialog::new();
-            Self::initialize_dynamic_component(input_dialog.as_widget_impl_mut());
+            #[cfg(not(win_dialog))]
+            let mut input_dialog = crate::input::dialog::InputDialog::new();
+
+            #[cfg(win_dialog)]
+            let mut input_dialog = crate::input::dialog::CorrInputDialog::new();
+
+            Self::initialize_dynamic_component(input_dialog.as_mut());
             self.input_dialog = Some(input_dialog);
         }
 
@@ -917,20 +930,13 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn tooltip(&mut self, tooltip_strat: TooltipStrat) {
         if self.tooltip.is_none() {
-            #[cfg(not(win_popup))]
-            let tooltip = {
-                let mut tooltip = crate::tooltip::Tooltip::new();
-                Self::initialize_dynamic_component(tooltip.as_mut());
-                tooltip
-            };
+            #[cfg(not(win_tooltip))]
+            let mut tooltip = crate::tooltip::Tooltip::new();
 
-            #[cfg(win_popup)]
-            let tooltip = {
-                let mut tooltip = crate::tooltip::CorrTooltip::new();
-                Self::initialize_dynamic_component(tooltip.as_mut());
-                tooltip
-            };
+            #[cfg(win_tooltip)]
+            let mut tooltip = crate::tooltip::CorrTooltip::new();
 
+            Self::initialize_dynamic_component(tooltip.as_mut());
             self.tooltip = Some(tooltip);
         }
 
@@ -938,7 +944,7 @@ impl ApplicationWindow {
 
         match tooltip_strat {
             TooltipStrat::Show(text, position, size, styles) => {
-                #[cfg(not(win_popup))]
+                #[cfg(not(win_tooltip))]
                 {
                     tooltip.set_fixed_x(position.x());
                     tooltip.set_fixed_y(position.y());
@@ -948,7 +954,7 @@ impl ApplicationWindow {
                     ApplicationWindow::window().layout_change(tooltip.as_widget_impl_mut());
                 }
 
-                #[cfg(win_popup)]
+                #[cfg(win_tooltip)]
                 {
                     tooltip.set_fixed_x(position.x());
                     tooltip.set_fixed_y(position.y());

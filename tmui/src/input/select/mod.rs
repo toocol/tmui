@@ -5,11 +5,11 @@ use super::{Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInp
 use crate::{
     asset::Asset, font::FontCalculation, input::INPUT_DEFAULT_BORDER_COLOR, input_ele_impl, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_inner::WidgetInnerExt, WidgetImpl}
 };
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 use crate::widget::widget_ext::FocusStrat;
-#[cfg(not(win_popup))]
+#[cfg(not(win_select))]
 use dropdown_list::{DropdownList, DropdownListSignals};
-#[cfg(win_popup)]
+#[cfg(win_select)]
 use dropdown_list::{CorrDropdownList, CorrDropdownListSignals};
 use select_option::SelectOption;
 use tlib::{
@@ -18,7 +18,7 @@ use tlib::{
 };
 
 const MINIMUN_WIDTH: i32 = 25;
-#[cfg(win_popup)]
+#[cfg(win_select)]
 const MINIMUN_HEIGHT: i32 = 10;
 const TEXT_MARGIN: i32 = 3;
 
@@ -52,7 +52,7 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
 
         self.input_wrapper.init(self.id());
 
-        #[cfg(not(win_popup))]
+        #[cfg(not(win_select))]
         {
             let mut dropdown_list = DropdownList::new();
             dropdown_list.width_request(MINIMUN_WIDTH);
@@ -65,7 +65,7 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
             self.add_popup(dropdown_list);
         }
 
-        #[cfg(win_popup)]
+        #[cfg(win_select)]
         {
             let mut dropdown_list = crate::input::select::dropdown_list::CorrDropdownList::new();
             dropdown_list.width_request(MINIMUN_WIDTH);
@@ -126,7 +126,7 @@ impl<T: SelectBounds> WidgetImpl for Select<T> {
         }
 
         self.show_popup(event.position().into());
-        #[cfg(not(win_popup))]
+        #[cfg(not(win_select))]
         self.dropdown_list_mut()
             .trans_focus_take(FocusStrat::TakeOver);
     }
@@ -217,7 +217,7 @@ impl<T: SelectBounds> Select<T> {
         self.update();
     }
 
-    #[cfg(not(win_popup))]
+    #[cfg(not(win_select))]
     #[inline]
     pub fn dropdown_list(&self) -> &DropdownList {
         self.get_popup_ref()
@@ -227,7 +227,7 @@ impl<T: SelectBounds> Select<T> {
             .unwrap()
     }
 
-    #[cfg(not(win_popup))]
+    #[cfg(not(win_select))]
     #[inline]
     pub fn dropdown_list_mut(&mut self) -> &mut DropdownList {
         self.get_popup_mut()
@@ -237,7 +237,7 @@ impl<T: SelectBounds> Select<T> {
             .unwrap()
     }
 
-    #[cfg(win_popup)]
+    #[cfg(win_select)]
     #[inline]
     pub fn dropdown_list(&self) -> &CorrDropdownList {
         self.get_popup_ref()
@@ -247,7 +247,7 @@ impl<T: SelectBounds> Select<T> {
             .unwrap()
     }
 
-    #[cfg(win_popup)]
+    #[cfg(win_select)]
     pub fn dropdown_list_mut(&mut self) -> &mut CorrDropdownList {
         self.get_popup_mut()
             .unwrap()
