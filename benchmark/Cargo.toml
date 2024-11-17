@@ -33,6 +33,10 @@ name = "builtin_benchmark"
 harness = false
 
 [[bench]]
+name = "channel_benchmark"
+harness = false
+
+[[bench]]
 name = "color_format_benchmark"
 harness = false
 
