@@ -41,7 +41,9 @@ fn benchmark_channels(c: &mut Criterion) {
             });
 
             let receiver_thread = thread::spawn(move || {
-                let _ = rx.recv().unwrap();
+                let messages = rx.recv().unwrap();
+
+                for _msg in messages {}
             });
 
             sender_thread.join().unwrap();
