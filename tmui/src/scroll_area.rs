@@ -235,7 +235,7 @@ impl ScrollAreaGenericExt for ScrollArea {
             );
         }
 
-        ApplicationWindow::initialize_dynamic_component(area.as_mut());
+        ApplicationWindow::initialize_dynamic_component(area.as_mut(), self.is_in_tree());
         self.container.children.insert(0, area)
     }
 

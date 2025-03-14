@@ -72,9 +72,7 @@ impl TimerHub {
     }
 
     fn add_timer(&self, timer: &Timer) {
-        self.timers
-            .borrow_mut()
-            .insert(timer.id(), timer);
+        self.timers.borrow_mut().insert(timer.id(), timer);
     }
 
     fn add_once_timer(&self, timer: Box<Timer>) -> Ref<Timer> {
@@ -225,7 +223,6 @@ mod tests {
             connect!(timer, timeout(), widget, deal_num());
             timer.start(Duration::from_millis(1));
         });
-
 
         loop {
             if widget.num >= 5 {

@@ -122,12 +122,13 @@ impl ObjectImpl for ApplicationWindow {
 
         let window_id = self.id();
         self.root_ancestors.push(window_id);
-        child_initialize(self.get_child_mut(), window_id);
+        self.set_in_tree();
+        child_initialize(self.get_child_mut(), window_id, true);
         if let Some(input_dialog) = self.input_dialog.as_mut() {
-            child_initialize(Some(input_dialog.as_mut()), window_id);
+            child_initialize(Some(input_dialog.as_mut()), window_id, true);
         }
         if let Some(tooltip) = self.tooltip.as_mut() {
-            child_initialize(Some(tooltip.as_mut()), window_id);
+            child_initialize(Some(tooltip.as_mut()), window_id, true);
         }
 
         self.when_size_change(self.size());
@@ -458,7 +459,7 @@ impl ApplicationWindow {
     }
 
     /// Should set the parent of widget before use this function.
-    pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl) {
+    pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl, ancestor_is_in_tree: bool) {
         INTIALIZE_PHASE.with(|p| {
             if *p.borrow() {
                 panic!(
@@ -482,8 +483,11 @@ impl ApplicationWindow {
         if !window.initialized() {
             return;
         }
+        if !ancestor_is_in_tree {
+            return;
+        }
 
-        child_initialize(Some(widget), window_id);
+        child_initialize(Some(widget), window_id, ancestor_is_in_tree);
 
         window.board().shuffle();
 
@@ -911,7 +915,7 @@ impl ApplicationWindow {
             #[cfg(win_dialog)]
             let mut input_dialog = crate::input::dialog::CorrInputDialog::new();
 
-            Self::initialize_dynamic_component(input_dialog.as_mut());
+            Self::initialize_dynamic_component(input_dialog.as_mut(), true);
             self.input_dialog = Some(input_dialog);
         }
 
@@ -936,7 +940,7 @@ impl ApplicationWindow {
             #[cfg(win_tooltip)]
             let mut tooltip = crate::tooltip::CorrTooltip::new();
 
-            Self::initialize_dynamic_component(tooltip.as_mut());
+            Self::initialize_dynamic_component(tooltip.as_mut(), true);
             self.tooltip = Some(tooltip);
         }
 
@@ -1040,7 +1044,11 @@ pub fn window_id() -> ObjectId {
     WINDOW_ID.with(|id| *id.borrow())
 }
 
-fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId) {
+fn child_initialize(
+    mut child: Option<&mut dyn WidgetImpl>,
+    window_id: ObjectId,
+    ancestor_is_in_tree: bool,
+) {
     let window = ApplicationWindow::window_of(window_id);
     let type_registry = TypeRegistry::instance();
 
@@ -1099,9 +1107,12 @@ fn child_initialize(mut child: Option<&mut dyn WidgetImpl>, window_id: ObjectId)
             }
         }
 
-        child_ref.set_initialized(true);
+        if ancestor_is_in_tree {
+            child_ref.set_in_tree();
+        }
         child_ref.inner_initialize();
         child_ref.initialize();
+        child_ref.set_initialized(true);
 
         if let Some(snapshot) = cast_mut!(child_ref as Snapshot) {
             AnimationMgr::with(|m| m.borrow_mut().add_snapshot(snapshot))

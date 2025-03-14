@@ -38,6 +38,7 @@ pub type WinitMouseButton = winit::event::MouseButton;
 pub type WinitPosition = winit::dpi::Position;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct WrappedWindowId(winit::window::WindowId);
 impl From<winit::window::WindowId> for WrappedWindowId {
     #[inline]
@@ -48,6 +49,7 @@ impl From<winit::window::WindowId> for WrappedWindowId {
 impl IsEnabled for WrappedWindowId {}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct WrappedTypeId(TypeId);
 impl From<TypeId> for WrappedTypeId {
     #[inline]

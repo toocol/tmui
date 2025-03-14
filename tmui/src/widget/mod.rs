@@ -66,6 +66,7 @@ pub struct Widget {
     #[derivative(Default(value = "false"))]
     rerender_difference: bool,
     redraw_shadow_box: bool,
+    in_tree: bool,
     overflow: Overflow,
 
     margins: [i32; 4],
@@ -289,7 +290,7 @@ impl Widget {
     where
         T: WidgetImpl,
     {
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
 
         self.child = Some(child);
         self.child_ref = None;
@@ -297,7 +298,7 @@ impl Widget {
 
     #[inline]
     pub fn child_ref_internal(&mut self, child: &mut dyn WidgetImpl) {
-        ApplicationWindow::initialize_dynamic_component(child);
+        ApplicationWindow::initialize_dynamic_component(child, self.is_in_tree());
 
         self.child = None;
         self.child_ref = NonNull::new(child);

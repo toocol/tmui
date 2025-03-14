@@ -32,6 +32,9 @@ pub trait WidgetExt {
     /// The widget was initialized or not.
     fn initialized(&self) -> bool;
 
+    /// The widget was is in ui tree or not.
+    fn is_in_tree(&self) -> bool;
+
     /// Upcast widget to `&mut dyn ElementImpl`
     fn as_element(&mut self) -> &mut dyn ElementImpl;
 
@@ -567,6 +570,11 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn initialized(&self) -> bool {
         self.widget_props().initialized
+    }
+
+    #[inline]
+    fn is_in_tree(&self) -> bool {
+        self.widget_props().in_tree
     }
 
     #[inline]

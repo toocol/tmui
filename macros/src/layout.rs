@@ -75,7 +75,7 @@ pub(crate) fn expand(
         ast,
         LayoutType::from(layout_meta, layout)?,
         ignore_default,
-        is_popup
+        is_popup,
     )
 }
 
@@ -240,7 +240,7 @@ fn gen_layout_clause(
         (false, false, false, false) => {
             quote! {
                 child.set_parent(self);
-                ApplicationWindow::initialize_dynamic_component(child.as_mut());
+                ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
                 self.container.children.push(child);
                 self.update();
             }

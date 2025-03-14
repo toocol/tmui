@@ -223,7 +223,7 @@ impl ContainerImplExt for Pane {
         }
 
         child.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
         self.container.children.push(child);
         self.update();
     }

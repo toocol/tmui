@@ -22,7 +22,7 @@ impl Overlay {
         child.set_fixed_x(point.x());
         child.set_fixed_y(point.y());
 
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
 
         self.container.children.push(child);
         self.update();

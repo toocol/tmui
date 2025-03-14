@@ -12,6 +12,8 @@ use tlib::{
 pub(crate) trait WidgetInnerExt {
     fn set_initialized(&mut self, initialized: bool);
 
+    fn set_in_tree(&mut self);
+
     fn first_rendered(&self) -> bool;
 
     fn set_first_rendered(&mut self, frist_rendered: bool);
@@ -267,7 +269,15 @@ macro_rules! widget_inner_ext_impl {
 
 impl<T: WidgetImpl> WidgetInnerExt for T {
     widget_inner_ext_impl!();
+
+    fn set_in_tree(&mut self) {
+        self.widget_props_mut().in_tree = true;
+    }
 }
 impl WidgetInnerExt for dyn WidgetImpl {
     widget_inner_ext_impl!();
+
+    fn set_in_tree(&mut self) {
+        self.widget_props_mut().in_tree = true;
+    }
 }

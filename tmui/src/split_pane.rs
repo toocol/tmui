@@ -68,7 +68,7 @@ impl ContainerImplExt for SplitPane {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
         child.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
         let widget_ptr: WidgetHnd = NonNull::new(child.as_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),

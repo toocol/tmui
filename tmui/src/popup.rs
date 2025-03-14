@@ -191,7 +191,10 @@ pub trait Popupable: WidgetImpl {
     /// Only one popup can exist at the same time.
     #[inline]
     fn add_popup(&mut self, mut popup: Box<dyn PopupImpl>) {
-        ApplicationWindow::initialize_dynamic_component(popup.as_widget_impl_mut());
+        ApplicationWindow::initialize_dynamic_component(
+            popup.as_widget_impl_mut(),
+            self.is_in_tree(),
+        );
 
         self.set_popup(popup);
     }
