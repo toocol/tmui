@@ -9,14 +9,14 @@ pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream
         } else {
             child.hide()
         }
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
         self.container.children.push(child);
         self.update();
     })
 }
 
 pub(crate) fn generate_stack_inner_initial() -> syn::Result<proc_macro2::TokenStream> {
-    Ok(quote!{
+    Ok(quote! {
         let idx = self.current_index();
         for (i, c) in self.children_mut().iter_mut().enumerate() {
             if i != idx {
@@ -27,7 +27,7 @@ pub(crate) fn generate_stack_inner_initial() -> syn::Result<proc_macro2::TokenSt
 }
 
 pub(crate) fn generate_stack_inner_on_property_set() -> syn::Result<proc_macro2::TokenStream> {
-    Ok(quote!{
+    Ok(quote! {
         match name {
             "visible" => {
                 let visible = value.get::<bool>();

@@ -108,6 +108,11 @@ impl ActionHub {
             .or_insert(IntMap::default())
             .entry(target)
             .or_insert(vec![]);
+
+        if target_set.contains(&target) {
+            return;
+        }
+
         target_set.insert(target);
         actions.push(Box::new(f));
     }

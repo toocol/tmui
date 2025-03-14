@@ -5,7 +5,8 @@ use crate::{
         StaticContainerScaleCalculate,
     },
     layout::{ContainerLayout, LayoutMgr},
-    prelude::*, widget::InnerEventProcess,
+    prelude::*,
+    widget::InnerEventProcess,
 };
 use tlib::{
     object::{ObjectImpl, ObjectSubclass},
@@ -91,7 +92,7 @@ impl ContainerImplExt for Stack {
             child.hide()
         }
 
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
 
         self.container.children.push(child);
         self.update();
@@ -105,10 +106,7 @@ impl Layout for Stack {
     }
 
     #[inline]
-    fn position_layout(
-        &mut self,
-        parent: Option<&dyn WidgetImpl>,
-    ) {
+    fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         Stack::container_position_layout(self, parent)
     }
 }

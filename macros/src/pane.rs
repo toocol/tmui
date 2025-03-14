@@ -9,7 +9,7 @@ pub(crate) fn generate_pane_add_child() -> syn::Result<proc_macro2::TokenStream>
         }
 
         child.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(child.as_mut());
+        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
         self.container.children.push(child);
         self.update();
     ))

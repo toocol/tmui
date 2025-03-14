@@ -27,6 +27,16 @@ fn non_hash_map_i32() {
     }
 }
 
+fn ahash_map_i32() {
+    let mut map = AHashMap::default();
+    for i in 0..CNT {
+        map.insert(i, i);
+    }
+    for i in 0..CNT {
+        let _ = map.get(&i);
+    }
+}
+
 fn builtin_hash_map_string(set: &AHashSet<String>) {
     let mut map = HashMap::new();
     for i in set.iter() {
@@ -64,6 +74,7 @@ pub fn builtin_bench(c: &mut Criterion) {
     c.bench_function("builtin_i32_non_hash_map", |b| {
         b.iter(|| non_hash_map_i32())
     });
+    c.bench_function("builtin_ahash_map", |b| b.iter(|| ahash_map_i32()));
 
     let set = generate_unique_strings(CNT, 10);
     c.bench_function("builtin_string_hash_map", |b| {

@@ -143,7 +143,7 @@ pub(crate) fn generate_scroll_area_impl(name: &Ident) -> syn::Result<proc_macro2
                     connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
                 }
 
-                ApplicationWindow::initialize_dynamic_component(area.as_mut());
+                ApplicationWindow::initialize_dynamic_component(area.as_mut(), self.is_in_tree());
                 self.container.children.insert(0, area)
             }
 
