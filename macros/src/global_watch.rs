@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
-use syn::{parse::Parse, punctuated::Punctuated, Ident, Token};
 use quote::quote;
+use syn::{parse::Parse, punctuated::Punctuated, Ident, Token};
 
 use crate::SplitGenericsRef;
 
@@ -9,7 +9,7 @@ pub(crate) struct GlobalWatch<'a> {
     generics: Option<SplitGenericsRef<'a>>,
 }
 
-impl<'a> Parse for GlobalWatch<'a> {
+impl Parse for GlobalWatch<'_> {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let events: Punctuated<Ident, Token![,]> = input.parse_terminated(Ident::parse)?;
 

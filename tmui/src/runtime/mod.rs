@@ -12,6 +12,7 @@ use crate::{
     },
     application_window::ApplicationWindow,
     backend::{opengl_backend::OpenGLBackend, raster_backend::RasterBackend, Backend, BackendType},
+    font::mgr::FontManager,
     graphics::board::Board,
     opti::tracker::Tracker,
     platform::logic_window::LogicWindow,
@@ -76,6 +77,8 @@ where
 
     // Initialize the `ActionHub`.
     ActionHub::initialize();
+    // Load the fonts.
+    FontManager::load_fonts();
 
     let bitmap = logic_window.bitmap();
     let read_guard = bitmap.read();

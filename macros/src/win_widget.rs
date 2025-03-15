@@ -29,7 +29,7 @@ pub(crate) struct WinWidget<'a> {
     fields: TokenStream,
 }
 
-impl<'a> Parse for WinWidget<'a> {
+impl Parse for WinWidget<'_> {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut crs_o2s_msg = None;
         let mut crs_s2o_msg = None;

@@ -69,7 +69,7 @@ pub struct MemMutexGuard<'mutex> {
     mutex: &'mutex MemMutex,
 }
 
-impl<'mutex> Drop for MemMutexGuard<'mutex> {
+impl Drop for MemMutexGuard<'_> {
     #[inline]
     fn drop(&mut self) {
         if self.mutex.is_locked() {

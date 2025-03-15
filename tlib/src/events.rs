@@ -197,7 +197,7 @@ impl StaticType for KeyEvent {
         EventType::bytes_len()
             + KeyCode::bytes_len()
             + KeyboardModifier::bytes_len()
-            + self.text.as_bytes().len()
+            + self.text.len()
             + 1
     }
 }

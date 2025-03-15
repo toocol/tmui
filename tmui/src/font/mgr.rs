@@ -1,11 +1,6 @@
 use ahash::AHashMap;
 use derivative::Derivative;
-use once_cell::sync::Lazy;
-use std::io::Read;
-use tipc::parking_lot::{
-    lock_api::{RwLockReadGuard, RwLockWriteGuard},
-    RawRwLock, RwLock,
-};
+use std::{cell::RefCell, io::Read};
 use tlib::{
     skia_safe::FontMgr,
     typedef::{SkiaFontStyle, SkiaTypeface},
@@ -40,48 +35,44 @@ pub struct FontManager {
     fonts: AHashMap<String, SkiaTypeface>,
 }
 
-static mut MGR: Lazy<RwLock<FontManager>> = Lazy::new(|| RwLock::new(FontManager::default()));
+thread_local! {
+    static MGR: RefCell<FontManager> = RefCell::new(FontManager::default());
+}
 
 impl FontManager {
-    #[inline]
-    fn write() -> RwLockWriteGuard<'static, RawRwLock, FontManager> {
-        unsafe { MGR.write() }
-    }
-
-    #[inline]
-    fn read() -> RwLockReadGuard<'static, RawRwLock, FontManager> {
-        unsafe { MGR.read() }
-    }
-
     #[inline]
     pub(crate) fn load_fonts() {
         #[cfg(font_awesome)]
         {
-            let mut manager = Self::write();
+            MGR.with(|mgr| {
+                let mut manager = mgr.borrow_mut();
 
-            for font in EXTERNAL_FONTS {
-                let data = FontAsset::get(font)
-                    .unwrap_or_else(|| panic!("Load ttf file `{}` failed.", font))
-                    .data;
+                for font in EXTERNAL_FONTS {
+                    let data = FontAsset::get(font)
+                        .unwrap_or_else(|| panic!("Load ttf file `{}` failed.", font))
+                        .data;
 
-                let tf = manager
-                    .system_mgr
-                    .new_from_data(&data, None)
-                    .unwrap_or_else(|| panic!("Make font typeface failed, ttf file: {}.", font));
+                    let tf = manager
+                        .system_mgr
+                        .new_from_data(&data, None)
+                        .unwrap_or_else(|| {
+                            panic!("Make font typeface failed, ttf file: {}.", font)
+                        });
 
-                manager.fonts.insert(tf.family_name(), tf);
-            }
+                    manager.fonts.insert(tf.family_name(), tf);
+                }
+            })
         }
     }
 
     #[inline]
     pub(crate) fn get(family: &str) -> Option<SkiaTypeface> {
-        Self::read().fonts.get(family).cloned()
+        MGR.with(|mgr| mgr.borrow().fonts.get(family).cloned())
     }
 
     #[inline]
     pub(crate) fn make_typeface(family: &str, style: SkiaFontStyle) -> Option<SkiaTypeface> {
-        Self::read().system_mgr.match_family_style(family, style)
+        MGR.with(|mgr| mgr.borrow().system_mgr.match_family_style(family, style))
     }
 
     #[inline]
@@ -93,25 +84,31 @@ impl FontManager {
         file.read_to_end(&mut data)
             .unwrap_or_else(|_| panic!("Read file `{}` failed", path));
 
-        let mut manager = Self::write();
+        MGR.with(|mgr| {
+            let mut manager = mgr.borrow_mut();
 
-        let tf = manager
-            .system_mgr
-            .new_from_data(&data, None)
-            .unwrap_or_else(|| panic!("Make customize font typeface failed, ttf file: {}.", path));
+            let tf = manager
+                .system_mgr
+                .new_from_data(&data, None)
+                .unwrap_or_else(|| {
+                    panic!("Make customize font typeface failed, ttf file: {}.", path)
+                });
 
-        manager.fonts.insert(tf.family_name(), tf);
+            manager.fonts.insert(tf.family_name(), tf);
+        });
     }
 
     #[inline]
     pub fn load_data(data: &[u8]) {
-        let mut manager = Self::write();
+        MGR.with(|mgr| {
+            let mut manager = mgr.borrow_mut();
 
-        let tf = manager
-            .system_mgr
-            .new_from_data(data, None)
-            .unwrap_or_else(|| panic!("Make customize font typeface failed."));
+            let tf = manager
+                .system_mgr
+                .new_from_data(data, None)
+                .unwrap_or_else(|| panic!("Make customize font typeface failed."));
 
-        manager.fonts.insert(tf.family_name(), tf);
+            manager.fonts.insert(tf.family_name(), tf);
+        })
     }
 }

@@ -10,7 +10,6 @@ use crate::{
     application_window::ApplicationWindow,
     backend::BackendType,
     event_hints::event_hints,
-    font::mgr::FontManager,
     graphics::icon::Icon,
     platform::{PlatformContext, PlatformIpc, PlatformType},
     prelude::CloseHandlerMgr,
@@ -117,9 +116,6 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> Applicati
         logic_window.on_activate = on_activate;
         logic_window.on_user_event_receive = on_user_event_receive;
         logic_window.on_request_receive = on_request_receive;
-
-        // Load the fonts.
-        FontManager::load_fonts();
 
         // Create the `UI` main thread.
         let join = start_ui_runtime(0, self.ui_stack_size, logic_window);

@@ -5,7 +5,7 @@ use super::{
 use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::{
     mem::size_of,
-    sync::atomic::{Ordering, AtomicU8},
+    sync::atomic::{AtomicU8, Ordering},
 };
 
 #[repr(C)]
@@ -105,7 +105,7 @@ impl<'lock> MemRwLockGuard<'lock> {
     }
 }
 
-impl<'lock> Drop for MemRwLockGuard<'lock> {
+impl Drop for MemRwLockGuard<'_> {
     #[inline]
     fn drop(&mut self) {
         let inner = self.lock.inner_mut();
