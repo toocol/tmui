@@ -491,7 +491,11 @@ impl ApplicationWindow {
 
         window.board().shuffle();
 
-        window.layout_change(widget);
+        if let Some(parent) = widget.get_parent_mut() {
+            window.layout_change(parent);
+        } else {
+            window.layout_change(widget);
+        }
 
         if let Some(win_widget) = cast_mut!(widget as WinWidget) {
             let inner = cast!(win_widget as PopupImpl).is_none();
