@@ -11,7 +11,7 @@ use tlib::{
     connect, emit,
     events::{DeltaType, MouseEvent},
     global::bound,
-    implements_enum_value, isolated_visibility,
+    global_watch, implements_enum_value, isolated_visibility,
     namespace::{AsNumeric, BlendMode, KeyboardModifier, Orientation},
     object::{ObjectImpl, ObjectSubclass},
     run_after, signals,
@@ -28,6 +28,7 @@ pub const DEFAULT_SLIDER_BACKGROUND: Color = Color::rgb(250, 250, 250);
 #[extends(Widget)]
 #[run_after]
 #[isolated_visibility]
+#[global_watch(MouseMove)]
 pub struct ScrollBar {
     #[derivative(Default(value = "Orientation::Vertical"))]
     orientation: Orientation,
@@ -103,6 +104,18 @@ impl ObjectImpl for ScrollBar {
     #[inline]
     fn type_register(&self, type_registry: &mut TypeRegistry) {
         type_registry.register::<Self, ReflectPartCovered>()
+    }
+}
+
+impl GlobalWatchImpl for ScrollBar {
+    #[inline]
+    fn on_global_mouse_move(&mut self, evt: &MouseEvent) -> bool {
+        if self.is_active() {
+            self.on_mouse_move(evt);
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -582,7 +595,7 @@ impl ScrollBar {
     }
 
     /// Do not call this function directly.
-    /// 
+    ///
     /// Use [`ScrollArea::set_layout_mode`](crate::scroll_area::ScrollArea::set_layout_mode).
     #[inline]
     pub fn set_overlaid(&mut self, overlaid: bool) {
