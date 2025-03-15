@@ -45,14 +45,20 @@ impl TimerHub {
     /// Check the timers, if any timer was arrival the interval, emit the [`timeout()`] signal.
     #[inline]
     pub fn check_timers(&self) {
-        for (id, timer) in self.timers.borrow_mut().iter_mut() {
+        let mut should_activate = vec![];
+        for (id, timer) in self.timers.borrow().iter() {
             if let Some(timer) = unsafe { timer.as_ref() } {
                 if timer.is_active() {
-                    timer.check_timer();
+                    if timer.check_timer() {
+                        should_activate.push(timer);
+                    }
                 }
             } else {
                 warn!("The raw pointer of timer was none, id = {}", id)
             }
+        }
+        for timer in should_activate {
+            emit!(Timer::check_timer => timer, timeout());
         }
 
         self.once_timers.borrow_mut().retain(|_, timer| {
@@ -151,7 +157,6 @@ impl Timer {
     pub fn check_timer(&self) -> bool {
         if let Ok(duration) = SystemTime::now().duration_since(self.last_strike.get()) {
             if duration > self.duration.get() {
-                emit!(Timer::check_timer => self, timeout());
                 self.last_strike.set(SystemTime::now());
 
                 if self.single_shoot.get() {
