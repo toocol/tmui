@@ -186,17 +186,13 @@ impl Bitmap {
                 raw_pointer,
                 total_bytes,
                 ..
-            } => {
-                return unsafe {
-                    slice::from_raw_parts(
-                        raw_pointer.as_ref().unwrap().as_ptr() as *const u8,
-                        *total_bytes,
-                    )
-                };
-            }
-            Self::Direct { pixels, .. } => {
-                return pixels.as_ref().unwrap().as_ref();
-            }
+            } => unsafe {
+                slice::from_raw_parts(
+                    raw_pointer.as_ref().unwrap().as_ptr() as *const u8,
+                    *total_bytes,
+                )
+            },
+            Self::Direct { pixels, .. } => pixels.as_ref().unwrap().as_ref(),
             Self::Empty { .. } => {
                 unreachable!()
             }
@@ -212,17 +208,13 @@ impl Bitmap {
                 raw_pointer,
                 total_bytes,
                 ..
-            } => {
-                return unsafe {
-                    slice::from_raw_parts_mut(
-                        raw_pointer.as_mut().unwrap().as_ptr() as *mut u8,
-                        *total_bytes,
-                    )
-                };
-            }
-            Self::Direct { pixels, .. } => {
-                return pixels.as_mut().unwrap().as_mut();
-            }
+            } => unsafe {
+                slice::from_raw_parts_mut(
+                    raw_pointer.as_mut().unwrap().as_ptr() as *mut u8,
+                    *total_bytes,
+                )
+            },
+            Self::Direct { pixels, .. } => pixels.as_mut().unwrap().as_mut(),
             Self::Empty { .. } => {
                 unreachable!()
             }

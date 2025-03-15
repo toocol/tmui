@@ -1181,7 +1181,7 @@ fn child_initialize(
             }
         }
 
-        child = children.pop_front().take().and_then(|widget| unsafe {
+        child = children.pop_front().and_then(|widget| unsafe {
             match widget {
                 None => None,
                 Some(w) => w.as_mut(),
