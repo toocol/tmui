@@ -50,6 +50,10 @@ pub mod tlib {
     pub use tlib::*;
 }
 
+pub mod tipc {
+    pub use tipc::*;
+}
+
 mod winit {
     pub use tlib::winit::*;
 }
