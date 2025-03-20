@@ -37,6 +37,11 @@ impl<'a> GlobalWatch<'a> {
                         #(GlobalWatchEvent::#events),*
                     ]
                 }
+
+                #[inline]
+                fn as_widget(&mut self) -> &mut dyn WidgetImpl {
+                    self
+                }
             }
         ))
     }

@@ -30,6 +30,8 @@ pub trait GlobalWatch: WidgetImpl + GlobalWatchImpl {
     }
 
     fn watch_list(&self) -> Vec<GlobalWatchEvent>;
+
+    fn as_widget(&mut self) -> &mut dyn WidgetImpl;
 }
 
 #[allow(unused_variables)]
