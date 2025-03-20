@@ -148,7 +148,13 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             let pos = evt.position().into();
 
             let prevent = window.handle_global_watch(GlobalWatchEvent::MouseMove, |handle| {
-                handle.on_global_mouse_move(&evt)
+                let prevent = handle.on_global_mouse_move(&evt);
+                if prevent {
+                    let window = ApplicationWindow::window();
+                    window.check_mouse_leave(&pos, &evt);
+                    window.check_mouse_enter(handle.as_widget(), &pos, &evt);
+                }
+                prevent
             });
             if prevent {
                 return event;
@@ -467,7 +473,11 @@ pub(crate) fn message_handle(window: &mut ApplicationWindow, msg: Message) {
             if let Some(w) = window.find_id_mut(id) {
                 w.width_request(size.width());
                 w.height_request(size.height());
-                debug!("Correspondent window widget `{}` reverse set size {:?}", w.name(), size);
+                debug!(
+                    "Correspondent window widget `{}` reverse set size {:?}",
+                    w.name(),
+                    size
+                );
             } else {
                 warn!(
                     "`ApplicationWindow` finds widget by id get `None`, id = {}",
