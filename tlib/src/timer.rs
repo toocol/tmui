@@ -48,10 +48,8 @@ impl TimerHub {
         let mut should_activate = vec![];
         for (id, timer) in self.timers.borrow().iter() {
             if let Some(timer) = unsafe { timer.as_ref() } {
-                if timer.is_active() {
-                    if timer.check_timer() {
-                        should_activate.push(timer);
-                    }
+                if timer.is_active() && timer.check_timer() {
+                    should_activate.push(timer);
                 }
             } else {
                 warn!("The raw pointer of timer was none, id = {}", id)

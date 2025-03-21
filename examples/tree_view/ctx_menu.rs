@@ -39,6 +39,7 @@ impl ObjectImpl for CtxMenu {
             None,
             Some(ShadowSide::new(&[ShadowSide::RIGHT, ShadowSide::BOTTOM])),
             None,
+            None,
         ));
 
         self.selection_list.set_vexpand(true);
@@ -58,8 +59,14 @@ impl ObjectImpl for CtxMenu {
             let view = node.get_view();
 
             let tree_view_id = view.get_property("view_id").unwrap().get::<ObjectId>();
-            let tree_view = ApplicationWindow::window().find_id_mut(tree_view_id).unwrap().downcast_mut::<TreeView>().unwrap();
-            tree_view.root_mut().add_node(&SimpContent{ name: "New Content" });
+            let tree_view = ApplicationWindow::window()
+                .find_id_mut(tree_view_id)
+                .unwrap()
+                .downcast_mut::<TreeView>()
+                .unwrap();
+            tree_view.root_mut().add_node(&SimpContent {
+                name: "New Content",
+            });
 
             view.get_parent_mut().unwrap().hide();
         })

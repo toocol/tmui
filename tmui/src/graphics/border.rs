@@ -20,7 +20,8 @@ pub struct Border {
         value = "(DEFAULT_BORDER_COLOR, DEFAULT_BORDER_COLOR, DEFAULT_BORDER_COLOR, DEFAULT_BORDER_COLOR)"
     ))]
     pub(crate) border_color: (Color, Color, Color, Color),
-    pub(crate) border_radius: f32,
+    /// (left top, right top, right bottom, left bottom)
+    pub(crate) border_radius: (f32, f32, f32, f32),
 }
 
 impl Border {
@@ -35,14 +36,14 @@ impl Border {
             style,
             width,
             border_color,
-            border_radius: radius,
+            border_radius: (radius, radius, radius, radius),
         }
     }
 
     pub(crate) fn render(&self, painter: &mut Painter, geometry: FRect) {
         painter.save_pen();
 
-        if self.border_radius > 0. {
+        if self.should_draw_radius() {
             self.render_radius(painter, geometry);
         } else {
             self.render_normal(painter, geometry)
@@ -274,6 +275,9 @@ impl Border {
     fn render_radius(&self, painter: &mut Painter, mut geometry: FRect) {
         let (top, right, bottom, left) = self.width;
         if self.is_same_color() && self.is_same_width() {
+            if self.is_same_width() && top == 0. {
+                return;
+            }
             painter.set_color(self.border_color.0);
             painter.set_line_width(top);
 
@@ -288,12 +292,12 @@ impl Border {
 
         let (lt, rt, rb, lb) = geometry.arc_points(self.border_radius);
 
-        if rt.0.x() > lt.1.x() {
+        if rt.0.x() > lt.1.x() && top > 0. {
             painter.set_line_width(top);
             painter.set_color(self.border_color.0);
             painter.draw_line_f(lt.1.x(), lt.1.y() + top / 2., rt.0.x(), rt.0.y() + top / 2.);
         }
-        if rb.0.y() > rt.1.y() {
+        if rb.0.y() > rt.1.y() && right > 0. {
             painter.set_line_width(right);
             painter.set_color(self.border_color.1);
             painter.draw_line_f(
@@ -303,7 +307,7 @@ impl Border {
                 rb.0.y(),
             );
         }
-        if lb.0.x() < rb.1.x() {
+        if lb.0.x() < rb.1.x() && bottom > 0. {
             painter.set_line_width(bottom);
             painter.set_color(self.border_color.2);
             painter.draw_line_f(
@@ -313,7 +317,7 @@ impl Border {
                 lb.0.y() - bottom / 2.,
             );
         }
-        if lt.0.y() < lb.1.y() {
+        if lt.0.y() < lb.1.y() && left > 0. {
             painter.set_line_width(left);
             painter.set_color(self.border_color.3);
             painter.draw_line_f(
@@ -326,8 +330,8 @@ impl Border {
 
         // Draw arc angles:
         painter.set_antialiasing(true);
-        let dimension = 2. * self.border_radius;
 
+        let dimension = 2. * self.border_radius.0;
         let lt = FRect::new(
             geometry.left() + left / 2.,
             geometry.top() + top / 2.,
@@ -335,11 +339,16 @@ impl Border {
             dimension,
         );
         let (start_width, mid_width, end_width) = (left, (left + top) / 2., top);
-        painter.set_color(self.border_color.3);
-        painter.draw_varying_arc(lt, 180., 45., start_width, mid_width, 8);
-        painter.set_color(self.border_color.0);
-        painter.draw_varying_arc(lt, 225., 45., mid_width, end_width, 8);
+        if left > 0. {
+            painter.set_color(self.border_color.3);
+            painter.draw_varying_arc(lt, 180., 45., start_width, mid_width, 8);
+        }
+        if top > 0. {
+            painter.set_color(self.border_color.0);
+            painter.draw_varying_arc(lt, 225., 45., mid_width, end_width, 8);
+        }
 
+        let dimension = 2. * self.border_radius.1;
         let rt = FRect::new(
             geometry.right() - dimension - right / 2.,
             geometry.top() + top / 2.,
@@ -347,11 +356,16 @@ impl Border {
             dimension,
         );
         let (start_width, mid_width, end_width) = (top, (top + right) / 2., right);
-        painter.set_color(self.border_color.0);
-        painter.draw_varying_arc(rt, 270., 45., start_width, mid_width, 8);
-        painter.set_color(self.border_color.1);
-        painter.draw_varying_arc(rt, 315., 45., mid_width, end_width, 8);
+        if top > 0. {
+            painter.set_color(self.border_color.0);
+            painter.draw_varying_arc(rt, 270., 45., start_width, mid_width, 8);
+        }
+        if right > 0. {
+            painter.set_color(self.border_color.1);
+            painter.draw_varying_arc(rt, 315., 45., mid_width, end_width, 8);
+        }
 
+        let dimension = 2. * self.border_radius.2;
         let rb = FRect::new(
             geometry.right() - dimension - right / 2.,
             geometry.bottom() - dimension - bottom / 2.,
@@ -359,11 +373,16 @@ impl Border {
             dimension,
         );
         let (start_width, mid_width, end_width) = (right, (bottom + right) / 2., bottom);
-        painter.set_color(self.border_color.1);
-        painter.draw_varying_arc(rb, 0., 45., start_width, mid_width, 8);
-        painter.set_color(self.border_color.2);
-        painter.draw_varying_arc(rb, 45., 45., mid_width, end_width, 8);
+        if right > 0. {
+            painter.set_color(self.border_color.1);
+            painter.draw_varying_arc(rb, 0., 45., start_width, mid_width, 8);
+        }
+        if bottom > 0. {
+            painter.set_color(self.border_color.2);
+            painter.draw_varying_arc(rb, 45., 45., mid_width, end_width, 8);
+        }
 
+        let dimension = 2. * self.border_radius.3;
         let lb = FRect::new(
             geometry.left() + left / 2.,
             geometry.bottom() - dimension - bottom / 2.,
@@ -371,10 +390,14 @@ impl Border {
             dimension,
         );
         let (start_width, mid_width, end_width) = (bottom, (bottom + left) / 2., left);
-        painter.set_color(self.border_color.2);
-        painter.draw_varying_arc(lb, 90., 45., start_width, mid_width, 8);
-        painter.set_color(self.border_color.3);
-        painter.draw_varying_arc(lb, 135., 45., mid_width, end_width, 8);
+        if bottom > 0. {
+            painter.set_color(self.border_color.2);
+            painter.draw_varying_arc(lb, 90., 45., start_width, mid_width, 8);
+        }
+        if left > 0. {
+            painter.set_color(self.border_color.3);
+            painter.draw_varying_arc(lb, 135., 45., mid_width, end_width, 8);
+        }
 
         painter.reset();
     }
@@ -389,5 +412,13 @@ impl Border {
         self.border_color.0 == self.border_color.1
             && self.border_color.1 == self.border_color.2
             && self.border_color.2 == self.border_color.3
+    }
+
+    #[inline]
+    pub fn should_draw_radius(&self) -> bool {
+        self.border_radius.0 != 0.
+            || self.border_radius.1 != 0.
+            || self.border_radius.2 != 0.
+            || self.border_radius.3 != 0.
     }
 }

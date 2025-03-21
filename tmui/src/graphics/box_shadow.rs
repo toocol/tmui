@@ -3,7 +3,7 @@ use crate::{skia_safe, widget::WidgetImpl};
 use derivative::Derivative;
 use tlib::{
     bitflags::bitflags,
-    figure::Color,
+    figure::{Color, FRect},
     namespace::BlendMode,
     skia_safe::{ClipOp, MaskFilter},
 };
@@ -17,6 +17,7 @@ pub struct BoxShadow {
     #[derivative(Default(value = "ShadowSide::all()"))]
     side: ShadowSide,
     strength: usize,
+    blend_mode: BlendMode,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -54,6 +55,7 @@ impl BoxShadow {
         pos: Option<ShadowPos>,
         side: Option<ShadowSide>,
         strength: Option<usize>,
+        blend_mode: Option<BlendMode>,
     ) -> Self {
         Self {
             blur,
@@ -61,6 +63,7 @@ impl BoxShadow {
             pos: pos.unwrap_or_default(),
             side: side.unwrap_or(ShadowSide::all()),
             strength: strength.unwrap_or_default(),
+            blend_mode: blend_mode.unwrap_or(BlendMode::SrcOver),
         }
     }
 
@@ -127,44 +130,159 @@ pub trait ShadowRender: WidgetImpl {
         let blur = MaskFilter::blur(skia_safe::BlurStyle::Normal, sigma, None);
 
         painter.save();
+        let draw_radius = self.border_ref().should_draw_radius();
         match box_shadow.pos {
-            ShadowPos::Outset => painter.clip_rect_global(self.rect_f(), ClipOp::Difference),
-            ShadowPos::Inset => painter.clip_rect_global(self.rect_f(), ClipOp::Intersect),
+            ShadowPos::Outset => {
+                if draw_radius {
+                    painter.clip_round_rect_global(
+                        self.rect_f(),
+                        self.border_ref().border_radius,
+                        ClipOp::Difference,
+                    )
+                } else {
+                    painter.clip_rect_global(self.rect_f(), ClipOp::Difference)
+                }
+            }
+            ShadowPos::Inset => {
+                if draw_radius {
+                    painter.clip_round_rect_global(
+                        self.rect_f(),
+                        self.border_ref().border_radius,
+                        ClipOp::Intersect,
+                    )
+                } else {
+                    painter.clip_rect_global(self.rect_f(), ClipOp::Intersect)
+                }
+            }
         }
 
         painter.save_pen();
-        painter.set_blend_mode(BlendMode::SrcOver);
+        painter.set_blend_mode(box_shadow.blend_mode);
         painter.set_line_width(1.);
         painter.set_color(box_shadow.color);
         painter.paint_mut().set_mask_filter(blur);
 
         let rect = self.rect_f();
+        let (lt, rt, rb, lb) = rect.arc_points(self.border_ref().border_radius);
+        let radius = self.border_ref().border_radius;
         let side = box_shadow.side;
         for _ in 0..box_shadow.strength + 1 {
             if side.is_all() {
-                painter.draw_rect_global(rect);
+                if self.border_ref().should_draw_radius() {
+                    painter.draw_round_rect_global(rect, radius);
+                } else {
+                    painter.draw_rect_global(rect);
+                }
             } else {
                 if side.contains(ShadowSide::TOP) {
-                    painter.draw_line_f_global(rect.left(), rect.top(), rect.right(), rect.top())
-                } 
+                    if radius.0 > 0. || radius.1 > 0. {
+                        // Radius: top-left
+                        painter.draw_line_f_global(lt.1.x(), lt.1.y(), rt.0.x(), rt.0.y());
+                        let dimension = 2. * radius.0;
+                        let lt = FRect::new(rect.left(), rect.top(), dimension, dimension);
+                        painter.draw_varying_arc_global(lt, 225., 45., 1., 1., 8);
+                    } else {
+                        painter.draw_line_f_global(
+                            rect.left(),
+                            rect.top(),
+                            rect.right(),
+                            rect.top(),
+                        );
+                    }
+                    if radius.1 > 0. {
+                        // Radius: top-right
+                        let dimension = 2. * radius.1;
+                        let rt =
+                            FRect::new(rect.right() - dimension, rect.top(), dimension, dimension);
+                        painter.draw_varying_arc_global(rt, 270., 45., 1., 1., 8);
+                    }
+                }
                 if side.contains(ShadowSide::RIGHT) {
-                    painter.draw_line_f_global(
-                        rect.right(),
-                        rect.top(),
-                        rect.right(),
-                        rect.bottom(),
-                    )
-                } 
+                    if radius.1 > 0. || radius.2 > 0. {
+                        // Radius: top-right
+                        painter.draw_line_f_global(rt.1.x(), rt.1.y(), rb.0.x(), rb.0.y());
+                        let dimension = 2. * radius.1;
+                        let rt =
+                            FRect::new(rect.right() - dimension, rect.top(), dimension, dimension);
+                        painter.draw_varying_arc_global(rt, 315., 45., 1., 1., 8);
+                    } else {
+                        painter.draw_line_f_global(
+                            rect.right(),
+                            rect.top(),
+                            rect.right(),
+                            rect.bottom(),
+                        )
+                    }
+                    if radius.2 > 0. {
+                        // Radius: bottom-right
+                        let dimension = 2. * radius.2;
+                        let rb = FRect::new(
+                            rect.right() - dimension,
+                            rect.bottom() - dimension,
+                            dimension,
+                            dimension,
+                        );
+                        painter.draw_varying_arc_global(rb, 0., 45., 1., 1., 8);
+                    }
+                }
                 if side.contains(ShadowSide::BOTTOM) {
-                    painter.draw_line_f_global(
-                        rect.left(),
-                        rect.bottom(),
-                        rect.right(),
-                        rect.bottom(),
-                    )
-                } 
+                    if radius.2 > 0. || radius.3 > 0. {
+                        // Radius: bottom-right
+                        painter.draw_line_f_global(rb.1.x(), rb.1.y(), lb.0.x(), lb.0.y());
+                        let dimension = 2. * radius.2;
+                        let rb = FRect::new(
+                            rect.right() - dimension,
+                            rect.bottom() - dimension,
+                            dimension,
+                            dimension,
+                        );
+                        painter.draw_varying_arc_global(rb, 45., 45., 1., 1., 8);
+                    } else {
+                        painter.draw_line_f_global(
+                            rect.left(),
+                            rect.bottom(),
+                            rect.right(),
+                            rect.bottom(),
+                        )
+                    }
+                    if radius.3 > 0. {
+                        // Radius: bottom-left
+                        let dimension = 2. * radius.3;
+                        let lb = FRect::new(
+                            rect.left(),
+                            rect.bottom() - dimension,
+                            dimension,
+                            dimension,
+                        );
+                        painter.draw_varying_arc_global(lb, 90., 45., 1., 1., 8);
+                    }
+                }
                 if side.contains(ShadowSide::LEFT) {
-                    painter.draw_line_f_global(rect.left(), rect.bottom(), rect.left(), rect.top())
+                    if radius.3 > 0. || radius.0 > 0. {
+                        // Radius: bottom-left
+                        painter.draw_line_f_global(lb.1.x(), lb.1.y(), lt.0.x(), lt.0.y());
+                        let dimension = 2. * radius.3;
+                        let lb = FRect::new(
+                            rect.left(),
+                            rect.bottom() - dimension,
+                            dimension,
+                            dimension,
+                        );
+                        painter.draw_varying_arc_global(lb, 135., 45., 1., 1., 8);
+                    } else {
+                        painter.draw_line_f_global(
+                            rect.left(),
+                            rect.bottom(),
+                            rect.left(),
+                            rect.top(),
+                        )
+                    }
+                }
+                if radius.0 > 0. {
+                    // Radius: top-left
+                    let dimension = 2. * radius.0;
+                    let lt = FRect::new(rect.left(), rect.top(), dimension, dimension);
+                    painter.draw_varying_arc_global(lt, 180., 45., 1., 1., 8);
                 }
             }
         }

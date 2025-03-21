@@ -62,7 +62,7 @@ impl ObjectImpl for DropdownList {
         self.parent_construct();
         self.set_borders(1., 1., 1., 1.);
         self.set_border_color(Color::GREY_LIGHT);
-        self.set_box_shadow(BoxShadow::new(6., Color::BLACK, None, None, None));
+        self.set_box_shadow(BoxShadow::new(6., Color::BLACK, None, None, None, None));
 
         #[cfg(win_select)]
         self.set_hexpand(true);

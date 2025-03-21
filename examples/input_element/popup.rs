@@ -1,12 +1,21 @@
 use tmui::{
-    graphics::box_shadow::{BoxShadow, ShadowSide}, input::{number::Number, password::Password, select::{select_option::SelectOption, Select}, text::Text}, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl
+    graphics::box_shadow::{BoxShadow, ShadowSide},
+    input::{
+        number::Number,
+        password::Password,
+        select::{select_option::SelectOption, Select},
+        text::Text,
+    },
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Popup)]
 #[derive(Childable)]
 pub struct InputPopup {
     #[child]
-    vbox: Box<VBox>
+    vbox: Box<VBox>,
 }
 
 impl ObjectSubclass for InputPopup {
@@ -26,6 +35,7 @@ impl ObjectImpl for InputPopup {
             Color::BLACK,
             None,
             Some(ShadowSide::new(&[ShadowSide::RIGHT, ShadowSide::BOTTOM])),
+            None,
             None,
         ));
 
