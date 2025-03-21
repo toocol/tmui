@@ -35,7 +35,7 @@ fn build_ui(window: &mut ApplicationWindow) {
     //     None,
     // ));
 
-    widget.set_box_shadow(BoxShadow::new(8., Color::BLACK, None, None, None));
+    widget.set_box_shadow(BoxShadow::new(8., Color::BLACK, None, None, None, None));
 
     window.child(widget);
     window.set_background(Color::GREY_LIGHT);

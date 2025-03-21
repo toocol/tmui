@@ -294,6 +294,9 @@ pub trait WidgetExt {
     /// Set the border radius of the widget.
     fn set_border_radius(&mut self, radius: f32);
 
+    /// Set the border radius separately.
+    fn set_border_radius_sep(&mut self, lt: f32, rt: f32, rb: f32, lb: f32);
+
     /// Set the border style of the widget.
     fn set_border_style(&mut self, style: BorderStyle);
 
@@ -1460,7 +1463,17 @@ impl<T: WidgetImpl> WidgetExt for T {
             return;
         }
 
-        self.widget_props_mut().styles.border_mut().border_radius = radius;
+        self.widget_props_mut().styles.border_mut().border_radius =
+            (radius, radius, radius, radius);
+
+        self.set_whole_styles_render(true);
+        self.update_render_styles();
+    }
+
+    #[inline]
+    fn set_border_radius_sep(&mut self, lt: f32, rt: f32, rb: f32, lb: f32) {
+        self.widget_props_mut().styles.border_mut().border_radius =
+            (lt.max(0.), rt.max(0.), rb.max(0.), lb.max(0.));
 
         self.set_whole_styles_render(true);
         self.update_render_styles();

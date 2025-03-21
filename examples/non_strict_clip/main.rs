@@ -1,11 +1,7 @@
 mod non_strict_clip_widget;
 
 use non_strict_clip_widget::NonStrictClipWidget;
-use tmui::{
-    prelude::*,
-    application::Application,
-    application_window::ApplicationWindow,
-};
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
@@ -14,6 +10,7 @@ fn main() {
         .width(1280)
         .height(800)
         .title("Non strict clip")
+        .transparent(true)
         .build();
 
     app.connect_activate(build_ui);

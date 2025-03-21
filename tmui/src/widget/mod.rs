@@ -559,9 +559,6 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             painter.restore();
             return;
         } else if !self.first_rendered() || self.render_styles() {
-            painter.save();
-            self.clip_rect(&mut painter, ClipOp::Intersect);
-
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
             let mut background = if self.first_rendered() && !self.is_animation_progressing() {
                 self.opaque_background()
@@ -583,6 +580,9 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
                 && !self.window().minimized()
                 && !cliped
             {
+                painter.save();
+                self.clip_rect(&mut painter, ClipOp::Intersect);
+
                 let mut border_rect: FRect = self.rect_record();
                 border_rect.set_point(&(0, 0).into());
                 self.border_ref()
@@ -590,8 +590,20 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
                 self.render_difference(&mut painter, background);
             } else {
-                painter.fill_rect(geometry, background);
+                painter.save();
+                if self.border_ref().should_draw_radius() {
+                    painter.clip_round_rect_global(
+                        self.visual_rect(),
+                        self.border_ref().border_radius,
+                        ClipOp::Intersect,
+                    );
+                }
                 self.render_shadow(&mut painter);
+                painter.restore();
+
+                painter.save();
+                self.clip_rect(&mut painter, ClipOp::Intersect);
+                painter.fill_rect(geometry, background);
             }
 
             // Draw the border of the Widget.

@@ -1098,23 +1098,23 @@ impl FRect {
     ///
     /// Each points are ordered by clockwise.
     #[inline]
-    pub fn arc_points(&self, radius: f32) -> ArcFPoints {
+    pub fn arc_points(&self, radius: (f32, f32, f32, f32)) -> ArcFPoints {
         (
             (
-                FPoint::new(self.left(), self.top() + radius),
-                FPoint::new(self.left() + radius, self.top()),
+                FPoint::new(self.left(), self.top() + radius.0),
+                FPoint::new(self.left() + radius.0, self.top()),
             ),
             (
-                FPoint::new(self.right() - radius, self.top()),
-                FPoint::new(self.right(), self.top() + radius),
+                FPoint::new(self.right() - radius.1, self.top()),
+                FPoint::new(self.right(), self.top() + radius.1),
             ),
             (
-                FPoint::new(self.right(), self.bottom() - radius),
-                FPoint::new(self.right() - radius, self.bottom()),
+                FPoint::new(self.right(), self.bottom() - radius.2),
+                FPoint::new(self.right() - radius.2, self.bottom()),
             ),
             (
-                FPoint::new(self.left() + radius, self.bottom()),
-                FPoint::new(self.left(), self.bottom() - radius),
+                FPoint::new(self.left() + radius.3, self.bottom()),
+                FPoint::new(self.left(), self.bottom() - radius.3),
             ),
         )
     }

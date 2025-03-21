@@ -1,11 +1,15 @@
 use tmui::{
-    graphics::render_difference::{CustomRenderChildDiff, ReflectCustomRenderChildDiff},
+    graphics::{
+        box_shadow::{BoxShadow, ShadowSide},
+        render_difference::{CustomRenderChildDiff, ReflectCustomRenderChildDiff},
+    },
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},
     widget::WidgetImpl,
 };
 
 #[extends(Widget)]
+#[derive(Childable)]
 pub struct NonStrictClipWidget {}
 
 impl ObjectSubclass for NonStrictClipWidget {
@@ -18,6 +22,19 @@ impl ObjectImpl for NonStrictClipWidget {
         self.height_request(230);
         self.set_halign(Align::Center);
         self.set_valign(Align::Center);
+        self.set_border_radius_sep(10., 0., 0., 0.);
+        self.set_box_shadow(BoxShadow::new(
+            18.,
+            Color::BLACK,
+            None,
+            Some(ShadowSide::new(&[
+                ShadowSide::TOP,
+                ShadowSide::RIGHT,
+                ShadowSide::LEFT,
+            ])),
+            Some(3),
+            None,
+        ));
 
         self.set_background(Color::CYAN);
         self.set_strict_clip_widget(false);

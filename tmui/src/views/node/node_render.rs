@@ -77,10 +77,10 @@ impl NodeRender {
         //     _ => background,
         // };
 
-        if self.border.border_radius > 0. {
-            painter.fill_rect(geometry, background)
-        } else {
+        if self.border.should_draw_radius() {
             painter.fill_round_rect(geometry, self.border.border_radius, background)
+        } else {
+            painter.fill_rect(geometry, background);
         }
 
         self.border.render(painter, geometry);
@@ -180,7 +180,7 @@ impl NodeRenderBuilder {
 
     #[inline]
     pub fn border_radius(mut self, radius: f32) -> Self {
-        self.border.border_radius = radius;
+        self.border.border_radius = (radius, radius, radius, radius);
         self
     }
 

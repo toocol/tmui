@@ -7,6 +7,7 @@ use crate::{
 };
 use ::tlib::{
     namespace::BlendMode,
+    skia_safe::Vector,
     typedef::{
         SkiaBlendMode, SkiaClipOp, SkiaFont, SkiaImage, SkiaPaintStyle, SkiaPoint, SkiaRRect,
         SkiaRect, SkiaRegion,
@@ -313,7 +314,7 @@ impl<'a> Painter<'a> {
     pub fn fill_round_rect<T: Into<SkiaRect>>(
         &mut self,
         rect: T,
-        border_radius: f32,
+        border_radius: (f32, f32, f32, f32),
         color: Color,
     ) {
         let mut rect: SkiaRect = rect.into();
@@ -329,7 +330,7 @@ impl<'a> Painter<'a> {
     pub fn fill_round_rect_global<T: Into<SkiaRect>>(
         &mut self,
         rect: T,
-        border_radius: f32,
+        radius: (f32, f32, f32, f32),
         mut color: Color,
     ) {
         if self.follow_transparency && color.a() == 255 {
@@ -340,7 +341,15 @@ impl<'a> Painter<'a> {
 
         let rect: SkiaRect = rect.into();
 
-        let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
+        let rrect = SkiaRRect::new_rect_radii(
+            rect,
+            &[
+                Vector::new(radius.0, radius.0),
+                Vector::new(radius.1, radius.1),
+                Vector::new(radius.2, radius.2),
+                Vector::new(radius.3, radius.3),
+            ],
+        );
         self.canvas.draw_rrect(rrect, &self.paint);
         if let Some(color) = self.color {
             self.paint.set_color(color);
@@ -374,7 +383,11 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::Widget`](tlib::namespace::Coordinate::Widget)
     #[inline]
-    pub fn draw_round_rect<T: Into<SkiaRect>>(&mut self, rect: T, border_radius: f32) {
+    pub fn draw_round_rect<T: Into<SkiaRect>>(
+        &mut self,
+        rect: T,
+        border_radius: (f32, f32, f32, f32),
+    ) {
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
@@ -385,13 +398,24 @@ impl<'a> Painter<'a> {
     ///
     /// the point of `Rect`'s coordinate must be [`Coordinate::World`](tlib::namespace::Coordinate::World)
     #[inline]
-    pub fn draw_round_rect_global<T: Into<SkiaRect>>(&mut self, rect: T, border_radius: f32) {
+    pub fn draw_round_rect_global<T: Into<SkiaRect>>(
+        &mut self,
+        rect: T,
+        radius: (f32, f32, f32, f32),
+    ) {
         self.paint.set_style(crate::skia_safe::PaintStyle::Stroke);
         let rect: SkiaRect = rect.into();
 
-        let rrect = crate::skia_safe::RRect::new_rect_xy(rect, border_radius, border_radius);
+        let rrect = SkiaRRect::new_rect_radii(
+            rect,
+            &[
+                Vector::new(radius.0, radius.0),
+                Vector::new(radius.1, radius.1),
+                Vector::new(radius.2, radius.2),
+                Vector::new(radius.3, radius.3),
+            ],
+        );
         self.canvas.draw_rrect(rrect, &self.paint);
-        self.paint.set_style(crate::skia_safe::PaintStyle::Fill);
     }
 
     /// Stroke and Fill the specified region with the specified color. <br>
@@ -770,18 +794,46 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn clip_round_rect<T: Into<SkiaRect>>(&self, rect: T, radius: f32, op: SkiaClipOp) {
+    pub fn clip_round_rect<T: Into<SkiaRect>>(
+        &self,
+        rect: T,
+        radius: (f32, f32, f32, f32),
+        op: SkiaClipOp,
+    ) {
         let mut rect: SkiaRect = rect.into();
         rect.offset((self.x_offset, self.y_offset));
 
-        let rrect = SkiaRRect::new_rect_xy(rect, radius, radius);
+        rect.set_xywh(rect.x(), rect.y(), rect.width() + 1., rect.height());
+        let rrect = SkiaRRect::new_rect_radii(
+            rect,
+            &[
+                Vector::new(radius.0, radius.0),
+                Vector::new(radius.1, radius.1),
+                Vector::new(radius.2, radius.2),
+                Vector::new(radius.3, radius.3),
+            ],
+        );
         self.canvas.clip_rrect(rrect, op, true);
     }
 
     #[inline]
-    pub fn clip_round_rect_global<T: Into<SkiaRect>>(&self, rect: T, radius: f32, op: SkiaClipOp) {
-        let rect: SkiaRect = rect.into();
-        let rrect = SkiaRRect::new_rect_xy(rect, radius, radius);
+    pub fn clip_round_rect_global<T: Into<SkiaRect>>(
+        &self,
+        rect: T,
+        radius: (f32, f32, f32, f32),
+        op: SkiaClipOp,
+    ) {
+        let mut rect: SkiaRect = rect.into();
+        rect.set_xywh(rect.x(), rect.y(), rect.width(), rect.height());
+        let rrect = SkiaRRect::new_rect_radii(
+            rect,
+            &[
+                Vector::new(radius.0, radius.0),
+                Vector::new(radius.1, radius.1),
+                Vector::new(radius.2, radius.2),
+                Vector::new(radius.3, radius.3),
+            ],
+        );
         self.canvas.clip_rrect(rrect, op, true);
     }
 

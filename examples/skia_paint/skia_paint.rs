@@ -230,7 +230,7 @@ impl SkiaPaint {
 
     fn draw_round_rect(&mut self, painter: &mut Painter) {
         let rect = Rect::new(600, 0, 100, 40);
-        painter.fill_round_rect(rect, 10., Color::CYAN);
+        painter.fill_round_rect(rect, (10., 10., 10., 10.), Color::CYAN);
 
         let (lt, rt, rb, lb) = rect.arc_points(10);
         let mut path = Path::new();
@@ -243,20 +243,10 @@ impl SkiaPaint {
         path.move_to(lb.0);
         path.line_to(lb.1);
 
-        let lt: SkiaRect = Rect::new(
-            rect.left(),
-            rect.top(),
-            2 * 10,
-            2 * 10,
-        ).into();
+        let lt: SkiaRect = Rect::new(rect.left(), rect.top(), 2 * 10, 2 * 10).into();
         path.arc_to(lt, 180., 90., true);
 
-        let rt: SkiaRect = Rect::new(
-            rect.right() - 2 * 10,
-            rect.top(),
-            2 * 10,
-            2 * 10,
-        ).into();
+        let rt: SkiaRect = Rect::new(rect.right() - 2 * 10, rect.top(), 2 * 10, 2 * 10).into();
         path.arc_to(rt, 270., 90., true);
 
         let rb: SkiaRect = Rect::new(
@@ -264,15 +254,11 @@ impl SkiaPaint {
             rect.bottom() - 2 * 10,
             2 * 10,
             2 * 10,
-        ).into();
+        )
+        .into();
         path.arc_to(rb, 0., 90., true);
 
-        let lb: SkiaRect = Rect::new(
-            rect.left(),
-            rect.bottom() - 2 * 10,
-            2 * 10,
-            2 * 10,
-        ).into();
+        let lb: SkiaRect = Rect::new(rect.left(), rect.bottom() - 2 * 10, 2 * 10, 2 * 10).into();
         path.arc_to(lb, 90., 90., true);
 
         painter.set_antialiasing(true);
@@ -283,12 +269,7 @@ impl SkiaPaint {
 
         let rect = Rect::new(600, 200, 100, 60);
         let (lt, rt, _, lb) = rect.arc_points(20);
-        let oval: SkiaRect = Rect::new(
-            rect.left(),
-            rect.top(),
-            2 * 20,
-            2 * 20,
-        ).into();
+        let oval: SkiaRect = Rect::new(rect.left(), rect.top(), 2 * 20, 2 * 20).into();
         painter.set_line_width(1.);
         painter.set_color(Color::RED);
         painter.draw_line(lb.1.x(), lb.1.y(), lt.0.x(), lt.0.y());
@@ -299,7 +280,7 @@ impl SkiaPaint {
         painter.draw_line(lt.1.x(), lt.1.y(), rt.0.x(), rt.0.y());
 
         let rect = Rect::new(800, 200, 100, 100);
-        painter.fill_round_rect(rect, 40., Color::CYAN);
+        painter.fill_round_rect(rect, (40., 40., 40., 40.), Color::CYAN);
         let (lt, rt, rb, lb) = rect.arc_points(40);
         painter.set_color(Color::BLACK);
         painter.set_line_width(1.);
@@ -357,7 +338,7 @@ impl SkiaPaint {
 
         painter.paint_mut().set_mask_filter(None);
         painter.fill_rect(rect, Color::WHITE);
-        
+
         painter.set_line_width(5.);
         painter.draw_line(1050, 400, 1050, 600);
 

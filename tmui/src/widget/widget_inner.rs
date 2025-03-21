@@ -210,7 +210,7 @@ macro_rules! widget_inner_ext_impl {
 
         #[inline]
         fn clip_rect(&self, painter: &mut Painter, op: SkiaClipOp) {
-            if self.border_ref().border_radius != 0. {
+            if self.border_ref().should_draw_radius() {
                 painter.clip_round_rect_global(self.rect(), self.border_ref().border_radius, op);
             } else {
                 painter.clip_rect_global(self.visual_rect(), op);

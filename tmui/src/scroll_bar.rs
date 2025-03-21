@@ -186,7 +186,13 @@ impl WidgetImpl for ScrollBar {
             painter.set_blend_mode(BlendMode::default());
         }
         if self.slider_radius > 0. {
-            painter.fill_round_rect(self.calculate_slider(), self.slider_radius, color);
+            let radius = (
+                self.slider_radius,
+                self.slider_radius,
+                self.slider_radius,
+                self.slider_radius,
+            );
+            painter.fill_round_rect(self.calculate_slider(), radius, color);
         } else {
             painter.fill_rect(self.calculate_slider(), color);
         }

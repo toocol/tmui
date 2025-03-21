@@ -35,6 +35,7 @@ impl ObjectImpl for CtxMenu {
             None,
             Some(ShadowSide::new(&[ShadowSide::RIGHT, ShadowSide::BOTTOM])),
             None,
+            None,
         ));
 
         self.list.set_vexpand(true);
