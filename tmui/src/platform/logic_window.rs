@@ -17,7 +17,11 @@ use tipc::{
     ipc_master::IpcMaster, ipc_slave::IpcSlave, mem::mem_rw_lock::MemRwLock, parking_lot::RwLock,
     IpcNode, IpcType,
 };
-use tlib::{figure::Point, winit::window::WindowId, Value};
+use tlib::{
+    figure::{Point, Size},
+    winit::window::WindowId,
+    Value,
+};
 
 pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> {
     raw_window_handle: Option<RawWindowHandle6>,
@@ -35,6 +39,7 @@ pub(crate) struct LogicWindow<T: 'static + Copy + Sync + Send, M: 'static + Copy
     pub platform_type: PlatformType,
     pub backend_type: BackendType,
     pub ipc_type: IpcType,
+    pub min_size: Option<Size>,
 
     pub master: Option<Arc<RwLock<IpcMaster<T, M>>>>,
     pub shared_channel: Option<SharedChannel<T, M>>,
@@ -66,6 +71,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
         context: LogicWindowContext,
         initial_position: (Point, Point),
         defer_display: bool,
+        min_size: Option<Size>,
     ) -> Self {
         let lock = master.as_ref().map(|m| m.read().buffer_lock());
         Self {
@@ -81,6 +87,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
             ipc_type: IpcType::Master,
+            min_size,
             master,
             shared_channel,
             context: Some(context),
@@ -113,6 +120,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> LogicWind
             platform_type: PlatformType::default(),
             backend_type: BackendType::default(),
             ipc_type: IpcType::Slave,
+            min_size: None,
             master: None,
             shared_channel,
             context: Some(context),

@@ -81,6 +81,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
         };
 
         let (width, height) = win_config.size();
+        let min_size = win_config.min_size();
         let bitmap = Arc::new(RwLock::new(if self.backend_type == BackendType::OpenGL {
             Bitmap::empty(width, height)
         } else {
@@ -152,6 +153,7 @@ impl<T: 'static + Copy + Sync + Send, M: 'static + Copy + Sync + Send> PlatformC
                 },
                 (init_outer, init_inner),
                 defer_display,
+                min_size,
             ),
             PhysicalWindow::Win32(Win32Window::new(
                 window_id,

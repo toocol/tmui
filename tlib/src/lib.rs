@@ -1,3 +1,4 @@
+pub mod event_bus;
 pub mod figure;
 pub mod actions;
 pub mod r#async;
