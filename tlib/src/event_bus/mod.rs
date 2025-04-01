@@ -88,15 +88,19 @@ impl<E: IEvent<EventType = T>, T: IEventType> AsMutPtr for InnerEventBus<E, T> {
 macro_rules! event_bus_init {
     ( $event:ty, $event_type:ty ) => {
         use $crate::prelude::*;
-        use $crate::common::event_bus::{InnerEventBus, event_handle::EventHandle};
-        use $crate::builtin::action::AsMutPtr;
+        use $crate::event_bus::{InnerEventBus, event_handle::EventHandle};
+        use $crate::actions::AsMutPtr;
         use std::sync::atomic::{AtomicPtr, Ordering};
         use std::cell::RefCell;
         use std::ptr::null_mut;
 
         thread_local! {
             static EVENT_BUS: RefCell<InnerEventBus<$event, $event_type>> = RefCell::new(InnerEventBus::<$event, $event_type>::new());
-            static INSTANCE_PTR: AtomicPtr<InnerEventBus<$event, $event_type>> = const { AtomicPtr::new(null_mut()) };
+            static INSTANCE_PTR: AtomicPtr<InnerEventBus<$event, $event_type>> = AtomicPtr::new({
+                EVENT_BUS.with(|rf| {
+                    rf.borrow_mut().as_mut_ptr()
+                })
+            });
         }
 
         #[inline]
@@ -107,29 +111,14 @@ macro_rules! event_bus_init {
             });
         }
 
-        #[derive(GodotClass)]
-        #[class(base = Node)]
-        pub struct EventBus {
-            base: Base<Node>,
-        }
-
-        #[godot_api]
-        impl INode for EventBus {
-            #[inline]
-            fn init(base: Base<Node>) -> Self {
-                EVENT_BUS.with(|rf| {
-                    INSTANCE_PTR.with(|ptr| ptr.store(rf.borrow_mut().as_mut_ptr(), Ordering::Release))
-                });
-                Self { base }
-            }
-
-            #[inline]
-            fn process(&mut self, _: f64) {
-                with_event_bus(|event_bus| event_bus.process_deferred_evts());
-            }
-        }
+        pub struct EventBus {}
 
         impl EventBus {
+            #[inline]
+            pub fn process() {
+                with_event_bus(|event_bus| event_bus.process_deferred_evts());
+            }
+
             #[inline]
             pub fn register(handle: *mut dyn EventHandle<Event = $event, EventType = $event_type>) {
                 with_event_bus(|event_bus| event_bus.register(handle))
