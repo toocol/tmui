@@ -117,6 +117,7 @@ where
     window.set_client_position(init_pos.1);
     window.set_params(logic_window.params.take());
     window.set_defer_display(logic_window.defer_display);
+    window.set_min_size(logic_window.min_size);
 
     if let Some(window_id) = logic_window.window_id() {
         window.set_winit_id(window_id)

@@ -69,6 +69,7 @@ pub struct ApplicationWindow {
     /// Position to the client area on the screen coordinate.
     client_position: Point,
     params: Option<AHashMap<String, Value>>,
+    min_size: Option<Size>,
 
     board: Option<NonNull<Board>>,
     output_sender: Option<OutputSender>,
@@ -458,6 +459,11 @@ impl ApplicationWindow {
         self.params.as_ref()?.get(key).map(|p| p.get::<T>())
     }
 
+    #[inline]
+    pub fn get_min_size(&self) -> Option<Size> {
+        self.min_size
+    }
+
     /// Should set the parent of widget before use this function.
     pub fn initialize_dynamic_component(widget: &mut dyn WidgetImpl, ancestor_is_in_tree: bool) {
         INTIALIZE_PHASE.with(|p| {
@@ -759,6 +765,11 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn set_raw_window_handle(&mut self, rwh: RawWindowHandle6) {
         self.raw_window_handle = Some(rwh)
+    }
+
+    #[inline]
+    pub(crate) fn set_min_size(&mut self, size: Option<Size>) {
+        self.min_size = size;
     }
 
     #[inline]

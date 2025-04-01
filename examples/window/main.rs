@@ -15,6 +15,7 @@ fn main() {
     let app = Application::builder()
         .width(1280)
         .height(800)
+        .min_size((200, 100))
         .title("window")
         .transparent(true)
         .opti_track(true)
