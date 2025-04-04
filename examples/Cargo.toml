@@ -66,6 +66,10 @@ name = "icon_list"
 path = "icon_list/main.rs"
 
 [[bin]]
+name = "icon_win"
+path = "icon_win/main.rs"
+
+[[bin]]
 name = "image_draw"
 path = "image_draw/main.rs"
 

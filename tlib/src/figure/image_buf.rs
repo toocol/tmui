@@ -1,4 +1,4 @@
-use skia_safe;
+use skia_safe::{self, image::CachingHint, AlphaType, ColorType, ImageInfo};
 use std::path::Path;
 
 use crate::typedef::SkiaImage;
@@ -32,9 +32,9 @@ impl ImageBuf {
         })
     }
 
-    /// # Safety 
+    /// # Safety
     /// User should guarantee the bytes wiil not outlive the lifetime of the `ImageBuf`
-    /// 
+    ///
     /// Create image by bytes.
     #[inline]
     pub unsafe fn from_bytes(bytes: &[u8]) -> Self {
@@ -76,7 +76,35 @@ impl ImageBuf {
         self.file.as_deref()
     }
 
-    /// # Safety 
+    #[inline]
+    pub fn encoded_data(&self) -> Option<skia_safe::Data> {
+        self.image.encoded_data()
+    }
+
+    #[inline]
+    pub fn get_pixels(&self) -> Vec<u8> {
+        let (width, height) = (self.width(), self.height());
+        let info = ImageInfo::new(
+            (width, height),
+            ColorType::RGBA8888,
+            AlphaType::Premul,
+            None,
+        );
+        let mut pixels = vec![0u8; (width * height * 4) as usize];
+        if self.image.read_pixels(
+            &info,
+            &mut pixels,
+            width as usize * 4,
+            (0, 0),
+            CachingHint::Allow,
+        ) {
+            pixels
+        } else {
+            vec![]
+        }
+    }
+
+    /// # Safety
     /// User should guarantee the bytes wiil not outlive the lifetime of the `ImageBuf`
     #[inline]
     pub unsafe fn raw_bytes(&self) -> Option<&[u8]> {
