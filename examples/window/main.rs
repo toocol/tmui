@@ -27,6 +27,8 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
+    window.set_border_radius(10.);
+
     let mut label = Label::new(Some("Hello World! J"));
     label.set_background(Color::CYAN);
     label.set_halign(Align::Center);

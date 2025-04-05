@@ -527,6 +527,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         // Clip difference the children region:
         painter.save();
 
+        self.window().clip_window(&mut painter);
         if self.id() != self.window_id() {
             self.clip_child_region(&mut painter);
         }
