@@ -644,6 +644,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             }
 
             let _track = Tracker::start(format!("single_render_{}_paint", self.name()));
+            self.widget_props_mut().redraw_region.merge_all();
             self.paint(&mut painter);
         }
 

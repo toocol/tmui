@@ -1,6 +1,9 @@
-use std::{vec::IntoIter, slice::{Iter, IterMut}};
+use std::{
+    slice::{Iter, IterMut},
+    vec::IntoIter,
+};
 
-use super::{Rect, Point, FRect, FPoint, CoordRect};
+use super::{CoordRect, FPoint, FRect, Point, Rect};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Region
@@ -47,7 +50,7 @@ impl Region {
     pub fn contains_point(&self, point: &Point) -> bool {
         for rect in self.regions.iter() {
             if rect.contains(point) {
-                return true
+                return true;
             }
         }
         false
@@ -132,7 +135,7 @@ impl FRegion {
     pub fn contains_point(&self, point: &FPoint) -> bool {
         for rect in self.regions.iter() {
             if rect.contains(point) {
-                return true
+                return true;
             }
         }
         false
@@ -239,6 +242,46 @@ impl CoordRegion {
     pub fn iter_mut(&mut self) -> IterMut<CoordRect> {
         self.regions.iter_mut()
     }
+
+    pub fn merge_all(&mut self) {
+        if self.regions.is_empty() {
+            return;
+        }
+
+        loop {
+            let mut merged = Vec::new();
+            let mut used = vec![false; self.regions.len()];
+            let mut changed = false;
+
+            for i in 0..self.regions.len() {
+                if used[i] {
+                    continue;
+                }
+                let mut current = self.regions[i];
+                used[i] = true;
+
+                let mut j = 0;
+                while j < self.regions.len() {
+                    if i != j && !used[j] {
+                        if let Some(merged_rect) = merge_if_intersect(&current, &self.regions[j]) {
+                            current = merged_rect;
+                            used[j] = true;
+                            changed = true;
+                            j = 0;
+                            continue;
+                        }
+                    }
+                    j += 1;
+                }
+                merged.push(current);
+            }
+
+            if !changed {
+                return;
+            }
+            self.regions = merged;
+        }
+    }
 }
 impl IntoIterator for CoordRegion {
     type Item = CoordRect;
@@ -248,14 +291,24 @@ impl IntoIterator for CoordRegion {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.regions.into_iter()
+    }
+}
 
+fn merge_if_intersect(a: &CoordRect, b: &CoordRect) -> Option<CoordRect> {
+    if a.coord() != b.coord() {
+        return None;
+    }
+    if let Some(rect) = a.rect().intersects(&b.rect()) {
+        Some(CoordRect::new(rect, a.coord()))
+    } else {
+        None
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::figure::{Rect, FRect};
-    use super::{Region, FRegion};
+    use super::{FRegion, Region};
+    use crate::figure::{FRect, Rect};
 
     #[test]
     fn test_region() {
