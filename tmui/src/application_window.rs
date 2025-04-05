@@ -1058,7 +1058,7 @@ impl ApplicationWindow {
         if !self.border_ref().should_draw_radius() {
             return;
         }
-        let rect = self.rect();
+        let rect = self.rect_f();
         painter.clip_round_rect_global(rect, self.border_ref().border_radius, ClipOp::Intersect);
     }
 }
