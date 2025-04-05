@@ -837,6 +837,11 @@ impl<'a> Painter<'a> {
         self.canvas.clip_rrect(rrect, op, true);
     }
 
+    #[inline]
+    pub fn clip_path(&self, path: &Path, op: SkiaClipOp, anti_alias: bool) {
+        self.canvas.clip_path(path, op, anti_alias);
+    }
+
     /// Clip the region to draw.
     #[inline]
     pub fn clip_region_global(&self, region: SkiaRegion, op: SkiaClipOp) {
