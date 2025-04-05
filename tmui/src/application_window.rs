@@ -40,6 +40,7 @@ use tlib::{
     namespace::{KeyboardModifier, MouseButton},
     nonnull_mut, nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
+    skia_safe::ClipOp,
     values::FromValue,
     winit::window::WindowId,
 };
@@ -1050,6 +1051,15 @@ impl ApplicationWindow {
         }
         let id = self.get_signal_source().unwrap();
         self.send_message(Message::WinWidgetVisibilityChangedRequest(id, visible))
+    }
+
+    #[inline]
+    pub(crate) fn clip_window(&self, painter: &mut Painter) {
+        if !self.border_ref().should_draw_radius() {
+            return;
+        }
+        let rect = self.rect();
+        painter.clip_round_rect_global(rect, self.border_ref().border_radius, ClipOp::Intersect);
     }
 }
 

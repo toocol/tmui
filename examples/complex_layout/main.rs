@@ -1,13 +1,9 @@
-mod layouts;
-mod ctx_menu;
 mod asset;
+mod ctx_menu;
+mod layouts;
 
 use layouts::View;
-use tmui::{
-    prelude::*,
-    application::Application,
-    application_window::ApplicationWindow,
-};
+use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
     log4rs::init_file("examples/log4rs.yaml", Default::default()).unwrap();
@@ -18,6 +14,7 @@ fn main() {
         .title("Complex Layout")
         .transparent(true)
         .defer_display(true)
+        .decoration(false)
         .build();
 
     app.connect_activate(build_ui);
@@ -26,5 +23,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
+    window.set_border_radius(10.);
     window.child(View::new());
 }
