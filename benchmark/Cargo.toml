@@ -57,6 +57,10 @@ name = "regex_benchmark"
 harness = false
 
 [[bench]]
+name = "region_merge_benchmark"
+harness = false
+
+[[bench]]
 name = "size_probe_benchmark"
 harness = false
 

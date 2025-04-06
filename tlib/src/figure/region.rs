@@ -248,39 +248,24 @@ impl CoordRegion {
             return;
         }
 
-        loop {
-            let mut merged = Vec::new();
-            let mut used = vec![false; self.regions.len()];
-            let mut changed = false;
+        let mut input = std::mem::take(&mut self.regions);
+        let mut result = Vec::new();
 
-            for i in 0..self.regions.len() {
-                if used[i] {
-                    continue;
+        while let Some(mut base) = input.pop() {
+            let mut i = 0;
+            while i < input.len() {
+                if let Some(merged) = merge_if_intersect(&base, &input[i]) {
+                    base = merged;
+                    input.swap_remove(i);
+                    i = 0;
+                } else {
+                    i += 1;
                 }
-                let mut current = self.regions[i];
-                used[i] = true;
-
-                let mut j = 0;
-                while j < self.regions.len() {
-                    if i != j && !used[j] {
-                        if let Some(merged_rect) = merge_if_intersect(&current, &self.regions[j]) {
-                            current = merged_rect;
-                            used[j] = true;
-                            changed = true;
-                            j = 0;
-                            continue;
-                        }
-                    }
-                    j += 1;
-                }
-                merged.push(current);
             }
-
-            if !changed {
-                return;
-            }
-            self.regions = merged;
+            result.push(base);
         }
+
+        self.regions = result;
     }
 }
 impl IntoIterator for CoordRegion {
@@ -298,17 +283,18 @@ fn merge_if_intersect(a: &CoordRect, b: &CoordRect) -> Option<CoordRect> {
     if a.coord() != b.coord() {
         return None;
     }
-    if let Some(rect) = a.rect().intersects(&b.rect()) {
-        Some(CoordRect::new(rect, a.coord()))
-    } else {
-        None
-    }
+    a.rect()
+        .union_intersects(&b.rect())
+        .map(|rect| CoordRect::new(rect, a.coord()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{FRegion, Region};
-    use crate::figure::{FRect, Rect};
+    use super::{CoordRegion, FRegion, Region};
+    use crate::{
+        figure::{CoordRect, FRect, Rect},
+        prelude::Coordinate,
+    };
 
     #[test]
     fn test_region() {
@@ -327,6 +313,70 @@ mod tests {
         region.add_rect(origin);
         for rect in region.iter() {
             assert_eq!(*rect, origin);
+        }
+    }
+
+    #[test]
+    fn test_region_merge() {
+        let mut coord_region = CoordRegion::new();
+
+        // Merge chain: R0 merges with R1, then with R2 -> final rect (100, 100, 300, 100)
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(100.0, 100.0, 100.0, 100.0),
+            Coordinate::World,
+        )); // R0
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(200.0, 100.0, 100.0, 100.0),
+            Coordinate::World,
+        )); // R1
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(299.9, 100.0, 100.0, 100.0),
+            Coordinate::World,
+        )); // R2 (touching by EPSILON)
+
+        // Merge chain: R3 and R4 overlap vertically -> (500, 200, 100, 300)
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(500.0, 200.0, 100.0, 100.0),
+            Coordinate::World,
+        )); // R3
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(500.0, 300.0, 100.0, 200.0),
+            Coordinate::World,
+        )); // R4
+
+        // Non-overlapping rectangles
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(50.0, 50.0, 40.0, 40.0),
+            Coordinate::World,
+        )); // R5
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(1000.0, 1000.0, 10.0, 10.0),
+            Coordinate::World,
+        )); // R6
+
+        // Tiny overlap (barely touching)
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(800.0, 800.0, 50.0, 50.0),
+            Coordinate::World,
+        )); // R7
+        coord_region.add_rect(CoordRect::new(
+            FRect::new(849.95, 800.0, 50.0, 50.0),
+            Coordinate::World,
+        )); // R8 (barely touches R7)
+
+        // Trigger merging
+        coord_region.merge_all();
+
+        // Expected results:
+        // - Merged: R0+R1+R2 -> (100, 100, 300, 100)
+        // - Merged: R3+R4 -> (500, 200, 100, 300)
+        // - Merged: R7+R8 -> (800, 800, 99.95, 50)
+        // - Unmerged: R5, R6
+
+        assert_eq!(coord_region.len(), 5);
+
+        for (i, r) in coord_region.regions.iter().enumerate() {
+            println!("Region {}: {:?}", i, r);
         }
     }
 }

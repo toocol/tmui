@@ -294,6 +294,30 @@ impl Rect {
     }
 
     #[inline]
+    pub fn union_intersects(&self, rect: &Rect) -> Option<Rect> {
+        if !self.is_intersects(rect) {
+            None
+        } else {
+            let left = self.x.min(rect.x);
+            let top = self.y.min(rect.y);
+            let right = (self.x + self.width).max(rect.x + rect.width);
+            let bottom = (self.y + self.height).max(rect.y + rect.height);
+
+            let x = left;
+            let y = top;
+            let width = right - left;
+            let height = bottom - top;
+
+            Some(Rect {
+                x,
+                y,
+                width,
+                height,
+            })
+        }
+    }
+
+    #[inline]
     pub fn union(&self, rect: &Rect) -> Rect {
         let left = self.x.min(rect.x);
         let right = (self.x + self.width).max(rect.x + rect.width);
@@ -918,7 +942,9 @@ impl FRect {
         let right = (self.x + self.width).min(rect.x + rect.width);
         let bottom = (self.y + self.height).min(rect.y + rect.height);
 
-        left <= right && top <= bottom
+        const EPSILON: f32 = 0.1;
+
+        left <= right + EPSILON && top <= bottom + EPSILON
     }
 
     #[inline]
@@ -935,6 +961,38 @@ impl FRect {
             let y = top;
             let width = right - left;
             let height = bottom - top;
+
+            if width <= 0.0 || height <= 0.0 {
+                return None;
+            }
+
+            Some(FRect {
+                x,
+                y,
+                width,
+                height,
+            })
+        }
+    }
+
+    #[inline]
+    pub fn union_intersects(&self, rect: &FRect) -> Option<FRect> {
+        if !self.is_intersects(rect) {
+            None
+        } else {
+            let left = self.x.min(rect.x);
+            let top = self.y.min(rect.y);
+            let right = (self.x + self.width).max(rect.x + rect.width);
+            let bottom = (self.y + self.height).max(rect.y + rect.height);
+
+            let x = left;
+            let y = top;
+            let width = right - left;
+            let height = bottom - top;
+
+            if width <= 0.0 || height <= 0.0 {
+                return None;
+            }
 
             Some(FRect {
                 x,
@@ -1648,6 +1706,36 @@ impl AtomicRect {
             let top = y.max(ry);
             let right = (x + width).min(rx + rwidth);
             let bottom = (y + height).min(ry + rheight);
+
+            let x = left;
+            let y = top;
+            let width = right - left;
+            let height = bottom - top;
+
+            Some(AtomicRect::new(x, y, width, height))
+        }
+    }
+
+
+    #[inline]
+    pub fn union_intersects(&self, rect: &AtomicRect) -> Option<AtomicRect> {
+        if !self.is_intersects(rect) {
+            None
+        } else {
+            let x = self.x.load(Ordering::SeqCst);
+            let y = self.y.load(Ordering::SeqCst);
+            let width = self.width.load(Ordering::SeqCst);
+            let height = self.height.load(Ordering::SeqCst);
+
+            let rx = rect.x.load(Ordering::SeqCst);
+            let ry = rect.y.load(Ordering::SeqCst);
+            let rwidth = rect.width.load(Ordering::SeqCst);
+            let rheight = rect.height.load(Ordering::SeqCst);
+
+            let left = x.min(rx);
+            let top = y.min(ry);
+            let right = (x + width).max(rx + rwidth);
+            let bottom = (y + height).max(ry + rheight);
 
             let x = left;
             let y = top;
