@@ -1,3 +1,4 @@
+use super::BuildType;
 use parking_lot::Mutex;
 use shared_memory::{Shmem, ShmemConf, ShmemError};
 use std::marker::PhantomData;
@@ -8,7 +9,6 @@ use std::{
     mem::size_of,
     sync::atomic::{AtomicUsize, Ordering},
 };
-use super::BuildType;
 
 #[repr(C)]
 struct _MemQueue<const QUEUE_SIZE: usize, T: 'static + Copy> {
@@ -34,7 +34,7 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> _MemQueue<QUEUE_SIZE, T> {
     fn try_read(&self) -> Option<T> {
         if self.has_event() {
             let read = self.read_indicate.load(Ordering::Acquire);
-            let evt = unsafe { *(self.events[read % QUEUE_SIZE].as_ptr()) };
+            let evt = unsafe { self.events[read % QUEUE_SIZE].assume_init_read() };
             self.read_indicate
                 .store(read.wrapping_add(1), Ordering::Release);
             Some(evt)
@@ -47,7 +47,7 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> _MemQueue<QUEUE_SIZE, T> {
     fn try_write(&mut self, evt: T) -> Result<(), MemQueueError> {
         if !self.is_full() {
             let write = self.write_indicate.load(Ordering::Acquire);
-            unsafe { std::ptr::write(self.events[write % QUEUE_SIZE].as_mut_ptr(), evt) };
+            unsafe { std::ptr::write(self.events[write % QUEUE_SIZE].assume_init_mut(), evt) };
             self.write_indicate
                 .store(write.wrapping_add(1), Ordering::Release);
             Ok(())
