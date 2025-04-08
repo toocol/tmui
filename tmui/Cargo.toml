@@ -10,9 +10,10 @@ build = "build.rs"
 cfg_aliases = "0.2.0"
 
 [features]
-default = ["x11"]
-wayland = []
-x11 = []
+default = ["x11_platform"]
+x11 = ["tlib/x11"]
+x11_platform = []
+wayland_platform = []
 font_awesome = []
 verbose_logging = []
 
