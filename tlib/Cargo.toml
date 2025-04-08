@@ -3,7 +3,9 @@ name = "tlib"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+x11 = ["skia-safe/x11"]
 
 [dependencies]
 macros = { path = "../macros/" }
@@ -22,9 +24,9 @@ hex_color = { workspace = true }
 derivative = { workspace = true }
 bitflags = { workspace = true }
 widestring = { workspace = true }
-skia-safe = { workspace = true }
 winit = { workspace = true }
 tokio = { workspace = true }
 paste = { workspace = true }
 nohash-hasher = { workspace = true }
 ahash = { workspace = true }
+skia-safe = { version = "0.72.0", features = ["gl", "textlayout", "svg"] }
