@@ -15,7 +15,9 @@ use crate::{
 };
 use log::warn;
 use std::{
-    cell::RefMut, collections::VecDeque, time::{Duration, Instant}
+    cell::RefMut,
+    collections::VecDeque,
+    time::{Duration, Instant},
 };
 use tlib::{
     connect,
@@ -324,9 +326,7 @@ impl Input for Text {
     }
 
     #[inline]
-    fn check_value(&mut self, val: &Self::Value) -> bool {
-        let len = val.chars().count();
-        self.props_mut().cursor_index = len;
+    fn check_value(&mut self, _val: &Self::Value) -> bool {
         true
     }
 }

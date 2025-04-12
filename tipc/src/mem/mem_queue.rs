@@ -19,6 +19,12 @@ struct _MemQueue<const QUEUE_SIZE: usize, T: 'static + Copy> {
 
 impl<const QUEUE_SIZE: usize, T: 'static + Copy> _MemQueue<QUEUE_SIZE, T> {
     #[inline]
+    fn clear(&self) {
+        self.read_indicate.store(0, Ordering::Release);
+        self.write_indicate.store(0, Ordering::Release);
+    }
+
+    #[inline]
     fn has_event(&self) -> bool {
         self.read_indicate.load(Ordering::Relaxed) != self.write_indicate.load(Ordering::Relaxed)
     }
@@ -102,6 +108,11 @@ impl<const QUEUE_SIZE: usize, T: 'static + Copy> MemQueue<QUEUE_SIZE, T> {
     #[inline]
     pub fn os_id(&self) -> &str {
         self.shmem.get_os_id()
+    }
+
+    #[inline]
+    pub fn clear(&self) {
+        self.queue_mut().clear();
     }
 
     #[inline]

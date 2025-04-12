@@ -113,12 +113,15 @@ impl ObjectImpl for ApplicationWindow {
         self.parent_construct();
 
         self.set_background(DEFAULT_WINDOW_BACKGROUND);
-        self.set_render_difference(true);
     }
 
     fn initialize(&mut self) {
         INTIALIZE_PHASE.with(|p| *p.borrow_mut() = true);
         debug!("Initialize-phase start.");
+
+        if !self.border_ref().should_draw_radius() {
+            self.set_render_difference(true);
+        }
 
         Self::widgets_of(self.id()).insert(self.id(), NonNull::new(self));
 

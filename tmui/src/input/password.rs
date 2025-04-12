@@ -223,9 +223,7 @@ impl Input for Password {
     }
 
     #[inline]
-    fn check_value(&mut self, val: &Self::Value) -> bool {
-        let len = val.chars().count();
-        self.props_mut().cursor_index = len;
+    fn check_value(&mut self, _val: &Self::Value) -> bool {
         true
     }
 }
