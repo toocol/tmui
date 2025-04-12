@@ -24,6 +24,8 @@ use tlib::{
     namespace::{Align, BorderStyle, Coordinate, Overflow, SystemCursorShape},
     object::ObjectId,
     ptr_mut,
+    skia_safe::Vector,
+    typedef::{SkiaRRect, SkiaRect},
 };
 
 ////////////////////////////////////// WidgetExt //////////////////////////////////////
@@ -324,6 +326,10 @@ pub trait WidgetExt {
 
     /// Get the border color of the widget.
     fn border_color(&self) -> (Color, Color, Color, Color);
+
+    /// Get the RRect with border,
+    /// return None if there is no radius setted.
+    fn border_rrect(&self) -> Option<SkiaRRect>;
 
     /// Set the system cursor shape.
     fn set_cursor_shape(&mut self, cursor: SystemCursorShape);
@@ -1554,6 +1560,25 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn border_color(&self) -> (Color, Color, Color, Color) {
         self.widget_props().styles.border().border_color
+    }
+
+    #[inline]
+    fn border_rrect(&self) -> Option<SkiaRRect> {
+        if self.border_ref().should_draw_radius() {
+            let radius = self.border_ref().border_radius;
+            let rect: SkiaRect = self.rect_f().into();
+            Some(SkiaRRect::new_rect_radii(
+                rect,
+                &[
+                    Vector::new(radius.0, radius.0),
+                    Vector::new(radius.1, radius.1),
+                    Vector::new(radius.2, radius.2),
+                    Vector::new(radius.3, radius.3),
+                ],
+            ))
+        } else {
+            None
+        }
     }
 
     #[inline]

@@ -251,9 +251,6 @@ impl Input for Number {
             return false;
         }
 
-        let len = val.chars().count();
-        self.props_mut().cursor_index = len;
-
         true
     }
 }

@@ -527,9 +527,15 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
         // Clip difference the children region:
         painter.save();
 
-        if self.id() == self.window_id() {
+        if self.id() == self.window_id() && self.border_ref().should_draw_radius() {
             let rect = self.rect_f();
+            painter.clip_round_rect_global(
+                rect,
+                self.border_ref().border_radius,
+                ClipOp::Difference,
+            );
             painter.fill_rect_global(rect, Color::TRANSPARENT);
+            painter.restore();
         } else {
             self.window().clip_window(&mut painter);
         }
