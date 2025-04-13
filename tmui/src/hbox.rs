@@ -58,6 +58,17 @@ impl ContainerImplExt for HBox {
         self.container.children.push(child);
         self.update();
     }
+
+    #[inline]
+    fn remove_children(&mut self, id: ObjectId) {
+        if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+            let removed = self.container.children.remove(index);
+
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(removed);
+            window.layout_change(self);
+        }
+    }
 }
 
 impl Layout for HBox {

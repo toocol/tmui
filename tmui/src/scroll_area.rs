@@ -311,6 +311,10 @@ impl ContainerImplExt for ScrollArea {
     {
         panic!("Please use `set_area()` instead in `ScrollArea`")
     }
+
+    fn remove_children(&mut self, _: ObjectId) {
+        // TODO
+    }
 }
 
 impl Layout for ScrollArea {

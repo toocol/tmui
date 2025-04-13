@@ -24,7 +24,8 @@ use derivative::Derivative;
 use log::error;
 #[cfg(verbose_logging)]
 use log::info;
-use std::{collections::HashSet, ptr::NonNull, slice::Iter};
+use nohash_hasher::IntSet;
+use std::{ptr::NonNull, slice::Iter};
 use tlib::{
     bitflags::bitflags,
     emit,
@@ -47,7 +48,7 @@ pub struct Widget {
 
     child: Option<Box<dyn WidgetImpl>>,
     child_ref: WidgetHnd,
-    children_index: HashSet<ObjectId>,
+    children_index: IntSet<ObjectId>,
 
     old_rect: FRect,
     old_image_rect: FRect,
@@ -286,10 +287,14 @@ impl WidgetSignals for dyn WidgetImpl {}
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl Widget {
     #[inline]
-    pub fn child_internal<T>(&mut self, mut child: Box<T>)
+    pub fn _child_internal<T>(&mut self, mut child: Box<T>)
     where
         T: WidgetImpl,
     {
+        if child.get_parent_ref().is_none() {
+            panic!("Do not call `child_internal()` directly, use `child()` instead.")
+        }
+
         ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
 
         self.child = Some(child);
@@ -297,11 +302,24 @@ impl Widget {
     }
 
     #[inline]
-    pub fn child_ref_internal(&mut self, child: &mut dyn WidgetImpl) {
+    pub fn _child_ref_internal(&mut self, child: &mut dyn WidgetImpl) {
+        if child.get_parent_ref().is_none() {
+            panic!("Do not call `child_internal()` directly, use `child()` instead.")
+        }
+
         ApplicationWindow::initialize_dynamic_component(child, self.is_in_tree());
 
         self.child = None;
         self.child_ref = NonNull::new(child);
+    }
+
+    #[inline]
+    pub fn _remove_child_internal(&mut self) {
+        if let Some(child) = self.child.take() {
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(child);
+            window.layout_change(self);
+        }
     }
 
     /// Notify all the child widget to invalidate.
@@ -1491,16 +1509,50 @@ impl dyn WidgetImpl {
 impl AsMutPtr for dyn WidgetImpl {}
 
 pub trait ChildOp: WidgetImpl {
-    /// @see [`Widget::child_internal`](Widget) <br>
+    /// @see [`Widget::_child_internal`](Widget::_child_internal) <br>
     /// Go to[`Function defination`](ChildOp::child) (Defined in [`ChildOp`])
     fn child<T: WidgetImpl>(&mut self, child: Box<T>);
 
     /// # Safety
     /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
     ///
-    /// @see [`Widget::child_ref_internal`](Widget) <br>
+    /// @see [`Widget::_child_ref_internal`](Widget::_child_ref_internal) <br>
     /// Go to[`Function defination`](ChildOp::_child_ref) (Defined in [`ChildOp`])
     unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
+
+    /// @see [`Widget::_remove_child_internal`](Widget::_remove_child_internal) <br>
+    /// Go to[`Function defination`](ChildOp::child) (Defined in [`ChildOp`])
+    /// Remove current child.
+    /// Child with `#[child]` annotated can't be removed.
+    fn remove_child(&mut self);
+}
+impl ChildOp for Widget {
+    #[inline]
+    fn child<_T: WidgetImpl>(&mut self, mut child: Box<_T>) {
+        if self.super_type().is_a(Container::static_type()) {
+            panic!("function `child()` was invalid in `Container`, use `add_child()` instead")
+        }
+        child.set_parent(self);
+        self._child_internal(child)
+    }
+
+    #[inline]
+    unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl) {
+        if self.super_type().is_a(Container::static_type()) {
+            panic!("function `_child_ref()` was invalid in `Container`")
+        }
+        let child_mut = tlib::ptr_mut!(child);
+        child_mut.set_parent(self);
+        self._child_ref_internal(child_mut)
+    }
+
+    #[inline]
+    fn remove_child(&mut self) {
+        if self.super_type().is_a(Container::static_type()) {
+            panic!("function `remove_child()` was invalid in `Container`, use `remove_children()` instead")
+        }
+        self._remove_child_internal()
+    }
 }
 
 ////////////////////////////////////// Widget Layouts impl //////////////////////////////////////
@@ -1583,7 +1635,7 @@ impl<T: WidgetImpl> WindowAcquire for T {
 
 ////////////////////////////////////// IterExecutor //////////////////////////////////////
 #[reflect_trait]
-pub trait IterExecutor {
+pub trait IterExecutor: WidgetImpl {
     /// This function will be executed in each iteration of the UI main thread loop.
     fn iter_execute(&mut self);
 }

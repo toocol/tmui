@@ -290,20 +290,28 @@ pub(crate) fn gen_widget_trait_impl_clause(
             #[inline]
             fn child<_T: WidgetImpl>(&mut self, mut child: Box<_T>) {
                 if self.super_type().is_a(Container::static_type()) {
-                    panic!("function `child()` was invalid in `Container`")
+                    panic!("function `child()` was invalid in `Container`, use `add_child()` instead")
                 }
                 child.set_parent(self);
-                self.#(#widget_path).*.child_internal(child)
+                self.#(#widget_path).*._child_internal(child)
             }
 
             #[inline]
             unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl) {
                 if self.super_type().is_a(Container::static_type()) {
-                    panic!("function `child()` was invalid in `Container`")
+                    panic!("function `_child_ref()` was invalid in `Container`")
                 }
                 let child_mut = tlib::ptr_mut!(child);
                 child_mut.set_parent(self);
-                self.#(#widget_path).*.child_ref_internal(child_mut)
+                self.#(#widget_path).*._child_ref_internal(child_mut)
+            }
+
+            #[inline]
+            fn remove_child(&mut self) {
+                if self.super_type().is_a(Container::static_type()) {
+                    panic!("function `remove_child()` was invalid in `Container`, use `remove_children()` instead")
+                }
+                self.#(#widget_path).*._remove_child_internal()
             }
         }
 

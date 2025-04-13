@@ -81,6 +81,10 @@ impl ContainerImplExt for SplitPane {
         self.container.children.push(child);
         self.update();
     }
+
+    fn remove_children(&mut self, _id: ObjectId) {
+        // TODO
+    }
 }
 
 impl Layout for SplitPane {

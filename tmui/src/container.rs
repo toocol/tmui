@@ -273,6 +273,11 @@ pub trait ContainerImplExt: ContainerImpl {
     fn add_child<T>(&mut self, child: Box<T>)
     where
         T: WidgetImpl;
+
+    /// Go to[`Function defination`](ContainerImplExt::remove_children) (Defined in [`ContainerImplExt`])
+    /// Remove the children with id
+    /// Children with `#[children]` annotated can't be removed.
+    fn remove_children(&mut self, id: ObjectId);
 }
 
 pub trait ContainerPointEffective {

@@ -1,9 +1,7 @@
-use std::str::FromStr;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{
-    Attribute, DeriveInput, Meta, MetaList, MetaNameValue, NestedMeta,
-};
+use std::str::FromStr;
+use syn::{Attribute, DeriveInput, Meta, MetaList, MetaNameValue, NestedMeta};
 
 use crate::SplitGenericsRef;
 
@@ -32,9 +30,7 @@ impl<'a> AsyncTask<'a> {
             for meta in nested {
                 match meta {
                     NestedMeta::Meta(Meta::NameValue(MetaNameValue {
-                        ref path,
-                        ref lit,
-                        ..
+                        ref path, ref lit, ..
                     })) => {
                         let ident = path.get_ident().unwrap();
 
@@ -57,8 +53,10 @@ impl<'a> AsyncTask<'a> {
                             },
                             "value" => match lit {
                                 syn::Lit::Str(lit) => {
-                                    let token = TokenStream::from_str(&lit.value()).expect("`async_task` value parse error.");
-                                    let ty = syn::parse2::<syn::Type>(token).expect("`async_task` value parse error.");
+                                    let token = TokenStream::from_str(&lit.value())
+                                        .expect("`async_task` value parse error.");
+                                    let ty = syn::parse2::<syn::Type>(token)
+                                        .expect("`async_task` value parse error.");
                                     res.value = Some(ty)
                                 }
                                 _ => return None,
@@ -142,12 +140,10 @@ impl<'a> AsyncTask<'a> {
                     }
                 ))
             }
-            _ => {
-                Err(syn::Error::new_spanned(
-                    ast,
-                    "`async_task` should defined on struct.",
-                ))
-            }
+            _ => Err(syn::Error::new_spanned(
+                ast,
+                "`async_task` should defined on struct.",
+            )),
         }
     }
 
@@ -166,7 +162,7 @@ impl<'a> AsyncTask<'a> {
         let (_, ty_generics, _) = self.generics;
 
         Ok(quote!(
-            fn #name_snake<_F, _T>(&mut self, future: _F, then: _T)
+            pub fn #name_snake<_F, _T>(&mut self, future: _F, then: _T)
             where
                 _F: std::future::Future<Output = #value> + Send + 'static,
                 _T: FnOnce(&'static mut #widget #ty_generics, #value) + 'static,

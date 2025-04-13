@@ -1,7 +1,7 @@
 use super::snapshot::Snapshot;
 use crate::primitive::frame::Frame;
 use std::{cell::RefCell, ptr::NonNull};
-use tlib::nonnull_mut;
+use tlib::{nonnull_mut, nonnull_ref, object::ObjectId};
 
 thread_local! {
     static INSTANCE: RefCell<AnimationMgr> = RefCell::new(AnimationMgr::new());
@@ -28,6 +28,11 @@ impl AnimationMgr {
     #[inline]
     pub(crate) fn add_snapshot(&mut self, snapshot: &mut dyn Snapshot) {
         self.snapshots.push(NonNull::new(snapshot))
+    }
+
+    #[inline]
+    pub(crate) fn remove_snapshot(&mut self, id: ObjectId) {
+        self.snapshots.retain(|r| nonnull_ref!(r).id() != id);
     }
 
     #[inline]

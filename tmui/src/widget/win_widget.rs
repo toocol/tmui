@@ -21,7 +21,7 @@ pub trait WinWidget: WidgetImpl + WidgetSignals {
 pub trait CrossWinWidget {}
 
 #[reflect_trait]
-pub trait CrossWinMsgHandlerInner {
+pub trait CrossWinMsgHandlerInner: WidgetImpl {
     fn handle_inner(&mut self);
 }
 
@@ -72,7 +72,7 @@ pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bo
             )
             .inner_window(inner)
             .win_widget_id(win_widget.id())
-            .on_activate(move |win| { 
+            .on_activate(move |win| {
                 win.set_transparency(0);
                 child_proc_fn(win);
             }),

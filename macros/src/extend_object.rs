@@ -2,7 +2,7 @@ use proc_macro2::Ident;
 use quote::quote;
 use syn::{parse::Parser, DeriveInput};
 
-use crate::SplitGenericsRef;
+use crate::{general_attr::GeneralAttr, SplitGenericsRef};
 
 pub(crate) fn expand(
     ast: &mut DeriveInput,
@@ -11,6 +11,12 @@ pub(crate) fn expand(
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
+    let general_attr =
+        GeneralAttr::parse(ast, (&impl_generics, &ty_generics, &where_clause), false)?;
+
+    let async_task_clause = &general_attr.async_task_impl_clause;
+    let async_method_clause = &general_attr.async_task_method_clause;
+
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => {
             match &mut struct_data.fields {
@@ -18,6 +24,14 @@ pub(crate) fn expand(
                     fields.named.push(syn::Field::parse_named.parse2(quote! {
                         pub object: Object
                     })?);
+
+                    if general_attr.is_async_task {
+                        for async_field in general_attr.async_task_fields.iter() {
+                            fields.named.push(syn::Field::parse_named.parse2(quote! {
+                                #async_field
+                            })?);
+                        }
+                    }
                 }
                 _ => {
                     return Err(syn::Error::new_spanned(
@@ -50,6 +64,8 @@ pub(crate) fn expand(
 
                 #object_trait_impl_clause
 
+                #async_task_clause
+
                 impl #impl_generics ObjectAcquire for #name #ty_generics #where_clause {}
 
                 impl #impl_generics SuperType for #name #ty_generics #where_clause {
@@ -66,6 +82,10 @@ pub(crate) fn expand(
                         type_registry.register::<#name #ty_generics, ReflectObjectImplExt>();
                         type_registry.register::<#name #ty_generics, ReflectObjectOperation>();
                     }
+                }
+
+                impl #impl_generics #name #ty_generics #where_clause {
+                    #async_method_clause
                 }
             })
         }
@@ -192,5 +212,12 @@ pub(crate) fn gen_object_trait_impl_clause(
         impl #impl_generics IsA<Object> for #name #ty_generics #where_clause {}
 
         impl #impl_generics IsA<#name #ty_generics> for #name #ty_generics #where_clause {}
+
+        impl #impl_generics Drop for #name #ty_generics #where_clause {
+            fn drop(&mut self) {
+                self.disconnect_all();
+                self.on_drop();
+            }
+        }
     ))
 }

@@ -2,7 +2,7 @@ use crate::{graphics::painter::Painter, primitive::frame::Frame, widget::WidgetI
 use std::{cell::RefCell, ptr::NonNull};
 use tlib::{
     figure::{Color, FRect, Rect},
-    nonnull_mut,
+    nonnull_mut, nonnull_ref,
     prelude::*,
     skia_safe::{ClipOp, PaintStyle},
 };
@@ -148,6 +148,11 @@ impl LoadingMgr {
     #[inline]
     pub(crate) fn add_loading(&mut self, loading: &mut dyn Loadable) {
         self.loadings.push(NonNull::new(loading))
+    }
+
+    #[inline]
+    pub(crate) fn remove_loading(&mut self, id: ObjectId) {
+        self.loadings.retain(|r| nonnull_ref!(r).id() != id);
     }
 
     #[inline]

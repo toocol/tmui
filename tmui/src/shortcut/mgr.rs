@@ -1,10 +1,10 @@
 use super::{Shortcut, ShortcutTrigger};
 use crate::widget::{WidgetHnd, WidgetImpl};
-use std::{cell::RefCell, ptr::NonNull};
 use nohash_hasher::IntMap;
+use std::{cell::RefCell, ptr::NonNull};
 use tlib::{
     events::{EventTrait, EventType, KeyEvent},
-    nonnull_mut,
+    nonnull_mut, nonnull_ref,
     object::ObjectId,
 };
 
@@ -64,6 +64,16 @@ impl ShortcutMgr {
             .entry(shortcut)
             .or_default()
             .push((NonNull::new(widget), Box::new(f)));
+    }
+
+    #[inline]
+    pub(crate) fn remove_shortcut_all(&mut self, id: ObjectId) {
+        for shortcuts in self.shortcuts.values_mut() {
+            shortcuts.retain(|(r, _)| nonnull_ref!(r).id() != id);
+        }
+        for shortcuts in self.global_shortcuts.values_mut() {
+            shortcuts.retain(|(r, _)| nonnull_ref!(r).id() != id);
+        }
     }
 
     #[inline]
