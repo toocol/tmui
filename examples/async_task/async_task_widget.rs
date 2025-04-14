@@ -6,20 +6,23 @@ use tmui::{
     widget::WidgetImpl,
 };
 
+use crate::{async_task_element::AsyncTaskElement, async_task_object::AsyncTaskObject};
+
 #[extends(Widget)]
 #[async_task(name = "AsyncTask", value = "i32")]
 #[async_task(name = "AsyncTask2", value = "f32")]
 #[async_task(name = "AsyncTask3", value = "()")]
-pub struct AsyncTaskWidget {}
+pub struct AsyncTaskWidget {
+    async_object: Box<AsyncTaskObject>,
+    async_element: Box<AsyncTaskElement>,
+}
 
 impl ObjectSubclass for AsyncTaskWidget {
     const NAME: &'static str = "AsyncTaskWidget";
 }
 
 impl ObjectImpl for AsyncTaskWidget {
-    fn construct(&mut self) {
-        self.parent_construct();
-
+    fn initialize(&mut self) {
         self.async_task(
             async {
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -27,7 +30,10 @@ impl ObjectImpl for AsyncTaskWidget {
                 12
             },
             |_, val| {
-                println!("{} => then", thread::current().name().unwrap());
+                println!(
+                    "{} => then, should be last one",
+                    thread::current().name().unwrap()
+                );
                 assert_eq!(val, 12)
             },
         );
@@ -44,6 +50,38 @@ impl ObjectImpl for AsyncTaskWidget {
         );
 
         self.async_task3(async {}, |_, _val| {});
+
+        self.async_object.async_object(
+            async {
+                println!("{} => async obejct", thread::current().name().unwrap());
+                true
+            },
+            |_, val| {
+                println!("{} => then obejct", thread::current().name().unwrap());
+                assert!(val)
+            },
+        );
+
+        self.async_element.async_element(
+            async {
+                println!("{} => async element", thread::current().name().unwrap());
+                vec![1, 2, 3]
+            },
+            |_, val| {
+                println!("{} => then element", thread::current().name().unwrap());
+                assert_eq!(val, vec![1, 2, 3])
+            },
+        );
+
+        async_do!(
+            {
+                println!("{} => async_do!", thread::current().name().unwrap());
+                ()
+            } =>
+            || {
+                println!("{} => then async_do!", thread::current().name().unwrap());
+            }
+        )
     }
 }
 

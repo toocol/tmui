@@ -1,6 +1,6 @@
 use super::{Container, EventBubble, WidgetImpl};
 use crate::graphics::painter::Painter;
-use std::collections::HashSet;
+use nohash_hasher::IntSet;
 use tlib::{
     figure::{FRect, Size},
     namespace::Overflow,
@@ -44,9 +44,9 @@ pub(crate) trait WidgetInnerExt {
 
     fn set_manage_by_container(&mut self, manage_by_container: bool);
 
-    fn children_index(&self) -> &HashSet<ObjectId>;
+    fn children_index(&self) -> &IntSet<ObjectId>;
 
-    fn children_index_mut(&mut self) -> &mut HashSet<ObjectId>;
+    fn children_index_mut(&mut self) -> &mut IntSet<ObjectId>;
 
     fn child_image_rect_union(&self) -> &FRect;
 
@@ -164,12 +164,12 @@ macro_rules! widget_inner_ext_impl {
         }
 
         #[inline]
-        fn children_index(&self) -> &HashSet<ObjectId> {
+        fn children_index(&self) -> &IntSet<ObjectId> {
             &self.widget_props().children_index
         }
 
         #[inline]
-        fn children_index_mut(&mut self) -> &mut HashSet<ObjectId> {
+        fn children_index_mut(&mut self) -> &mut IntSet<ObjectId> {
             &mut self.widget_props_mut().children_index
         }
 

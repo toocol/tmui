@@ -114,6 +114,10 @@ name = "pane_widget"
 path = "pane_widget/main.rs"
 
 [[bin]]
+name = "remove_demo"
+path = "remove_demo/main.rs"
+
+[[bin]]
 name = "run_after"
 path = "run_after/main.rs"
 

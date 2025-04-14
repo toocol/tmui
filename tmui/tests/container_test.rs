@@ -1,6 +1,9 @@
 use tlib::object::{ObjectImpl, ObjectSubclass};
 use tmui::{
-    container::{ContainerImpl, ContainerImplExt, ContainerScaleCalculate, SCALE_ADAPTION, ContainerLayoutEnum},
+    container::{
+        ContainerImpl, ContainerImplExt, ContainerLayoutEnum, ContainerScaleCalculate,
+        SCALE_ADAPTION,
+    },
     label::Label,
     prelude::*,
     widget::{Widget, WidgetImpl},
@@ -48,6 +51,8 @@ impl ContainerImplExt for TestContainer {
     {
         self.container.children.push(child)
     }
+
+    fn remove_children(&mut self, _: ObjectId) {}
 }
 
 impl Layout for TestContainer {

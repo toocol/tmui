@@ -30,7 +30,10 @@ impl FocusMgr {
 
     pub(crate) fn add(&mut self, root: ObjectId, ele: &mut dyn InputEle) {
         if root == 0 {
-            warn!("Add input ele `{}` to `FocusMgr` failed, the `root` is 0.", ele.name());
+            warn!(
+                "Add input ele `{}` to `FocusMgr` failed, the `root` is 0.",
+                ele.name()
+            );
             return;
         }
         let mut shuffle = false;
@@ -51,6 +54,31 @@ impl FocusMgr {
                 let b = nonnull_ref!(b).tabindex();
                 a.cmp(&b)
             })
+        }
+    }
+
+    pub(crate) fn remove(&mut self, id: ObjectId) {
+        if self.cur_root == id {
+            self.eles.remove(&id);
+            self.cur_root = 0;
+            self.current = None;
+        } else if self.cur_root == 0 {
+            self.current = None;
+            for eles in self.eles.values_mut() {
+                eles.retain(|r| nonnull_ref!(r).id() != id);
+            }
+        } else {
+            for (&root, eles) in self.eles.iter_mut() {
+                if let Some(index) = eles.iter().position(|r| nonnull_ref!(r).id() == id) {
+                    eles.remove(index);
+                    if let Some(current) = self.current {
+                        if current >= eles.len() && self.cur_root == root && current != 0 {
+                            self.current = Some(current - 1);
+                        }
+                    }
+                    break;
+                }
+            }
         }
     }
 

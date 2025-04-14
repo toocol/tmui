@@ -1,12 +1,15 @@
 use crate::{
     extend_container,
-    pane::{generate_pane_add_child, generate_pane_impl},
+    pane::{generate_pane_add_child, generate_pane_impl, generate_pane_remove_children},
     scroll_area::{
         generate_scroll_area_add_child, generate_scroll_area_get_children,
-        generate_scroll_area_impl,
+        generate_scroll_area_impl, generate_scroll_area_remove_children,
     },
-    split_pane::{generate_split_pane_add_child, generate_split_pane_impl},
-    stack::{generate_stack_add_child, generate_stack_impl},
+    split_pane::{
+        generate_split_pane_add_child, generate_split_pane_impl,
+        generate_split_pane_remove_children,
+    },
+    stack::{generate_stack_add_child, generate_stack_impl, generate_stack_remove_children},
 };
 use proc_macro2::Ident;
 use quote::quote;
@@ -236,19 +239,42 @@ fn gen_layout_clause(
         proc_macro2::TokenStream::new()
     };
 
-    let add_child_clause = match (is_split_pane, is_stack, is_scroll_area, is_pane) {
-        (false, false, false, false) => {
+    let (add_child_clause, remove_children_clause) = match (
+        is_split_pane,
+        is_stack,
+        is_scroll_area,
+        is_pane,
+    ) {
+        (false, false, false, false) => (
             quote! {
                 child.set_parent(self);
                 ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
                 self.container.children.push(child);
                 self.update();
-            }
-        }
-        (true, _, _, _) => generate_split_pane_add_child()?,
-        (_, true, _, _) => generate_stack_add_child()?,
-        (_, _, true, _) => generate_scroll_area_add_child(name)?,
-        (_, _, _, true) => generate_pane_add_child()?,
+            },
+            quote! {
+                if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+                    let removed = self.container.children.remove(index);
+
+                    let window = ApplicationWindow::window();
+                    window._add_removed_widget(removed);
+                    window.layout_change(self);
+                }
+            },
+        ),
+        (true, _, _, _) => (
+            generate_split_pane_add_child()?,
+            generate_split_pane_remove_children()?,
+        ),
+        (_, true, _, _) => (
+            generate_stack_add_child()?,
+            generate_stack_remove_children()?,
+        ),
+        (_, _, true, _) => (
+            generate_scroll_area_add_child(name)?,
+            generate_scroll_area_remove_children()?,
+        ),
+        (_, _, _, true) => (generate_pane_add_child()?, generate_pane_remove_children()?),
     };
 
     let children_clause = if is_scroll_area {
@@ -308,11 +334,17 @@ fn gen_layout_clause(
         }
 
         impl ContainerImplExt for #name {
+            #[inline]
             fn add_child<T>(&mut self, mut child: Box<T>)
             where
                 T: WidgetImpl,
             {
                 #add_child_clause
+            }
+
+            #[inline]
+            fn remove_children(&mut self, id: ObjectId) {
+                #remove_children_clause
             }
         }
 

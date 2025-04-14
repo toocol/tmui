@@ -10,6 +10,12 @@ pub(crate) fn generate_scroll_area_add_child(
     )))
 }
 
+pub(crate) fn generate_scroll_area_remove_children() -> syn::Result<proc_macro2::TokenStream> {
+    Ok(quote!(
+        // TODO
+    ))
+}
+
 pub(crate) fn generate_scroll_area_get_children() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         #[inline]

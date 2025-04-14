@@ -1,7 +1,13 @@
-use super::{drawing_context::DrawingContext, element::{ElementImpl, HierachyZ}};
+use super::{
+    drawing_context::DrawingContext,
+    element::{ElementImpl, HierachyZ},
+};
 use crate::{
-    backend::Backend, opti::tracker::Tracker, primitive::{bitmap::Bitmap, frame::Frame},
-    shared_widget::ReflectSharedWidgetImpl, skia_safe::Surface,
+    backend::Backend,
+    opti::tracker::Tracker,
+    primitive::{bitmap::Bitmap, frame::Frame},
+    shared_widget::ReflectSharedWidgetImpl,
+    skia_safe::Surface,
 };
 use std::{cell::RefCell, ptr::NonNull, sync::Arc};
 use tipc::{
@@ -79,12 +85,24 @@ impl Board {
         self.element_list.borrow_mut().push(NonNull::new(element))
     }
 
+    pub(crate) fn remove_element(&self, id: ObjectId) {
+        self.element_list
+            .borrow_mut()
+            .retain(|r| nonnull_ref!(r).id() != id);
+    }
+
     #[inline]
     pub(crate) fn shuffle(&self) {
         self.element_list.borrow_mut().sort_by(|a, b| {
-            let a = nonnull_ref!(a).z_index();
-            let b = nonnull_ref!(b).z_index();
-            a.cmp(&b)
+            let (a, b) = (nonnull_ref!(a), nonnull_ref!(b));
+            let a_z_index = a.z_index();
+            let b_z_index = b.z_index();
+
+            if a_z_index == b_z_index {
+                a.id().cmp(&b.id())
+            } else {
+                a_z_index.cmp(&b_z_index)
+            }
         });
     }
 

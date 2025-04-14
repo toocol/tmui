@@ -1,6 +1,6 @@
 use crate::{primitive::frame::Frame, widget::WidgetImpl};
 use std::{cell::RefCell, ptr::NonNull};
-use tlib::{nonnull_mut, prelude::*};
+use tlib::{nonnull_mut, nonnull_ref, prelude::*};
 
 #[reflect_trait]
 #[allow(unused_variables)]
@@ -37,6 +37,11 @@ impl FrameAnimatorMgr {
     #[inline]
     pub(crate) fn add_frame_animator(&mut self, frame_animator: &mut dyn FrameAnimator) {
         self.frame_animators.push(NonNull::new(frame_animator))
+    }
+
+    #[inline]
+    pub(crate) fn remove_frame_animator(&mut self, id: ObjectId) {
+        self.frame_animators.retain(|r| nonnull_ref!(r).id() != id);
     }
 
     #[inline]

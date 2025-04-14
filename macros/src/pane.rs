@@ -15,6 +15,18 @@ pub(crate) fn generate_pane_add_child() -> syn::Result<proc_macro2::TokenStream>
     ))
 }
 
+pub(crate) fn generate_pane_remove_children() -> syn::Result<proc_macro2::TokenStream> {
+    Ok(quote!(
+        if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+            let removed = self.container.children.remove(index);
+
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(removed);
+            window.layout_change(self);
+        }
+    ))
+}
+
 pub(crate) fn generate_pane_type_register(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote!(
         type_registry.register::<#name, ReflectSizeUnifiedAdjust>();

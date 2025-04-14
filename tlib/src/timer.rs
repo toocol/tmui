@@ -104,13 +104,6 @@ pub struct Timer {
     triggered: Cell<i32>,
 }
 
-impl Drop for Timer {
-    fn drop(&mut self) {
-        self.disconnect_all();
-        TimerHub::with(|hub| hub.delete_timer(self.id()))
-    }
-}
-
 impl Timer {
     /// Normal constructor to build a `Timer`
     pub fn new() -> Box<Self> {
@@ -181,7 +174,12 @@ impl ObjectSubclass for Timer {
     const NAME: &'static str = "Timer";
 }
 
-impl ObjectImpl for Timer {}
+impl ObjectImpl for Timer {
+    #[inline]
+    fn on_drop(&mut self) {
+        TimerHub::with(|hub| hub.delete_timer(self.id()))
+    }
+}
 
 #[cfg(test)]
 mod tests {

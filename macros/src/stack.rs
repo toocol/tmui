@@ -15,6 +15,22 @@ pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream
     })
 }
 
+pub(crate) fn generate_stack_remove_children() -> syn::Result<proc_macro2::TokenStream> {
+    Ok(quote! {
+        if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+            if self.current_index == self.container.children.len() {
+                self.current_index -= 1;
+            }
+
+            let removed = self.container.children.remove(index);
+
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(removed);
+            window.layout_change(self);
+        }
+    })
+}
+
 pub(crate) fn generate_stack_inner_initial() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         let idx = self.current_index();

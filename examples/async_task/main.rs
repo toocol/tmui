@@ -1,3 +1,5 @@
+mod async_task_element;
+mod async_task_object;
 mod async_task_widget;
 
 use async_task_widget::AsyncTaskWidget;

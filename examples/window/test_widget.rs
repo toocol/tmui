@@ -2,9 +2,17 @@ use lazy_static::lazy_static;
 use log::debug;
 use std::time::Duration;
 use tlib::{
-    close_handler, connect, disconnect, object::{ObjectImpl, ObjectSubclass}, timer::Timer
+    close_handler, connect, disconnect,
+    object::{ObjectImpl, ObjectSubclass},
+    timer::Timer,
 };
-use tmui::{animation::frame_animator::FrameAnimator, prelude::*, primitive::frame::Frame, tlib::{figure::Color, frame_animator}, widget::WidgetImpl};
+use tmui::{
+    animation::frame_animator::FrameAnimator,
+    prelude::*,
+    primitive::frame::Frame,
+    tlib::{figure::Color, frame_animator},
+    widget::WidgetImpl,
+};
 
 lazy_static! {
     static ref COLORS: [Color; 3] = [Color::RED, Color::GREEN, Color::BLUE];
@@ -67,7 +75,7 @@ impl TestWidget {
 
 impl FrameAnimator for TestWidget {
     #[inline]
-    fn on_frame(&mut self, frame: Frame){
+    fn on_frame(&mut self, frame: Frame) {
         println!("widget on frame: {:?}", frame)
     }
 }

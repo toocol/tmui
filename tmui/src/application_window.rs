@@ -13,6 +13,7 @@ use crate::{
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
+    shortcut::mgr::ShortcutMgr,
     tooltip::TooltipStrat,
     widget::{
         index_children,
@@ -93,6 +94,7 @@ pub struct ApplicationWindow {
     overlaids: IntMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
     win_widgets: Vec<WinWidgetHnd>,
+    removed: Vec<Box<dyn WidgetImpl>>,
 
     #[cfg(not(win_dialog))]
     input_dialog: Option<Box<crate::input::dialog::InputDialog>>,
@@ -473,7 +475,7 @@ impl ApplicationWindow {
         INTIALIZE_PHASE.with(|p| {
             if *p.borrow() {
                 panic!(
-                    "`{}` Can not add ui component in function `ObjectImpl::initialize()`.",
+                    "`{}` Can not add ui component in function `ObjectImpl::initialize()`, add in `ObjectImpl::construct()` or after intialized.",
                     widget.name()
                 )
             }
@@ -709,6 +711,8 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn iter_execute(&mut self) {
+        self.handle_removed_widget();
+
         self.iter_executors
             .iter_mut()
             .for_each(|hnd| nonnull_mut!(hnd).iter_execute());
@@ -716,6 +720,62 @@ impl ApplicationWindow {
         self.crs_win_handlers
             .iter_mut()
             .for_each(|hnd| nonnull_mut!(hnd).handle_inner());
+    }
+
+    #[inline]
+    pub fn _add_removed_widget(&mut self, widget: Box<dyn WidgetImpl>) {
+        self.removed.push(widget);
+    }
+
+    pub(crate) fn handle_removed_widget(&mut self) {
+        for removed in self.removed.iter_mut() {
+            let mut ids = vec![removed.id()];
+            ids.extend(removed.children_index().iter().copied());
+
+            for id in ids.into_iter() {
+                self.widgets.remove(&id);
+                self.iter_executors.retain(|r| nonnull_ref!(r).id() != id);
+                self.shadow_mouse_watch
+                    .retain(|r| nonnull_ref!(r).id() != id);
+                self.crs_win_handlers.retain(|r| nonnull_ref!(r).id() != id);
+                if self.focused_widget == id {
+                    self.focused_widget = 0;
+                }
+                self.focused_widget_mem.retain(|r| *r != id);
+                if self.pressed_widget == id {
+                    self.pressed_widget = 0;
+                }
+                if let Some(modal) = self.modal_widget {
+                    if modal == id {
+                        self.modal_widget = None;
+                    }
+                }
+                if self.mouse_over_widget.is_some()
+                    && nonnull_ref!(self.mouse_over_widget).id() == id
+                {
+                    self.mouse_over_widget = None;
+                }
+                self.mouse_enter_widgets
+                    .retain_mut(|r| nonnull_ref!(r).id() != id);
+                self.run_afters.retain_mut(|r| nonnull_ref!(r).id() != id);
+                for map in self.watch_map.values_mut() {
+                    map.remove(&id);
+                }
+                self.overlaids.remove(&id);
+                self.root_ancestors.retain_mut(|r| *r != id);
+                self.win_widgets.retain_mut(|r| nonnull_ref!(r).id() != id);
+
+                nonnull_ref!(self.board).remove_element(id);
+                AnimationMgr::with(|mgr| mgr.borrow_mut().remove_snapshot(id));
+                FrameAnimatorMgr::with(|mgr| mgr.borrow_mut().remove_frame_animator(id));
+                LoadingMgr::with(|mgr| mgr.borrow_mut().remove_loading(id));
+                FocusMgr::with(|mgr| mgr.borrow_mut().remove(id));
+                ShortcutMgr::with(|mgr| mgr.borrow_mut().remove_shortcut_all(id));
+                CloseHandlerMgr::remove(id);
+            }
+        }
+
+        self.removed.clear();
     }
 
     #[inline]

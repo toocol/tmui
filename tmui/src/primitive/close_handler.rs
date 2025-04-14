@@ -1,5 +1,7 @@
 use std::{cell::RefCell, ptr::NonNull};
-use tlib::{nonnull_mut, prelude::*};
+use tlib::{nonnull_mut, nonnull_ref, prelude::*};
+
+use crate::widget::WidgetImpl;
 
 thread_local! {
     static INSTANCE: RefCell<CloseHandlerMgr> = RefCell::new(CloseHandlerMgr::new());
@@ -18,14 +20,24 @@ impl CloseHandlerMgr {
     #[inline]
     pub(crate) fn process() {
         INSTANCE.with(|ins| {
-            ins.borrow_mut().handlers.iter_mut().for_each(|h| nonnull_mut!(h).handle())
+            ins.borrow_mut()
+                .handlers
+                .iter_mut()
+                .for_each(|h| nonnull_mut!(h).handle())
         })
     }
 
     #[inline]
     pub fn register(handler: &mut dyn CloseHandler) {
-        INSTANCE.with(|ins| {
-            ins.borrow_mut().handlers.push(NonNull::new(handler))
+        INSTANCE.with(|ins| ins.borrow_mut().handlers.push(NonNull::new(handler)))
+    }
+
+    #[inline]
+    pub fn remove(id: ObjectId) {
+        INSTANCE.with(|inst| {
+            inst.borrow_mut()
+                .handlers
+                .retain_mut(|r| nonnull_ref!(r).id() != id)
         })
     }
 }
@@ -33,6 +45,6 @@ impl CloseHandlerMgr {
 pub trait CloseHandlerRequire: CloseHandler {}
 
 #[reflect_trait]
-pub trait CloseHandler {
+pub trait CloseHandler: WidgetImpl {
     fn handle(&mut self);
 }

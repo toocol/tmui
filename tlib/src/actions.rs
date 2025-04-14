@@ -83,13 +83,16 @@ impl ActionHub {
     }
 
     #[inline]
-    pub fn with<F, R>(f: F) -> R
+    pub fn with<F>(f: F)
     where
-        F: FnOnce(&mut Self) -> R,
+        F: FnOnce(&mut Self),
     {
         INSTANCE_PTR.with(|ptr| {
-            let hub = unsafe { ptr.load(Ordering::Acquire).as_mut().unwrap() };
-            f(hub)
+            unsafe {
+                if let Some(hub) = ptr.load(Ordering::Acquire).as_mut() {
+                    f(hub)
+                }
+            };
         })
     }
 
@@ -189,18 +192,25 @@ impl ActionHub {
 pub type FnHandleValue = Box<dyn Fn(&Option<Vec<Value>>)>;
 
 pub trait ActionExt: ObjectOperation {
+    #[inline]
     fn connect(&self, signal: Signal, target: ObjectId, f: FnHandleValue) {
         ActionHub::with(|hub| hub.connect_action(signal, target, f));
     }
 
+    #[inline]
     fn disconnect(&self, emiter: Option<ObjectId>, signal: Option<&str>, target: Option<ObjectId>) {
         ActionHub::with(|hub| hub.disconnect_action(emiter, signal, target));
     }
 
+    #[inline]
     fn disconnect_all(&self) {
-        ActionHub::with(|hub| hub.disconnect_action(Some(self.id()), None, None));
+        ActionHub::with(|hub| {
+            hub.disconnect_action(Some(self.id()), None, None);
+            hub.disconnect_action(None, None, Some(self.id()));
+        });
     }
 
+    #[inline]
     fn create_action_with_no_param(&self, signal: Signal) -> Action {
         Action::with_no_param(signal)
     }

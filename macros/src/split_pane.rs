@@ -23,6 +23,12 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
     })
 }
 
+pub(crate) fn generate_split_pane_remove_children() -> syn::Result<proc_macro2::TokenStream> {
+    Ok(quote! {
+        // TODO
+    })
+}
+
 pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
     impl SizeUnifiedAdjust for #name {
