@@ -1,7 +1,7 @@
 pub mod event;
 pub mod event_handle;
 
-use crate::{nonnull_mut, prelude::*};
+use crate::{nonnull_mut, nonnull_ref, prelude::*};
 use event::{IEvent, IEventType};
 use event_handle::EventHandle;
 use log::warn;
@@ -10,7 +10,7 @@ use std::{
     collections::VecDeque,
     hash::{DefaultHasher, Hasher},
     marker::PhantomData,
-    ptr::NonNull,
+    ptr::{self, NonNull},
 };
 
 pub type RegisterMap<E, T> =
@@ -46,6 +46,23 @@ impl<E: IEvent<EventType = T>, T: IEventType> InnerEventBus<E, T> {
                 .entry(k)
                 .or_default()
                 .push(NonNull::new(handle));
+        }
+    }
+
+    #[inline]
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn remove(&mut self, handle: *const dyn EventHandle<Event = E, EventType = T>) {
+        for listen in unsafe { handle.as_ref() }.unwrap().listen() {
+            let mut hasher = DefaultHasher::default();
+            listen.hash(&mut hasher);
+            let k = hasher.finish();
+
+            if let Some(hnds) = self.register.get_mut(&k) {
+                hnds.retain(|h| {
+                    let h = nonnull_ref!(h);
+                    !ptr::eq(handle, h)
+                });
+            }
         }
     }
 
@@ -122,6 +139,11 @@ macro_rules! event_bus_init {
             #[inline]
             pub fn register(handle: *mut dyn EventHandle<Event = $event, EventType = $event_type>) {
                 with_event_bus(|event_bus| event_bus.register(handle))
+            }
+
+            #[inline]
+            pub fn remove(handle: *const dyn EventHandle<Event = $event, EventType = $event_type>) {
+                with_event_bus(|event_bus| event_bus.remove(handle))
             }
 
             #[inline]

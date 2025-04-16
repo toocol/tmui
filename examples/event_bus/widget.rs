@@ -18,6 +18,16 @@ impl ObjectSubclass for WidgetEvents {
 impl ObjectImpl for WidgetEvents {
     fn initialize(&mut self) {
         EventBus::register(self);
+
+        self.set_background(Color::RED);
+        self.set_borders(1., 1., 1., 1.);
+        self.width_request(100);
+        self.height_request(100);
+    }
+
+    fn on_drop(&mut self) {
+        info!("widget drop");
+        EventBus::remove(self);
     }
 }
 
@@ -40,7 +50,7 @@ impl EventHandle for WidgetEvents {
 
     fn handle(&mut self, evt: &Self::Event) {
         match evt {
-            Events::Test => info!("Test events received."),
+            Events::Test => info!("Test events received. id = {}", self.id()),
         }
     }
 }

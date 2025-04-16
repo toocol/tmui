@@ -16,7 +16,7 @@ impl ObjectImpl for ChildWidget {
         self.parent_construct();
 
         self.width_request(200);
-        self.height_request(100);
+        self.height_request(200);
         self.set_background(Color::GREY_LIGHT);
 
         let mut child: Box<Widget> = Object::new(&[]);
