@@ -312,7 +312,9 @@ pub trait ObjectImpl: ObjectImplExt + InnerInitializer + TypeName {
     /// Override to register the reflect type info to [`TypeRegistry`] in this function.
     fn type_register(&self, type_registry: &mut TypeRegistry) {}
 
-    /// Call on drop.
+    /// Any struct that extends `Object` will automatically implement `Drop` trait.
+    ///
+    /// To customize the behavior, override on_drop instead.
     fn on_drop(&mut self) {}
 }
 

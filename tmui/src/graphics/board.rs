@@ -85,6 +85,7 @@ impl Board {
         self.element_list.borrow_mut().push(NonNull::new(element))
     }
 
+    #[inline]
     pub(crate) fn remove_element(&self, id: ObjectId) {
         self.element_list
             .borrow_mut()
