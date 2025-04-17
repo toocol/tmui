@@ -18,11 +18,19 @@ pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream
 pub(crate) fn generate_stack_remove_children() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
         if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
-            if self.current_index == self.container.children.len() {
+            let removed = self.container.children.remove(index);
+
+            if self.current_index == self.container.children.len() && self.current_index != 0 {
                 self.current_index -= 1;
             }
 
-            let removed = self.container.children.remove(index);
+            for (idx, child) in self.container.children.iter_mut().enumerate() {
+                if self.current_index == idx {
+                    child.show();
+                } else {
+                    child.hide();
+                }
+            }
 
             let window = ApplicationWindow::window();
             window._add_removed_widget(removed);
@@ -144,6 +152,17 @@ pub(crate) fn generate_stack_impl(name: &Ident) -> syn::Result<proc_macro2::Toke
 
                 self.update();
                 self.set_render_styles(true);
+            }
+
+            #[inline]
+            fn remove_index(&mut self, index: usize) {
+                if index >= self.children().len() {
+                    log::warn!("`index` overrange, skip the `remove_index()`, children len {}, get index {}", self.children().len(), index);
+                    return
+                }
+
+                let id = self.children_mut().get_mut(index).unwrap().id();
+                self.remove_children(id);
             }
         }
     })
