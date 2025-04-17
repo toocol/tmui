@@ -25,7 +25,14 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
 
 pub(crate) fn generate_split_pane_remove_children() -> syn::Result<proc_macro2::TokenStream> {
     Ok(quote! {
-        // TODO
+        if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+            let removed = self.container.children.remove(index);
+            self.close_pane(removed.id());
+
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(removed);
+            window.layout_change(self);
+        }
     })
 }
 
@@ -78,68 +85,30 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
         }
 
         fn close_pane(&mut self, id: ObjectId) {
-            use std::ptr::NonNull;
-            use std::collections::VecDeque;
+            let mut split = match self.split_infos.remove(&id) {
+                Some(s) => s,
+                None => return,
+            };
 
-            if let Some(split_info) = self.split_infos.get_mut(&id) {
-                let remove_id_vec = if split_info.ty == SplitType::SplitNone {
-                    let mut idx = 0;
-                    let mut new_head = None;
-
-                    // Make the second splitted widget to the head widget:
-                    for split_to in split_info.split_to.iter_mut() {
-                        let split_to_mut = nonnull_mut!(split_to);
-                        if idx == 0 {
-                            new_head = NonNull::new(split_to_mut);
-                            split_to_mut.ty = SplitType::SplitNone;
-                        } else {
-                            let new_head_mut = unsafe { new_head.as_mut().unwrap().as_mut() };
-                            new_head_mut.split_to.push(NonNull::new(split_to_mut));
-                            split_to_mut.split_from = new_head;
-                        }
-
-                        idx += 1;
-                    }
-
-                    vec![split_info.id]
-                } else {
-                    let split_from = split_from!(split_info);
-                    split_from
-                        .split_to
-                        .retain(|st| unsafe { st.as_ref().unwrap().as_ref().id != id });
-
-                    let mut remove_id_collect = vec![];
-                    let mut deque: VecDeque<&SplitInfo> = VecDeque::new();
-                    deque.push_back(split_info);
-
-                    while !deque.is_empty() {
-                        let split_info = deque.pop_front().unwrap();
-                        remove_id_collect.push(split_info.id);
-
-                        for split_to in split_info.split_to.iter() {
-                            if let Some(ptr) = split_to {
-                                deque.push_back(unsafe { ptr.as_ref() })
-                            }
-                        }
-                    }
-
-                    remove_id_collect
-                };
-
-                for id in remove_id_vec.iter() {
-                    self.split_infos.remove(id);
-                    self.split_infos_vec
-                        .retain(|st| unsafe { st.as_ref().unwrap().as_ref().id } != *id);
-                    self.children_mut().retain(|child| child.id() != *id);
-                }
-
-                // Tell the `ApplicationWindow` that widget's layout has changed:
-                if self.window_id() == 0 {
-                    panic!("`close_pane()` in SplitPane should invoke after window initialize.")
-                }
-                ApplicationWindow::window_of(self.window_id()).layout_change(self);
-                self.update()
+            let mut split_from = if split.split_from.is_some() {
+                Some(nonnull_mut!(split.split_from))
+            } else {
+                None
+            };
+            if let Some(split_from) = split_from.as_mut() {
+                split_from.split_to.retain(|s| nonnull_ref!(s).id != id);
             }
+
+            for split_to_ptr in split.split_to.iter_mut() {
+                let split_to = nonnull_mut!(split_to_ptr);
+                split_to.split_from = split.split_from;
+                split_to.ty = split.ty;
+
+                if let Some(split_from) = split_from.as_mut() {
+                    split_from.split_to.push(split_to_ptr.clone());
+                }
+            }
+            self.split_infos_vec.retain(|s| nonnull_ref!(s).id != id);
         }
 
         fn split<T: WidgetImpl>(&mut self, id: ObjectId, mut widget: Box<T>, ty: SplitType) {

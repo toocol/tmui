@@ -149,7 +149,7 @@ pub trait SplitInfosGetter {
 pub trait SplitPaneExt {
     /// Split new widget left.
     ///
-    /// @param: id the id of target widget where user click on. <br>
+    /// @param: id the id of split base widget. <br>
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
@@ -157,7 +157,7 @@ pub trait SplitPaneExt {
 
     /// Split new widget up.
     ///
-    /// @param: id the id of target widget where user click on. <br>
+    /// @param: id the id of split base widget. <br>
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
@@ -165,7 +165,7 @@ pub trait SplitPaneExt {
 
     /// Split new widget right.
     ///
-    /// @param: id the id of target widget where user click on. <br>
+    /// @param: id the id of split base widget. <br>
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
@@ -173,15 +173,17 @@ pub trait SplitPaneExt {
 
     /// Split new widget down.
     ///
-    /// @param: id the id of target widget where user click on. <br>
+    /// @param: id the id of split base widget. <br>
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
     fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
 
+    /// **Do not call this function directly, use `remove_children()` instead.**
+    ///
     /// Close the split pane, the widgets were splited from this pane will be closed automatically.
     ///
-    /// @param: id the id of target widget where user click on. <br>
+    /// @param: id the id of target widget to close. <br>
     fn close_pane(&mut self, id: ObjectId);
 
     /// Common function of split().

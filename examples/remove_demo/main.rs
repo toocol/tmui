@@ -1,5 +1,6 @@
 pub mod child_widget;
 pub mod remove_widget;
+pub mod split_pane_layout;
 pub mod stack_widget;
 
 use remove_widget::RemoveWidget;
