@@ -6,7 +6,7 @@ use tmui::{
     widget::WidgetImpl,
 };
 
-use crate::child_widget::ChildWidget;
+use crate::{child_widget::ChildWidget, stack_widget::StackWidget};
 
 #[extends(Widget, Layout(VBox))]
 #[derive(Childrenable)]
@@ -15,6 +15,8 @@ pub struct RemoveWidget {
     top: Box<HBox>,
     #[children]
     bottom: Box<HBox>,
+    #[children]
+    stack: Box<StackWidget>,
 
     to_remove: ObjectId,
     widget_id: ObjectId,
@@ -34,8 +36,10 @@ impl ObjectImpl for RemoveWidget {
         self.set_vexpand(true);
         let mut button_1 = Button::new(Some("Remove Left"));
         let mut button_2 = Button::new(Some("Remove Right"));
+        let mut button_3 = Button::new(Some("Remove Stack"));
         button_1.width_request(100);
         button_2.width_request(100);
+        button_3.width_request(100);
         connect!(
             button_1,
             mouse_pressed(),
@@ -48,8 +52,15 @@ impl ObjectImpl for RemoveWidget {
             self,
             remove_right_pressed(MouseEvent)
         );
+        connect!(
+            button_3,
+            mouse_pressed(),
+            self,
+            remove_stack_widget(MouseEvent)
+        );
         self.top.add_child(button_1);
         self.top.add_child(button_2);
+        self.top.add_child(button_3);
 
         self.bottom.add_child(Label::new(Some("Label 1")));
         let label2 = Label::new(Some("Label 2"));
@@ -83,5 +94,9 @@ impl RemoveWidget {
             .downcast_mut::<ChildWidget>()
             .unwrap()
             .remove_child();
+    }
+
+    pub fn remove_stack_widget(&mut self, _: MouseEvent) {
+        self.stack.remove_index(1);
     }
 }

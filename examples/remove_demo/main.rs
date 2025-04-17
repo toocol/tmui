@@ -1,5 +1,6 @@
 pub mod child_widget;
 pub mod remove_widget;
+pub mod stack_widget;
 
 use remove_widget::RemoveWidget;
 use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};

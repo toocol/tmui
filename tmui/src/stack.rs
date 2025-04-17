@@ -156,6 +156,8 @@ pub trait StackImpl {
     fn switch(&mut self);
 
     fn switch_index(&mut self, index: usize);
+
+    fn remove_index(&mut self, index: usize);
 }
 stack_impl!(Stack);
 
