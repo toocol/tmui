@@ -82,8 +82,15 @@ impl ContainerImplExt for SplitPane {
         self.update();
     }
 
-    fn remove_children(&mut self, _id: ObjectId) {
-        // TODO
+    fn remove_children(&mut self, id: ObjectId) {
+        if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+            let removed = self.container.children.remove(index);
+            self.close_pane(removed.id());
+
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(removed);
+            window.layout_change(self);
+        }
     }
 }
 
