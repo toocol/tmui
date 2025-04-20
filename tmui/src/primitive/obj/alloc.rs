@@ -87,7 +87,7 @@ pub trait DynTrAlloc: WidgetImpl {
 }
 impl DynTrAlloc for dyn WidgetImpl {}
 
-pub trait DynPopupTrAlloc<T: PopupImpl + ObjectSubclass + Default>: PopupImpl {
+pub trait DynPopupTrAlloc: PopupImpl {
     #[inline]
     fn to_dyn_popup_tr(&self) -> DynPopupTr {
         let id = self.id();
@@ -102,7 +102,7 @@ pub trait DynPopupTrAlloc<T: PopupImpl + ObjectSubclass + Default>: PopupImpl {
         })
     }
 }
-impl<T: PopupImpl + ObjectSubclass + Default> DynPopupTrAlloc<T> for T {}
+impl<T: PopupImpl> DynPopupTrAlloc for T {}
 
 #[cfg(test)]
 mod tests {
