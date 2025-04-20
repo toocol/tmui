@@ -11,7 +11,7 @@ thread_local! {
     static OWNER_STORAGE: RefCell<IntMap<ObjectId, Box<dyn WidgetImpl>>> = RefCell::new(IntMap::default());
 }
 
-pub(crate) struct TrAllocater;
+pub(crate) struct TrAllocater {}
 impl TrAllocater {
     #[inline]
     pub(crate) fn insert(owner: Box<dyn WidgetImpl>) {

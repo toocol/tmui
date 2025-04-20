@@ -1,17 +1,21 @@
-use super::Tr;
+use super::{Tr, TrAllocater};
 use crate::widget::WidgetImpl;
-use std::ops::{Deref, DerefMut};
+use std::{
+    cell::Cell,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
 
-#[repr(transparent)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DynTr {
     raw: *mut dyn WidgetImpl,
+    ref_count: Rc<Cell<i32>>,
 }
 
 impl DynTr {
     /// # SAFETY
     ///
-    /// The raw pointer becomes invalid when the widget is removed.
+    /// Destruction of the underlying object is managed by reference counting, and exceptions should never occur.
     #[inline]
     pub fn bind(&self) -> &dyn WidgetImpl {
         unsafe {
@@ -23,7 +27,7 @@ impl DynTr {
 
     /// # SAFETY
     ///
-    /// The raw pointer becomes invalid when the widget is removed.
+    /// Destruction of the underlying object is managed by reference counting, and exceptions should never occur.
     #[inline]
     pub fn bind_mut(&mut self) -> &mut dyn WidgetImpl {
         unsafe {
@@ -35,10 +39,42 @@ impl DynTr {
 }
 
 impl<R: WidgetImpl> From<Tr<R>> for DynTr {
+    #[inline]
     fn from(mut value: Tr<R>) -> Self {
-        let dyn_mut = value.as_dyn_mut();
+        let ref_count = value.clone_ref_count();
+        ref_count.set(ref_count.get() + 1);
 
-        Self { raw: dyn_mut }
+        Self {
+            raw: value.as_dyn_mut(),
+            ref_count,
+        }
+    }
+}
+
+impl Clone for DynTr {
+    #[inline]
+    fn clone(&self) -> Self {
+        let ref_count = self.ref_count.clone();
+        ref_count.set(ref_count.get() + 1);
+
+        Self {
+            raw: self.raw,
+            ref_count,
+        }
+    }
+}
+
+impl Drop for DynTr {
+    #[inline]
+    fn drop(&mut self) {
+        self.ref_count.set(self.ref_count.get() - 1);
+
+        let ref_cnt = self.ref_count.get();
+        debug_assert!(ref_cnt >= 0);
+
+        if ref_cnt == 0 {
+            TrAllocater::remove(self.id());
+        }
     }
 }
 

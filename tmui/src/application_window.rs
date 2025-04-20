@@ -11,7 +11,7 @@ use crate::{
     loading::LoadingMgr,
     platform::{ipc_bridge::IpcBridge, PlatformType},
     prelude::*,
-    primitive::{global_watch::GlobalWatchEvent, obj::TrAllocater, Message},
+    primitive::{global_watch::GlobalWatchEvent, Message},
     runtime::{wed, window_context::OutputSender},
     shortcut::mgr::ShortcutMgr,
     tooltip::TooltipStrat,
@@ -772,8 +772,6 @@ impl ApplicationWindow {
                 FocusMgr::with(|mgr| mgr.borrow_mut().remove(id));
                 ShortcutMgr::with(|mgr| mgr.borrow_mut().remove_shortcut_all(id));
                 CloseHandlerMgr::remove(id);
-
-                TrAllocater::remove(id);
             }
         }
 

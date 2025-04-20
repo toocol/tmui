@@ -264,20 +264,17 @@ macro_rules! widget_inner_ext_impl {
         fn set_redraw_shadow_box(&mut self, redraw: bool) {
             self.widget_props_mut().redraw_shadow_box = redraw
         }
+
+        #[inline]
+        fn set_in_tree(&mut self) {
+            self.widget_props_mut().in_tree = true;
+        }
     };
 }
 
 impl<T: WidgetImpl> WidgetInnerExt for T {
     widget_inner_ext_impl!();
-
-    fn set_in_tree(&mut self) {
-        self.widget_props_mut().in_tree = true;
-    }
 }
 impl WidgetInnerExt for dyn WidgetImpl {
     widget_inner_ext_impl!();
-
-    fn set_in_tree(&mut self) {
-        self.widget_props_mut().in_tree = true;
-    }
 }
