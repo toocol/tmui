@@ -24,28 +24,28 @@ use crate::popup::InputPopup;
 #[popupable]
 pub struct Holder {
     #[children]
-    text1: Box<Text>,
+    text1: Tr<Text>,
 
     #[children]
-    text2: Box<Text>,
+    text2: Tr<Text>,
 
     #[children]
-    text3: Box<Text>,
+    text3: Tr<Text>,
 
     #[children]
-    password: Box<Password>,
+    password: Tr<Password>,
 
     #[children]
-    select1: Box<Select<String>>,
+    select1: Tr<Select<String>>,
 
     #[children]
-    number: Box<Number>,
+    number: Tr<Number>,
 
     #[children]
-    text4: Box<Text>,
+    text4: Tr<Text>,
 
     #[children]
-    select2: Box<Select<String>>,
+    select2: Tr<Select<String>>,
 }
 
 impl ObjectSubclass for Holder {
@@ -54,8 +54,9 @@ impl ObjectSubclass for Holder {
 
 impl ObjectImpl for Holder {
     fn construct(&mut self) {
+        Select::<String>::new_alloc();
         self.parent_construct();
-        self.add_popup(InputPopup::new());
+        self.add_popup(InputPopup::new().to_dyn_popup_tr());
     }
 
     fn initialize(&mut self) {
@@ -190,8 +191,8 @@ impl WidgetImpl for Holder {
 
 impl Holder {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

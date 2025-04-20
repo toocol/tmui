@@ -1,5 +1,6 @@
 use super::{Tr, TrAllocater};
-use crate::widget::WidgetImpl;
+use crate::popup::PopupImpl;
+use crate::prelude::*;
 use std::{
     cell::Cell,
     ops::{Deref, DerefMut},
@@ -7,14 +8,14 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct DynTr {
-    raw: *mut dyn WidgetImpl,
+pub struct DynPopupTr {
+    raw: *mut dyn PopupImpl,
     ref_count: Rc<Cell<i32>>,
 }
 
-impl DynTr {
+impl DynPopupTr {
     #[inline]
-    pub(crate) fn new_directly(raw: *mut dyn WidgetImpl, ref_count: Rc<Cell<i32>>) -> Self {
+    pub(crate) fn new_directly(raw: *mut dyn PopupImpl, ref_count: Rc<Cell<i32>>) -> Self {
         ref_count.set(ref_count.get() + 1);
 
         Self { raw, ref_count }
@@ -24,7 +25,7 @@ impl DynTr {
     ///
     /// Destruction of the underlying object is managed by reference counting, and exceptions should never occur.
     #[inline]
-    pub fn bind(&self) -> &dyn WidgetImpl {
+    pub fn bind(&self) -> &dyn PopupImpl {
         unsafe {
             self.raw
                 .as_ref()
@@ -36,7 +37,7 @@ impl DynTr {
     ///
     /// Destruction of the underlying object is managed by reference counting, and exceptions should never occur.
     #[inline]
-    pub fn bind_mut(&mut self) -> &mut dyn WidgetImpl {
+    pub fn bind_mut(&mut self) -> &mut dyn PopupImpl {
         unsafe {
             self.raw
                 .as_mut()
@@ -50,20 +51,20 @@ impl DynTr {
     }
 }
 
-impl<R: WidgetImpl> From<Tr<R>> for DynTr {
+impl<R: PopupImpl> From<Tr<R>> for DynPopupTr {
     #[inline]
     fn from(mut value: Tr<R>) -> Self {
         let ref_count = value.clone_ref_count();
         ref_count.set(ref_count.get() + 1);
 
-        Self {
-            raw: value.as_dyn_mut(),
-            ref_count,
-        }
+        let widget = value.as_mut();
+        let raw = cast_mut!(widget as PopupImpl).unwrap();
+
+        Self { raw, ref_count }
     }
 }
 
-impl Clone for DynTr {
+impl Clone for DynPopupTr {
     #[inline]
     fn clone(&self) -> Self {
         let ref_count = self.ref_count.clone();
@@ -76,7 +77,7 @@ impl Clone for DynTr {
     }
 }
 
-impl Drop for DynTr {
+impl Drop for DynPopupTr {
     #[inline]
     fn drop(&mut self) {
         self.ref_count.set(self.ref_count.get() - 1);
@@ -90,8 +91,8 @@ impl Drop for DynTr {
     }
 }
 
-impl Deref for DynTr {
-    type Target = dyn WidgetImpl;
+impl Deref for DynPopupTr {
+    type Target = dyn PopupImpl;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -99,23 +100,23 @@ impl Deref for DynTr {
     }
 }
 
-impl DerefMut for DynTr {
+impl DerefMut for DynPopupTr {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.bind_mut()
     }
 }
 
-impl AsRef<dyn WidgetImpl> for DynTr {
+impl AsRef<dyn PopupImpl> for DynPopupTr {
     #[inline]
-    fn as_ref(&self) -> &dyn WidgetImpl {
+    fn as_ref(&self) -> &dyn PopupImpl {
         self.bind()
     }
 }
 
-impl AsMut<dyn WidgetImpl> for DynTr {
+impl AsMut<dyn PopupImpl> for DynPopupTr {
     #[inline]
-    fn as_mut(&mut self) -> &mut dyn WidgetImpl {
+    fn as_mut(&mut self) -> &mut dyn PopupImpl {
         self.bind_mut()
     }
 }

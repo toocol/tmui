@@ -14,7 +14,7 @@ pub struct WinCtrlBtns {
         SvgIcon::from_bytes(file.data.as_ref())
     }"))]
     #[children]
-    minimize: Box<SvgIcon>,
+    minimize: Tr<SvgIcon>,
 
     #[derivative(Default(value = "{
         let maximize = Asset::get(\"large.svg\").unwrap();
@@ -22,14 +22,14 @@ pub struct WinCtrlBtns {
         SvgToggleIcon::from_bytes(&[maximize.data.as_ref(), restore.data.as_ref()])
     }"))]
     #[children]
-    large_restore: Box<SvgToggleIcon>,
+    large_restore: Tr<SvgToggleIcon>,
 
     #[derivative(Default(value = "{
         let file = Asset::get(\"close.svg\").unwrap();
         SvgIcon::from_bytes(file.data.as_ref())
     }"))]
     #[children]
-    close: Box<SvgIcon>,
+    close: Tr<SvgIcon>,
 }
 
 impl ObjectSubclass for WinCtrlBtns {

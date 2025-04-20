@@ -10,13 +10,13 @@ use super::{app_icon::AppIcon, WinCtrlBtns};
 #[derive(Childrenable)]
 pub struct TitleBar {
     #[children]
-    app_icon: Box<AppIcon>,
+    app_icon: Tr<AppIcon>,
 
     #[children]
-    widget2: Box<Widget>,
+    widget2: Tr<Widget>,
 
     #[children]
-    win_ctrl_btns: Box<WinCtrlBtns>
+    win_ctrl_btns: Tr<WinCtrlBtns>,
 }
 
 impl ObjectSubclass for TitleBar {

@@ -28,12 +28,12 @@ impl ObjectImpl for MySplitPane {
         self.set_hexpand(true);
         self.set_vexpand(true);
 
-        let mut widget: Box<MyStack> = Object::new(&[]);
+        let mut widget = MyStack::new_alloc();
         widget.set_background(Color::CYAN);
         widget.set_vexpand(true);
         widget.set_hexpand(true);
 
-        let mut scroll_area: Box<ScrollArea> = Object::new(&[]);
+        let mut scroll_area = ScrollArea::new_alloc();
         scroll_area.set_scroll_bar_position(ScrollBarPosition::End);
         scroll_area.set_orientation(Orientation::Vertical);
         scroll_area.set_hexpand(true);

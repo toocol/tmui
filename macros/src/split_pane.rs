@@ -7,8 +7,7 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
         child.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-        let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.as_mut());
+        let widget_ptr: std::option::Option<std::ptr::NonNull<dyn WidgetImpl>> = std::ptr::NonNull::new(child.bind_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),
             widget_ptr.clone(),
@@ -18,7 +17,8 @@ pub(crate) fn generate_split_pane_add_child() -> syn::Result<proc_macro2::TokenS
         self.split_infos_vec
             .push(std::ptr::NonNull::new(split_info.as_mut()));
         self.split_infos.insert(child.id(), split_info);
-        self.container.children.push(child);
+        self.container.children.push(child.clone().into());
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
         self.update();
     })
 }
@@ -65,22 +65,22 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
 
     impl SplitPaneExt for #name {
         #[inline]
-        fn split_left<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
+        fn split_left<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>) {
             self.split(id, widget, SplitType::SplitLeft)
         }
 
         #[inline]
-        fn split_up<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
+        fn split_up<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>) {
             self.split(id, widget, SplitType::SplitUp)
         }
 
         #[inline]
-        fn split_right<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
+        fn split_right<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>) {
             self.split(id, widget, SplitType::SplitRight)
         }
 
         #[inline]
-        fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>) {
+        fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>) {
             self.split(id, widget, SplitType::SplitDown)
         }
 
@@ -111,7 +111,7 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
             self.split_infos_vec.retain(|s| nonnull_ref!(s).id != id);
         }
 
-        fn split<T: WidgetImpl>(&mut self, id: ObjectId, mut widget: Box<T>, ty: SplitType) {
+        fn split<T: WidgetImpl>(&mut self, id: ObjectId, mut widget: Tr<T>, ty: SplitType) {
             use std::ptr::NonNull;
 
             let mut split_from = if let Some(split_info) = self.split_infos.get_mut(&id) {
@@ -121,10 +121,9 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
             };
 
             widget.set_parent(self);
-            ApplicationWindow::initialize_dynamic_component(widget.as_mut(), self.is_in_tree());
             let mut split_info = Box::new(SplitInfo::new(
                 widget.id(),
-                NonNull::new(widget.as_mut()),
+                NonNull::new(widget.as_dyn_mut()),
                 split_from,
                 ty,
             ));
@@ -133,13 +132,13 @@ pub(crate) fn generate_split_pane_impl(name: &Ident) -> syn::Result<proc_macro2:
             self.split_infos_vec
                 .push(NonNull::new(split_info.as_mut()));
             self.split_infos.insert(widget.id(), split_info);
-            self.container.children.push(widget);
+            self.container.children.push(widget.clone().into());
 
             // Tell the `ApplicationWindow` that widget's layout has changed:
             if self.window_id() == 0 {
                 panic!("`split()` in SplitPane should invoke after window initialize.")
             }
-            ApplicationWindow::window_of(self.window_id()).layout_change(self);
+            ApplicationWindow::initialize_dynamic_component(widget.as_dyn_mut(), self.is_in_tree());
             self.update()
         }
     }

@@ -1,7 +1,10 @@
 use tmui::{
     label::Label,
     prelude::*,
-    tlib::{namespace::Orientation, object::{ObjectImpl, ObjectSubclass}},
+    tlib::{
+        namespace::Orientation,
+        object::{ObjectImpl, ObjectSubclass},
+    },
     widget::WidgetImpl,
 };
 
@@ -9,10 +12,10 @@ use tmui::{
 #[derive(Childrenable)]
 pub struct PaneLayout {
     #[children]
-    left: Box<Label>,
+    left: Tr<Label>,
 
     #[children]
-    right: Box<Label>,
+    right: Tr<Label>,
 }
 
 impl ObjectSubclass for PaneLayout {
@@ -46,7 +49,7 @@ impl WidgetImpl for PaneLayout {}
 impl PaneLayout {
     #[inline]
     #[allow(dead_code)]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

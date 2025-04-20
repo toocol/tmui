@@ -31,7 +31,7 @@ impl WidgetImpl for RunAfterWidget {
 }
 
 impl RunAfterWidget {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

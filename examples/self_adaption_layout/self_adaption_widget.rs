@@ -46,7 +46,7 @@ impl WidgetImpl for SelfAdaptionWidget {}
 
 impl SelfAdaptionWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

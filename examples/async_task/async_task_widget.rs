@@ -89,7 +89,7 @@ impl WidgetImpl for AsyncTaskWidget {}
 
 impl AsyncTaskWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

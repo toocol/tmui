@@ -190,13 +190,13 @@ pub trait Popupable: WidgetImpl {
     ///
     /// Only one popup can exist at the same time.
     #[inline]
-    fn add_popup(&mut self, mut popup: Box<dyn PopupImpl>) {
+    fn add_popup(&mut self, mut popup: DynPopupTr) {
+        self.set_popup(popup.clone());
+
         ApplicationWindow::initialize_dynamic_component(
             popup.as_widget_impl_mut(),
             self.is_in_tree(),
         );
-
-        self.set_popup(popup);
     }
 
     /// Change the popup's visibility to true, show the popup.
@@ -232,7 +232,7 @@ pub trait Popupable: WidgetImpl {
     /// Set the popup to widget.
     ///
     /// use [`add_popup()`](Popupable::add_popup) instead, do not use this function directly.
-    fn set_popup(&mut self, popup: Box<dyn PopupImpl>);
+    fn set_popup(&mut self, popup: DynPopupTr);
 
     /// Get the refrence of popup.
     fn get_popup_ref(&self) -> Option<&dyn PopupImpl>;

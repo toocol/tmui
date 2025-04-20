@@ -29,13 +29,13 @@ const DATA_SIZE: u32 = 30;
 #[async_task(name = "BuildSortTreeTask", value = "Box<TreeNode>")]
 pub struct TreeViewHolder {
     #[children]
-    tree_view: Box<TreeView>,
+    tree_view: Tr<TreeView>,
 
     #[children]
-    tree_view_2: Box<TreeView>,
+    tree_view_2: Tr<TreeView>,
 
     #[children]
-    tree_view_3: Box<TreeView>,
+    tree_view_3: Tr<TreeView>,
 
     tooltip_timer: Rc<Timer>,
 }
@@ -51,7 +51,7 @@ impl ObjectImpl for TreeViewHolder {
 
         self.tree_view
             .set_layout_mode(tmui::scroll_area::LayoutMode::Overlay);
-        self.tree_view.add_popup(CtxMenu::new());
+        self.tree_view.add_popup(CtxMenu::new().to_dyn_popup_tr());
         self.tree_view.start_loading();
         self.tree_view.set_hexpand(true);
         self.tree_view.set_vexpand(true);
@@ -348,8 +348,8 @@ impl WidgetImpl for TreeViewHolder {}
 
 impl TreeViewHolder {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

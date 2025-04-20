@@ -621,56 +621,29 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn get_raw_child(&self) -> Option<*const dyn WidgetImpl> {
-        let mut child = self
+        let child = self
             .widget_props()
             .child
             .as_ref()
-            .map(|c| c.as_ref().as_ptr());
-
-        if child.is_none() {
-            unsafe {
-                child = match self.widget_props().child_ref {
-                    Some(ref c) => Some(c.as_ref().as_ptr()),
-                    None => None,
-                }
-            }
-        }
+            .map(|c| c.bind().as_ptr());
 
         child
     }
 
     #[inline]
     fn get_raw_child_mut(&mut self) -> Option<*mut dyn WidgetImpl> {
-        let mut child = self
+        let child = self
             .widget_props_mut()
             .child
             .as_mut()
-            .map(|c| c.as_mut().as_ptr_mut());
-
-        if child.is_none() {
-            unsafe {
-                child = match self.widget_props_mut().child_ref {
-                    Some(ref mut c) => Some(c.as_mut().as_ptr_mut()),
-                    None => None,
-                }
-            }
-        }
+            .map(|c| c.bind_mut().as_ptr_mut());
 
         child
     }
 
     #[inline]
     fn get_child_ref(&self) -> Option<&dyn WidgetImpl> {
-        let mut child = self.widget_props().child.as_ref().map(|c| c.as_ref());
-
-        if child.is_none() {
-            unsafe {
-                child = match self.widget_props().child_ref {
-                    Some(ref c) => Some(c.as_ref()),
-                    None => None,
-                }
-            }
-        }
+        let child = self.widget_props().child.as_ref().map(|c| c.bind());
 
         child
     }
@@ -678,16 +651,7 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn get_child_mut(&mut self) -> Option<&mut dyn WidgetImpl> {
         let props = self.widget_props_mut();
-        let mut child = props.child.as_mut().map(|c| c.as_mut());
-
-        if child.is_none() {
-            unsafe {
-                child = match props.child_ref {
-                    Some(ref mut c) => Some(c.as_mut()),
-                    None => None,
-                }
-            }
-        }
+        let child = props.child.as_mut().map(|c| c.bind_mut());
 
         child
     }

@@ -1,7 +1,8 @@
 mod skia_paint;
 use skia_paint::SkiaPaint;
 use tmui::{
-    application::Application, application_window::ApplicationWindow, tlib::Object, widget::ChildOp,
+    application::Application, application_window::ApplicationWindow, prelude::TrAlloc,
+    widget::ChildOp,
 };
 
 fn main() {
@@ -19,6 +20,6 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let w: Box<SkiaPaint> = Object::new(&[]);
+    let w = SkiaPaint::new_alloc();
     window.child(w)
 }

@@ -1,4 +1,5 @@
 use crate::{
+    childable::{extract_inner_type, get_outer_type_ident_string, type_to_string_with_turbofish},
     extend_element, extend_object, extend_popup, extend_widget,
     general_attr::GeneralAttr,
     layout::LayoutType,
@@ -168,10 +169,12 @@ pub(crate) fn expand(
                     for field in fields.named.iter_mut() {
                         let mut childrenable = false;
                         let mut has_default = false;
+                        let mut ty = None;
                         for attr in field.attrs.iter() {
                             if let Some(attr_ident) = attr.path.get_ident() {
                                 if *attr_ident == "children" {
                                     childrenable = true;
+                                    ty = Some(field.ty.clone())
                                 }
                                 if *attr_ident == "derivative" {
                                     has_default = true;
@@ -180,24 +183,40 @@ pub(crate) fn expand(
                         }
 
                         if childrenable && !has_default {
-                            let mut segments = Punctuated::<syn::PathSegment, Token![::]>::new();
-                            segments.push(syn::PathSegment {
-                                ident: syn::Ident::new("derivative", field.span()),
-                                arguments: syn::PathArguments::None,
-                            });
-                            let attr = Attribute {
-                                pound_token: Pound {
-                                    spans: [field.span()],
-                                },
-                                style: syn::AttrStyle::Outer,
-                                bracket_token: syn::token::Bracket { span: field.span() },
-                                path: Path {
-                                    leading_colon: None,
-                                    segments,
-                                },
-                                tokens: quote! {(Default(value = "Object::new(&[])"))},
-                            };
-                            field.attrs.push(attr);
+                            let ty = ty.as_ref().unwrap();
+                            if &get_outer_type_ident_string(ty) != "Tr" {
+                                return Err(syn::Error::new_spanned(
+                                    field,
+                                    "Children widget must wrapped with `Tr`.",
+                                ));
+                            }
+
+                            if let Some(ty) = extract_inner_type(ty) {
+                                if let Some(ty) = type_to_string_with_turbofish(ty) {
+                                    let value_str = format!("{}::new_alloc()", ty);
+                                    let value_lit = syn::LitStr::new(&value_str, field.span());
+
+                                    let mut segments =
+                                        Punctuated::<syn::PathSegment, Token![::]>::new();
+                                    segments.push(syn::PathSegment {
+                                        ident: syn::Ident::new("derivative", field.span()),
+                                        arguments: syn::PathArguments::None,
+                                    });
+                                    let attr = Attribute {
+                                        pound_token: Pound {
+                                            spans: [field.span()],
+                                        },
+                                        style: syn::AttrStyle::Outer,
+                                        bracket_token: syn::token::Bracket { span: field.span() },
+                                        path: Path {
+                                            leading_colon: None,
+                                            segments,
+                                        },
+                                        tokens: quote! {(Default(value = #value_lit))},
+                                    };
+                                    field.attrs.push(attr);
+                                }
+                            }
                         }
                     }
                 }
@@ -320,7 +339,7 @@ pub(crate) fn expand(
                 let children_fields = children_fields.unwrap();
                 quote!(
                     #(
-                        self.container.children_ref.push(std::ptr::NonNull::new(self.#children_fields.as_mut()));
+                        self.container.children.push(self.#children_fields.to_dyn_tr());
                     )*
                 )
             } else {

@@ -42,7 +42,7 @@ impl DropdownListSignals for DropdownList {}
 )]
 pub struct DropdownList {
     #[child]
-    list: Box<ListView>,
+    list: Tr<ListView>,
 }
 
 #[cfg(not(win_select))]
@@ -50,7 +50,7 @@ pub struct DropdownList {
 #[derive(Childable)]
 pub struct DropdownList {
     #[child]
-    list: Box<ListView>,
+    list: Tr<ListView>,
 }
 
 impl ObjectSubclass for DropdownList {
@@ -98,7 +98,8 @@ impl ObjectImpl for DropdownList {
 impl WidgetImpl for DropdownList {
     #[inline]
     fn font_changed(&mut self) {
-        self.list.set_font(self.font().clone())
+        let font = self.font().clone();
+        self.list.set_font(font)
     }
 }
 
@@ -129,8 +130,8 @@ fn popup_position_calculate(widget: &dyn WidgetImpl, base_rect: Rect, _: Point) 
 impl DropdownList {
     #[cfg(not(win_select))]
     #[inline]
-    pub(crate) fn new() -> Box<Self> {
-        Object::new(&[])
+    pub(crate) fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

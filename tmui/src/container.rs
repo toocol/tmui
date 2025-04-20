@@ -5,7 +5,7 @@ use crate::{
 };
 use tlib::{
     namespace::Orientation,
-    nonnull_mut, nonnull_ref,
+    nonnull_ref,
     object::{ObjectImpl, ObjectSubclass},
     skia_safe::region::RegionOp,
 };
@@ -23,8 +23,7 @@ pub enum ContainerLayoutEnum {
 
 #[extends(Widget)]
 pub struct Container {
-    pub children: Vec<Box<dyn WidgetImpl>>,
-    pub children_ref: Vec<WidgetHnd>,
+    pub children: Vec<DynTr>,
 
     /// The container will restrictly respect childrens' `size_hint` or not.
     ///
@@ -58,10 +57,6 @@ impl ObjectImpl for Container {
                     for child in self.children.iter_mut() {
                         child.update()
                     }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        nonnull_mut!(c).update()
-                    }
                 }
             }
             "visible" => {
@@ -88,68 +83,32 @@ impl ObjectImpl for Container {
                             child.set_property("visible", false.to_value());
                         }
                     }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        let child = nonnull_mut!(c);
-                        if visible {
-                            if !child.visibility_check() {
-                                continue;
-                            }
-                            if let Some(iv) = cast!(child as IsolatedVisibility) {
-                                if iv.auto_hide() {
-                                    continue;
-                                }
-                            }
-
-                            child.set_property("visible", true.to_value());
-                            child.set_render_styles(true);
-                        } else {
-                            child.set_property("visible", false.to_value());
-                        }
-                    }
                 }
             }
             "z_index" => {
                 if !ApplicationWindow::window_of(self.window_id()).initialized() {
                     return;
                 }
-                let offset = value.get::<u32>() - self.z_index();
+                let new_zindex = value.get::<u64>() - self.z_index();
                 if !self.children.is_empty() {
                     for child in self.children.iter_mut() {
-                        child.set_z_index(child.z_index() + offset);
-                    }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        let child = nonnull_mut!(c);
-                        child.set_z_index(child.z_index() + offset);
+                        child.set_z_index(new_zindex);
                     }
                 }
             }
             "rerender_styles" => {
                 let rerender = value.get::<bool>();
-                if rerender {
-                    if !self.children.is_empty() {
-                        for child in self.children.iter_mut() {
-                            child.set_render_styles(true)
-                        }
-                    } else if !self.children_ref.is_empty() {
-                        for c in self.children_ref.iter_mut() {
-                            nonnull_mut!(c).set_render_styles(true)
-                        }
+                if rerender && !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.set_render_styles(true)
                     }
                 }
             }
             "minimized" => {
                 let minimized = value.get::<bool>();
-                if minimized {
-                    if !self.children.is_empty() {
-                        for child in self.children.iter_mut() {
-                            child.set_minimized(true)
-                        }
-                    } else if !self.children_ref.is_empty() {
-                        for c in self.children_ref.iter_mut() {
-                            nonnull_mut!(c).set_minimized(true)
-                        }
+                if minimized && !self.children.is_empty() {
+                    for child in self.children.iter_mut() {
+                        child.set_minimized(true)
                     }
                 }
             }
@@ -159,10 +118,6 @@ impl ObjectImpl for Container {
                     for child in self.children.iter_mut() {
                         child.propagate_update_rect(rect)
                     }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        nonnull_mut!(c).propagate_update_rect(rect)
-                    }
                 }
             }
             "animation_progressing" => {
@@ -171,10 +126,6 @@ impl ObjectImpl for Container {
                     for child in self.children.iter_mut() {
                         child.propagate_animation_progressing(is)
                     }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        nonnull_mut!(c).propagate_animation_progressing(is)
-                    }
                 }
             }
             "propagate_transparency" => {
@@ -182,10 +133,6 @@ impl ObjectImpl for Container {
                 if !self.children.is_empty() {
                     for child in self.children.iter_mut() {
                         child.propagate_set_transparency(transparency)
-                    }
-                } else if !self.children_ref.is_empty() {
-                    for c in self.children_ref.iter_mut() {
-                        nonnull_mut!(c).propagate_set_transparency(transparency)
                     }
                 }
             }
@@ -270,13 +217,12 @@ pub trait ContainerImpl:
 
 pub trait ContainerImplExt: ContainerImpl {
     /// Go to[`Function defination`](ContainerImplExt::add_child) (Defined in [`ContainerImplExt`])
-    fn add_child<T>(&mut self, child: Box<T>)
+    fn add_child<T>(&mut self, child: Tr<T>)
     where
         T: WidgetImpl;
 
     /// Go to[`Function defination`](ContainerImplExt::remove_children) (Defined in [`ContainerImplExt`])
     /// Remove the children with id
-    /// Children with `#[children]` annotated can't be removed.
     fn remove_children(&mut self, id: ObjectId);
 }
 

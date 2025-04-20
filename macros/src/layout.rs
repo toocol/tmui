@@ -248,8 +248,8 @@ fn gen_layout_clause(
         (false, false, false, false) => (
             quote! {
                 child.set_parent(self);
-                ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-                self.container.children.push(child);
+                self.container.children.push(child.clone().into());
+                ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
                 self.update();
             },
             quote! {
@@ -282,19 +282,15 @@ fn gen_layout_clause(
     } else {
         quote!(
             fn children(&self) -> Vec<&dyn WidgetImpl> {
-                let mut children: Vec<&dyn WidgetImpl> = self.container.children.iter().map(|c| c.as_ref()).collect();
-                #(
-                    children.push(self.#children_fields.as_ref());
-                )*
-                children
+                self.container.children.iter().map(|c| c.bind()).collect()
             }
 
             fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
-                let mut children: Vec<&mut dyn WidgetImpl> = self.container.children.iter_mut().map(|c| c.as_mut()).collect();
-                #(
-                    children.push(self.#children_fields.as_mut());
-                )*
-                children
+                self.container
+                    .children
+                    .iter_mut()
+                    .map(|c| c.bind_mut())
+                    .collect()
             }
         )
     };
@@ -335,7 +331,7 @@ fn gen_layout_clause(
 
         impl ContainerImplExt for #name {
             #[inline]
-            fn add_child<T>(&mut self, mut child: Box<T>)
+            fn add_child<T>(&mut self, mut child: Tr<T>)
             where
                 T: WidgetImpl,
             {

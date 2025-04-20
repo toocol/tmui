@@ -15,7 +15,7 @@ const DEFAULT_BACKGROUND_HOVER: Color = Color::grey_with(225);
 #[derive(Childable)]
 pub struct Button {
     #[child]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 impl ObjectSubclass for Button {
@@ -52,8 +52,8 @@ impl WidgetImpl for Button {
 
 impl Button {
     #[inline]
-    pub fn new(text: Option<&str>) -> Box<Self> {
-        let mut button: Box<Self> = Object::new(&[]);
+    pub fn new(text: Option<&str>) -> Tr<Self> {
+        let mut button = Self::new_alloc();
         if let Some(text) = text {
             button.label.set_text(text);
         }

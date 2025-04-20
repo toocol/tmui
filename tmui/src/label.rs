@@ -6,9 +6,12 @@ use crate::{
 };
 use log::debug;
 use tlib::{
-    emit, object::{ObjectImpl, ObjectSubclass}, run_after, signals, skia_safe::textlayout::{
+    emit,
+    object::{ObjectImpl, ObjectSubclass},
+    run_after, signals,
+    skia_safe::textlayout::{
         FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-    }
+    },
 };
 
 #[extends(Widget)]
@@ -189,8 +192,8 @@ impl WidgetImpl for Label {
 
 impl Label {
     #[inline]
-    pub fn new(text: Option<&str>) -> Box<Self> {
-        let mut label: Box<Self> = Object::new(&[]);
+    pub fn new(text: Option<&str>) -> Tr<Self> {
+        let mut label = Self::new_alloc();
         if let Some(text) = text {
             label.label = text.to_string();
         }

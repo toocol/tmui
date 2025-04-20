@@ -1,4 +1,6 @@
-use super::{ctrl::RadioControl, Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle};
+use super::{
+    ctrl::RadioControl, Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle,
+};
 use crate::{
     input_ele_impl,
     prelude::*,
@@ -55,8 +57,8 @@ impl<T: InputBounds> Input for Radio<T> {
 
 impl<T: InputBounds> Radio<T> {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

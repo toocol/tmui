@@ -14,13 +14,13 @@ use crate::{
 #[derive(Childrenable)]
 pub struct RemoveWidget {
     #[children]
-    top: Box<HBox>,
+    top: Tr<HBox>,
     #[children]
-    bottom: Box<HBox>,
+    bottom: Tr<HBox>,
     #[children]
-    stack: Box<StackWidget>,
+    stack: Tr<StackWidget>,
     #[children]
-    split_pane: Box<SplitPaneLayout>,
+    split_pane: Tr<SplitPaneLayout>,
 
     to_remove: ObjectId,
     widget_id: ObjectId,
@@ -119,8 +119,8 @@ impl WidgetImpl for RemoveWidget {}
 
 impl RemoveWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     pub fn remove_left_pressed(&mut self, _: MouseEvent) {

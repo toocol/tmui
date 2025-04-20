@@ -10,31 +10,31 @@ use tmui::{
 pub struct FontIcons {
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f007}')"))]
-    icon1: Box<FontIcon>,
+    icon1: Tr<FontIcon>,
 
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f118}')"))]
-    icon2: Box<FontIcon>,
+    icon2: Tr<FontIcon>,
 
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f2b9}')"))]
-    icon3: Box<FontIcon>,
+    icon3: Tr<FontIcon>,
 
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f0f8}')"))]
-    icon4: Box<FontIcon>,
+    icon4: Tr<FontIcon>,
 
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f247}')"))]
-    icon5: Box<FontIcon>,
+    icon5: Tr<FontIcon>,
 
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f25b}')"))]
-    icon6: Box<FontIcon>,
+    icon6: Tr<FontIcon>,
 
     #[children]
     #[derivative(Default(value = "FontIcon::new('\u{f58b}')"))]
-    icon7: Box<FontIcon>,
+    icon7: Tr<FontIcon>,
 }
 
 impl ObjectSubclass for FontIcons {

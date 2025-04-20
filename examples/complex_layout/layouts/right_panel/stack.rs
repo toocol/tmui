@@ -1,15 +1,18 @@
 use tmui::{
-    label::Label, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl
+    label::Label,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 #[extends(Widget, Layout(Stack))]
 #[derive(Childrenable)]
 pub struct MyStack {
     #[children]
-    label_1: Box<Label>,
+    label_1: Tr<Label>,
 
     #[children]
-    label_2: Box<Label>,
+    label_2: Tr<Label>,
 }
 
 impl ObjectSubclass for MyStack {

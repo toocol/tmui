@@ -14,15 +14,14 @@ pub struct Tr<R: WidgetImpl> {
 
 impl<R: WidgetImpl> Tr<R> {
     #[inline]
-    pub(crate) fn from_raw(raw: *mut R) -> Tr<R> {
-        Self {
-            raw,
-            ref_count: Rc::new(Cell::new(1)),
-        }
+    pub(crate) fn from_raw(raw: *mut R, ref_count: Rc<Cell<i32>>) -> Tr<R> {
+        Self { raw, ref_count }
     }
 
     #[inline]
     pub(crate) fn new_directly(raw: *mut R, ref_count: Rc<Cell<i32>>) -> Tr<R> {
+        ref_count.set(ref_count.get() + 1);
+
         Self { raw, ref_count }
     }
 
@@ -110,6 +109,20 @@ impl<R: WidgetImpl> Deref for Tr<R> {
 impl<R: WidgetImpl> DerefMut for Tr<R> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
+        self.bind_mut()
+    }
+}
+
+impl<R: WidgetImpl> AsRef<R> for Tr<R> {
+    #[inline]
+    fn as_ref(&self) -> &R {
+        self.bind()
+    }
+}
+
+impl<R: WidgetImpl> AsMut<R> for Tr<R> {
+    #[inline]
+    fn as_mut(&mut self) -> &mut R {
         self.bind_mut()
     }
 }

@@ -1,7 +1,6 @@
 mod scroll_window;
 
 use scroll_window::ScrollWindow;
-use tlib::Object;
 use tmui::{
     application::Application, application_window::ApplicationWindow, prelude::*, widget::ChildOp,
 };
@@ -21,7 +20,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut scroll_window: Box<ScrollWindow> = Object::new(&[]);
+    let mut scroll_window = ScrollWindow::new_alloc();
     // scroll_window.width_request(400);
     // scroll_window.height_request(300);
     scroll_window.set_hexpand(true);

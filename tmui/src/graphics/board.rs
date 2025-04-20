@@ -1,6 +1,6 @@
 use super::{
     drawing_context::DrawingContext,
-    element::{ElementImpl, HierachyZ},
+    element::{ElementImpl, HierachyZ, RenderOrder},
 };
 use crate::{
     backend::Backend,
@@ -100,7 +100,7 @@ impl Board {
             let b_z_index = b.z_index();
 
             if a_z_index == b_z_index {
-                a.id().cmp(&b.id())
+                a.get_render_order().cmp(&b.get_render_order())
             } else {
                 a_z_index.cmp(&b_z_index)
             }

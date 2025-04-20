@@ -12,7 +12,7 @@ use crate::{
 pub struct Overlay {}
 
 impl Overlay {
-    pub fn add_overlay<T, P>(&mut self, mut child: Box<T>, point: P)
+    pub fn add_overlay<T, P>(&mut self, mut child: Tr<T>, point: P)
     where
         T: WidgetImpl,
         P: Into<Point>,
@@ -22,9 +22,8 @@ impl Overlay {
         child.set_fixed_x(point.x());
         child.set_fixed_y(point.y());
 
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-
-        self.container.children.push(child);
+        self.container.children.push(child.clone().into());
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
         self.update();
     }
 }
@@ -39,14 +38,14 @@ impl WidgetImpl for Overlay {}
 
 impl ContainerImpl for Overlay {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.container.children.iter().map(|c| c.as_ref()).collect()
+        self.container.children.iter().map(|c| c.bind()).collect()
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
         self.container
             .children
             .iter_mut()
-            .map(|c| c.as_mut())
+            .map(|c| c.bind_mut())
             .collect()
     }
 
@@ -56,7 +55,7 @@ impl ContainerImpl for Overlay {
 }
 
 impl ContainerImplExt for Overlay {
-    fn add_child<T>(&mut self, _child: Box<T>)
+    fn add_child<T>(&mut self, _child: Tr<T>)
     where
         T: WidgetImpl,
     {

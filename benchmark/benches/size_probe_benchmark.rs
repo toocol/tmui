@@ -46,7 +46,7 @@ impl ObjectImpl for TestWidget {}
 impl WidgetImpl for TestWidget {}
 
 impl TestWidget {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

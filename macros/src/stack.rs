@@ -9,8 +9,8 @@ pub(crate) fn generate_stack_add_child() -> syn::Result<proc_macro2::TokenStream
         } else {
             child.hide()
         }
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-        self.container.children.push(child);
+        self.container.children.push(child.clone().into());
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
         self.update();
     })
 }

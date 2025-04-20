@@ -10,10 +10,10 @@ use super::{ActivityBar, WorkspacePanel};
 #[derive(Childrenable)]
 pub struct LeftPanel {
     #[children]
-    activity_bar: Box<ActivityBar>,
+    activity_bar: Tr<ActivityBar>,
 
     #[children]
-    workspace_panel: Box<WorkspacePanel>,
+    workspace_panel: Tr<WorkspacePanel>,
 }
 
 impl ObjectSubclass for LeftPanel {

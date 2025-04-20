@@ -64,14 +64,14 @@ impl WidgetImpl for Stack {}
 
 impl ContainerImpl for Stack {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.container.children.iter().map(|c| c.as_ref()).collect()
+        self.container.children.iter().map(|c| c.bind()).collect()
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
         self.container
             .children
             .iter_mut()
-            .map(|c| c.as_mut())
+            .map(|c| c.bind_mut())
             .collect()
     }
 
@@ -81,7 +81,7 @@ impl ContainerImpl for Stack {
 }
 
 impl ContainerImplExt for Stack {
-    fn add_child<T>(&mut self, mut child: Box<T>)
+    fn add_child<T>(&mut self, mut child: Tr<T>)
     where
         T: WidgetImpl,
     {
@@ -92,9 +92,8 @@ impl ContainerImplExt for Stack {
             child.hide()
         }
 
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-
-        self.container.children.push(child);
+        self.container.children.push(child.clone().into());
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
         self.update();
     }
 
@@ -186,7 +185,7 @@ impl StaticContainerScaleCalculate for Stack {
 
 impl Stack {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

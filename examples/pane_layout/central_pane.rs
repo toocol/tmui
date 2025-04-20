@@ -1,7 +1,8 @@
 use tmui::{
-   prelude::*,
-   tlib::object::{ObjectImpl, ObjectSubclass},
-   widget::WidgetImpl, label::Label,
+    label::Label,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 use crate::pane_layout::PaneLayout;
@@ -10,14 +11,14 @@ use crate::pane_layout::PaneLayout;
 #[derive(Childrenable)]
 pub struct CentralPane {
     #[children]
-    top_label: Box<Label>,
+    top_label: Tr<Label>,
 
     #[children]
-    pane: Box<PaneLayout>,
+    pane: Tr<PaneLayout>,
 }
 
 impl ObjectSubclass for CentralPane {
-   const NAME: &'static str = "CentralPane";
+    const NAME: &'static str = "CentralPane";
 }
 
 impl ObjectImpl for CentralPane {
@@ -39,7 +40,7 @@ impl ObjectImpl for CentralPane {
 impl WidgetImpl for CentralPane {}
 
 impl CentralPane {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

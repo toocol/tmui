@@ -4,7 +4,7 @@ use crate::{
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,
-        element::{HierachyZ, TOP_Z_INDEX},
+        element::{HierachyZ, RenderOrder, TOP_Z_INDEX},
     },
     input::{dialog::TyInputDialog, focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
@@ -19,7 +19,7 @@ use crate::{
         index_children,
         widget_inner::WidgetInnerExt,
         win_widget::{handle_win_widget_create, CrsWinMsgHnd, WinWidgetHnd},
-        IterExecutorHnd, WidgetImpl, ZIndexStep,
+        IterExecutorHnd, WidgetImpl,
     },
     window::win_builder::WindowBuilder,
 };
@@ -94,16 +94,16 @@ pub struct ApplicationWindow {
     overlaids: IntMap<ObjectId, WidgetHnd>,
     root_ancestors: Vec<ObjectId>,
     win_widgets: Vec<WinWidgetHnd>,
-    removed: Vec<Box<dyn WidgetImpl>>,
+    removed: Vec<DynTr>,
 
     #[cfg(not(win_dialog))]
-    input_dialog: Option<Box<crate::input::dialog::InputDialog>>,
+    input_dialog: Option<Tr<crate::input::dialog::InputDialog>>,
     #[cfg(win_dialog)]
-    input_dialog: Option<Box<crate::input::dialog::CorrInputDialog>>,
+    input_dialog: Option<Tr<crate::input::dialog::CorrInputDialog>>,
     #[cfg(not(win_tooltip))]
-    tooltip: Option<Box<crate::tooltip::Tooltip>>,
+    tooltip: Option<Tr<crate::tooltip::Tooltip>>,
     #[cfg(win_tooltip)]
-    tooltip: Option<Box<crate::tooltip::CorrTooltip>>,
+    tooltip: Option<Tr<crate::tooltip::CorrTooltip>>,
 }
 
 impl ObjectSubclass for ApplicationWindow {
@@ -132,11 +132,12 @@ impl ObjectImpl for ApplicationWindow {
         self.set_in_tree();
         child_initialize(self.get_child_mut(), window_id, true);
         if let Some(input_dialog) = self.input_dialog.as_mut() {
-            child_initialize(Some(input_dialog.as_mut()), window_id, true);
+            child_initialize(Some(input_dialog.as_dyn_mut()), window_id, true);
         }
         if let Some(tooltip) = self.tooltip.as_mut() {
-            child_initialize(Some(tooltip.as_mut()), window_id, true);
+            child_initialize(Some(tooltip.as_dyn_mut()), window_id, true);
         }
+        self.rebuild_render_order();
 
         self.when_size_change(self.size());
 
@@ -501,13 +502,9 @@ impl ApplicationWindow {
 
         child_initialize(Some(widget), window_id, ancestor_is_in_tree);
 
+        window.rebuild_render_order();
         window.board().shuffle();
-
-        if let Some(parent) = widget.get_parent_mut() {
-            window.layout_change(parent);
-        } else {
-            window.layout_change(widget);
-        }
+        window.layout_change(widget);
 
         if let Some(win_widget) = cast_mut!(widget as WinWidget) {
             let inner = cast!(win_widget as PopupImpl).is_none();
@@ -723,7 +720,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn _add_removed_widget(&mut self, widget: Box<dyn WidgetImpl>) {
+    pub fn _add_removed_widget(&mut self, widget: DynTr) {
         self.removed.push(widget);
     }
 
@@ -994,7 +991,7 @@ impl ApplicationWindow {
             #[cfg(win_dialog)]
             let mut input_dialog = crate::input::dialog::CorrInputDialog::new();
 
-            Self::initialize_dynamic_component(input_dialog.as_mut(), true);
+            Self::initialize_dynamic_component(input_dialog.as_dyn_mut(), true);
             self.input_dialog = Some(input_dialog);
         }
 
@@ -1019,7 +1016,7 @@ impl ApplicationWindow {
             #[cfg(win_tooltip)]
             let mut tooltip = crate::tooltip::CorrTooltip::new();
 
-            Self::initialize_dynamic_component(tooltip.as_mut(), true);
+            Self::initialize_dynamic_component(tooltip.as_dyn_mut(), true);
             self.tooltip = Some(tooltip);
         }
 
@@ -1124,6 +1121,11 @@ impl ApplicationWindow {
         let rect = self.rect_f();
         painter.clip_round_rect_global(rect, self.border_ref().border_radius, ClipOp::Intersect);
     }
+
+    pub(crate) fn rebuild_render_order(&mut self) {
+        let mut order_counter = 0;
+        assign_render_order(self, &mut order_counter);
+    }
 }
 
 /// Get window id in current ui thread.
@@ -1138,7 +1140,6 @@ fn child_initialize(
     ancestor_is_in_tree: bool,
 ) {
     let window = ApplicationWindow::window_of(window_id);
-    let type_registry = TypeRegistry::instance();
 
     let mut children: VecDeque<Option<*mut dyn WidgetImpl>> = VecDeque::new();
 
@@ -1155,15 +1156,15 @@ fn child_initialize(
             .insert(child_ref.id(), NonNull::new(child_ref));
         index_children(child_ref);
 
-        child_ref.inner_type_register(type_registry);
-        child_ref.type_register(type_registry);
-
         if let Some(pop) = cast!(child_ref as PopupImpl) {
             let supervisor = pop.supervisor();
             window.root_ancestors.push(pop.id());
             child_ref.set_z_index(supervisor.z_index() + TOP_Z_INDEX);
+
+            let mut render_order = 0;
+            assign_render_order(child_ref, &mut render_order);
         } else if let Some(parent) = child_ref.get_parent_mut() {
-            let zindex = parent.z_index() + parent.z_index_step();
+            let zindex = parent.z_index();
             child_ref.set_z_index(zindex);
         }
 
@@ -1275,5 +1276,18 @@ fn child_initialize(
                 Some(w) => w.as_mut(),
             }
         });
+    }
+}
+
+fn assign_render_order(node: &mut dyn WidgetImpl, order_counter: &mut usize) {
+    node.set_render_order(*order_counter);
+    *order_counter += 1;
+
+    if let Some(container) = cast_mut!(node as ContainerImpl) {
+        for child in container.children_mut() {
+            assign_render_order(child, order_counter);
+        }
+    } else if let Some(child) = node.get_child_mut() {
+        assign_render_order(child, order_counter);
     }
 }

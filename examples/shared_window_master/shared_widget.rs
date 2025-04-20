@@ -25,7 +25,7 @@ impl WidgetImpl for MasterSharedWidget {}
 impl SharedWidgetImpl for MasterSharedWidget {}
 
 impl MasterSharedWidget {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

@@ -9,10 +9,10 @@ use tmui::{
 #[derive(Childrenable)]
 pub struct MyBox {
     #[children]
-    content_widget: Box<Widget>,
+    content_widget: Tr<Widget>,
 
     #[children]
-    bottom_bar: Box<MyWidget>,
+    bottom_bar: Tr<MyWidget>,
 }
 
 impl ObjectSubclass for MyBox {
@@ -42,7 +42,7 @@ impl WidgetImpl for MyBox {}
 
 impl MyBox {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

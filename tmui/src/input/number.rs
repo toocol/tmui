@@ -280,8 +280,8 @@ impl TextPropsAcquire for Number {
 /// Public implement.
 impl Number {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

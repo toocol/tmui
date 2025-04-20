@@ -16,8 +16,8 @@ fn main() {
 
 fn build_ui(window: &mut ApplicationWindow) {
     let mut hbox = HBox::new();
-    let mut widget1: Box<Widget> = Object::new(&[]);
-    let mut widget2: Box<Widget> = Object::new(&[]);
+    let mut widget1 = Widget::new_alloc();
+    let mut widget2 = Widget::new_alloc();
 
     widget1.set_background(Color::CYAN);
     widget1.width_request(400);

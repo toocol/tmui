@@ -12,7 +12,7 @@ use crate::input_dialog::InputDialog;
 #[derive(Childable)]
 pub struct MyWidget {
     #[child]
-    text: Box<Text>,
+    text: Tr<Text>,
 }
 
 impl ObjectSubclass for MyWidget {
@@ -58,7 +58,7 @@ impl WidgetImpl for MyWidget {
 
 impl MyWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

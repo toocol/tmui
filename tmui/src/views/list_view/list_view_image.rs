@@ -115,8 +115,8 @@ impl WidgetImpl for ListViewImage {
 
 impl ListViewImage {
     #[inline]
-    pub(crate) fn new(scroll_bar: &mut ScrollBar) -> Box<Self> {
-        let mut img: Box<ListViewImage> = Object::new(&[]);
+    pub(crate) fn new(scroll_bar: &mut ScrollBar) -> Tr<Self> {
+        let mut img = Self::new_alloc();
         img.scroll_bar = NonNull::new(scroll_bar);
         img
     }

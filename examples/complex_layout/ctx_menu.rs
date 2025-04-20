@@ -15,7 +15,7 @@ use tmui::{
 #[derive(Childable)]
 pub struct CtxMenu {
     #[child]
-    list: Box<ListView>,
+    list: Tr<ListView>,
 }
 
 impl ObjectSubclass for CtxMenu {
@@ -75,8 +75,8 @@ impl PopupImpl for CtxMenu {
 
 impl CtxMenu {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

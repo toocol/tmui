@@ -19,13 +19,13 @@ use crate::Node;
 #[async_task(name = "BuildListTaskIII", value = "()")]
 pub struct ListViewHolder {
     #[children]
-    list_view_1: Box<ListView>,
+    list_view_1: Tr<ListView>,
 
     #[children]
-    list_view_2: Box<ListView>,
+    list_view_2: Tr<ListView>,
 
     #[children]
-    list_view_3: Box<ListView>,
+    list_view_3: Tr<ListView>,
 }
 
 impl ObjectSubclass for ListViewHolder {
@@ -75,7 +75,9 @@ impl ObjectImpl for ListViewHolder {
             println!("Node pressed, {}", node.id());
 
             if evt.mouse_button() == MouseButton::RightButton {
-                let idx = mutex.add_node(&Node { name: "New Node".to_string() });
+                let idx = mutex.add_node(&Node {
+                    name: "New Node".to_string(),
+                });
                 node.get_view().scroll_to(idx);
             }
         });
@@ -182,7 +184,7 @@ impl WidgetImpl for ListViewHolder {}
 
 impl ListViewHolder {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

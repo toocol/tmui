@@ -14,10 +14,10 @@ use crate::{font_icons::FontIcons, svg_icons::SvgIcons};
 #[iter_executor]
 pub struct Icons {
     #[children]
-    font_icons: Box<FontIcons>,
+    font_icons: Tr<FontIcons>,
 
     #[children]
-    svg_icons: Box<SvgIcons>,
+    svg_icons: Tr<SvgIcons>,
 }
 
 impl ObjectSubclass for Icons {
@@ -37,8 +37,8 @@ impl WidgetImpl for Icons {}
 
 impl Icons {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

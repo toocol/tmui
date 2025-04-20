@@ -6,13 +6,13 @@ use tmui::{label::Label, prelude::*};
 #[derive(Childrenable)]
 pub struct HBoxLayout {
     #[children]
-    label_1: Box<Label>,
+    label_1: Tr<Label>,
 
     #[children]
-    label_2: Box<Label>,
+    label_2: Tr<Label>,
 
     #[children]
-    label_3: Box<Label>,
+    label_3: Tr<Label>,
 }
 
 impl ObjectSubclass for HBoxLayout {

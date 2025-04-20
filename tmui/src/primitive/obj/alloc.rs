@@ -33,9 +33,15 @@ impl TrAllocater {
 pub trait TrAlloc<T: WidgetImpl + ObjectSubclass + Default>: ObjectOperation {
     #[inline]
     fn new_alloc() -> Tr<T> {
+        let type_registry = TypeRegistry::instance();
+
         let mut obj: Box<T> = Object::new(&[]);
-        let tr = Tr::from_raw(obj.as_mut());
-        let ref_count = tr.clone_ref_count();
+        obj.inner_type_register(type_registry);
+        obj.type_register(type_registry);
+
+        let ref_count = Rc::new(Cell::new(1));
+        let tr = Tr::from_raw(obj.as_mut(), ref_count.clone());
+
         TrAllocater::insert(obj, ref_count);
         tr
     }
@@ -47,7 +53,7 @@ pub trait TrAlloc<T: WidgetImpl + ObjectSubclass + Default>: ObjectOperation {
             if let Some((widget, ref_count)) = map.get_mut(&id) {
                 Tr::new_directly(widget.downcast_mut::<T>().unwrap(), ref_count.clone())
             } else {
-                panic!("The widget is not managed internally by `tmui`.")
+                panic!("The widget is not created by `Self::new_alloc()`.")
             }
         })
     }
@@ -59,7 +65,7 @@ pub trait TrAlloc<T: WidgetImpl + ObjectSubclass + Default>: ObjectOperation {
             if let Some((widget, ref_count)) = map.get_mut(&id) {
                 DynTr::new_directly(widget.as_mut(), ref_count.clone())
             } else {
-                panic!("The widget is not managed internally by `tmui`.")
+                panic!("The widget is not created by `Self::new_alloc()`.")
             }
         })
     }
@@ -74,12 +80,29 @@ pub trait DynTrAlloc: WidgetImpl {
             if let Some((widget, ref_count)) = map.get_mut(&id) {
                 DynTr::new_directly(widget.as_mut(), ref_count.clone())
             } else {
-                panic!("The widget is not managed internally by `tmui`.")
+                panic!("The widget is not created by `Self::new_alloc()`.")
             }
         })
     }
 }
 impl DynTrAlloc for dyn WidgetImpl {}
+
+pub trait DynPopupTrAlloc<T: PopupImpl + ObjectSubclass + Default>: PopupImpl {
+    #[inline]
+    fn to_dyn_popup_tr(&self) -> DynPopupTr {
+        let id = self.id();
+        OWNER_STORAGE.with_borrow_mut(|map| {
+            if let Some((widget, ref_count)) = map.get_mut(&id) {
+                let widget = widget.as_mut();
+                let raw = cast_mut!(widget as PopupImpl).unwrap();
+                DynPopupTr::new_directly(raw, ref_count.clone())
+            } else {
+                panic!("The widget is not created by `Self::new_alloc()`.")
+            }
+        })
+    }
+}
+impl<T: PopupImpl + ObjectSubclass + Default> DynPopupTrAlloc<T> for T {}
 
 #[cfg(test)]
 mod tests {

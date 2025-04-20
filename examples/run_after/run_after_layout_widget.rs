@@ -11,7 +11,7 @@ use tmui::{
 #[run_after]
 pub struct RunAfterLayoutWidget {
     #[children]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 impl ObjectSubclass for RunAfterLayoutWidget {
@@ -37,7 +37,7 @@ impl WidgetImpl for RunAfterLayoutWidget {
 
 impl RunAfterLayoutWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

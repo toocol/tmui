@@ -12,15 +12,15 @@ use crate::{password_bundle::PasswordBundle, text_bundle::TextBundle};
 pub struct InputDialog {
     #[children]
     #[derivative(Default(value = "TextBundle::new(\"User Name: \")"))]
-    username: Box<TextBundle>,
+    username: Tr<TextBundle>,
 
     #[children]
     #[derivative(Default(value = "PasswordBundle::new(\"Password: \")"))]
-    password: Box<PasswordBundle>,
+    password: Tr<PasswordBundle>,
 
     #[children]
     #[derivative(Default(value = "Button::new(Some(\"Submit\"))"))]
-    submit: Box<Button>,
+    submit: Tr<Button>,
 }
 
 impl ObjectSubclass for InputDialog {
@@ -76,7 +76,7 @@ impl WidgetImpl for InputDialog {}
 
 impl InputDialog {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

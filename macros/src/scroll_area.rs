@@ -20,7 +20,7 @@ pub(crate) fn generate_scroll_area_get_children() -> syn::Result<proc_macro2::To
     Ok(quote!(
         #[inline]
         fn children(&self) -> Vec<&dyn WidgetImpl> {
-            self.container.children.iter().map(|w| w.as_ref()).collect()
+            self.container.children.iter().map(|w| w.bind()).collect()
         }
 
         #[inline]
@@ -28,7 +28,7 @@ pub(crate) fn generate_scroll_area_get_children() -> syn::Result<proc_macro2::To
             self.container
                 .children
                 .iter_mut()
-                .map(|w| w.as_mut())
+                .map(|w| w.bind_mut())
                 .collect()
         }
     ))
@@ -39,7 +39,7 @@ pub(crate) fn generate_scroll_area_pre_construct() -> syn::Result<proc_macro2::T
         self.set_render_difference(true);
         self.container
             .children
-            .push(ScrollBar::new(Orientation::Vertical));
+            .push(ScrollBar::new(Orientation::Vertical).into());
 
         let use_occupy = self.layout_mode == LayoutMode::Normal;
         self.scroll_bar_mut()
@@ -60,7 +60,7 @@ pub(crate) fn generate_scroll_area_impl(name: &Ident) -> syn::Result<proc_macro2
                 if self.container.children.len() == 1 {
                     return None;
                 }
-                self.container.children.first().map(|w| w.as_ref())
+                self.container.children.first().map(|w| w.bind())
             }
 
             #[inline]
@@ -68,7 +68,7 @@ pub(crate) fn generate_scroll_area_impl(name: &Ident) -> syn::Result<proc_macro2
                 if self.container.children.len() == 1 {
                     return None;
                 }
-                self.container.children.first_mut().map(|w| w.as_mut())
+                self.container.children.first_mut().map(|w| w.bind_mut())
             }
 
             #[inline]
@@ -139,7 +139,7 @@ pub(crate) fn generate_scroll_area_impl(name: &Ident) -> syn::Result<proc_macro2
 
         impl ScrollAreaGenericExt for #name {
             #[inline]
-            fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
+            fn set_area<T: WidgetImpl>(&mut self, mut area: Tr<T>) {
                 area.set_parent(self);
                 area.set_vexpand(true);
                 area.set_hexpand(true);
@@ -149,8 +149,8 @@ pub(crate) fn generate_scroll_area_impl(name: &Ident) -> syn::Result<proc_macro2
                     connect!(self.scroll_bar_mut(), need_update(), self.area_mut().unwrap(), update());
                 }
 
-                ApplicationWindow::initialize_dynamic_component(area.as_mut(), self.is_in_tree());
-                self.container.children.insert(0, area)
+                self.container.children.insert(0, area.clone().into());
+                ApplicationWindow::initialize_dynamic_component(area.as_dyn_mut(), self.is_in_tree());
             }
 
             #[inline]

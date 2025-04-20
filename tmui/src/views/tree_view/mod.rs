@@ -104,8 +104,8 @@ impl WidgetImpl for TreeView {}
 
 impl TreeView {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

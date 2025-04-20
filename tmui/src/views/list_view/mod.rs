@@ -109,8 +109,8 @@ impl WidgetImpl for ListView {
 
 impl ListView {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     /// @return the index of added node.

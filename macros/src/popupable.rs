@@ -10,10 +10,7 @@ pub(crate) struct Popupable<'a> {
 }
 
 impl<'a> Popupable<'a> {
-    pub(crate) fn parse(
-        ast: &DeriveInput,
-        generics: SplitGenericsRef<'a>,
-    ) -> syn::Result<Self> {
+    pub(crate) fn parse(ast: &DeriveInput, generics: SplitGenericsRef<'a>) -> syn::Result<Self> {
         Ok(Self {
             name: ast.ident.clone(),
             generics,
@@ -21,7 +18,7 @@ impl<'a> Popupable<'a> {
     }
 
     pub(crate) fn popupable_field(&self) -> TokenStream {
-        quote!(popup_field: Option<Box<dyn PopupImpl>>)
+        quote!(popup_field: Option<DynPopupTr>)
     }
 
     pub(crate) fn popupable_reflect(&self) -> TokenStream {
@@ -39,19 +36,19 @@ impl<'a> Popupable<'a> {
         quote!(
             impl #impl_generics Popupable for #name #ty_generics #where_clause {
                 #[inline]
-                fn set_popup(&mut self, mut popup: Box<dyn PopupImpl>) {
+                fn set_popup(&mut self, mut popup: DynPopupTr) {
                     popup.set_supervisor(self);
                     self.popup_field = Some(popup)
                 }
 
                 #[inline]
                 fn get_popup_ref(&self) -> Option<&dyn PopupImpl> {
-                    self.popup_field.as_ref().and_then(|p| {Some(p.as_ref())})
+                    self.popup_field.as_ref().and_then(|p| {Some(p.bind())})
                 }
 
                 #[inline]
                 fn get_popup_mut(&mut self) -> Option<&mut dyn PopupImpl> {
-                    self.popup_field.as_mut().and_then(|p| {Some(p.as_mut())})
+                    self.popup_field.as_mut().and_then(|p| {Some(p.bind_mut())})
                 }
 
                 #[inline]
