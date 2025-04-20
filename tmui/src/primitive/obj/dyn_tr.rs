@@ -13,6 +13,11 @@ pub struct DynTr {
 }
 
 impl DynTr {
+    #[inline]
+    pub(crate) fn new_directly(raw: *mut dyn WidgetImpl, ref_count: Rc<Cell<i32>>) -> Self {
+        Self { raw, ref_count }
+    }
+
     /// # SAFETY
     ///
     /// Destruction of the underlying object is managed by reference counting, and exceptions should never occur.
@@ -35,6 +40,11 @@ impl DynTr {
                 .as_mut()
                 .expect("Fatal error, try to access the removed reference.")
         }
+    }
+
+    #[inline]
+    pub fn get_ref_count(&self) -> usize {
+        self.ref_count.get() as usize
     }
 }
 

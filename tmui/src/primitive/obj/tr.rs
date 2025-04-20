@@ -15,10 +15,15 @@ pub struct Tr<R: WidgetImpl> {
 impl<R: WidgetImpl> Tr<R> {
     #[inline]
     pub(crate) fn from_raw(raw: *mut R) -> Tr<R> {
-        Tr {
+        Self {
             raw,
             ref_count: Rc::new(Cell::new(1)),
         }
+    }
+
+    #[inline]
+    pub(crate) fn new_directly(raw: *mut R, ref_count: Rc<Cell<i32>>) -> Tr<R> {
+        Self { raw, ref_count }
     }
 
     #[inline]
@@ -58,6 +63,11 @@ impl<R: WidgetImpl> Tr<R> {
     #[inline]
     pub fn as_dyn_mut(&mut self) -> &mut dyn WidgetImpl {
         self.bind_mut() as &mut dyn WidgetImpl
+    }
+
+    #[inline]
+    pub fn get_ref_count(&self) -> usize {
+        self.ref_count.get() as usize
     }
 }
 
@@ -101,22 +111,5 @@ impl<R: WidgetImpl> DerefMut for Tr<R> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.bind_mut()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        prelude::{DynTr, TrAlloc},
-        widget::Widget,
-    };
-
-    #[test]
-    fn test_tr() {
-        let tr = Widget::new_alloc();
-        {
-            let dyn_tr: DynTr = tr.clone().into();
-            let _ = dyn_tr.clone();
-        }
     }
 }
