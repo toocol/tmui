@@ -502,7 +502,18 @@ impl ApplicationWindow {
 
         child_initialize(Some(widget), window_id, ancestor_is_in_tree);
 
-        window.rebuild_render_order();
+        let root_ancestor = widget.root_ancestor();
+        if root_ancestor == window.id() {
+            window.rebuild_render_order();
+        } else if root_ancestor != widget.id() {
+            if let Some(ancestor) = window.find_id_mut(root_ancestor) {
+                let mut order_counter = 0;
+                assign_render_order(ancestor, &mut order_counter);
+            } else {
+                error!("Fatal error, the ancestor of `{}` is None.", widget.name())
+            }
+        }
+
         window.board().shuffle();
         window.layout_change(widget);
 
