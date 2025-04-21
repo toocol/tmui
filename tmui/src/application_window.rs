@@ -385,12 +385,19 @@ impl ApplicationWindow {
         }
 
         // Layout changes should be based on its parent widget.
-        if let Some(parent) = widget.get_raw_parent_mut() {
+        while let Some(parent) = widget.get_raw_parent_mut() {
             let parent = unsafe { parent.as_mut().unwrap() };
             if !parent.initialized() {
                 return;
             }
+
             widget = parent;
+
+            if (widget.fixed_width() || widget.hexpand())
+                && (widget.fixed_height() || widget.vexpand())
+            {
+                break;
+            }
         }
 
         Self::layout_of(self.id()).layout_change(widget, false);
@@ -688,6 +695,10 @@ impl ApplicationWindow {
 
     #[inline]
     pub(crate) fn when_size_change(&mut self, size: Size) {
+        if size == Size::default() {
+            return;
+        }
+
         emit!(self, size_changed(size));
         Self::layout_of(self.id()).set_window_size(size);
         self.window_layout_change();
