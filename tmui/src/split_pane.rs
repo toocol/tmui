@@ -41,7 +41,7 @@ impl WidgetImpl for SplitPane {}
 impl ContainerImpl for SplitPane {
     #[inline]
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.container.children.iter().map(|c| c.as_ref()).collect()
+        self.container.children.iter().map(|c| c.bind()).collect()
     }
 
     #[inline]
@@ -49,7 +49,7 @@ impl ContainerImpl for SplitPane {
         self.container
             .children
             .iter_mut()
-            .map(|c| c.as_mut())
+            .map(|c| c.bind_mut())
             .collect()
     }
 
@@ -60,7 +60,7 @@ impl ContainerImpl for SplitPane {
 }
 
 impl ContainerImplExt for SplitPane {
-    fn add_child<T>(&mut self, mut child: Box<T>)
+    fn add_child<T>(&mut self, mut child: Tr<T>)
     where
         T: WidgetImpl,
     {
@@ -68,8 +68,7 @@ impl ContainerImplExt for SplitPane {
             panic!("Only first widget can use function `add_child()` to add, please use `split_left()`,`split_top()`,`split_right()` or `split_down()`")
         }
         child.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-        let widget_ptr: WidgetHnd = NonNull::new(child.as_mut());
+        let widget_ptr: WidgetHnd = NonNull::new(child.bind_mut());
         let mut split_info = Box::new(SplitInfo::new(
             child.id(),
             widget_ptr,
@@ -78,12 +77,20 @@ impl ContainerImplExt for SplitPane {
         ));
         self.split_infos_vec.push(NonNull::new(split_info.as_mut()));
         self.split_infos.insert(child.id(), split_info);
-        self.container.children.push(child);
+        self.container.children.push(child.clone().into());
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
         self.update();
     }
 
-    fn remove_children(&mut self, _id: ObjectId) {
-        // TODO
+    fn remove_children(&mut self, id: ObjectId) {
+        if let Some(index) = self.container.children.iter().position(|w| w.id() == id) {
+            let removed = self.container.children.remove(index);
+            self.close_pane(removed.id());
+
+            let window = ApplicationWindow::window();
+            window._add_removed_widget(removed);
+            window.layout_change(self);
+        }
     }
 }
 
@@ -153,7 +160,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_left<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
+    fn split_left<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>);
 
     /// Split new widget up.
     ///
@@ -161,7 +168,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_up<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
+    fn split_up<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>);
 
     /// Split new widget right.
     ///
@@ -169,7 +176,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_right<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
+    fn split_right<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>);
 
     /// Split new widget down.
     ///
@@ -177,7 +184,7 @@ pub trait SplitPaneExt {
     /// @param widget the new widget that split off. <br>
     ///
     /// @reutrn success or not.
-    fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>);
+    fn split_down<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>);
 
     /// **Do not call this function directly, use `remove_children()` instead.**
     ///
@@ -187,7 +194,7 @@ pub trait SplitPaneExt {
     fn close_pane(&mut self, id: ObjectId);
 
     /// Common function of split().
-    fn split<T: WidgetImpl>(&mut self, id: ObjectId, widget: Box<T>, ty: SplitType);
+    fn split<T: WidgetImpl>(&mut self, id: ObjectId, widget: Tr<T>, ty: SplitType);
 }
 
 split_pane_impl!(SplitPane);

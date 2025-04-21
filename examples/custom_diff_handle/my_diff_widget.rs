@@ -24,7 +24,7 @@ impl WidgetImpl for MyDiffWidget {}
 
 impl MyDiffWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

@@ -39,7 +39,7 @@ impl ObjectImpl for ScrollWindow {
             when_laebl_receive_wheel(MouseEvent)
         );
 
-        let mut scroll_area: Box<ScrollArea> = Object::new(&[]);
+        let mut scroll_area = ScrollArea::new_alloc();
         scroll_area.set_area(label);
         // scroll_area.width_request(400);
         // scroll_area.height_request(300);

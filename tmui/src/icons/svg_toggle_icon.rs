@@ -45,8 +45,8 @@ impl WidgetImpl for SvgToggleIcon {
 
 impl SvgToggleIcon {
     #[inline]
-    pub fn from_files(paths: &[&str]) -> Box<Self> {
-        let mut icon: Box<Self> = Object::new(&[]);
+    pub fn from_files(paths: &[&str]) -> Tr<Self> {
+        let mut icon = Self::new_alloc();
 
         let mut datas = vec![];
         for path in paths {
@@ -68,8 +68,8 @@ impl SvgToggleIcon {
     }
 
     #[inline]
-    pub fn from_bytes(data: &[&[u8]]) -> Box<Self> {
-        let mut icon: Box<Self> = Object::new(&[]);
+    pub fn from_bytes(data: &[&[u8]]) -> Tr<Self> {
+        let mut icon = Self::new_alloc();
 
         icon.build_from_datas(data);
 
@@ -126,7 +126,10 @@ impl SvgToggleIcon {
     #[inline]
     fn handle_geometry_changed(&mut self, rect: FRect) {
         let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
-        let (w2, h2) = (self.view_size.width() as f32, self.view_size.height() as f32);
+        let (w2, h2) = (
+            self.view_size.width() as f32,
+            self.view_size.height() as f32,
+        );
         self.origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
     }
 }

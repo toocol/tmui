@@ -8,13 +8,13 @@ use crate::hbox_layout::HBoxLayout;
 #[derive(Childrenable)]
 pub struct VBoxLayout {
     #[children]
-    hbox_1: Box<HBoxLayout>,
+    hbox_1: Tr<HBoxLayout>,
 
     #[children]
-    hbox_2: Box<HBoxLayout>,
+    hbox_2: Tr<HBoxLayout>,
 
     #[children]
-    hbox_3: Box<HBoxLayout>,
+    hbox_3: Tr<HBoxLayout>,
 }
 
 impl ObjectSubclass for VBoxLayout {
@@ -39,7 +39,7 @@ impl ObjectImpl for VBoxLayout {
 impl WidgetImpl for VBoxLayout {}
 
 impl VBoxLayout {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

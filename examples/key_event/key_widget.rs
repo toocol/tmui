@@ -59,8 +59,8 @@ impl WidgetImpl for KeyWidget {
 }
 
 impl KeyWidget {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     pub fn timeout(&self) {

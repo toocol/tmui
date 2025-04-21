@@ -19,14 +19,14 @@ impl ObjectImpl for ChildWidget {
         self.height_request(200);
         self.set_background(Color::GREY_LIGHT);
 
-        let mut child: Box<Widget> = Object::new(&[]);
+        let mut child = Widget::new_alloc();
         child.set_halign(Align::Center);
         child.set_valign(Align::Center);
         child.set_background(Color::YELLOW);
         child.width_request(100);
         child.height_request(100);
 
-        let mut child_c: Box<Widget> = Object::new(&[]);
+        let mut child_c = Widget::new_alloc();
         child_c.set_halign(Align::Center);
         child_c.set_valign(Align::Center);
         child_c.set_background(Color::GREEN);
@@ -42,7 +42,7 @@ impl WidgetImpl for ChildWidget {}
 
 impl ChildWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

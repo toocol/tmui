@@ -204,8 +204,8 @@ impl WidgetImpl for TreeViewImage {
 
 impl TreeViewImage {
     #[inline]
-    pub fn new(scroll_bar: &mut ScrollBar) -> Box<Self> {
-        let mut image: Box<TreeViewImage> = Object::new(&[]);
+    pub fn new(scroll_bar: &mut ScrollBar) -> Tr<Self> {
+        let mut image = Self::new_alloc();
         image.scroll_bar = NonNull::new(scroll_bar);
         image
     }

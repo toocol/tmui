@@ -373,8 +373,8 @@ impl ScrollBarSignal for ScrollBar {}
 
 impl ScrollBar {
     #[inline]
-    pub fn new(orientation: Orientation) -> Box<Self> {
-        let mut scroll_bar: Box<Self> = Object::new(&[]);
+    pub fn new(orientation: Orientation) -> Tr<Self> {
+        let mut scroll_bar: Tr<Self> = Self::new_alloc();
         scroll_bar.orientation = orientation;
         scroll_bar
     }

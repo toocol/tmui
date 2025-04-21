@@ -2,7 +2,8 @@ mod split_pane_layout;
 
 use split_pane_layout::SplitPaneLayout;
 use tmui::{
-    application::Application, application_window::ApplicationWindow, tlib::Object, widget::ChildOp,
+    application::Application, application_window::ApplicationWindow, prelude::TrAlloc,
+    widget::ChildOp,
 };
 
 fn main() {
@@ -20,7 +21,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let split_pane: Box<SplitPaneLayout> = Object::new(&[]);
+    let split_pane = SplitPaneLayout::new_alloc();
 
     window.child(split_pane);
 }

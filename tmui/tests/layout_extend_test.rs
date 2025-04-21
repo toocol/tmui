@@ -5,7 +5,7 @@ use tmui::{label::Label, platform::PlatformType, prelude::*};
 #[derive(Childrenable)]
 struct TestWidget {
     #[children]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 impl ObjectSubclass for TestWidget {
@@ -26,7 +26,7 @@ fn main() {
     ActionHub::initialize();
     let _window = ApplicationWindow::new(PlatformType::default(), 0, 0);
 
-    let widget: Box<TestWidget> = Object::new(&[]);
+    let widget = TestWidget::new_alloc();
     let children = widget.children();
     assert_eq!(1, children.len());
     let label_dyn = *children.first().unwrap();

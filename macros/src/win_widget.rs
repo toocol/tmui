@@ -593,7 +593,7 @@ impl<'a> WinWidget<'a> {
 
             token.extend(quote!(
                 Box::new(move |win| {
-                    let mut w_widget = Object::new::<#name>(&[]);
+                    let mut w_widget = #name::new_alloc();
                     w_widget.set_background(Color::WHITE);
                     #set_receiver_clause
                     #set_sender_clause
@@ -604,7 +604,7 @@ impl<'a> WinWidget<'a> {
         } else {
             quote!(
                 Box::new(|win| {
-                    win.child(Object::new::<#name>(&[]))
+                    win.child(#name::new_alloc())
                 })
             )
         };
@@ -655,8 +655,8 @@ impl<'a> WinWidget<'a> {
 
             impl #corr_name {
                 #[inline]
-                pub fn new() -> Box<Self> {
-                    let mut w: Box<#corr_name> = Object::new(&[]);
+                pub fn new() -> Tr<Self> {
+                    let mut w: Tr<#corr_name> = Self::new_alloc();
                     #channel_set_clause
                     w
                 }

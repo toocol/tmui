@@ -1,16 +1,26 @@
 pub mod dropdown_list;
 pub mod select_option;
 
-use super::{Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle, INPUT_FOCUSED_BORDER_COLOR};
-use crate::{
-    asset::Asset, font::FontCalculation, input::INPUT_DEFAULT_BORDER_COLOR, input_ele_impl, prelude::*, svg::{svg_attr::SvgAttr, svg_str::SvgStr}, tlib::object::{ObjectImpl, ObjectSubclass}, widget::{widget_inner::WidgetInnerExt, WidgetImpl}
+use super::{
+    Input, InputBounds, InputEle, InputSignals, InputWrapper, ReflectInputEle,
+    INPUT_FOCUSED_BORDER_COLOR,
 };
 #[cfg(not(win_select))]
 use crate::widget::widget_ext::FocusStrat;
-#[cfg(not(win_select))]
-use dropdown_list::{DropdownList, DropdownListSignals};
+use crate::{
+    asset::Asset,
+    font::FontCalculation,
+    input::INPUT_DEFAULT_BORDER_COLOR,
+    input_ele_impl,
+    prelude::*,
+    svg::{svg_attr::SvgAttr, svg_str::SvgStr},
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::{widget_inner::WidgetInnerExt, WidgetImpl},
+};
 #[cfg(win_select)]
 use dropdown_list::{CorrDropdownList, CorrDropdownListSignals};
+#[cfg(not(win_select))]
+use dropdown_list::{DropdownList, DropdownListSignals};
 use select_option::SelectOption;
 use tlib::{
     connect, events::MouseEvent, global::PrecisionOps, namespace::MouseButton, run_after,
@@ -62,7 +72,7 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
                 self,
                 dropdown_list_value_changed(String)
             );
-            self.add_popup(dropdown_list);
+            self.add_popup(dropdown_list.into());
         }
 
         #[cfg(win_select)]
@@ -75,7 +85,7 @@ impl<T: SelectBounds> ObjectImpl for Select<T> {
                 self,
                 dropdown_list_value_changed(String)
             );
-            self.add_popup(dropdown_list);
+            self.add_popup(dropdown_list.into());
         }
 
         let size = ARROW_SIZE as u32;
@@ -167,8 +177,8 @@ impl<T: SelectBounds> Input for Select<T> {
 
 impl<T: SelectBounds> Select<T> {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[inline]

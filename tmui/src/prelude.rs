@@ -49,6 +49,7 @@ pub use crate::primitive::close_handler::{
 pub use crate::primitive::global_watch::{
     GlobalWatch, GlobalWatchEvent, GlobalWatchImpl, ReflectGlobalWatch,
 };
+pub use crate::primitive::obj::*;
 pub use crate::scroll_area::{
     LayoutMode, ReflectScrollAreaExt, ScrollArea, ScrollAreaExt, ScrollAreaGenericExt,
     ScrollAreaSlots,

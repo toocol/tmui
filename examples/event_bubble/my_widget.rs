@@ -10,10 +10,10 @@ use crate::child_widget::ChildWidget;
 #[derive(Childrenable)]
 pub struct MyWidget {
     #[children]
-    w1: Box<ChildWidget>,
+    w1: Tr<ChildWidget>,
 
     #[children]
-    w2: Box<ChildWidget>,
+    w2: Tr<ChildWidget>,
 }
 
 impl ObjectSubclass for MyWidget {
@@ -65,7 +65,7 @@ impl WidgetImpl for MyWidget {
 
 impl MyWidget {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

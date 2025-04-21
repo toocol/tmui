@@ -13,7 +13,7 @@ use self::split_pane::MySplitPane;
 #[derive(Childrenable)]
 pub struct RightPanel {
     #[children]
-    split_pane: Box<MySplitPane>,
+    split_pane: Tr<MySplitPane>,
 }
 
 impl ObjectSubclass for RightPanel {

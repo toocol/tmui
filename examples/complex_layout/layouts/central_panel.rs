@@ -10,10 +10,10 @@ use super::{right_panel::RightPanel, LeftPanel};
 #[derive(Childrenable)]
 pub struct CentralPanel {
     #[children]
-    widget1: Box<LeftPanel>,
+    widget1: Tr<LeftPanel>,
 
     #[children]
-    widget2: Box<RightPanel>,
+    widget2: Tr<RightPanel>,
 }
 
 impl ObjectSubclass for CentralPanel {

@@ -1,5 +1,8 @@
 use tmui::{
-    icons::svg_icon::SvgIcon, prelude::*, tlib::object::{ObjectImpl, ObjectSubclass}, widget::WidgetImpl
+    icons::svg_icon::SvgIcon,
+    prelude::*,
+    tlib::object::{ObjectImpl, ObjectSubclass},
+    widget::WidgetImpl,
 };
 
 use crate::ctrl_button::CtrlButtons;
@@ -9,22 +12,22 @@ use crate::ctrl_button::CtrlButtons;
 pub struct SvgIcons {
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/search.svg\")"))]
-    icon1: Box<SvgIcon>,
+    icon1: Tr<SvgIcon>,
 
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/toggle_on.svg\")"))]
-    icon2: Box<SvgIcon>,
+    icon2: Tr<SvgIcon>,
 
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/globe_asia.svg\")"))]
-    icon3: Box<SvgIcon>,
+    icon3: Tr<SvgIcon>,
 
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/sword_rose.svg\")"))]
-    icon4: Box<SvgIcon>,
+    icon4: Tr<SvgIcon>,
 
     #[children]
-    icon5: Box<CtrlButtons>,
+    icon5: Tr<CtrlButtons>,
 }
 
 impl ObjectSubclass for SvgIcons {

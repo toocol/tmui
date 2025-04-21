@@ -114,7 +114,7 @@ impl WidgetImpl for Image {
 
 impl Image {
     #[inline]
-    pub fn new<T: AsRef<Path>>(path: T) -> Box<Self> {
+    pub fn new<T: AsRef<Path>>(path: T) -> Tr<Self> {
         let image_buf = ImageBuf::from_file(&path).unwrap_or_else(|| {
             panic!(
                 "load image file `{:?}` failed, maybe it's not exist",
@@ -122,7 +122,7 @@ impl Image {
             )
         });
 
-        let mut image: Box<Self> = Object::new(&[]);
+        let mut image = Self::new_alloc();
         image.image_buf = Some(image_buf);
         image
     }

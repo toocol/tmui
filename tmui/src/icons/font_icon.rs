@@ -89,8 +89,8 @@ impl WidgetImpl for FontIcon {
 impl FontIcon {
     #[cfg(font_awesome)]
     #[inline]
-    pub fn new(code: char) -> Box<Self> {
-        let mut icon: Box<Self> = Object::new(&[]);
+    pub fn new(code: char) -> Tr<Self> {
+        let mut icon = Self::new_alloc();
         icon.code = code;
 
         let mut font = Font::with_families(&DEFAULT_ICON_FAMILIES);
@@ -102,13 +102,13 @@ impl FontIcon {
 
     #[cfg(not(font_awesome))]
     #[inline]
-    pub fn new<T: ToString>(code: char, families: &[T]) -> Box<Self> {
+    pub fn new<T: ToString>(code: char, families: &[T]) -> Tr<Self> {
         Self::with_families(code, families)
     }
 
     #[inline]
-    pub fn with_families<T: ToString>(code: char, families: &[T]) -> Box<Self> {
-        let mut icon: Box<Self> = Object::new(&[]);
+    pub fn with_families<T: ToString>(code: char, families: &[T]) -> Tr<Self> {
+        let mut icon = Self::new_alloc();
         icon.code = code;
 
         let mut font = Font::with_families(families);

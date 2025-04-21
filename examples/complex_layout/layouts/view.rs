@@ -12,13 +12,13 @@ use super::{CentralPanel, StatusBar, TitleBar};
 #[global_watch(MouseMove, MousePressed, MouseReleased)]
 pub struct View {
     #[children]
-    title_bar: Box<TitleBar>,
+    title_bar: Tr<TitleBar>,
 
     #[children]
-    central_panel: Box<CentralPanel>,
+    central_panel: Tr<CentralPanel>,
 
     #[children]
-    status_bar: Box<StatusBar>,
+    status_bar: Tr<StatusBar>,
 
     resize_zone: bool,
     resize_pressed: bool,
@@ -40,8 +40,8 @@ impl WidgetImpl for View {}
 
 impl View {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

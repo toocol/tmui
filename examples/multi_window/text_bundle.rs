@@ -11,10 +11,10 @@ use tmui::{
 #[derive(Childrenable)]
 pub struct TextBundle {
     #[children]
-    label: Box<Label>,
+    label: Tr<Label>,
 
     #[children]
-    text: Box<Text>,
+    text: Tr<Text>,
 }
 
 impl ObjectSubclass for TextBundle {
@@ -27,8 +27,8 @@ impl WidgetImpl for TextBundle {}
 
 impl TextBundle {
     #[inline]
-    pub fn new(label: &str) -> Box<Self> {
-        let mut tb: Box<Self> = Object::new(&[]);
+    pub fn new(label: &str) -> Tr<Self> {
+        let mut tb = Self::new_alloc();
         tb.label.set_margin_top(3);
         tb.label.set_text(label);
         tb

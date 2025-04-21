@@ -22,7 +22,7 @@ use tmui::{
 #[run_after]
 pub struct RbaPopup {
     #[child]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 impl ObjectSubclass for RbaPopup {
@@ -60,7 +60,7 @@ impl PopupImpl for RbaPopup {}
 
 impl RbaPopup {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

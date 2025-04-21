@@ -239,10 +239,14 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
                 if parent_vscale.is_adaption() {
                     let ration = self.vscale().min(1.) / 1.;
-                    self.set_fixed_height((parent_size.height() as f32 * ration) as i32 - outer_ver);
+                    self.set_fixed_height(
+                        (parent_size.height() as f32 * ration) as i32 - outer_ver,
+                    );
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
-                    self.set_fixed_height((parent_size.height() as f32 * ration) as i32 - outer_ver);
+                    self.set_fixed_height(
+                        (parent_size.height() as f32 * ration) as i32 - outer_ver,
+                    );
                 }
             } else {
                 if self.detecting_height() != 0 {
@@ -290,13 +294,13 @@ impl SizeCalculation for dyn WidgetImpl {
         let visible = self.visible();
         let mut resized = false;
 
-        if (size.width() == 0 && child_size.width() != 0 && visible)
-            || (!self.hexpand() && !self.fixed_width())
+        if (size.width() == 0 && visible)
+            || (!self.hexpand() && !self.fixed_width()) && child_size.width() != 0
         {
             self.set_fixed_width(child_size.width());
         }
-        if (size.height() == 0 && child_size.height() != 0 && visible)
-            || (!self.vexpand() && !self.fixed_height())
+        if (size.height() == 0 && visible)
+            || (!self.vexpand() && !self.fixed_height()) && child_size.height() != 0
         {
             self.set_fixed_height(child_size.height());
         }
@@ -346,7 +350,7 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
 
                 if self.fixed_width_ration() <= 0. {
-                    if parent_size.width() == 0 || self.size().width() == 0{
+                    if parent_size.width() == 0 || self.size().width() == 0 {
                         self.set_fixed_width_ration(1.);
                     } else {
                         let ration = self.get_width_request() as f32 / parent_size.width() as f32;
@@ -430,10 +434,14 @@ impl SizeCalculation for dyn WidgetImpl {
                 }
                 if parent_vscale.is_adaption() {
                     let ration = self.vscale().min(1.) / 1.;
-                    self.set_fixed_height((parent_size.height() as f32 * ration) as i32 - outer_ver);
+                    self.set_fixed_height(
+                        (parent_size.height() as f32 * ration) as i32 - outer_ver,
+                    );
                 } else if !parent_vscale.is_dismiss() {
                     let ration = self.vscale() / parent_vscale;
-                    self.set_fixed_height((parent_size.height() as f32 * ration) as i32 - outer_ver);
+                    self.set_fixed_height(
+                        (parent_size.height() as f32 * ration) as i32 - outer_ver,
+                    );
                 }
             } else {
                 if self.detecting_height() != 0 {
@@ -670,7 +678,8 @@ impl LayoutMgr {
             let visual_image_size = widget.visual_image_rect().size();
             let size: Size = visual_image_size.floor().into();
             let window = ApplicationWindow::window();
-            if window.initialized() && widget.visible()
+            if window.initialized()
+                && widget.visible()
                 && cast!(widget as CrossWinWidget).is_some()
                 && size != window_size
             {
@@ -814,8 +823,7 @@ impl LayoutMgr {
         match valign {
             Align::Start => widget.set_fixed_y(parent_rect.y() + widget.outer_top()),
             Align::Center => {
-                let offset =
-                    (parent_rect.height() - widget_rect.height()) / 2 + widget.outer_top();
+                let offset = (parent_rect.height() - widget_rect.height()) / 2 + widget.outer_top();
                 widget.set_fixed_y(parent_rect.y() + offset)
             }
             Align::End => {

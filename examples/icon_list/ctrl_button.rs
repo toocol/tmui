@@ -10,17 +10,17 @@ use tmui::{
 pub struct CtrlButtons {
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/minimize.svg\")"))]
-    minimize: Box<SvgIcon>,
+    minimize: Tr<SvgIcon>,
 
     #[children]
     #[derivative(Default(
         value = "SvgToggleIcon::from_files(&[\"examples/resources/restore.svg\",\"examples/resources/large.svg\"])"
     ))]
-    maximize_restore: Box<SvgToggleIcon>,
+    maximize_restore: Tr<SvgToggleIcon>,
 
     #[children]
     #[derivative(Default(value = "SvgIcon::from_file(\"examples/resources/close.svg\")"))]
-    close: Box<SvgIcon>,
+    close: Tr<SvgIcon>,
 }
 
 impl ObjectSubclass for CtrlButtons {

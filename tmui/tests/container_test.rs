@@ -15,7 +15,7 @@ pub struct TestContainer {
     #[derivative(Default(value = "99"))]
     _num: i32,
     #[children]
-    _label: Box<Label>,
+    _label: Tr<Label>,
 }
 
 impl ObjectSubclass for TestContainer {
@@ -28,14 +28,14 @@ impl WidgetImpl for TestContainer {}
 
 impl ContainerImpl for TestContainer {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.container.children.iter().map(|c| c.as_ref()).collect()
+        self.container.children.iter().map(|c| c.bind()).collect()
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
         self.container
             .children
             .iter_mut()
-            .map(|c| c.as_mut())
+            .map(|c| c.bind_mut())
             .collect()
     }
 
@@ -45,11 +45,11 @@ impl ContainerImpl for TestContainer {
 }
 
 impl ContainerImplExt for TestContainer {
-    fn add_child<T>(&mut self, child: Box<T>)
+    fn add_child<T>(&mut self, child: Tr<T>)
     where
         T: WidgetImpl,
     {
-        self.container.children.push(child)
+        self.container.children.push(child.into())
     }
 
     fn remove_children(&mut self, _: ObjectId) {}
@@ -77,11 +77,10 @@ impl ContainerScaleCalculate for TestContainer {
 fn main() {
     ActionHub::initialize();
     let r = TypeRegistry::instance();
-    let mut c = Object::new::<TestContainer>(&[]);
+    let mut c = TestContainer::new_alloc();
     c.inner_type_register(r);
-    cast_test(c.as_ref());
-    cast_mut_test(c.as_mut());
-    cast_boxed_test(c);
+    cast_test(c.bind());
+    cast_mut_test(c.bind_mut());
 }
 
 fn cast_test(widget: &dyn WidgetImpl) {
@@ -95,14 +94,6 @@ fn cast_test(widget: &dyn WidgetImpl) {
 fn cast_mut_test(widget: &mut dyn WidgetImpl) {
     let mut c = false;
     if let Some(_) = cast_mut!(widget as ContainerImpl) {
-        c = true;
-    }
-    assert!(c);
-}
-
-fn cast_boxed_test(widget: Box<dyn WidgetImpl>) {
-    let mut c = false;
-    if let Some(_) = cast_boxed!(widget as ContainerImpl) {
         c = true;
     }
     assert!(c);

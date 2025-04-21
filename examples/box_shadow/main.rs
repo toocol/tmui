@@ -18,7 +18,7 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
-    let mut widget: Box<Widget> = Object::new(&[]);
+    let mut widget = Widget::new_alloc();
     widget.width_request(400);
     widget.height_request(200);
     widget.set_hexpand(true);

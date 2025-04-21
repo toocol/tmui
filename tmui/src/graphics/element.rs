@@ -253,16 +253,16 @@ pub trait ElementAcquire: ElementImpl + Default {}
 
 /// The hierarchy of widget on the z-axis, the higher the numerical value,
 /// the higher the widget position
-pub(crate) const TOP_Z_INDEX: u32 = 100000000;
-pub(crate) trait HierachyZ {
-    fn z_index(&self) -> u32;
+pub(crate) const TOP_Z_INDEX: u64 = 1000000000000;
+pub trait HierachyZ {
+    fn z_index(&self) -> u64;
 
-    fn set_z_index(&mut self, z_index: u32);
+    fn set_z_index(&mut self, z_index: u64);
 }
 macro_rules! hierarchy_z_impl {
     () => {
         #[inline]
-        fn z_index(&self) -> u32 {
+        fn z_index(&self) -> u64 {
             match self.get_property("z_index") {
                 Some(val) => val.get(),
                 None => 0,
@@ -270,7 +270,7 @@ macro_rules! hierarchy_z_impl {
         }
 
         #[inline]
-        fn set_z_index(&mut self, z_index: u32) {
+        fn set_z_index(&mut self, z_index: u64) {
             self.set_property("z_index", z_index.to_value())
         }
     };
@@ -283,6 +283,37 @@ impl HierachyZ for dyn ElementImpl {
 }
 impl HierachyZ for dyn WidgetImpl {
     hierarchy_z_impl!();
+}
+
+pub(crate) trait RenderOrder {
+    fn get_render_order(&self) -> usize;
+
+    fn set_render_order(&mut self, render_order: usize);
+}
+macro_rules! render_order_impl {
+    () => {
+        #[inline]
+        fn get_render_order(&self) -> usize {
+            match self.get_property("render_order") {
+                Some(val) => val.get(),
+                None => 0,
+            }
+        }
+
+        #[inline]
+        fn set_render_order(&mut self, order: usize) {
+            self.set_property("render_order", order.to_value())
+        }
+    };
+}
+impl<T: ElementImpl> RenderOrder for T {
+    render_order_impl!();
+}
+impl RenderOrder for dyn ElementImpl {
+    render_order_impl!();
+}
+impl RenderOrder for dyn WidgetImpl {
+    render_order_impl!();
 }
 
 #[cfg(test)]

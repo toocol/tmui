@@ -46,8 +46,7 @@ pub type WidgetHnd = Option<NonNull<dyn WidgetImpl>>;
 pub struct Widget {
     parent: WidgetHnd,
 
-    child: Option<Box<dyn WidgetImpl>>,
-    child_ref: WidgetHnd,
+    child: Option<DynTr>,
     children_index: IntSet<ObjectId>,
 
     old_rect: FRect,
@@ -287,7 +286,7 @@ impl WidgetSignals for dyn WidgetImpl {}
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl Widget {
     #[inline]
-    pub fn _child_internal<T>(&mut self, mut child: Box<T>)
+    pub fn _child_internal<T>(&mut self, mut child: Tr<T>)
     where
         T: WidgetImpl,
     {
@@ -295,22 +294,9 @@ impl Widget {
             panic!("Do not call `child_internal()` directly, use `child()` instead.")
         }
 
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
+        self.child = Some(child.clone().into());
 
-        self.child = Some(child);
-        self.child_ref = None;
-    }
-
-    #[inline]
-    pub fn _child_ref_internal(&mut self, child: &mut dyn WidgetImpl) {
-        if child.get_parent_ref().is_none() {
-            panic!("Do not call `child_internal()` directly, use `child()` instead.")
-        }
-
-        ApplicationWindow::initialize_dynamic_component(child, self.is_in_tree());
-
-        self.child = None;
-        self.child_ref = NonNull::new(child);
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
     }
 
     #[inline]
@@ -354,9 +340,9 @@ impl Widget {
 
     /// Notify the child to change the zindex.
     #[inline]
-    fn notify_zindex(&mut self, offset: u32) {
+    fn notify_zindex(&mut self, new_zindex: u64) {
         if let Some(child) = self.get_child_mut() {
-            child.set_z_index(child.z_index() + offset);
+            child.set_z_index(new_zindex);
         }
     }
 
@@ -453,8 +439,8 @@ impl ObjectImpl for Widget {
                 if !ApplicationWindow::window_of(self.window_id()).initialized() {
                     return;
                 }
-                let new_z_index = value.get::<u32>();
-                self.notify_zindex(new_z_index - self.z_index());
+                let new_z_index = value.get::<u64>();
+                self.notify_zindex(new_z_index);
             }
             "rerender_styles" => {
                 let rerender = value.get::<bool>();
@@ -1488,22 +1474,6 @@ impl dyn WidgetImpl {
             None
         }
     }
-
-    #[inline]
-    pub fn downcast<T: StaticType + 'static>(self: Box<Self>) -> Option<Box<T>> {
-        let require = self.object_type().name();
-        match self.as_any_boxed().downcast::<T>() {
-            Ok(v) => Some(v),
-            _ => {
-                error!(
-                    "Downcast widget type mismatched, require {}, get {}",
-                    require,
-                    T::static_type().name()
-                );
-                None
-            }
-        }
-    }
 }
 
 impl AsMutPtr for dyn WidgetImpl {}
@@ -1511,39 +1481,21 @@ impl AsMutPtr for dyn WidgetImpl {}
 pub trait ChildOp: WidgetImpl {
     /// @see [`Widget::_child_internal`](Widget::_child_internal) <br>
     /// Go to[`Function defination`](ChildOp::child) (Defined in [`ChildOp`])
-    fn child<T: WidgetImpl>(&mut self, child: Box<T>);
-
-    /// # Safety
-    /// Do not call this function directly, this crate will handle the lifetime of child widget automatically.
-    ///
-    /// @see [`Widget::_child_ref_internal`](Widget::_child_ref_internal) <br>
-    /// Go to[`Function defination`](ChildOp::_child_ref) (Defined in [`ChildOp`])
-    unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl);
+    fn child<T: WidgetImpl>(&mut self, child: Tr<T>);
 
     /// @see [`Widget::_remove_child_internal`](Widget::_remove_child_internal) <br>
     /// Go to[`Function defination`](ChildOp::child) (Defined in [`ChildOp`])
     /// Remove current child.
-    /// Child with `#[child]` annotated can't be removed.
     fn remove_child(&mut self);
 }
 impl ChildOp for Widget {
     #[inline]
-    fn child<_T: WidgetImpl>(&mut self, mut child: Box<_T>) {
+    fn child<_T: WidgetImpl>(&mut self, mut child: Tr<_T>) {
         if self.super_type().is_a(Container::static_type()) {
             panic!("function `child()` was invalid in `Container`, use `add_child()` instead")
         }
         child.set_parent(self);
         self._child_internal(child)
-    }
-
-    #[inline]
-    unsafe fn _child_ref(&mut self, child: *mut dyn WidgetImpl) {
-        if self.super_type().is_a(Container::static_type()) {
-            panic!("function `_child_ref()` was invalid in `Container`")
-        }
-        let child_mut = tlib::ptr_mut!(child);
-        child_mut.set_parent(self);
-        self._child_ref_internal(child_mut)
     }
 
     #[inline]
@@ -1578,32 +1530,6 @@ impl Layout for Widget {
     fn position_layout(&mut self, parent: Option<&dyn WidgetImpl>) {
         LayoutMgr::base_widget_position_layout(self, parent)
     }
-}
-
-////////////////////////////////////// ZInddexStep //////////////////////////////////////
-pub(crate) trait ZIndexStep {
-    /// Get current widget's z-index step, starts from 1, `auto-increacement`.
-    fn z_index_step(&mut self) -> u32;
-}
-macro_rules! z_index_step_impl {
-    () => {
-        #[inline]
-        fn z_index_step(&mut self) -> u32 {
-            let step = match self.get_property("z_index_step") {
-                Some(val) => val.get(),
-                None => 1,
-            };
-            self.set_property("z_index_step", (step + 1).to_value());
-            step
-        }
-    };
-}
-impl<T: WidgetImpl> ZIndexStep for T {
-    z_index_step_impl!();
-}
-
-impl ZIndexStep for dyn WidgetImpl {
-    z_index_step_impl!();
 }
 
 ////////////////////////////////////// ScaleCalculate //////////////////////////////////////

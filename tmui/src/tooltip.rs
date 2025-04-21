@@ -12,7 +12,7 @@ use tlib::figure::OptionSize;
 #[derive(Childable)]
 pub struct Tooltip {
     #[child]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 #[cfg(win_tooltip)]
@@ -27,7 +27,7 @@ pub enum TooltipCrsMsg {
 #[tlib::win_widget(TooltipCrsMsg)]
 pub struct Tooltip {
     #[child]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 #[cfg(win_tooltip)]
@@ -119,8 +119,8 @@ impl Tooltip {
 #[cfg(not(win_tooltip))]
 impl Tooltip {
     #[inline]
-    pub(crate) fn new() -> Box<Self> {
-        Object::new(&[])
+    pub(crate) fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

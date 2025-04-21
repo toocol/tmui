@@ -9,7 +9,7 @@ use tmui::{
 #[derive(Childable)]
 pub struct ChildAttrWidget {
     #[child]
-    label: Box<Label>,
+    label: Tr<Label>,
 }
 
 impl ObjectSubclass for ChildAttrWidget {
@@ -28,7 +28,7 @@ impl ObjectImpl for ChildAttrWidget {
 impl WidgetImpl for ChildAttrWidget {}
 
 impl ChildAttrWidget {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }

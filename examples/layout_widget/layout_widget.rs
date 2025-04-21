@@ -12,7 +12,7 @@ const TEXT: [&str; 4] = ["Hello", "World", "Hello", "You"];
 #[derive(Childrenable)]
 pub struct LayoutWidget {
     #[children]
-    label: Box<Label>,
+    label: Tr<Label>,
 
     timer: Timer,
     idx: usize,
@@ -50,7 +50,12 @@ impl ObjectImpl for LayoutWidget {
         self.width_request(500);
         self.height_request(300);
 
-        connect!(self.label, text_changed(), self, text_changed(String, String));
+        connect!(
+            self.label,
+            text_changed(),
+            self,
+            text_changed(String, String)
+        );
         connect!(self.timer, timeout(), self, change_text());
         self.timer.start(Duration::from_millis(10));
     }
@@ -59,8 +64,8 @@ impl ObjectImpl for LayoutWidget {
 impl WidgetImpl for LayoutWidget {}
 
 impl LayoutWidget {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     pub fn text_changed(&self, old: String, new: String) {

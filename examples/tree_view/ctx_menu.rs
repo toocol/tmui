@@ -19,7 +19,7 @@ use crate::tree_view_holder::SimpContent;
 #[run_after]
 pub struct CtxMenu {
     #[child]
-    selection_list: Box<TreeView>,
+    selection_list: Tr<TreeView>,
 }
 
 impl ObjectSubclass for CtxMenu {
@@ -105,8 +105,8 @@ impl PopupImpl for CtxMenu {
 
 impl CtxMenu {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

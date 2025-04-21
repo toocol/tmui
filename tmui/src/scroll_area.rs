@@ -62,7 +62,7 @@ pub trait ScrollAreaExt: WidgetImpl {
 }
 
 pub trait ScrollAreaGenericExt {
-    fn set_area<T: WidgetImpl>(&mut self, area: Box<T>);
+    fn set_area<T: WidgetImpl>(&mut self, area: Tr<T>);
 
     fn get_area_cast<T: WidgetImpl + ObjectSubclass>(&self) -> Option<&T>;
 
@@ -112,7 +112,7 @@ impl ScrollAreaExt for ScrollArea {
         if self.container.children.len() == 1 {
             return None;
         }
-        self.container.children.first().map(|w| w.as_ref())
+        self.container.children.first().map(|w| w.bind())
     }
 
     #[inline]
@@ -120,7 +120,7 @@ impl ScrollAreaExt for ScrollArea {
         if self.container.children.len() == 1 {
             return None;
         }
-        self.container.children.first_mut().map(|w| w.as_mut())
+        self.container.children.first_mut().map(|w| w.bind_mut())
     }
 
     #[inline]
@@ -221,7 +221,7 @@ impl ScrollAreaExt for ScrollArea {
 
 impl ScrollAreaGenericExt for ScrollArea {
     #[inline]
-    fn set_area<T: WidgetImpl>(&mut self, mut area: Box<T>) {
+    fn set_area<T: WidgetImpl>(&mut self, mut area: Tr<T>) {
         area.set_parent(self);
         area.set_vexpand(true);
         area.set_hexpand(true);
@@ -235,8 +235,8 @@ impl ScrollAreaGenericExt for ScrollArea {
             );
         }
 
-        ApplicationWindow::initialize_dynamic_component(area.as_mut(), self.is_in_tree());
-        self.container.children.insert(0, area)
+        self.container.children.insert(0, area.clone().into());
+        ApplicationWindow::initialize_dynamic_component(area.as_dyn_mut(), self.is_in_tree());
     }
 
     #[inline]
@@ -261,7 +261,7 @@ impl ObjectImpl for ScrollArea {
         self.set_render_difference(true);
         self.container
             .children
-            .push(ScrollBar::new(Orientation::Vertical));
+            .push(ScrollBar::new(Orientation::Vertical).into());
 
         let occupy_space = self.layout_mode == LayoutMode::Normal;
         self.scroll_bar_mut().set_occupy_space(occupy_space);
@@ -286,7 +286,7 @@ impl WidgetImpl for ScrollArea {
 impl ContainerImpl for ScrollArea {
     #[inline]
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.container.children.iter().map(|w| w.as_ref()).collect()
+        self.container.children.iter().map(|w| w.bind()).collect()
     }
 
     #[inline]
@@ -294,7 +294,7 @@ impl ContainerImpl for ScrollArea {
         self.container
             .children
             .iter_mut()
-            .map(|w| w.as_mut())
+            .map(|w| w.bind_mut())
             .collect()
     }
 
@@ -305,7 +305,7 @@ impl ContainerImpl for ScrollArea {
 }
 
 impl ContainerImplExt for ScrollArea {
-    fn add_child<T>(&mut self, _: Box<T>)
+    fn add_child<T>(&mut self, _: Tr<T>)
     where
         T: WidgetImpl,
     {

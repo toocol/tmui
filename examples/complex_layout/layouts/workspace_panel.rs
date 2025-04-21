@@ -20,7 +20,7 @@ impl ObjectImpl for WorkspacePanel {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.add_popup(CtxMenu::new());
+        self.add_popup(CtxMenu::new().to_dyn_popup_tr());
     }
 
     fn initialize(&mut self) {

@@ -32,14 +32,14 @@ impl WidgetImpl for HBox {}
 
 impl ContainerImpl for HBox {
     fn children(&self) -> Vec<&dyn WidgetImpl> {
-        self.container.children.iter().map(|c| c.as_ref()).collect()
+        self.container.children.iter().map(|c| c.bind()).collect()
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn WidgetImpl> {
         self.container
             .children
             .iter_mut()
-            .map(|c| c.as_mut())
+            .map(|c| c.bind_mut())
             .collect()
     }
 
@@ -49,13 +49,13 @@ impl ContainerImpl for HBox {
 }
 
 impl ContainerImplExt for HBox {
-    fn add_child<T>(&mut self, mut child: Box<T>)
+    fn add_child<T>(&mut self, mut child: Tr<T>)
     where
         T: WidgetImpl,
     {
         child.set_parent(self);
-        ApplicationWindow::initialize_dynamic_component(child.as_mut(), self.is_in_tree());
-        self.container.children.push(child);
+        self.container.children.push(child.clone().into());
+        ApplicationWindow::initialize_dynamic_component(child.as_dyn_mut(), self.is_in_tree());
         self.update();
     }
 
@@ -143,8 +143,8 @@ impl ContentAlignment for HBox {
 }
 
 impl HBox {
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

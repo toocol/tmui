@@ -18,8 +18,8 @@ impl ObjectImpl for StackWidget {
         self.width_request(100);
         self.height_request(100);
 
-        let mut w1: Box<Widget> = Object::new(&[]);
-        let mut w2: Box<Widget> = Object::new(&[]);
+        let mut w1 = Widget::new_alloc();
+        let mut w2 = Widget::new_alloc();
 
         w1.set_vexpand(true);
         w1.set_hexpand(true);

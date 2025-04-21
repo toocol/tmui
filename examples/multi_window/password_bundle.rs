@@ -11,10 +11,10 @@ use tmui::{
 #[derive(Childrenable)]
 pub struct PasswordBundle {
     #[children]
-    label: Box<Label>,
+    label: Tr<Label>,
 
     #[children]
-    password: Box<Password>,
+    password: Tr<Password>,
 }
 
 impl ObjectSubclass for PasswordBundle {
@@ -27,8 +27,8 @@ impl WidgetImpl for PasswordBundle {}
 
 impl PasswordBundle {
     #[inline]
-    pub fn new(label: &str) -> Box<Self> {
-        let mut tb: Box<Self> = Object::new(&[]);
+    pub fn new(label: &str) -> Tr<Self> {
+        let mut tb = Self::new_alloc();
         tb.label.set_margin_top(3);
         tb.label.set_text(label);
         tb

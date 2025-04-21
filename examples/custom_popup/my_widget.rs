@@ -12,10 +12,10 @@ use crate::popups::{rba_popup::RbaPopup, tba_popup::TbaPopup};
 #[derive(Childrenable)]
 pub struct MyWidget {
     #[children]
-    label_1: Box<Label>,
+    label_1: Tr<Label>,
 
     #[children]
-    label_2: Box<Label>,
+    label_2: Tr<Label>,
 }
 
 impl ObjectSubclass for MyWidget {
@@ -33,8 +33,8 @@ impl ObjectImpl for MyWidget {
         self.label_2
             .set_text("Transparency based animated popup. (click me)");
 
-        self.label_1.add_popup(RbaPopup::new());
-        self.label_2.add_popup(TbaPopup::new());
+        self.label_1.add_popup(RbaPopup::new().to_dyn_popup_tr());
+        self.label_2.add_popup(TbaPopup::new().to_dyn_popup_tr());
 
         self.label_1.width_request(300);
         self.label_2.width_request(300);
@@ -70,8 +70,8 @@ impl MyWidget {
         if self.label_1.get_popup_ref().unwrap().visible() {
             self.label_1.hide_popup();
         } else {
-            self.label_1
-                .show_popup(self.label_1.map_to_global(&event.position().into()));
+            let pos = self.label_1.map_to_global(&event.position().into());
+            self.label_1.show_popup(pos);
         }
     }
 
@@ -79,8 +79,8 @@ impl MyWidget {
         if self.label_2.get_popup_ref().unwrap().visible() {
             self.label_2.hide_popup();
         } else {
-            self.label_2
-                .show_popup(self.label_2.map_to_global(&event.position().into()));
+            let pos = self.label_2.map_to_global(&event.position().into());
+            self.label_2.show_popup(pos);
         }
     }
 }

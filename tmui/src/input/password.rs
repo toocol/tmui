@@ -230,8 +230,8 @@ impl Input for Password {
 
 impl Password {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     /// Set the input element `Password`'s text is visible or not.

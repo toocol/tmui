@@ -41,8 +41,8 @@ impl WidgetImpl for SvgIcon {
 
 impl SvgIcon {
     #[inline]
-    pub fn from_file(path: &str) -> Box<Self> {
-        let mut icon: Box<Self> = Object::new(&[]);
+    pub fn from_file(path: &str) -> Tr<Self> {
+        let mut icon = Self::new_alloc();
 
         let mut file = std::fs::File::open(path).expect("Open file failed");
         let mut data = vec![];
@@ -54,8 +54,8 @@ impl SvgIcon {
     }
 
     #[inline]
-    pub fn from_bytes(data: &[u8]) -> Box<Self> {
-        let mut icon: Box<Self> = Object::new(&[]);
+    pub fn from_bytes(data: &[u8]) -> Tr<Self> {
+        let mut icon = Self::new_alloc();
 
         icon.build_from_data(data);
 

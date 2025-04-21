@@ -15,7 +15,7 @@ use tmui::{
 #[derive(Childable)]
 pub struct InputPopup {
     #[child]
-    vbox: Box<VBox>,
+    vbox: Tr<VBox>,
 }
 
 impl ObjectSubclass for InputPopup {
@@ -86,8 +86,8 @@ impl WidgetImpl for InputPopup {}
 
 impl InputPopup {
     #[inline]
-    pub fn new() -> Box<Self> {
-        Object::new(&[])
+    pub fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 }
 

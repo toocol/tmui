@@ -32,13 +32,13 @@ pub type TyInputDialog = crate::input::dialog::CorrInputDialog;
 )]
 pub struct InputDialog {
     #[children]
-    text: Box<Text>,
+    text: Tr<Text>,
 
     #[children]
-    password: Box<Password>,
+    password: Tr<Password>,
 
     #[children]
-    number: Box<Number>,
+    number: Tr<Number>,
 
     #[derivative(Default(value = "InputType::Text"))]
     current: InputType,
@@ -49,13 +49,13 @@ pub struct InputDialog {
 #[derive(Childrenable)]
 pub struct InputDialog {
     #[children]
-    text: Box<Text>,
+    text: Tr<Text>,
 
     #[children]
-    password: Box<Password>,
+    password: Tr<Password>,
 
     #[children]
-    number: Box<Number>,
+    number: Tr<Number>,
 
     value: Option<Value>,
     #[derivative(Default(value = "InputType::Text"))]
@@ -173,8 +173,8 @@ impl InputDialog {
 impl InputDialog {
     #[inline]
     #[cfg(not(win_dialog))]
-    pub(crate) fn new() -> Box<Self> {
-        Object::new(&[])
+    pub(crate) fn new() -> Tr<Self> {
+        Self::new_alloc()
     }
 
     #[cfg(not(win_dialog))]
