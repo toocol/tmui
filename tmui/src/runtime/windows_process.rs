@@ -229,7 +229,6 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
                         match event {
                             // Window redraw event.
                             WindowEvent::RedrawRequested => {
-                                debug!("Window redraw requested");
                                 let _track = Tracker::start("physical_window_redraw");
                                 #[cfg(macos_platform)]
                                 self.windows
@@ -805,7 +804,7 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
         window.slave.read().signal();
     }
 
-    pub fn send_resize_event(&mut self, window_id: WindowId, size: PhysicalSize<u32>) {
+    pub fn send_resize_event(&mut self, window_id: WindowId, mut size: PhysicalSize<u32>) {
         let window = self
             .windows
             .get(&window_id.into())
@@ -817,6 +816,8 @@ impl<'a, T: 'static + Copy + Send + Sync, M: 'static + Copy + Send + Sync>
         } else if window.winit_window().is_minimized().unwrap_or_default() {
             self.window_extremed.insert(wrapped_window_id, true);
             window.send_input(Message::Event(Box::new(WindowMinimized::new())));
+            size.width = 0;
+            size.height = 0;
         } else {
             let is_extremed = self
                 .window_extremed

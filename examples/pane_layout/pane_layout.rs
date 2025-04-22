@@ -26,7 +26,7 @@ impl ObjectImpl for PaneLayout {
     fn construct(&mut self) {
         self.parent_construct();
 
-        self.set_orientation(Orientation::Vertical);
+        self.set_orientation(Orientation::Horizontal);
         self.set_hexpand(true);
         self.set_vexpand(true);
 

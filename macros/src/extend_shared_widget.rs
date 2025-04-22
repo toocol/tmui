@@ -159,6 +159,13 @@ pub(crate) fn expand(
                     }
                 }
 
+                impl #impl_generics InnerRunAfter for #name #ty_generics #where_clause {
+                    #[inline]
+                    fn inner_run_after(&mut self) {
+                        self.shared_widget.run_after();
+                    }
+                }
+
                 impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }

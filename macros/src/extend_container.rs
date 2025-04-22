@@ -497,6 +497,11 @@ pub(crate) fn expand(
                     }
                 }
 
+                impl #impl_generics InnerRunAfter for #name #ty_generics #where_clause {
+                    #[inline]
+                    fn inner_run_after(&mut self) {}
+                }
+
                 impl #impl_generics #name #ty_generics #where_clause {
                     #async_method_clause
                 }
