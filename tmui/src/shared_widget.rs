@@ -4,13 +4,14 @@ use tlib::{connect, skia_safe::ImageInfo};
 use crate::{
     application,
     backend::create_image_info,
+    opti::tracker::Tracker,
     platform::PlatformType,
     prelude::*,
     tlib::{
         object::{ObjectImpl, ObjectSubclass},
         run_after,
     },
-    widget::WidgetImpl, opti::tracker::Tracker,
+    widget::WidgetImpl,
 };
 
 lazy_static! {

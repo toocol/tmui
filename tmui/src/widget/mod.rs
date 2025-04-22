@@ -577,7 +577,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             return;
         } else if !self.first_rendered() || self.render_styles() {
             let _track = Tracker::start(format!("single_render_{}_styles", self.name()));
-            let mut background = if self.first_rendered() && !self.is_animation_progressing() {
+            let mut background = if !self.is_animation_progressing() {
                 self.opaque_background()
             } else {
                 self.background()
@@ -1296,6 +1296,7 @@ pub trait WidgetImpl:
     + ObjectImpl
     + SuperType
     + Layout
+    + InnerRunAfter
     + InnerEventProcess
     + PointEffective
     + ChildRegionAcquire
@@ -1709,6 +1710,14 @@ pub trait IsolatedVisibility: WidgetImpl {
     fn set_shadow_rect(&mut self, rect: FRect);
 
     fn shadow_rect_mut(&mut self) -> &mut FRect;
+}
+
+////////////////////////////////////// InnerRunAfter //////////////////////////////////////
+pub trait InnerRunAfter {
+    fn inner_run_after(&mut self);
+}
+impl InnerRunAfter for Widget {
+    fn inner_run_after(&mut self) {}
 }
 
 /// `MouseEnter`/`MouseLeave`:
