@@ -1,3 +1,6 @@
+pub mod border_with_child;
+
+use border_with_child::BorderWithChild;
 use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
@@ -15,6 +18,8 @@ fn main() {
 }
 
 fn build_ui(window: &mut ApplicationWindow) {
+    let mut vbox = VBox::new();
+
     let mut hbox = HBox::new();
     let mut widget1 = Widget::new_alloc();
     let mut widget2 = Widget::new_alloc();
@@ -47,5 +52,11 @@ fn build_ui(window: &mut ApplicationWindow) {
     hbox.height_request(400);
     hbox.set_background(Color::RED);
 
-    window.child(hbox);
+    vbox.set_halign(Align::Center);
+    vbox.set_valign(Align::Center);
+    vbox.add_child(hbox);
+    vbox.set_content_halign(Align::Center);
+    vbox.add_child(BorderWithChild::new_alloc());
+
+    window.child(vbox);
 }

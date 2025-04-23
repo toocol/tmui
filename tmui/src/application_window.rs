@@ -678,7 +678,7 @@ impl ApplicationWindow {
         for (_, overlaid) in self.overlaids.iter_mut() {
             let overlaid = nonnull_mut!(overlaid);
             if let Some(popup) = cast_mut!(overlaid as PopupImpl) {
-                if !popup.hide_on_click() {
+                if !popup.hide_on_click() || evt.mouse_button() != popup.click_hide_button() {
                     continue;
                 }
                 if popup.handle_global_mouse_pressed(evt) {

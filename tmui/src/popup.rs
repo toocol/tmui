@@ -4,7 +4,7 @@ use crate::{
     widget::WidgetImpl,
 };
 use std::ptr::NonNull;
-use tlib::{events::MouseEvent, nonnull_mut, nonnull_ref};
+use tlib::{events::MouseEvent, namespace::MouseButton, nonnull_mut, nonnull_ref};
 
 #[extends(Widget)]
 #[cfg(win_popup)]
@@ -148,6 +148,12 @@ pub trait PopupImpl: WidgetImpl + PopupExt + Overlaid {
     #[inline]
     fn hide_on_click(&self) -> bool {
         true
+    }
+
+    /// The mouse button of mouse to clicking hide the component.
+    #[inline]
+    fn click_hide_button(&self) -> MouseButton {
+        MouseButton::LeftButton
     }
 
     /// If true, popup will move postion by mouse dragging.

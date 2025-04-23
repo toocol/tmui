@@ -548,7 +548,10 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             self.clip_child_region(&mut painter);
         }
         if let Some(parent) = self.get_parent_ref() {
-            if cast!(parent as ContainerImpl).is_some() {
+            if parent.border_ref().should_draw_radius() {
+                let radius = parent.border_ref().border_radius;
+                painter.clip_round_rect_global(parent.rect(), radius, ClipOp::Intersect);
+            } else {
                 painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
             }
         }

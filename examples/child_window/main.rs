@@ -2,6 +2,7 @@ use tlib::figure::OptionSize;
 use tmui::{
     application::Application,
     application_window::ApplicationWindow,
+    graphics::styles::Styles,
     label::Label,
     prelude::*,
     tooltip::Tooltip,
@@ -48,6 +49,11 @@ fn build_ui(window: &mut ApplicationWindow) {
     window.register_mouse_released(|_, evt| {
         let mut pos: Point = evt.position().into();
         pos.offset(-100, -100);
-        Tooltip::show("Test tooltip overlap", pos, OptionSize::none(), None);
+        Tooltip::show(
+            "Test tooltip overlap",
+            pos,
+            OptionSize::none(),
+            Some(Styles::default().with_border(Border::default().with_border_radius(6.))),
+        );
     });
 }

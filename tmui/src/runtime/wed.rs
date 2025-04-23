@@ -161,6 +161,7 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
             }
 
             window.check_mouse_leave(&pos, &evt);
+            let mut mouse_move_handled = false;
 
             for (_id, widget_opt) in widgets_map.iter_mut() {
                 let widget = nonnull_mut!(widget_opt);
@@ -177,8 +178,12 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                 if !widget.visible() {
                     continue;
                 }
+
                 window.check_mouse_enter(widget, &pos, &evt);
 
+                if mouse_move_handled {
+                    continue;
+                }
                 let widget_position = widget.map_to_widget(&pos);
 
                 if widget.point_effective(&evt.position().into()) {
@@ -237,9 +242,9 @@ pub(crate) fn win_evt_dispatch(window: &mut ApplicationWindow, evt: Event) -> Op
                     widget.on_mouse_move(evt.as_ref());
 
                     if widget.super_type().is_a(SharedWidget::static_type()) {
-                        event = Some(evt);
+                        event = Some(evt.clone());
                     }
-                    break;
+                    mouse_move_handled = true;
                 }
             }
 
