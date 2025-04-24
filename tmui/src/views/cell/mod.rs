@@ -26,13 +26,14 @@ pub enum Cell {
     F32 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
     F64 { expand: bool, val: Value, render: Option<Box<dyn CellRender>> },
     Image { expand: bool, image_address: Value, render: Option<Box<dyn CellRender>> },
+    Svg { expand: bool, render: Option<Box<dyn CellRender>> },
     Value { val: Value },
 }
 
 macro_rules! common_cell_render_clause {
     ($render:ident, $painter:ident, $geometry:ident, $val:ident) => {
         if let Some(render) = $render {
-            render.render($painter, $geometry, $val);
+            render.render($painter, $geometry, Some($val));
         }
     };
 }
@@ -88,7 +89,12 @@ impl Cell {
                 ..
             } => {
                 if let Some(render) = render {
-                    render.render(painter, geometry, image_address);
+                    render.render(painter, geometry, Some(image_address));
+                }
+            }
+            Self::Svg { render, .. } => {
+                if let Some(render) = render {
+                    render.render(painter, geometry, None);
                 }
             }
             Self::Value { .. } => {}
@@ -112,6 +118,7 @@ impl Cell {
             Self::F32 { .. } => f32::static_type(),
             Self::F64 { .. } => f64::static_type(),
             Self::Image { .. } => String::static_type(),
+            Self::Svg { .. } => Type::NONE,
             Self::Value { val } => val.ty(),
         }
     }
@@ -133,6 +140,7 @@ impl Cell {
             Self::F32 { val, .. } => val,
             Self::F64 { val, .. } => val,
             Self::Image { image_address, .. } => image_address,
+            Self::Svg { .. } => panic!("Invalid access, Svg cell does not has the value."),
             Self::Value { val } => val,
         }
     }
@@ -154,6 +162,7 @@ impl Cell {
             Self::F32 { val, .. } => *val = value,
             Self::F64 { val, .. } => *val = value,
             Self::Image { image_address, .. } => *image_address = value,
+            Self::Svg { .. } => {}
             Self::Value { val } => *val = value,
         }
     }
@@ -175,6 +184,7 @@ impl Cell {
             Self::F32 { render, .. } => render.as_deref(),
             Self::F64 { render, .. } => render.as_deref(),
             Self::Image { render, .. } => render.as_deref(),
+            Self::Svg { render, .. } => render.as_deref(),
             Self::Value { .. } => None,
         }
     }
@@ -196,6 +206,7 @@ impl Cell {
             Self::F32 { render, .. } => render.as_deref_mut(),
             Self::F64 { render, .. } => render.as_deref_mut(),
             Self::Image { render, .. } => render.as_deref_mut(),
+            Self::Svg { render, .. } => render.as_deref_mut(),
             Self::Value { .. } => None,
         }
     }
@@ -217,6 +228,7 @@ impl Cell {
             Self::F32 { .. } => vec![Text],
             Self::F64 { .. } => vec![Text],
             Self::Image { .. } => vec![Image],
+            Self::Svg { .. } => vec![Svg],
             Self::Value { .. } => vec![],
         }
     }
@@ -351,6 +363,40 @@ impl CellValueBuilder {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct CellSvgBuilder {
+    expand: bool,
+    cell_render: Option<Box<dyn CellRender>>,
+}
+impl CellSvgBuilder {
+    #[inline]
+    pub fn expand(mut self, expand: bool) -> Self {
+        self.expand = expand;
+        self
+    }
+
+    #[inline]
+    pub fn cell_render(mut self, render: Box<dyn CellRender>) -> Self {
+        self.cell_render = Some(render);
+        self
+    }
+
+    #[inline]
+    pub fn build(self) -> Cell {
+        let cell = Cell::Svg {
+            expand: self.expand,
+            render: self.cell_render,
+        };
+
+        if let Some(cell_render) = cell.get_render() {
+            if !cell.support_render_types().contains(&cell_render.ty()) {
+                panic!("Unsupported cell render type.");
+            }
+        }
+        cell
+    }
+}
+
 macro_rules! cell_builder_func {
     ( $name:ident, $builder:ident ) => {
         #[inline]
@@ -376,5 +422,6 @@ impl Cell {
     cell_builder_func!(f32, CellF32Builder);
     cell_builder_func!(f64, CellF64Builder);
     cell_builder_func!(image, CellImageBuilder);
+    cell_builder_func!(svg, CellSvgBuilder);
     cell_builder_func!(value_cell, CellValueBuilder);
 }

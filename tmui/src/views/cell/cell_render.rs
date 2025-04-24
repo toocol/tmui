@@ -1,9 +1,10 @@
 #![allow(dead_code)]
-use crate::graphics::painter::Painter;
+use crate::{graphics::painter::Painter, icons::svg_dom::SvgDom};
 use derivative::Derivative;
+use log::warn;
 use std::fmt::Debug;
 use tlib::{
-    figure::{Color, FRect},
+    figure::{Color, FPoint, FRect},
     global::{shown_value_32, shown_value_64},
     namespace::BorderStyle,
     skia_safe::ClipOp,
@@ -14,10 +15,11 @@ use tlib::{
 pub enum CellRenderType {
     Text,
     Image,
+    Svg,
 }
 
 pub trait CellRender: Debug + 'static + Send + Sync {
-    fn render(&self, painter: &mut Painter, geometry: FRect, val: &Value);
+    fn render(&self, painter: &mut Painter, geometry: FRect, val: Option<&Value>);
 
     fn border(&self) -> (f32, f32, f32, f32);
 
@@ -48,7 +50,7 @@ pub trait CellRender: Debug + 'static + Send + Sync {
 
 macro_rules! cell_render_struct {
     ( $cell:ident, $builder:ident, $render_type:ident $(, $field:ident:$ty:tt)* ) => {
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone)]
         pub struct $cell {
             border: (f32, f32, f32, f32),
             border_style: BorderStyle,
@@ -209,11 +211,14 @@ macro_rules! impl_cell_render_common {
     };
 }
 
+type OptSvgDom = Option<SvgDom>;
+
 cell_render_struct!(TextCellRender, TextCellRenderBuilder, Text, color:Color, letter_spacing:f32);
 cell_render_struct!(ImageCellRender, ImageCellRenderBuilder, Image);
+cell_render_struct!(SvgCellRender, SvgCellRenderBuilder, Svg, dom:OptSvgDom);
 
 impl CellRender for TextCellRender {
-    fn render(&self, painter: &mut Painter, geometry: FRect, val: &Value) {
+    fn render(&self, painter: &mut Painter, geometry: FRect, val: Option<&Value>) {
         painter.save();
         painter.save_pen();
         painter.clip_rect(geometry, ClipOp::Intersect);
@@ -223,6 +228,7 @@ impl CellRender for TextCellRender {
         if let Some(background) = self.background {
             painter.fill_rect(geometry, background);
         }
+        let val = val.as_ref().unwrap();
 
         let text = match val.ty() {
             Type::STRING => val.get::<String>(),
@@ -280,7 +286,26 @@ impl TextCellRender {
 }
 
 impl CellRender for ImageCellRender {
-    fn render(&self, _painter: &mut Painter, _geometry: FRect, _val: &Value) {}
+    fn render(&self, _painter: &mut Painter, _geometry: FRect, _val: Option<&Value>) {}
+
+    impl_cell_render_common!();
+}
+
+impl CellRender for SvgCellRender {
+    fn render(&self, painter: &mut Painter, rect: FRect, _: Option<&Value>) {
+        if let Some(dom) = self.dom.as_ref() {
+            let view_size = dom.get_size();
+            let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
+            let (w2, h2) = (view_size.width() as f32, view_size.height() as f32);
+            let origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
+            painter.save();
+            painter.translate(origin.x(), origin.y());
+            painter.draw_dom(dom);
+            painter.restore();
+        } else {
+            warn!("The `dom` of `SvgCellRender` is not assigned.");
+        }
+    }
 
     impl_cell_render_common!();
 }

@@ -22,15 +22,15 @@ impl ObjectImpl for SvgIcon {}
 
 impl WidgetImpl for SvgIcon {
     fn paint(&mut self, painter: &mut Painter) {
-        let rect = self.rect_f();
-        let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
-        let (w2, h2) = (
-            self.view_size.width() as f32,
-            self.view_size.height() as f32,
-        );
-        let origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
-
         if let Some(ref dom) = self.dom {
+            let rect = self.rect_f();
+            let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
+            let (w2, h2) = (
+                self.view_size.width() as f32,
+                self.view_size.height() as f32,
+            );
+            let origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
+
             painter.save();
             painter.translate(origin.x(), origin.y());
             painter.draw_dom(dom);
@@ -60,6 +60,20 @@ impl SvgIcon {
         icon.build_from_data(data);
 
         icon
+    }
+
+    #[inline]
+    pub fn load_file(&mut self, path: &str) {
+        let mut file = std::fs::File::open(path).expect("Open file failed");
+        let mut data = vec![];
+        file.read_to_end(&mut data).expect("Read file failed");
+
+        self.build_from_data(&data);
+    }
+
+    #[inline]
+    pub fn load_bytes(&mut self, data: &[u8]) {
+        self.build_from_data(data);
     }
 }
 
