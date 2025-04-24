@@ -55,6 +55,8 @@ pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bo
         window.map_to_client(&rect.top_left())
     };
 
+    let radius = win_widget.border_ref().border_radius;
+
     let child_proc_fn = win_widget.child_process_fn();
     window.create_window(
         WindowBuilder::new()
@@ -74,6 +76,8 @@ pub(crate) fn handle_win_widget_create(win_widget: &mut dyn WinWidget, inner: bo
             .win_widget_id(win_widget.id())
             .on_activate(move |win| {
                 win.set_transparency(0);
+                win.set_border_radius_sep(radius.0, radius.1, radius.2, radius.3);
+
                 child_proc_fn(win);
             }),
     )

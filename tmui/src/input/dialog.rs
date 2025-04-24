@@ -237,6 +237,8 @@ impl InputDialog {
         if let Some(styles) = styles {
             input.set_styles(styles);
         };
+        let radius = input.border_ref().border_radius;
+        self.set_border_radius_sep(radius.0, radius.1, radius.2, radius.3);
 
         self.switch_index(idx);
         self.current = input_type;

@@ -54,7 +54,6 @@ impl ObjectSubclass for Holder {
 
 impl ObjectImpl for Holder {
     fn construct(&mut self) {
-        Select::<String>::new_alloc();
         self.parent_construct();
         self.add_popup(InputPopup::new().to_dyn_popup_tr());
     }

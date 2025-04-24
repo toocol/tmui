@@ -40,6 +40,48 @@ impl Border {
         }
     }
 
+    #[inline]
+    pub fn with_style(mut self, style: BorderStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    #[inline]
+    pub fn with_width(mut self, width: f32) -> Self {
+        self.width = (width, width, width, width);
+        self
+    }
+
+    #[inline]
+    pub fn with_width_sep(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
+        self.width = (top, right, bottom, left);
+        self
+    }
+
+    #[inline]
+    pub fn with_color(mut self, color: Color) -> Self {
+        self.border_color = (color, color, color, color);
+        self
+    }
+
+    #[inline]
+    pub fn with_color_sep(mut self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
+        self.border_color = (top, right, bottom, left);
+        self
+    }
+
+    #[inline]
+    pub fn with_border_radius(mut self, radius: f32) -> Self {
+        self.border_radius = (radius, radius, radius, radius);
+        self
+    }
+
+    #[inline]
+    pub fn with_border_radius_sep(mut self, lt: f32, rt: f32, rb: f32, lb: f32) -> Self {
+        self.border_radius = (lt, rt, rb, lb);
+        self
+    }
+
     pub(crate) fn render(&self, painter: &mut Painter, geometry: FRect) {
         painter.save_pen();
 
@@ -284,6 +326,7 @@ impl Border {
             geometry.offset(left / 2., top / 2.);
             geometry.set_width(geometry.width() - right);
             geometry.set_height(geometry.height() - bottom);
+            painter.set_antialiasing(true);
             painter.draw_round_rect(geometry, self.border_radius);
 
             painter.reset();
@@ -341,11 +384,11 @@ impl Border {
         let (start_width, mid_width, end_width) = (left, (left + top) / 2., top);
         if left > 0. {
             painter.set_color(self.border_color.3);
-            painter.draw_varying_arc(lt, 180., 45., start_width, mid_width, 8);
+            painter.draw_varying_arc(lt, 180., 45., start_width, mid_width, 16);
         }
         if top > 0. {
             painter.set_color(self.border_color.0);
-            painter.draw_varying_arc(lt, 225., 45., mid_width, end_width, 8);
+            painter.draw_varying_arc(lt, 225., 45., mid_width, end_width, 16);
         }
 
         let dimension = 2. * self.border_radius.1;
@@ -358,11 +401,11 @@ impl Border {
         let (start_width, mid_width, end_width) = (top, (top + right) / 2., right);
         if top > 0. {
             painter.set_color(self.border_color.0);
-            painter.draw_varying_arc(rt, 270., 45., start_width, mid_width, 8);
+            painter.draw_varying_arc(rt, 270., 45., start_width, mid_width, 16);
         }
         if right > 0. {
             painter.set_color(self.border_color.1);
-            painter.draw_varying_arc(rt, 315., 45., mid_width, end_width, 8);
+            painter.draw_varying_arc(rt, 315., 45., mid_width, end_width, 16);
         }
 
         let dimension = 2. * self.border_radius.2;
@@ -375,11 +418,11 @@ impl Border {
         let (start_width, mid_width, end_width) = (right, (bottom + right) / 2., bottom);
         if right > 0. {
             painter.set_color(self.border_color.1);
-            painter.draw_varying_arc(rb, 0., 45., start_width, mid_width, 8);
+            painter.draw_varying_arc(rb, 0., 45., start_width, mid_width, 16);
         }
         if bottom > 0. {
             painter.set_color(self.border_color.2);
-            painter.draw_varying_arc(rb, 45., 45., mid_width, end_width, 8);
+            painter.draw_varying_arc(rb, 45., 45., mid_width, end_width, 16);
         }
 
         let dimension = 2. * self.border_radius.3;
@@ -392,11 +435,11 @@ impl Border {
         let (start_width, mid_width, end_width) = (bottom, (bottom + left) / 2., left);
         if bottom > 0. {
             painter.set_color(self.border_color.2);
-            painter.draw_varying_arc(lb, 90., 45., start_width, mid_width, 8);
+            painter.draw_varying_arc(lb, 90., 45., start_width, mid_width, 16);
         }
         if left > 0. {
             painter.set_color(self.border_color.3);
-            painter.draw_varying_arc(lb, 135., 45., mid_width, end_width, 8);
+            painter.draw_varying_arc(lb, 135., 45., mid_width, end_width, 16);
         }
 
         painter.reset();
