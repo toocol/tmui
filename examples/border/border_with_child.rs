@@ -20,7 +20,7 @@ impl ObjectSubclass for BorderWithChild {
 
 impl ObjectImpl for BorderWithChild {
     fn initialize(&mut self) {
-        self.set_background(Color::GREY_LIGHT);
+        self.set_background(Color::TRANSPARENT);
         self.set_halign(Align::Center);
         self.enable_bubble(EventBubble::MOUSE_MOVE);
 
@@ -44,6 +44,6 @@ impl WidgetImpl for BorderWithChild {
 
     fn on_mouse_leave(&mut self, _: &MouseEvent) {
         info!("Mouse leaved.");
-        self.set_background(Color::GREY_LIGHT);
+        self.set_background(Color::TRANSPARENT);
     }
 }

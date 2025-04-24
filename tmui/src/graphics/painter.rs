@@ -906,7 +906,7 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
-    pub fn draw_dom(&self, dom: &tlib::typedef::SkiaSvgDom) {
-        dom.render(self.canvas);
+    pub fn draw_dom(&self, dom: impl AsRef<tlib::typedef::SkiaSvgDom>) {
+        dom.as_ref().render(self.canvas);
     }
 }

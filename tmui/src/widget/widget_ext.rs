@@ -1235,6 +1235,14 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         self.set_whole_styles_render(true);
         self.notify_update();
+
+        if self.border_ref().should_draw_radius() {
+            if let Some(parent) = self.get_parent_mut() {
+                parent.set_whole_styles_render(true);
+                parent.set_render_styles(true);
+                parent.update();
+            }
+        }
     }
 
     #[inline]
