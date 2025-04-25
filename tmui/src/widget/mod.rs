@@ -512,6 +512,8 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
 
         let _track = Tracker::start(format!("single_render_{}", self.name()));
 
+        let window = ApplicationWindow::window();
+
         let name = &self.name();
         let mut painter = Painter::new(name, cr.canvas(), self);
 
@@ -541,22 +543,28 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             painter.fill_rect_global(rect, Color::TRANSPARENT);
             painter.restore();
         } else {
-            self.window().clip_window(&mut painter);
+            window.clip_window(&mut painter);
         }
 
         if self.id() != self.window_id() {
             self.clip_child_region(&mut painter);
         }
         if let Some(parent) = self.get_parent_ref() {
-            if parent.border_ref().should_draw_radius() {
-                let radius = parent.border_ref().border_radius;
-                painter.clip_round_rect_global(parent.rect(), radius, ClipOp::Intersect);
-            } else {
-                painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
+            painter.clip_rect_global(parent.contents_rect(None), ClipOp::Intersect);
+        }
+        for &id in window.get_radius_widgets() {
+            if self.descendant_of(id) {
+                if let Some(w) = window.find_id(id) {
+                    painter.clip_round_rect_global(
+                        w.rect(),
+                        w.border_ref().border_radius,
+                        ClipOp::Intersect,
+                    );
+                }
             }
         }
 
-        let window_resized = self.window().is_resize_redraw();
+        let window_resized = window.is_resize_redraw();
         if (self.whole_styles_render() || self.is_resize_redraw() || window_resized)
             && !self.is_animation_progressing()
         {
@@ -597,7 +605,7 @@ impl<T: WidgetImpl + WidgetExt + WidgetInnerExt + ShadowRender> ElementImpl for 
             // Draw the background color of the Widget.
             if self.is_render_difference()
                 && self.first_rendered()
-                && !self.window().minimized()
+                && !window.minimized()
                 && !cliped
             {
                 painter.save();

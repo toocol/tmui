@@ -207,7 +207,8 @@ impl ListView {
 
     #[inline]
     pub fn set_line_height(&mut self, line_height: i32) {
-        self.get_image_mut().line_height = line_height
+        self.get_image_mut().line_height = line_height;
+        self.get_image_mut().custom_line_height = true;
     }
 
     #[inline]

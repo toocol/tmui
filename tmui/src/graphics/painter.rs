@@ -109,6 +109,11 @@ impl<'a> Painter<'a> {
     }
 
     #[inline]
+    pub fn font(&self) -> Option<&Font> {
+        self.font.as_ref()
+    }
+
+    #[inline]
     pub fn set_transform(&mut self, transform: Matrix, combined: bool) {
         if combined {
             self.transform = self.transform * transform;
@@ -217,6 +222,12 @@ impl<'a> Painter<'a> {
 
     #[inline]
     pub fn translate(&self, dx: f32, dy: f32) {
+        self.canvas
+            .translate((dx + self.x_offset as f32, dy + self.y_offset as f32));
+    }
+
+    #[inline]
+    pub fn translate_global(&self, dx: f32, dy: f32) {
         self.canvas.translate((dx, dy));
     }
 

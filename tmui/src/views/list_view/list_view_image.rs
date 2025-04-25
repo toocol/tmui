@@ -31,6 +31,7 @@ pub(crate) struct ListViewImage {
     indent_length: i32,
     #[derivative(Default(value = "1"))]
     pub(crate) line_height: i32,
+    pub(crate) custom_line_height: bool,
     pub(crate) line_spacing: i32,
     #[derivative(Default(value = "MouseEffect::all()"))]
     pub(crate) mouse_effect: MouseEffect,
@@ -190,6 +191,9 @@ impl ListViewImage {
 
     #[inline]
     fn on_font_changed(&mut self) {
+        if self.custom_line_height {
+            return;
+        }
         let (_, h) = self.font().calc_font_dimension();
 
         self.line_height = h as i32;

@@ -426,7 +426,7 @@ impl Number {
         let y = inner1.y() + (inner1.height() - ARROW_SIZE) / 2.;
         if let Some(ref dom) = self.arrow_up {
             painter.save();
-            painter.translate(x, y);
+            painter.translate_global(x, y);
             painter.draw_dom(dom);
             painter.restore();
         }
@@ -435,7 +435,7 @@ impl Number {
         let y = inner2.y() + (inner1.height() - ARROW_SIZE) / 2.;
         if let Some(ref dom) = self.arrow_down {
             painter.save();
-            painter.translate(x, y);
+            painter.translate_global(x, y);
             painter.draw_dom(dom);
             painter.restore();
         }

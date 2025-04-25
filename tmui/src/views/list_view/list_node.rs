@@ -4,10 +4,13 @@ use super::{
     list_view_object::ListViewObject,
     ListView, Painter,
 };
-use crate::{application::is_ui_thread, views::{
-    cell::{cell_index::CellIndex, cell_render::CellRender, Cell},
-    node::{node_render::NodeRender, RenderCtx, Status},
-}};
+use crate::{
+    application::is_ui_thread,
+    views::{
+        cell::{cell_index::CellIndex, cell_render::CellRender, Cell},
+        node::{node_render::NodeRender, RenderCtx, Status},
+    },
+};
 use log::warn;
 use tlib::{
     global::AsAny,
@@ -84,11 +87,17 @@ impl ListNode {
             .unwrap()
     }
 
-    pub fn get_value<T: 'static + StaticType + FromValue>(&self, cell_idx: impl CellIndex) -> Option<T> {
+    pub fn get_value<T: 'static + StaticType + FromValue>(
+        &self,
+        cell_idx: impl CellIndex,
+    ) -> Option<T> {
         self.cells
             .get(cell_idx.index())
             .or_else(|| {
-                warn!("Undefined cell of tree view node, cell index: {:?}", cell_idx);
+                warn!(
+                    "Undefined cell of tree view node, cell index: {:?}",
+                    cell_idx
+                );
                 None
             })
             .and_then(|cell| {
@@ -122,7 +131,10 @@ impl ListNode {
                 self.notify_update();
             }
         } else {
-            warn!("Undefined cell of tree view node, cell index: {:?}", cell_idx);
+            warn!(
+                "Undefined cell of tree view node, cell index: {:?}",
+                cell_idx
+            );
         }
     }
 
@@ -199,8 +211,7 @@ impl ListItem for ListNode {
     fn render(&self, painter: &mut Painter, render_ctx: RenderCtx) {
         let geometry = render_ctx.geometry;
 
-        self.node_render
-            .render(painter, render_ctx, self.status);
+        self.node_render.render(painter, render_ctx, self.status);
 
         let gapping = geometry.width() / self.render_cell_size() as f32;
         let mut offset = geometry.x();

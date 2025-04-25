@@ -1460,6 +1460,15 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
+
+        let window = ApplicationWindow::window();
+        if self.id() != window.id() {
+            if radius == 0. {
+                window.remove_radius_widget(self.id());
+            } else {
+                window.add_radius_widget(self.id());
+            }
+        }
     }
 
     #[inline]
@@ -1469,6 +1478,15 @@ impl<T: WidgetImpl> WidgetExt for T {
 
         self.set_whole_styles_render(true);
         self.update_render_styles();
+
+        let window = ApplicationWindow::window();
+        if self.id() != window.id() {
+            if self.border_ref().should_draw_radius() {
+                window.add_radius_widget(self.id());
+            } else {
+                window.remove_radius_widget(self.id());
+            }
+        }
     }
 
     #[inline]

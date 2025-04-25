@@ -7,7 +7,13 @@ use tlib::{
     figure::{Color, FPoint, FRect},
     global::{shown_value_32, shown_value_64},
     namespace::BorderStyle,
-    skia_safe::ClipOp,
+    prelude::Align,
+    skia_safe::{
+        textlayout::{
+            FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
+        },
+        ClipOp,
+    },
     Type, Value,
 };
 
@@ -45,6 +51,14 @@ pub trait CellRender: Debug + 'static + Send + Sync {
 
     fn set_height(&mut self, height: u32);
 
+    fn halign(&self) -> Align;
+
+    fn set_halign(&mut self, halign: Align);
+
+    fn valign(&self) -> Align;
+
+    fn set_valign(&mut self, valign: Align);
+
     fn ty(&self) -> CellRenderType;
 }
 
@@ -58,6 +72,8 @@ macro_rules! cell_render_struct {
             background: Option<Color>,
             width: Option<u32>,
             height: Option<u32>,
+            halign: Align,
+            valign: Align,
             ty: CellRenderType,
             $($field: $ty),*
         }
@@ -70,6 +86,8 @@ macro_rules! cell_render_struct {
             background: Option<Color>,
             width: Option<u32>,
             height: Option<u32>,
+            halign: Align,
+            valign: Align,
             $($field: $ty),*
         }
         impl $cell {
@@ -115,6 +133,18 @@ macro_rules! cell_render_struct {
                 self
             }
 
+            #[inline]
+            pub fn halign(mut self, halign: Align) -> Self {
+                self.halign = halign;
+                self
+            }
+
+            #[inline]
+            pub fn valign(mut self, valign: Align) -> Self {
+                self.valign = valign;
+                self
+            }
+
             $(
             #[inline]
             pub fn $field(mut self, $field: $ty) -> Self {
@@ -132,6 +162,8 @@ macro_rules! cell_render_struct {
                     background: self.background,
                     width: self.width,
                     height: self.height,
+                    halign: self.halign,
+                    valign: self.valign,
                     ty: CellRenderType::$render_type,
                     $(
                     $field: self.$field
@@ -205,6 +237,26 @@ macro_rules! impl_cell_render_common {
         }
 
         #[inline]
+        fn halign(&self) -> Align {
+            self.halign
+        }
+
+        #[inline]
+        fn set_halign(&mut self, halign: Align) {
+            self.halign = halign
+        }
+
+        #[inline]
+        fn valign(&self) -> Align {
+            self.valign
+        }
+
+        #[inline]
+        fn set_valign(&mut self, valign: Align) {
+            self.valign = valign
+        }
+
+        #[inline]
         fn ty(&self) -> CellRenderType {
             self.ty
         }
@@ -247,10 +299,42 @@ impl CellRender for TextCellRender {
             Type::F64 => shown_value_64(val.get::<f64>()),
             _ => "Unkonwn value.".to_string(),
         };
-        let origin = geometry.top_left();
+        let mut draw_point = geometry.top_left();
+        let (paragraph_width, paragraph_height) =
+            self.calc_paragraph_size(painter, &text, geometry);
+        match self.halign() {
+            Align::Start => {}
+            Align::Center => {
+                let offset = (geometry.width() - paragraph_width) / 2.;
+                if offset > 0. {
+                    draw_point.set_x(draw_point.x() + offset);
+                }
+            }
+            Align::End => {
+                let offset = geometry.width() - paragraph_width;
+                if offset > 0. {
+                    draw_point.set_x(draw_point.x() + offset);
+                }
+            }
+        };
+        match self.valign() {
+            Align::Start => {}
+            Align::Center => {
+                let offset = (geometry.height() - paragraph_height) / 2.;
+                if offset > 0. {
+                    draw_point.set_y(draw_point.y() + offset);
+                }
+            }
+            Align::End => {
+                let offset = geometry.height() - paragraph_height;
+                if offset > 0. {
+                    draw_point.set_y(draw_point.y() + offset);
+                }
+            }
+        };
         painter.draw_paragraph(
             &text,
-            origin,
+            draw_point,
             self.letter_spacing,
             geometry.width(),
             Some(1),
@@ -283,6 +367,49 @@ impl TextCellRender {
     pub fn letter_spacing(&self) -> f32 {
         self.letter_spacing
     }
+
+    fn calc_paragraph_size(&self, painter: &mut Painter, text: &str, rect: FRect) -> (f32, f32) {
+        let font = painter.font().unwrap();
+
+        let mut typeface_provider = TypefaceFontProvider::new();
+        let mut families = vec![];
+        for tf in font.typefaces() {
+            let typeface = tf.to_skia_typeface(font);
+
+            if let Some(typeface) = typeface {
+                families.push(tf.family());
+                let family = typeface.family_name();
+                typeface_provider.register_typeface(typeface, Some(family.as_str()));
+            }
+        }
+
+        let mut font_collection = FontCollection::new();
+        font_collection.set_asset_font_manager(Some(typeface_provider.clone().into()));
+
+        // define text style
+        let mut style = ParagraphStyle::new();
+        let mut text_style = TextStyle::new();
+        text_style.set_font_size(font.size());
+        text_style.set_font_families(&families);
+        text_style.set_letter_spacing(self.letter_spacing);
+        style.set_text_style(&text_style);
+        style.set_max_lines(Some(1));
+        style.set_ellipsis("\u{2026}");
+
+        // layout the paragraph
+        let mut paragraph_builder = ParagraphBuilder::new(&style, font_collection);
+        paragraph_builder.add_text(text);
+        let mut paragraph = paragraph_builder.build();
+
+        let width = rect.width();
+        let layout = if width == 0. { f32::MAX } else { width };
+        paragraph.layout(layout);
+
+        (
+            paragraph.max_intrinsic_width().ceil(),
+            paragraph.height().ceil(),
+        )
+    }
 }
 
 impl CellRender for ImageCellRender {
@@ -299,6 +426,7 @@ impl CellRender for SvgCellRender {
             let (w2, h2) = (view_size.width() as f32, view_size.height() as f32);
             let origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
             painter.save();
+            painter.clip_rect(rect, ClipOp::Intersect);
             painter.translate(origin.x(), origin.y());
             painter.draw_dom(dom);
             painter.restore();
