@@ -32,7 +32,7 @@ impl WidgetImpl for SvgIcon {
             let origin = FPoint::new(x1 + (w1 - w2) / 2., y1 + (h1 - h2) / 2.);
 
             painter.save();
-            painter.translate(origin.x(), origin.y());
+            painter.translate_global(origin.x(), origin.y());
             painter.draw_dom(dom);
             painter.restore();
         }

@@ -281,7 +281,7 @@ impl<T: SelectBounds> Select<T> {
         if let Some(ref dom) = self.dom {
             painter.save();
             let pos = self.arrow_pos();
-            painter.translate(pos.x(), pos.y());
+            painter.translate_global(pos.x(), pos.y());
             painter.draw_dom(dom);
             painter.restore();
         }

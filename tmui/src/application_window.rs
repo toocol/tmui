@@ -95,6 +95,7 @@ pub struct ApplicationWindow {
     root_ancestors: Vec<ObjectId>,
     win_widgets: Vec<WinWidgetHnd>,
     removed: Vec<DynTr>,
+    radius_widgets: Vec<ObjectId>,
 
     #[cfg(not(win_dialog))]
     input_dialog: Option<Tr<crate::input::dialog::InputDialog>>,
@@ -776,14 +777,15 @@ impl ApplicationWindow {
                     self.mouse_over_widget = None;
                 }
                 self.mouse_enter_widgets
-                    .retain_mut(|r| nonnull_ref!(r).id() != id);
-                self.run_afters.retain_mut(|r| nonnull_ref!(r).id() != id);
+                    .retain(|r| nonnull_ref!(r).id() != id);
+                self.run_afters.retain(|r| nonnull_ref!(r).id() != id);
                 for map in self.watch_map.values_mut() {
                     map.remove(&id);
                 }
                 self.overlaids.remove(&id);
-                self.root_ancestors.retain_mut(|r| *r != id);
-                self.win_widgets.retain_mut(|r| nonnull_ref!(r).id() != id);
+                self.root_ancestors.retain(|r| *r != id);
+                self.win_widgets.retain(|r| nonnull_ref!(r).id() != id);
+                self.radius_widgets.retain(|r| *r != id);
 
                 nonnull_ref!(self.board).remove_element(id);
                 AnimationMgr::with(|mgr| mgr.borrow_mut().remove_snapshot(id));
@@ -806,6 +808,21 @@ impl ApplicationWindow {
     #[inline]
     pub(crate) fn overlaids_mut(&mut self) -> &mut IntMap<ObjectId, WidgetHnd> {
         &mut self.overlaids
+    }
+
+    #[inline]
+    pub(crate) fn get_radius_widgets(&self) -> &[ObjectId] {
+        &self.radius_widgets
+    }
+
+    #[inline]
+    pub(crate) fn remove_radius_widget(&mut self, id: ObjectId) {
+        self.radius_widgets.retain(|w| *w != id);
+    }
+
+    #[inline]
+    pub(crate) fn add_radius_widget(&mut self, id: ObjectId) {
+        self.radius_widgets.push(id);
     }
 
     #[inline]

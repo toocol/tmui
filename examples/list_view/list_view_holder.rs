@@ -42,6 +42,7 @@ impl ObjectImpl for ListViewHolder {
         self.list_view_1.set_hexpand(true);
         self.list_view_1.set_vexpand(true);
         self.list_view_1.set_hscale(0.3);
+        self.list_view_1.set_line_height(40);
 
         self.list_view_2.set_hexpand(true);
         self.list_view_2.set_vexpand(true);
@@ -125,7 +126,7 @@ impl ObjectImpl for ListViewHolder {
                 }
                 list.add_group(group);
 
-                for i in 10..1000000 {
+                for i in 10..100 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
                     });

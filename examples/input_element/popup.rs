@@ -28,8 +28,10 @@ impl ObjectImpl for InputPopup {
 
         self.width_request(300);
         self.height_request(300);
-        self.set_borders(1., 1., 1., 1.);
+        self.set_border_radius(6.);
+        // self.set_borders(1., 1., 1., 1.);
         self.set_border_color(Color::GREY_LIGHT);
+        self.set_background(Color::GREY_LIGHT);
         self.set_box_shadow(BoxShadow::new(
             6.,
             Color::BLACK,

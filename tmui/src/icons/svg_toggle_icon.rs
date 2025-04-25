@@ -36,7 +36,7 @@ impl WidgetImpl for SvgToggleIcon {
     fn paint(&mut self, painter: &mut Painter) {
         if let Some(dom) = self.doms.get(self.index) {
             painter.save();
-            painter.translate(self.origin.x(), self.origin.y());
+            painter.translate_global(self.origin.x(), self.origin.y());
             painter.draw_dom(dom);
             painter.restore();
         }
