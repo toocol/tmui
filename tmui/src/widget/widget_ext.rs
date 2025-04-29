@@ -1057,8 +1057,14 @@ impl<T: WidgetImpl> WidgetExt for T {
     #[inline]
     fn borderless_rect(&self) -> Rect {
         let mut rect = self.rect();
+        let paddings = self.paddings();
         let (top, right, bottom, left) = self.borders().ceil();
-        let (top, right, bottom, left) = (top as i32, right as i32, bottom as i32, left as i32);
+        let (top, right, bottom, left) = (
+            (top as i32).max(paddings.0),
+            (right as i32).max(paddings.1),
+            (bottom as i32).max(paddings.2),
+            (left as i32).max(paddings.3),
+        );
 
         if rect.width() >= (right + left) {
             rect.set_x(rect.x() + left);

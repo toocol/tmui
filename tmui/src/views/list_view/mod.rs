@@ -105,6 +105,12 @@ impl WidgetImpl for ListView {
     fn enable_focus(&self) -> bool {
         true
     }
+
+    #[inline]
+    fn font_changed(&mut self) {
+        let font = self.font().clone();
+        self.get_image_mut().set_font(font);
+    }
 }
 
 impl ListView {
