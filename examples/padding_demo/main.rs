@@ -1,3 +1,6 @@
+pub mod padding_widget;
+
+use padding_widget::PaddingWidget;
 use tmui::{application::Application, application_window::ApplicationWindow, prelude::*};
 
 fn main() {
@@ -14,4 +17,6 @@ fn main() {
     app.run();
 }
 
-fn build_ui(window: &mut ApplicationWindow) {}
+fn build_ui(window: &mut ApplicationWindow) {
+    window.child(PaddingWidget::new_alloc());
+}
