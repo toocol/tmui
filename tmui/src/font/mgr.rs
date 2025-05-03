@@ -1,5 +1,6 @@
 use ahash::AHashMap;
 use derivative::Derivative;
+use log::error;
 use std::{cell::RefCell, io::Read};
 use tlib::{
     skia_safe::FontMgr,
@@ -52,12 +53,14 @@ impl FontManager {
                         .unwrap_or_else(|| panic!("Load ttf file `{}` failed.", font))
                         .data;
 
-                    let tf = manager
-                        .system_mgr
-                        .new_from_data(&data, None)
-                        .unwrap_or_else(|| {
-                            panic!("Make font typeface failed, ttf file: {}.", font)
-                        });
+                    let tf = manager.system_mgr.new_from_data(&data, None);
+
+                    if tf.is_none() {
+                        error!("Make font typeface failed, ttf file: {}.", font);
+                        continue;
+                    }
+
+                    let tf = tf.unwrap();
 
                     manager.fonts.insert(tf.family_name(), tf);
                 }

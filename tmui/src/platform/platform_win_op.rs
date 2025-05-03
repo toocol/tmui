@@ -1,3 +1,4 @@
+#[cfg(windows_platform)]
 use crate::prelude::{RawWindowHandle5, RawWindowHandle6};
 use tlib::typedef::WinitWindow;
 
@@ -30,6 +31,7 @@ impl HwndGetter for RawWindowHandle6 {
 }
 
 #[inline]
+#[allow(unused_variables)]
 pub(crate) fn set_undecoration_window(window: &WinitWindow) {
     #[cfg(windows_platform)]
     {
