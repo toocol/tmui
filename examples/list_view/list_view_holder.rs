@@ -93,7 +93,7 @@ impl ObjectImpl for ListViewHolder {
             println!("List view prepare async add node.");
             async_do!(move {
                 let mut list = arc.lock();
-                for i in 10..1000000 {
+                for i in 10..100 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
                     });
@@ -166,7 +166,7 @@ impl ObjectImpl for ListViewHolder {
                 println!("Build list 3 in thread {:?}", thread::current().id());
                 let mut list = arc.lock();
 
-                for i in 0..1000 {
+                for i in 0..100 {
                     list.add_node(&Node {
                         name: format!("Node_{}", i),
                     });

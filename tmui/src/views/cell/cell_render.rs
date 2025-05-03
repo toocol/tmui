@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::{graphics::painter::Painter, icons::svg_dom::SvgDom};
+use crate::{graphics::painter::Painter, icons::svg_dom::SvgDom, views::node::Status};
 use derivative::Derivative;
 use log::warn;
 use std::fmt::Debug;
@@ -25,7 +25,7 @@ pub enum CellRenderType {
 }
 
 pub trait CellRender: Debug + 'static + Send + Sync {
-    fn render(&self, painter: &mut Painter, geometry: FRect, val: Option<&Value>);
+    fn render(&self, painter: &mut Painter, geometry: FRect, val: Option<&Value>, node_status: Status);
 
     fn border(&self) -> (f32, f32, f32, f32);
 
@@ -264,18 +264,33 @@ macro_rules! impl_cell_render_common {
 }
 
 type OptSvgDom = Option<SvgDom>;
+type OptColor = Option<Color>;
 
-cell_render_struct!(TextCellRender, TextCellRenderBuilder, Text, color:Color, letter_spacing:f32);
+cell_render_struct!(TextCellRender, TextCellRenderBuilder, Text, color:Color, hover_color:OptColor, selection_color:OptColor, letter_spacing:f32);
 cell_render_struct!(ImageCellRender, ImageCellRenderBuilder, Image);
-cell_render_struct!(SvgCellRender, SvgCellRenderBuilder, Svg, dom:OptSvgDom);
+cell_render_struct!(SvgCellRender, SvgCellRenderBuilder, Svg, dom:OptSvgDom, hover_dom:OptSvgDom, selection_dom:OptSvgDom);
 
 impl CellRender for TextCellRender {
-    fn render(&self, painter: &mut Painter, geometry: FRect, val: Option<&Value>) {
+    fn render(&self, painter: &mut Painter, geometry: FRect, val: Option<&Value>, status: Status) {
         painter.save();
         painter.save_pen();
         painter.clip_rect(geometry, ClipOp::Intersect);
 
-        painter.set_color(self.color);
+        if status.contains(Status::Selected) {
+            if let Some(color) = self.selection_color {
+                painter.set_color(color);
+            } else {
+                painter.set_color(self.color);
+            }
+        } else if status.contains(Status::Hovered) {
+            if let Some(color) = self.hover_color {
+                painter.set_color(color);
+            } else {
+                painter.set_color(self.color);
+            }
+        } else {
+            painter.set_color(self.color);
+        }
 
         if let Some(background) = self.background {
             painter.fill_rect(geometry, background);
@@ -413,14 +428,29 @@ impl TextCellRender {
 }
 
 impl CellRender for ImageCellRender {
-    fn render(&self, _painter: &mut Painter, _geometry: FRect, _val: Option<&Value>) {}
+    fn render(&self, _painter: &mut Painter, _geometry: FRect, _val: Option<&Value>, _status: Status) {}
 
     impl_cell_render_common!();
 }
 
 impl CellRender for SvgCellRender {
-    fn render(&self, painter: &mut Painter, rect: FRect, _: Option<&Value>) {
-        if let Some(dom) = self.dom.as_ref() {
+    fn render(&self, painter: &mut Painter, rect: FRect, _: Option<&Value>, status: Status) {
+        let dom = if status.contains(Status::Selected) {
+            if self.selection_dom.is_some() {
+                self.selection_dom.as_ref()
+            } else {
+                self.dom.as_ref()
+            }
+        } else if status.contains(Status::Hovered) {
+            if self.hover_dom.is_some() {
+                self.hover_dom.as_ref()
+            } else {
+                self.dom.as_ref()
+            }
+        } else {
+            self.dom.as_ref()
+        };
+        if let Some(dom) = dom {
             let view_size = dom.get_size();
             let (x1, y1, w1, h1) = (rect.x(), rect.y(), rect.width(), rect.height());
             let (w2, h2) = (view_size.width() as f32, view_size.height() as f32);

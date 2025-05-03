@@ -47,6 +47,7 @@ impl ListViewObject for Node {
                 .cell_render(
                     TextCellRender::builder()
                         .color(Color::BLACK)
+                        .selection_color(Some(Color::WHITE))
                         .halign(Align::Center)
                         .valign(Align::Center)
                         .build(),

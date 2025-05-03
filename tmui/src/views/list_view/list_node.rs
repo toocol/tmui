@@ -215,6 +215,7 @@ impl ListItem for ListNode {
 
         let gapping = geometry.width() / self.render_cell_size() as f32;
         let mut offset = geometry.x();
+        let status = self.status();
 
         for cell in self.cells.iter() {
             if let Some(cell_render) = cell.get_render() {
@@ -232,7 +233,7 @@ impl ListItem for ListNode {
 
                 offset += cell_rect.width();
 
-                cell.render_cell(painter, cell_rect);
+                cell.render_cell(painter, cell_rect, status);
             }
         }
     }

@@ -5,6 +5,8 @@ use self::cell_render::{CellRender, CellRenderType, CellRenderType::*};
 use crate::graphics::painter::Painter;
 use tlib::{figure::FRect, types::StaticType, values::ToValue, Type, Value};
 
+use super::node::Status;
+
 /// The data cell of a TreeNode, one TreeNode represents one row of an image, 
 /// and one Cell corresponds to one column of the image.
 /// 
@@ -31,57 +33,57 @@ pub enum Cell {
 }
 
 macro_rules! common_cell_render_clause {
-    ($render:ident, $painter:ident, $geometry:ident, $val:ident) => {
+    ($render:ident, $painter:ident, $geometry:ident, $val:ident, $status:ident) => {
         if let Some(render) = $render {
-            render.render($painter, $geometry, Some($val));
+            render.render($painter, $geometry, Some($val), $status);
         }
     };
 }
 
 impl Cell {
-    pub(crate) fn render_cell(&self, painter: &mut Painter, geometry: FRect) {
+    pub(crate) fn render_cell(&self, painter: &mut Painter, geometry: FRect, status: Status) {
         match self {
             Self::String { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::Bool { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::U8 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::I8 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::U16 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::I16 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::U32 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::I32 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::U64 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::I64 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::U128 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::I128 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::F32 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::F64 { val, render, .. } => {
-                common_cell_render_clause!(render, painter, geometry, val);
+                common_cell_render_clause!(render, painter, geometry, val, status);
             }
             Self::Image {
                 image_address,
@@ -89,12 +91,12 @@ impl Cell {
                 ..
             } => {
                 if let Some(render) = render {
-                    render.render(painter, geometry, Some(image_address));
+                    render.render(painter, geometry, Some(image_address), status);
                 }
             }
             Self::Svg { render, .. } => {
                 if let Some(render) = render {
-                    render.render(painter, geometry, None);
+                    render.render(painter, geometry, None, status);
                 }
             }
             Self::Value { .. } => {}
