@@ -169,6 +169,13 @@ impl DropdownList {
     pub(crate) fn trans_focus_take(&mut self, strat: FocusStrat) {
         self.list.take_over_focus(strat);
     }
+
+    #[cfg(not(win_select))]
+    #[inline]
+    pub(crate) fn set_reset_effect_node_on_hide(&mut self, reset_effect_node_on_hide: bool) {
+        self.list
+            .set_reset_effect_node_on_hide(reset_effect_node_on_hide);
+    }
 }
 
 #[cfg(win_select)]

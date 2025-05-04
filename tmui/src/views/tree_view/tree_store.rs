@@ -28,7 +28,7 @@ pub struct TreeStore {
     current_line: i32,
     y_offset: i32,
 
-    enterd_node: Option<NonNull<TreeNode>>,
+    entered_node: Option<NonNull<TreeNode>>,
     hovered_node: Option<NonNull<TreeNode>>,
     selected_node: Option<NonNull<TreeNode>>,
 
@@ -117,6 +117,21 @@ impl TreeStore {
     }
 
     #[inline]
+    pub(crate) fn remove_effected_node_status(&mut self) {
+        if self.entered_node.is_some() {
+            self.entered_node = None;
+        }
+        if self.hovered_node.is_some() {
+            nonnull_mut!(self.hovered_node).remove_status(Status::Hovered);
+            self.hovered_node = None;
+        }
+        if self.selected_node.is_some() {
+            nonnull_mut!(self.selected_node).remove_status(Status::Selected);
+            self.selected_node = None;
+        }
+    }
+
+    #[inline]
     pub fn root(&self) -> &TreeNode {
         self.root.as_ref()
     }
@@ -147,7 +162,7 @@ impl TreeStore {
 
         self.nodes_buffer.clear();
         self.nodes_cache.clear();
-        self.enterd_node = None;
+        self.entered_node = None;
         self.hovered_node = None;
         self.selected_node = None;
     }
@@ -170,7 +185,7 @@ impl TreeStore {
             window_lines: 0,
             current_line: 0,
             y_offset: 0,
-            enterd_node: None,
+            entered_node: None,
             hovered_node: None,
             selected_node: None,
             id_increment: IdGenerator::new(1),
@@ -211,8 +226,8 @@ impl TreeStore {
     pub(crate) fn remove_node_cache(&mut self, id: ObjectId) {
         self.nodes_cache.remove(&id);
 
-        if self.enterd_node.is_some() && nonnull_ref!(self.enterd_node).id() == id {
-            self.enterd_node = None;
+        if self.entered_node.is_some() && nonnull_ref!(self.entered_node).id() == id {
+            self.entered_node = None;
         }
 
         if self.selected_node.is_some() && nonnull_ref!(self.selected_node).id() == id {
@@ -574,12 +589,12 @@ impl TreeStore {
 
     #[inline]
     pub(crate) fn get_entered_node(&self) -> Option<NonNull<TreeNode>> {
-        self.enterd_node
+        self.entered_node
     }
 
     #[inline]
     pub(crate) fn set_entered_node(&mut self, node: &mut TreeNode) {
-        self.enterd_node = NonNull::new(node)
+        self.entered_node = NonNull::new(node)
     }
 
     #[inline]

@@ -6,7 +6,10 @@ use super::{
     list_view_object::ListViewObject,
     WidgetHnd,
 };
-use crate::{views::list_view::list_item::ListItemCast, widget::WidgetImpl};
+use crate::{
+    views::{list_view::list_item::ListItemCast, node::Status},
+    widget::WidgetImpl,
+};
 use nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use std::{
@@ -328,6 +331,21 @@ impl ListStore {
             )
         } else {
             false
+        }
+    }
+
+    #[inline]
+    pub(crate) fn remove_effected_node_status(&mut self) {
+        if self.entered_node.is_some() {
+            self.entered_node = None;
+        }
+        if self.hovered_node.is_some() {
+            nonnull_mut!(self.hovered_node).remove_status(Status::Hovered);
+            self.hovered_node = None;
+        }
+        if self.selected_node.is_some() {
+            nonnull_mut!(self.selected_node).remove_status(Status::Selected);
+            self.selected_node = None;
         }
     }
 

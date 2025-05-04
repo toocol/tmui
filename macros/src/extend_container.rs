@@ -390,7 +390,7 @@ pub(crate) fn expand(
             let inner_on_property_set_clause = if layout.is(LayoutType::Stack) {
                 generate_stack_inner_on_property_set()?
             } else {
-                quote!(false)
+                generate_container_inner_on_property_set()?
             };
 
             Ok(quote!(
@@ -537,4 +537,39 @@ pub(crate) fn gen_container_trait_impl_clause(
             }
         }
     ))
+}
+
+pub(crate) fn generate_container_inner_on_property_set() -> syn::Result<proc_macro2::TokenStream> {
+    Ok(quote! {
+        match name {
+            "visible" => {
+                let visible = value.get::<bool>();
+                emit!(self, visibility_changed(visible));
+                self.inner_visibility_changed(visible);
+                self.on_visibility_changed(visible);
+
+                if !self.children().is_empty() {
+                    for child in self.children_mut().iter_mut() {
+                        if visible {
+                            if !child.visibility_check() {
+                                continue;
+                            }
+                            if let Some(iv) = cast!(child as IsolatedVisibility) {
+                                if iv.auto_hide() {
+                                    continue;
+                                }
+                            }
+
+                            child.set_property("visible", true.to_value());
+                            child.set_render_styles(true);
+                        } else {
+                            child.set_property("visible", false.to_value());
+                        }
+                    }
+                }
+                true
+            }
+            _ => false,
+        }
+    })
 }

@@ -164,6 +164,11 @@ impl TreeView {
     }
 
     #[inline]
+    pub fn reset_effect_node(&mut self) {
+        self.get_image_mut().reset_effect_node();
+    }
+
+    #[inline]
     pub fn mouse_effect(&self) -> MouseEffect {
         self.get_image().mouse_effect()
     }
