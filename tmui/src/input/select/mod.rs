@@ -247,6 +247,12 @@ impl<T: SelectBounds> Select<T> {
             .unwrap()
     }
 
+    #[inline]
+    pub fn set_reset_effect_node_on_hide(&mut self, reset_effect_node_on_hide: bool) {
+        self.dropdown_list_mut()
+            .set_reset_effect_node_on_hide(reset_effect_node_on_hide);
+    }
+
     #[cfg(win_select)]
     #[inline]
     pub fn dropdown_list(&self) -> &CorrDropdownList {

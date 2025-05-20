@@ -225,6 +225,37 @@ pub(crate) fn expand_with_general_attr(
                     fn pretreat_construct(&mut self) {
                         #child_ref_clause
                     }
+
+                    #[inline]
+                    fn inner_on_property_set(&mut self, name: &str, value: &Value) -> bool {
+                        match name {
+                            "visible" => {
+                                let visible = value.get::<bool>();
+                                emit!(self, visibility_changed(visible));
+                                self.inner_visibility_changed(visible);
+                                self.on_visibility_changed(visible);
+                                if let Some(child) = self.get_child_mut() {
+                                    if visible {
+                                        if !child.visibility_check() {
+                                            return true;
+                                        }
+                                        if let Some(iv) = cast!(child as IsolatedVisibility) {
+                                            if iv.auto_hide() {
+                                                return true;
+                                            }
+                                        }
+
+                                        child.set_property("visible", true.to_value());
+                                        child.set_render_styles(true);
+                                    } else {
+                                        child.set_property("visible", false.to_value());
+                                    }
+                                }
+                                true
+                            }
+                            _ => false,
+                        }
+                    }
                 }
 
                 impl #impl_generics PointEffective for #name #ty_generics #where_clause {

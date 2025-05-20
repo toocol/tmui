@@ -238,6 +238,11 @@ impl ListView {
     }
 
     #[inline]
+    pub fn set_reset_effect_node_on_hide(&mut self, reset_effect_node_on_hide: bool) {
+        self.get_image_mut().reset_effect_node_on_hide = reset_effect_node_on_hide;
+    }
+
+    #[inline]
     pub fn register_node_enter<
         F: 'static + Fn(&mut ListNode, &mut ConcurrentStoreMutexGuard, &MouseEvent),
     >(

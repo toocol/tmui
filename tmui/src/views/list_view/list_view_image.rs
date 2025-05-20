@@ -35,6 +35,7 @@ pub(crate) struct ListViewImage {
     pub(crate) line_spacing: i32,
     #[derivative(Default(value = "MouseEffect::all()"))]
     pub(crate) mouse_effect: MouseEffect,
+    pub(crate) reset_effect_node_on_hide: bool,
 
     pub(crate) on_node_enter: Option<FnNodeAction>,
     pub(crate) on_node_leave: Option<FnNodeAction>,
@@ -111,6 +112,14 @@ impl WidgetImpl for ListViewImage {
     #[inline]
     fn on_mouse_wheel(&mut self, event: &MouseEvent) {
         nonnull_mut!(self.scroll_bar).on_mouse_wheel(event)
+    }
+
+    #[inline]
+    fn on_visibility_changed(&mut self, visible: bool) {
+        if !visible && self.reset_effect_node_on_hide {
+            self.store.remove_effected_node_status();
+            nonnull_mut!(self.scroll_bar).set_value(0);
+        }
     }
 }
 

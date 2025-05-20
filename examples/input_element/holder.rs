@@ -148,6 +148,7 @@ impl ObjectImpl for Holder {
         ];
         self.select1.set_options(&options);
         self.select1.set_margin_left(20);
+        self.select1.set_reset_effect_node_on_hide(true);
 
         self.select2.set_options(&options);
         self.select2.set_margin_left(20);

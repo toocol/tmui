@@ -340,6 +340,11 @@ impl TreeViewImage {
     }
 
     #[inline]
+    pub(crate) fn reset_effect_node(&mut self) {
+        self.store.remove_effected_node_status();
+    }
+
+    #[inline]
     pub(crate) fn register_node_pressed<T: 'static + Fn(&mut TreeNode, &MouseEvent)>(
         &mut self,
         f: T,
