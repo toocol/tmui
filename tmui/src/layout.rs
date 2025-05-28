@@ -294,14 +294,10 @@ impl SizeCalculation for dyn WidgetImpl {
         let visible = self.visible();
         let mut resized = false;
 
-        if (size.width() == 0 && visible)
-            || (!self.hexpand() && !self.fixed_width()) && child_size.width() != 0
-        {
+        if (size.width() == 0 && visible) || (!self.hexpand() && !self.fixed_width()) {
             self.set_fixed_width(child_size.width());
         }
-        if (size.height() == 0 && visible)
-            || (!self.vexpand() && !self.fixed_height()) && child_size.height() != 0
-        {
+        if (size.height() == 0 && visible) || (!self.vexpand() && !self.fixed_height()) {
             self.set_fixed_height(child_size.height());
         }
 
