@@ -383,6 +383,8 @@ impl SizeCalculation for dyn WidgetImpl {
             } else {
                 if self.detecting_width() != 0 {
                     self.set_fixed_width(self.detecting_width())
+                } else {
+                    self.set_fixed_width(0);
                 }
             }
         }
@@ -442,6 +444,8 @@ impl SizeCalculation for dyn WidgetImpl {
             } else {
                 if self.detecting_height() != 0 {
                     self.set_fixed_height(self.detecting_height())
+                } else {
+                    self.set_fixed_height(0);
                 }
             }
         }
