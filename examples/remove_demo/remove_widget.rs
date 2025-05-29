@@ -35,9 +35,11 @@ impl ObjectImpl for RemoveWidget {
         self.parent_construct();
 
         self.bottom.set_margin_top(5);
+        self.bottom.set_background(Color::GREY_LIGHT);
 
         self.set_hexpand(true);
         self.set_vexpand(true);
+        let mut button_0 = Button::new(Some("Remove 1th"));
         let mut button_1 = Button::new(Some("Remove Left"));
         let mut button_2 = Button::new(Some("Remove Right"));
         let mut button_3 = Button::new(Some("Remove Stack"));
@@ -45,6 +47,8 @@ impl ObjectImpl for RemoveWidget {
         let mut button_5 = Button::new(Some("Remove SplitPane RightTop"));
         let mut button_6 = Button::new(Some("Remove SplitPane RightBottomLeft"));
         let mut button_7 = Button::new(Some("Remove SplitPane RightBottomRight"));
+        button_0.width_request(100);
+        button_1.width_request(100);
         button_1.width_request(100);
         button_2.width_request(100);
         button_3.width_request(100);
@@ -52,6 +56,12 @@ impl ObjectImpl for RemoveWidget {
         button_5.width_request(200);
         button_6.width_request(200);
         button_7.width_request(200);
+        connect!(
+            button_0,
+            mouse_pressed(),
+            self,
+            remove_0th_pressed(MouseEvent)
+        );
         connect!(
             button_1,
             mouse_pressed(),
@@ -94,6 +104,7 @@ impl ObjectImpl for RemoveWidget {
             self,
             remove_split_pane_right_bottom_right(MouseEvent)
         );
+        self.top.add_child(button_0);
         self.top.add_child(button_1);
         self.top.add_child(button_2);
         self.top.add_child(button_3);
@@ -121,6 +132,13 @@ impl RemoveWidget {
     #[inline]
     pub fn new() -> Tr<Self> {
         Self::new_alloc()
+    }
+
+    pub fn remove_0th_pressed(&mut self, _: MouseEvent) {
+        let id = self.bottom.children().first().map(|c| c.id());
+        if let Some(id) = id {
+            self.bottom.remove_children(id);
+        }
     }
 
     pub fn remove_left_pressed(&mut self, _: MouseEvent) {
