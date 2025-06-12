@@ -75,7 +75,7 @@ impl<E: IEvent<EventType = T>, T: IEventType> InnerEventBus<E, T> {
         if let Some(registers) = self.register.get_mut(&k) {
             for handle in registers.iter_mut() {
                 let handle = nonnull_mut!(handle);
-                handle.handle(&e);
+                handle.handle_evt(&e);
             }
         } else {
             warn!("[EventBus::push] Event `{:?}` has no registers.", e.ty());
