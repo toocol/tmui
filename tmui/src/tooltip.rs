@@ -124,6 +124,7 @@ impl Tooltip {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum TooltipStrat<'a> {
     Show(&'a str, Point, OptionSize, Option<Styles>),
     Hide,

@@ -557,7 +557,7 @@ impl TreeStore {
 
     /// @param `internal`
     /// - true: The view scrolling triggered internally in TreeView
-    ///         requires notifying the scroll bar to change the value.
+    ///   requires notifying the scroll bar to change the value.
     ///
     /// @return `true` if scroll value has updated, should update the image.
     #[inline]

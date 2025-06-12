@@ -75,6 +75,11 @@ impl SvgIcon {
     pub fn load_bytes(&mut self, data: &[u8]) {
         self.build_from_data(data);
     }
+
+    #[inline]
+    pub fn get_view_size(&self) -> Size {
+        self.view_size
+    }
 }
 
 impl SvgIcon {

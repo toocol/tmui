@@ -353,7 +353,7 @@ impl StaticType for String {
 
     fn dyn_bytes_len(&self) -> usize {
         // An extra '\0'
-        self.bytes().len() + 1
+        self.len() + 1
     }
 }
 
@@ -368,7 +368,7 @@ impl StaticType for &str {
 
     fn dyn_bytes_len(&self) -> usize {
         // An extra '\0'
-        self.bytes().len() + 1
+        self.len() + 1
     }
 }
 
