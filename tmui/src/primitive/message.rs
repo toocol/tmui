@@ -11,6 +11,7 @@ use tlib::{
     winit::window::WindowId,
 };
 
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum Message {
     /// VSync signal to redraw the window
     VSync(WindowId, Instant),

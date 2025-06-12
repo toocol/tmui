@@ -51,6 +51,7 @@ use std::{
 
 type ActionsMap = Box<
     IntMap<
+        // Emitter id
         ObjectId,
         (
             IntSet<ObjectId>,

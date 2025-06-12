@@ -35,6 +35,7 @@ pub(crate) fn generate_stack_remove_children() -> syn::Result<proc_macro2::Token
             let window = ApplicationWindow::window();
             window._add_removed_widget(removed);
             window.layout_change(self);
+            self.update();
         }
     })
 }
