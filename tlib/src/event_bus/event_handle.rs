@@ -6,5 +6,5 @@ pub trait EventHandle {
 
     fn listen(&self) -> Vec<Self::EventType>;
 
-    fn handle(&mut self, evt: &Self::Event);
+    fn handle_evt(&mut self, evt: &Self::Event);
 }

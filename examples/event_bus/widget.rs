@@ -48,7 +48,7 @@ impl EventHandle for WidgetEvents {
         vec![EventType::Test]
     }
 
-    fn handle(&mut self, evt: &Self::Event) {
+    fn handle_evt(&mut self, evt: &Self::Event) {
         match evt {
             Events::Test => info!("Test events received. id = {}", self.id()),
         }
