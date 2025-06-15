@@ -1,5 +1,5 @@
 use super::{board::Board, drawing_context::DrawingContext};
-use crate::{application_window::window_id, widget::WidgetImpl};
+use crate::{application_window::window_id, popup::PopupImpl, widget::WidgetImpl};
 use log::error;
 use tlib::{
     figure::{FRect, Rect},
@@ -99,18 +99,6 @@ pub trait ElementExt {
     /// Get the geometry rect of element which contains element's size and position.
     fn rect_f(&self) -> FRect;
 
-    /// Set the width of element.
-    fn set_fixed_width(&mut self, width: i32);
-
-    /// Set the height of element.
-    fn set_fixed_height(&mut self, height: i32);
-
-    /// Set the x position of element.
-    fn set_fixed_x(&mut self, x: i32);
-
-    /// Set the y position of element.
-    fn set_fixed_y(&mut self, y: i32);
-
     /// The element was invalidated or not.
     fn invalidate(&self) -> bool;
 
@@ -170,26 +158,6 @@ impl<T: ElementImpl> ElementExt for T {
     }
 
     #[inline]
-    fn set_fixed_width(&mut self, width: i32) {
-        self.element_props_mut().rect.set_width(width as f32)
-    }
-
-    #[inline]
-    fn set_fixed_height(&mut self, height: i32) {
-        self.element_props_mut().rect.set_height(height as f32)
-    }
-
-    #[inline]
-    fn set_fixed_x(&mut self, x: i32) {
-        self.element_props_mut().rect.set_x(x as f32)
-    }
-
-    #[inline]
-    fn set_fixed_y(&mut self, y: i32) {
-        self.element_props_mut().rect.set_y(y as f32)
-    }
-
-    #[inline]
     fn invalidate(&self) -> bool {
         match self.get_property("invalidate") {
             Some(val) => val.get::<(u8, bool)>().0 != UPD_VALIDATE,
@@ -209,6 +177,56 @@ impl<T: ElementImpl> ElementExt for T {
     fn validate(&mut self) {
         self.set_property("invalidate", (UPD_VALIDATE, false).to_value());
     }
+}
+
+pub(crate) trait ElementInner {
+    /// Set the width of element.
+    fn set_fixed_width(&mut self, width: i32);
+
+    /// Set the height of element.
+    fn set_fixed_height(&mut self, height: i32);
+
+    /// Set the x position of element.
+    fn set_fixed_x(&mut self, x: i32);
+
+    /// Set the y position of element.
+    fn set_fixed_y(&mut self, y: i32);
+}
+macro_rules! element_inner_impl {
+    () => {
+        #[inline]
+        fn set_fixed_width(&mut self, width: i32) {
+            self.element_props_mut().rect.set_width(width as f32)
+        }
+
+        #[inline]
+        fn set_fixed_height(&mut self, height: i32) {
+            self.element_props_mut().rect.set_height(height as f32)
+        }
+
+        #[inline]
+        fn set_fixed_x(&mut self, x: i32) {
+            self.element_props_mut().rect.set_x(x as f32)
+        }
+
+        #[inline]
+        fn set_fixed_y(&mut self, y: i32) {
+            self.element_props_mut().rect.set_y(y as f32)
+        }
+    };
+}
+
+impl<T: ElementImpl> ElementInner for T {
+    element_inner_impl!();
+}
+impl ElementInner for dyn ElementImpl {
+    element_inner_impl!();
+}
+impl ElementInner for dyn WidgetImpl {
+    element_inner_impl!();
+}
+impl ElementInner for dyn PopupImpl {
+    element_inner_impl!();
 }
 
 /// Every Element's subclass should impl this trait manually, and implements `on_renderer` function. <br>

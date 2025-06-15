@@ -7,7 +7,7 @@ use super::{
     InputType,
 };
 use crate::{
-    graphics::styles::Styles,
+    graphics::{element::ElementInner, styles::Styles},
     input::InputSignals,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},

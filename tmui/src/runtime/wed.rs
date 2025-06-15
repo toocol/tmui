@@ -1,7 +1,7 @@
 use crate::{
     application,
     application_window::ApplicationWindow,
-    graphics::element::HierachyZ,
+    graphics::element::{ElementInner, HierachyZ},
     input::focus_mgr::FocusMgr,
     prelude::*,
     primitive::{global_watch::GlobalWatchEvent, Message},
@@ -17,8 +17,6 @@ use tlib::{
     types::StaticType,
     values::ToValue,
 };
-
-use super::ElementExt;
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 /// [`Event`] dispatch

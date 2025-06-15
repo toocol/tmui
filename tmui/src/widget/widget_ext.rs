@@ -6,6 +6,7 @@ use crate::{
     animation::snapshot::ReflectSnapshot,
     application_window::ApplicationWindow,
     font::FontTypeface,
+    graphics::element::ElementInner,
     graphics::{
         border::Border,
         box_shadow::{BoxShadow, ShadowPos, ShadowSide},
