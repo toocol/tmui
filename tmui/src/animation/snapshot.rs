@@ -3,8 +3,7 @@ use super::{
     AnimationState, Direction,
 };
 use crate::{
-    animation::state_holder::ReflectRectHolder, prelude::*, primitive::frame::Frame,
-    widget::WidgetImpl,
+    graphics::element::ElementInner, prelude::*, primitive::frame::Frame, widget::WidgetImpl,
 };
 use std::ptr::NonNull;
 
@@ -150,10 +149,10 @@ pub trait Snapshot: WidgetImpl + Animatable {
 
                 if let Some(rect_holder) = cast!(self as RectHolder) {
                     let rect = rect_holder.animated_rect();
-                    self.set_fixed_x(rect.x() as i32);
-                    self.set_fixed_y(rect.y() as i32);
-                    self.set_fixed_width(rect.width() as i32);
-                    self.set_fixed_height(rect.height() as i32);
+                    self.as_element().set_fixed_x(rect.x() as i32);
+                    self.as_element().set_fixed_y(rect.y() as i32);
+                    self.as_element().set_fixed_width(rect.width() as i32);
+                    self.as_element().set_fixed_height(rect.height() as i32);
                     if self.animation_model().mode() == AnimationMode::Flex {
                         ApplicationWindow::window_of(self.window_id())
                             .animation_layout_change(self.as_widget_mut());
@@ -175,10 +174,10 @@ pub trait Snapshot: WidgetImpl + Animatable {
                 }
 
                 if let Some(origin) = self.animation_model().origin_rect() {
-                    self.set_fixed_x(origin.x());
-                    self.set_fixed_y(origin.y());
-                    self.set_fixed_width(origin.width());
-                    self.set_fixed_height(origin.height());
+                    self.as_element().set_fixed_x(origin.x());
+                    self.as_element().set_fixed_y(origin.y());
+                    self.as_element().set_fixed_width(origin.width());
+                    self.as_element().set_fixed_height(origin.height());
                 }
 
                 if let Some(transparency) = self.animation_model().origin_transparency() {

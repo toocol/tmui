@@ -2,6 +2,7 @@ use crate::{
     container::{
         ContainerLayoutEnum, ContainerScaleCalculate, StaticContainerScaleCalculate, SCALE_DISMISS,
     },
+    graphics::element::ElementInner,
     layout::LayoutMgr,
     prelude::*,
     tlib::object::{ObjectImpl, ObjectSubclass},

@@ -1,7 +1,9 @@
 use ahash::AHashMap;
 use derivative::Derivative;
+use lazy_static::lazy_static;
 use log::error;
-use std::{cell::RefCell, io::Read};
+use std::{cell::RefCell, io::Read, sync::Arc};
+use tipc::parking_lot::Mutex;
 use tlib::{
     skia_safe::FontMgr,
     typedef::{SkiaFontStyle, SkiaTypeface},
@@ -40,6 +42,11 @@ thread_local! {
     static MGR: RefCell<FontManager> = RefCell::new(FontManager::default());
 }
 
+type FontLoaderFn = dyn Fn(&mut FontManager) + 'static + Send + Sync;
+lazy_static! {
+    static ref FONT_LOADER: Arc<Mutex<Option<Box<FontLoaderFn>>>> = Arc::new(Mutex::new(None));
+}
+
 impl FontManager {
     #[inline]
     pub(crate) fn load_fonts() {
@@ -64,6 +71,10 @@ impl FontManager {
 
                     manager.fonts.insert(tf.family_name(), tf);
                 }
+
+                if let Some(f) = FONT_LOADER.lock().as_ref() {
+                    f(&mut manager)
+                }
             })
         }
     }
@@ -79,7 +90,12 @@ impl FontManager {
     }
 
     #[inline]
-    pub fn load_file(path: &str) {
+    pub fn register_font_loader<F: Fn(&mut FontManager) + 'static + Send + Sync>(loader: F) {
+        *FONT_LOADER.lock() = Some(Box::new(loader));
+    }
+
+    #[inline]
+    pub fn load_file(&mut self, path: &str) {
         let mut file =
             std::fs::File::open(path).unwrap_or_else(|_| panic!("Open file `{}` failed.", path));
 
@@ -87,31 +103,21 @@ impl FontManager {
         file.read_to_end(&mut data)
             .unwrap_or_else(|_| panic!("Read file `{}` failed", path));
 
-        MGR.with(|mgr| {
-            let mut manager = mgr.borrow_mut();
+        let tf = self
+            .system_mgr
+            .new_from_data(&data, None)
+            .unwrap_or_else(|| panic!("Make customize font typeface failed, ttf file: {}.", path));
 
-            let tf = manager
-                .system_mgr
-                .new_from_data(&data, None)
-                .unwrap_or_else(|| {
-                    panic!("Make customize font typeface failed, ttf file: {}.", path)
-                });
-
-            manager.fonts.insert(tf.family_name(), tf);
-        });
+        self.fonts.insert(tf.family_name(), tf);
     }
 
     #[inline]
-    pub fn load_data(data: &[u8]) {
-        MGR.with(|mgr| {
-            let mut manager = mgr.borrow_mut();
+    pub fn load_data(&mut self, data: &[u8]) {
+        let tf = self
+            .system_mgr
+            .new_from_data(data, None)
+            .unwrap_or_else(|| panic!("Make customize font typeface failed."));
 
-            let tf = manager
-                .system_mgr
-                .new_from_data(data, None)
-                .unwrap_or_else(|| panic!("Make customize font typeface failed."));
-
-            manager.fonts.insert(tf.family_name(), tf);
-        })
+        self.fonts.insert(tf.family_name(), tf);
     }
 }

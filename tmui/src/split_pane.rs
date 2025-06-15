@@ -4,6 +4,7 @@ use crate::{
         ContainerLayoutEnum, ContainerScaleCalculate, ReflectSizeUnifiedAdjust,
         StaticContainerScaleCalculate, SCALE_DISMISS,
     },
+    graphics::element::ElementInner,
     layout::LayoutMgr,
     prelude::*,
     tlib::{

@@ -4,7 +4,7 @@ use crate::{
     container::ContainerLayoutEnum,
     graphics::{
         board::Board,
-        element::{HierachyZ, RenderOrder, TOP_Z_INDEX},
+        element::{ElementInner, HierachyZ, RenderOrder, TOP_Z_INDEX},
     },
     input::{dialog::TyInputDialog, focus_mgr::FocusMgr, ReflectInputEle},
     layout::LayoutMgr,
@@ -741,6 +741,11 @@ impl ApplicationWindow {
         self.crs_win_handlers
             .iter_mut()
             .for_each(|hnd| nonnull_mut!(hnd).handle_inner());
+
+        self.widgets.values_mut().for_each(|hnd| {
+            let widget = nonnull_mut!(hnd);
+            widget.set_rect_record(widget.rect_f());
+        });
     }
 
     #[inline]

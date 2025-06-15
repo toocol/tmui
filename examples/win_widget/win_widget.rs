@@ -10,7 +10,7 @@ pub enum CrsWinMsg {
     Test(i32, i32),
 }
 
-#[extends(Widget)]
+#[extends(Widget, Layout(HBox))]
 #[win_widget(o2s = "CrsWinMsg", s2o(CrsWinMsg))]
 #[run_after]
 pub struct MyWinWidget {}

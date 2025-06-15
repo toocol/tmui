@@ -1,6 +1,7 @@
 use crate::{
     application_window::ApplicationWindow,
     container::{ContainerLayoutEnum, ContainerScaleCalculate, SCALE_ADAPTION},
+    graphics::element::ElementInner,
     layout::LayoutMgr,
     prelude::*,
     scroll_bar::{ScrollBar, ScrollBarPosition},

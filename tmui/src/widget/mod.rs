@@ -286,6 +286,19 @@ impl WidgetSignals for dyn WidgetImpl {}
 ////////////////////////////////////// Widget Implements //////////////////////////////////////
 impl Widget {
     #[inline]
+    pub fn resize_batch(
+        mut base: DynTr,
+        widgets: &mut [&mut dyn WidgetImpl],
+        width: Option<i32>,
+        height: Option<i32>,
+    ) {
+        for w in widgets.iter_mut() {
+            w.resize_ex(width, height, false);
+        }
+        ApplicationWindow::window().layout_change(base.bind_mut());
+    }
+
+    #[inline]
     pub fn _child_internal<T>(&mut self, mut child: Tr<T>)
     where
         T: WidgetImpl,
