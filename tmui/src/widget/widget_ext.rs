@@ -105,6 +105,13 @@ pub trait WidgetExt {
     /// `resize() will set fixed_width and fixed_height to false`, make widget flexible.
     fn resize(&mut self, width: Option<i32>, height: Option<i32>);
 
+    /// Resize the widget. <br>
+    /// If `cause_layout_change` is false, shouold call [`ApplicationWindow::window().layout_change(self)`](crate::application_window::ApplicationWindow::layout_change) after all widgets resized manually. <br>
+    /// Use [`Widget::resize_batch`](crate::widget::Widget::resize_batch) if all widget has the same size to resize.
+    ///
+    /// `resize() will set fixed_width and fixed_height to false`, make widget flexible.
+    fn resize_ex(&mut self, width: Option<i32>, height: Option<i32>, cause_layout_change: bool);
+
     /// Request the widget's width. <br>
     /// This function should be used in construct phase of the ui component,
     /// the function will not change the layout and will not trigger the signal `size_changed()`.
@@ -827,6 +834,11 @@ impl<T: WidgetImpl> WidgetExt for T {
 
     #[inline]
     fn resize(&mut self, width: Option<i32>, height: Option<i32>) {
+        self.resize_ex(width, height, true);
+    }
+
+    #[inline]
+    fn resize_ex(&mut self, width: Option<i32>, height: Option<i32>, cause_layout_change: bool) {
         if width.is_none() && height.is_none() {
             return;
         }
@@ -878,7 +890,7 @@ impl<T: WidgetImpl> WidgetExt for T {
             emit!(self, size_changed(self.size()))
         }
 
-        if self.id() != self.window_id() {
+        if self.id() != self.window_id() && cause_layout_change {
             self.window().layout_change(self);
         }
     }
