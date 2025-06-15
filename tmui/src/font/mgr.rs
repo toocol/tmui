@@ -50,11 +50,11 @@ lazy_static! {
 impl FontManager {
     #[inline]
     pub(crate) fn load_fonts() {
-        #[cfg(font_awesome)]
-        {
-            MGR.with(|mgr| {
-                let mut manager = mgr.borrow_mut();
+        MGR.with(|mgr| {
+            let mut manager = mgr.borrow_mut();
 
+            #[cfg(font_awesome)]
+            {
                 for font in EXTERNAL_FONTS {
                     let data = FontAsset::get(font)
                         .unwrap_or_else(|| panic!("Load ttf file `{}` failed.", font))
@@ -71,12 +71,12 @@ impl FontManager {
 
                     manager.fonts.insert(tf.family_name(), tf);
                 }
+            }
 
-                if let Some(f) = FONT_LOADER.lock().as_ref() {
-                    f(&mut manager)
-                }
-            })
-        }
+            if let Some(f) = FONT_LOADER.lock().as_ref() {
+                f(&mut manager)
+            }
+        })
     }
 
     #[inline]
