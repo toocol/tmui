@@ -8,7 +8,7 @@ use tlib::{
     object::ObjectId,
     payload::PayloadWeight,
     prelude::SystemCursorShape,
-    winit::window::WindowId,
+    winit::window::{WindowId, WindowLevel},
 };
 
 #[allow(clippy::large_enum_variant)]
@@ -49,6 +49,9 @@ pub(crate) enum Message {
 
     /// Request window position.
     WindowPositionRequest(WindowId, Point),
+
+    /// Request window level.
+    WindowLevelRequest(WindowId, WindowLevel),
 
     /// Sub window calling response.
     WindowResponse(
@@ -120,6 +123,11 @@ impl Debug for Message {
                 .finish(),
             Self::WindowPositionRequest(arg0, arg1) => f
                 .debug_tuple("WindowPositionRequest")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::WindowLevelRequest(arg0, arg1) => f
+                .debug_tuple("WindowLevelRequest")
                 .field(arg0)
                 .field(arg1)
                 .finish(),

@@ -43,7 +43,7 @@ use tlib::{
     object::{ObjectImpl, ObjectSubclass},
     skia_safe::ClipOp,
     values::FromValue,
-    winit::window::WindowId,
+    winit::window::{WindowId, WindowLevel},
 };
 
 use self::animation::frame_animator::{FrameAnimatorMgr, ReflectFrameAnimator};
@@ -307,7 +307,7 @@ impl ApplicationWindow {
     }
 
     #[inline]
-    pub fn register_run_after<R: 'static + FnOnce(&mut Self) + Send>(&mut self, run_after: R) {
+    pub fn register_run_after<R: 'static + FnOnce(&mut Self)>(&mut self, run_after: R) {
         self.run_after = Some(Box::new(run_after));
     }
 
@@ -373,6 +373,16 @@ impl ApplicationWindow {
         }
 
         self.send_message(Message::WindowRestoreRequest(self.winit_id.unwrap()))
+    }
+
+    #[inline]
+    pub fn set_window_level(&mut self, level: WindowLevel) {
+        if self.platform_type == PlatformType::Ipc {
+            error!("Can not restore window on slave side of shared memory application.");
+            return;
+        }
+
+        self.send_message(Message::WindowLevelRequest(self.winit_id.unwrap(), level))
     }
 
     #[inline]
